@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<site xmlns="http://maven.apache.org/SITE/2.0.0"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:schemaLocation="http://maven.apache.org/SITE/2.0.0 https://maven.apache.org/xsd/site-2.0.0.xsd"
+      name="Maven Furo Skin">
+
+  <skin>
+    <groupId>${project.groupId}</groupId>
+    <artifactId>${project.artifactId}</artifactId>
+    <version>${project.version}</version>
+  </skin>
+
+  <custom>
+    <furoSkin>
+      <defaultTheme>auto</defaultTheme>
+      <announcement>Maven Furo Skin — Sphinx Furo aesthetics powered by Bootstrap 6 (Alpha) &amp; Vite.</announcement>
+      <sourceRepository>https://git.cotterell.dev/mepcotterell/mvn-furo-skin</sourceRepository>
+      <sourceBranch>main</sourceBranch>
+      <sourceDirectory>src/site</sourceDirectory>
+      <sourceEditButton>true</sourceEditButton>
+      <sourceViewButton>true</sourceViewButton>
+      <breadcrumb>true</breadcrumb>
+      <tocSidebar>true</tocSidebar>
+      <tocTitle>On this page</tocTitle>
+      <tocMaxDepth>4</tocMaxDepth>
+      <prevNextButtons>true</prevNextButtons>
+      <sidebarCollapseDepth>1</sidebarCollapseDepth>
+      <copyCodeButton>true</copyCodeButton>
+      <syntaxHighlighting>true</syntaxHighlighting>
+      <headingPermalinks>true</headingPermalinks>
+      <search>true</search>
+      <mermaid>auto</mermaid>
+      <katex>auto</katex>
+      <lightCssVariables>
+        <color-brand-primary>#2962ff</color-brand-primary>
+        <color-brand-content>#2a5adf</color-brand-content>
+      </lightCssVariables>
+      <darkCssVariables>
+        <color-brand-primary>#448aff</color-brand-primary>
+        <color-brand-content>#5c9aff</color-brand-content>
+      </darkCssVariables>
+    </furoSkin>
+  </custom>
+
+  <body>
+    <menu name="Documentation">
+      <item name="Overview" href="index.html" />
+      <item name="Configuration Reference" href="configuration.html" />
+      <item name="Kitchen Sink Showcase" href="kitchen-sink.html">
+        <item name="Admonitions" href="kitchen-sink.html#furo-admonitions" />
+        <item name="Code Blocks &amp; Tabs" href="kitchen-sink.html#syntax-highlighting-copy-button" />
+        <item name="Responsive Tables" href="kitchen-sink.html#responsive-doxia-tables" />
+        <item name="Bootstrap 6 UI" href="kitchen-sink.html#bootstrap-6-ui-components" />
+        <item name="Diagrams &amp; Math" href="kitchen-sink.html#diagrams-mathematical-notation" />
+      </item>
+    </menu>
+    <menu ref="reports" inherit="bottom" />
+  </body>
+</site>

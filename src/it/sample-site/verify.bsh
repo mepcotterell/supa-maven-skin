@@ -1,0 +1,60 @@
+import java.io.File;
+import java.nio.file.Files;
+import java.nio.charset.StandardCharsets;
+
+File siteDir = new File( basedir, "target/site" );
+if ( !siteDir.isDirectory() ) {
+    throw new IllegalStateException( "target/site directory was not generated" );
+}
+
+File cssFile = new File( siteDir, "css/mvn-furo-skin.min.css" );
+if ( !cssFile.isFile() || cssFile.length() < 1000 ) {
+    throw new IllegalStateException( "Bundled CSS asset missing or empty" );
+}
+
+File jsFile = new File( siteDir, "js/mvn-furo-skin.min.js" );
+if ( !jsFile.isFile() || jsFile.length() < 1000 ) {
+    throw new IllegalStateException( "Bundled JS asset missing or empty" );
+}
+
+File indexHtml = new File( siteDir, "index.html" );
+if ( !indexHtml.isFile() ) {
+    throw new IllegalStateException( "index.html was not generated" );
+}
+String html = Files.readString( indexHtml.toPath(), StandardCharsets.UTF_8 );
+
+if ( !html.contains( "class=\"furo-page\"" ) ) {
+    throw new IllegalStateException( "Missing Furo 3-column page wrapper" );
+}
+if ( !html.contains( "id=\"furoSidebarDrawer\"" ) ) {
+    throw new IllegalStateException( "Missing Bootstrap 6 left sidebar drawer" );
+}
+if ( !html.contains( "id=\"furoTocDrawer\"" ) ) {
+    throw new IllegalStateException( "Missing Bootstrap 6 right TOC drawer" );
+}
+if ( !html.contains( "id=\"furoSearchDialog\"" ) ) {
+    throw new IllegalStateException( "Missing Bootstrap 6 search dialog" );
+}
+if ( !html.contains( "Integration Test Announcement" ) ) {
+    throw new IllegalStateException( "Missing custom announcement banner" );
+}
+if ( !html.contains( "--color-brand-primary: #0055ff;" ) ) {
+    throw new IllegalStateException( "Missing custom lightCssVariables" );
+}
+if ( !html.contains( "--color-brand-primary: #6699ff;" ) ) {
+    throw new IllegalStateException( "Missing custom darkCssVariables" );
+}
+if ( !html.contains( "furo-next-page" ) || !html.contains( "guide.html" ) ) {
+    throw new IllegalStateException( "Missing Next page navigation card on index.html" );
+}
+
+File guideHtml = new File( siteDir, "guide.html" );
+if ( !guideHtml.isFile() ) {
+    throw new IllegalStateException( "guide.html was not generated" );
+}
+String guideText = Files.readString( guideHtml.toPath(), StandardCharsets.UTF_8 );
+if ( !guideText.contains( "furo-prev-page" ) ) {
+    throw new IllegalStateException( "Missing Previous page navigation card on guide.html" );
+}
+
+return true;

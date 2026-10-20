@@ -1,0 +1,11 @@
+# Maven & Vite build output
+target/
+node_modules/
+node/
+
+# OS & Editor files
+.DS_Store
+*.iml
+.idea/
+.vscode/
+*.log

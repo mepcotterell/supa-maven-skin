@@ -1,0 +1,75 @@
+// ============================================================================
+// Furo Design Tokens & Bootstrap 6 Token Bridge
+// Supports Light, Dark, and Auto (OS preference via light-dark()) modes, plus
+// user overrides via <lightCssVariables> and <darkCssVariables> in site.xml.
+// ============================================================================
+
+:root,
+:host {
+  // Layout dimensions matching Sphinx Furo
+  --furo-sidebar-width: 17.5rem;      // 280px
+  --furo-toc-width: 15rem;            // 240px
+  --furo-content-max-width: 48rem;    // 768px readable measure
+  --furo-header-height: 3.25rem;      // 52px
+
+  // Typography
+  --font-stack: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+  --font-stack--monospace: "SFMono-Regular", Menlo, Consolas, Monaco, "Liberation Mono", "Lucida Console", monospace;
+
+  // Canonical Furo CSS Custom Properties (Light / Dark aware via light-dark())
+  --color-brand-primary: light-dark(#2962ff, #448aff);
+  --color-brand-content: light-dark(#2a5adf, #5c9aff);
+
+  --color-background-primary: light-dark(#ffffff, #131416);
+  --color-background-secondary: light-dark(#f8f9fb, #1a1c1e);
+  --color-background-hover: light-dark(#efeff4, #222529);
+  --color-background-border: light-dark(#eeebee, #2b2e33);
+  --color-background-item: light-dark(#f1f3f5, #212529);
+
+  --color-foreground-primary: light-dark(#111827, #e5e7eb);
+  --color-foreground-secondary: light-dark(#4b5563, #9ca3af);
+  --color-foreground-muted: light-dark(#6b7280, #6b7280);
+  --color-foreground-border: light-dark(#d1d5db, #374151);
+
+  --color-code-background: light-dark(#f6f8fa, #1c1f24);
+  --color-inline-code-background: light-dark(rgba(175, 184, 193, 0.2), rgba(110, 118, 129, 0.35));
+
+  // Admonition Semantic Colors (Note, Tip, Important, Warning, Caution/Danger)
+  --furo-admonition-note-accent: light-dark(#0969da, #4493f8);
+  --furo-admonition-note-bg: light-dark(#ddf4ff, rgba(56, 139, 253, 0.14));
+
+  --furo-admonition-tip-accent: light-dark(#1a7f37, #3fb950);
+  --furo-admonition-tip-bg: light-dark(#dafbe1, rgba(46, 160, 67, 0.14));
+
+  --furo-admonition-important-accent: light-dark(#8250df, #a371f7);
+  --furo-admonition-important-bg: light-dark(#fbefff, rgba(163, 113, 247, 0.14));
+
+  --furo-admonition-warning-accent: light-dark(#9a6700, #d29922);
+  --furo-admonition-warning-bg: light-dark(#fff8c5, rgba(187, 128, 9, 0.14));
+
+  --furo-admonition-caution-accent: light-dark(#cf222e, #f85149);
+  --furo-admonition-caution-bg: light-dark(#ffebe9, rgba(248, 81, 73, 0.14));
+
+  // Bridge Furo variables into Bootstrap 6 root tokens
+  --bg-body: var(--color-background-primary);
+  --bg-1: var(--color-background-secondary);
+  --bg-2: var(--color-background-hover);
+  --fg-body: var(--color-foreground-primary);
+  --fg-1: var(--color-foreground-primary);
+  --fg-2: var(--color-foreground-secondary);
+  --fg-3: var(--color-foreground-muted);
+  --border-color: var(--color-background-border);
+  --link-color: var(--color-brand-content);
+  --link-hover-color: var(--color-brand-primary);
+  --body-font-family: var(--font-stack);
+  --font-mono: var(--font-stack--monospace);
+}
+
+// Explicit theme overrides when data-bs-theme is set
+[data-bs-theme="light"] {
+  color-scheme: light;
+}
+
+[data-bs-theme="dark"] {
+  color-scheme: dark;
+}

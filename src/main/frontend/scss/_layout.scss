@@ -1,0 +1,411 @@
+// ============================================================================
+// Furo 3-Column Layout Architecture
+// Left Sidebar (280px on lg+) | Center Article (48rem max) | Right TOC (240px on xl+)
+// ============================================================================
+
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 4.5rem;
+}
+
+body.furo-body {
+  min-height: 100vh;
+  margin: 0;
+  background-color: var(--color-background-primary);
+  color: var(--color-foreground-primary);
+  font-family: var(--font-stack);
+  display: flex;
+  flex-direction: column;
+  overflow-x: clip;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.furo-skip-link {
+  position: fixed;
+  top: 0.75rem;
+  left: 0.75rem;
+  z-index: 2000;
+  padding: 0.5rem 1rem;
+  background-color: var(--color-brand-primary);
+  color: #ffffff;
+  border-radius: 0.375rem;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+// Top Announcement Bar
+.furo-announcement {
+  background-color: var(--color-brand-primary);
+  color: #ffffff;
+  padding: 0.5rem 1.5rem;
+  text-align: center;
+  font-size: 0.84375rem;
+  line-height: 1.5;
+  font-weight: 500;
+  letter-spacing: 0.005em;
+
+  a {
+    color: #ffffff;
+    text-decoration: underline;
+    text-underline-offset: 0.15em;
+    font-weight: 600;
+  }
+}
+
+// Mobile / Tablet Header (< lg / 1024px)
+.furo-mobile-header {
+  position: sticky;
+  top: 0;
+  z-index: 1020;
+  height: var(--furo-header-height);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 1.25rem;
+  background-color: color-mix(in srgb, var(--color-background-secondary) 92%, transparent);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--color-background-border);
+
+  @media (width >= 1024px) {
+    display: none !important;
+  }
+}
+
+.furo-mobile-header-left,
+.furo-mobile-header-right {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.furo-mobile-brand {
+  font-weight: 650;
+  font-size: 0.95rem;
+  color: var(--color-foreground-primary);
+  text-decoration: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 55vw;
+
+  &:hover {
+    color: var(--color-brand-primary);
+  }
+}
+
+// Shared Icon Button
+.furo-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 0.4375rem;
+  background: transparent;
+  color: var(--color-foreground-secondary);
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  text-decoration: none;
+
+  &:hover,
+  &:focus-visible {
+    background-color: var(--color-background-hover);
+    color: var(--color-foreground-primary);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-brand-primary);
+    outline-offset: 1px;
+  }
+}
+
+// Theme Toggle Icon State Visibility
+.furo-theme-toggle {
+  .furo-theme-icon {
+    display: none;
+  }
+}
+
+html[data-furo-theme-mode="light"] .furo-theme-toggle .furo-theme-icon-light {
+  display: block;
+}
+
+html[data-furo-theme-mode="dark"] .furo-theme-toggle .furo-theme-icon-dark {
+  display: block;
+}
+
+html[data-furo-theme-mode="auto"] .furo-theme-toggle .furo-theme-icon-auto,
+html:not([data-furo-theme-mode]) .furo-theme-toggle .furo-theme-icon-auto {
+  display: block;
+}
+
+// 3-Column Page Container
+.furo-page {
+  display: flex;
+  flex: 1 1 auto;
+  width: 100%;
+  max-width: 96rem; // 1536px max outer frame, centered on ultra-wide screens
+  margin: 0 auto;
+}
+
+// 1. Left Navigation Sidebar Column
+.furo-sidebar-column {
+  flex: 0 0 auto;
+
+  @media (width >= 1024px) {
+    width: var(--furo-sidebar-width);
+    background-color: var(--color-background-secondary);
+    border-right: 1px solid var(--color-background-border);
+  }
+}
+
+.furo-sidebar-drawer {
+  --drawer-width: 18rem;
+  --drawer-bg: var(--color-background-secondary);
+
+  @media (width >= 1024px) {
+    position: sticky !important;
+    top: 0 !important;
+    height: 100vh !important;
+    max-height: 100vh !important;
+    width: var(--furo-sidebar-width) !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    display: flex !important;
+    flex-direction: column !important;
+    background-color: var(--color-background-secondary) !important;
+    overflow: hidden;
+  }
+
+  .furo-drawer-header {
+    @media (width >= 1024px) {
+      display: none !important;
+    }
+  }
+}
+
+.furo-drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--color-background-border);
+}
+
+// 2. Center Main Content + Right TOC Wrapper
+.furo-main {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+}
+
+.furo-content {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  justify-content: center;
+}
+
+.furo-article-container {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: calc(var(--furo-content-max-width) + 7rem);
+  padding: 0 1.5rem;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+
+  @media (width >= 768px) {
+    padding: 0 2.5rem;
+  }
+
+  @media (width >= 1024px) {
+    padding: 0 3.5rem;
+  }
+}
+
+// Top Content Utility Header (Breadcrumbs + Source/Theme Actions)
+.furo-content-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 3.5rem;
+  padding: 0.75rem 0;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid var(--color-background-border);
+  font-size: 0.8125rem;
+
+  .furo-theme-toggle {
+    @media (width < 1024px) {
+      display: none !important;
+    }
+  }
+
+  .furo-toc-drawer-trigger {
+    @media (width < 1024px) {
+      display: none !important;
+    }
+
+    @media (width >= 1280px) {
+      display: none !important;
+    }
+  }
+}
+
+.furo-header-left {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.furo-header-right {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex: 0 0 auto;
+}
+
+.furo-breadcrumb {
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  flex-wrap: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  .breadcrumb-item {
+    color: var(--color-foreground-secondary);
+
+    a {
+      color: var(--color-foreground-secondary);
+      text-decoration: none;
+      transition: color 0.15s ease;
+
+      &:hover {
+        color: var(--color-brand-primary);
+        text-decoration: underline;
+      }
+    }
+
+    &.active {
+      color: var(--color-foreground-primary);
+      font-weight: 500;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+  }
+}
+
+// 3. Right "On this page" TOC Column
+.furo-toc-column {
+  flex: 0 0 auto;
+
+  @media (width >= 1280px) {
+    width: var(--furo-toc-width);
+  }
+
+  &.is-empty {
+    @media (width >= 1280px) {
+      visibility: hidden;
+    }
+  }
+}
+
+.furo-toc-drawer {
+  --drawer-width: 16.5rem;
+  --drawer-bg: var(--color-background-primary);
+
+  @media (width >= 1280px) {
+    position: sticky !important;
+    top: 0 !important;
+    height: 100vh !important;
+    max-height: 100vh !important;
+    width: var(--furo-toc-width) !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    display: flex !important;
+    flex-direction: column !important;
+    background-color: transparent !important;
+    overflow: hidden;
+  }
+
+  .furo-drawer-header {
+    @media (width >= 1280px) {
+      display: none !important;
+    }
+  }
+}
+
+// Footer
+.furo-footer {
+  margin-top: auto;
+  padding: 2.25rem 0 3rem;
+  border-top: 1px solid var(--color-background-border);
+  font-size: 0.8125rem;
+  line-height: 1.6;
+  color: var(--color-foreground-secondary);
+
+  a {
+    color: var(--color-brand-content);
+    text-decoration: none;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}
+
+.furo-footer-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.25rem;
+}
+
+.furo-footer-left {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.furo-footer-icons {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+}
+
+.furo-footer-icon-link {
+  color: var(--color-foreground-secondary);
+  display: inline-flex;
+  align-items: center;
+
+  &:hover {
+    color: var(--color-foreground-primary);
+  }
+}
+
+// Print Stylesheet
+@media print {
+  .furo-sidebar-column,
+  .furo-toc-column,
+  .furo-mobile-header,
+  .furo-content-header,
+  .furo-related-pages,
+  .furo-announcement,
+  .furo-copy-btn {
+    display: none !important;
+  }
+
+  .furo-article-container {
+    max-width: 100% !important;
+    padding: 0 !important;
+  }
+}

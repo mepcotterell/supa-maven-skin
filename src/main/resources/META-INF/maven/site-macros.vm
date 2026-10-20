@@ -1,0 +1,192 @@
+## Licensed to the Apache Software Foundation (ASF) under one
+## or more contributor license agreements.  See the NOTICE file
+## distributed with this work for additional information
+## regarding copyright ownership.  The ASF licenses this file
+## to you under the Apache License, Version 2.0 (the
+## "License"); you may not use this file except in compliance
+## with the License.  You may obtain a copy of the License at
+##
+##     http://www.apache.org/licenses/LICENSE-2.0
+##
+## Unless required by applicable law or agreed to in writing,
+## software distributed under the License is distributed on an
+## "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+## KIND, either express or implied.  See the License for the
+## specific language governing permissions and limitations
+## under the License.
+##
+#macro( generatedBy )
+Apache Maven Doxia Site Renderer#if( $doxiaSiteRendererVersion ) $doxiaSiteRendererVersion#end##
+#end
+##
+## Resolve a relative or external link against $relativePath
+#macro( furoResolveHref $href )
+#if( $href && !$href.startsWith( "http://" ) && !$href.startsWith( "https://" ) && !$href.startsWith( "mailto:" ) && !$href.startsWith( "#" ) && !$href.startsWith( "/" ) )
+#set( $resolvedHref = "$relativePath/$href" )
+#set( $resolvedHref = $resolvedHref.replace( './', '' ) )
+#else
+#set( $resolvedHref = $href )
+#end
+#end
+##
+## Check if a menu item or any of its descendants is the current page
+#macro( furoHasActiveChild $menuItem )
+#set( $hasActive = false )
+#if( $alignedFileName == $menuItem.href )
+#set( $hasActive = true )
+#elseif( $menuItem.items && $menuItem.items.size() > 0 )
+#foreach( $subItem in $menuItem.items )
+#if( $alignedFileName == $subItem.href )
+#set( $hasActive = true )
+#elseif( $subItem.items && $subItem.items.size() > 0 )
+#foreach( $deepItem in $subItem.items )
+#if( $alignedFileName == $deepItem.href )
+#set( $hasActive = true )
+#end
+#end
+#end
+#end
+#end
+#end
+##
+## Render a single sidebar menu item (supports collapsible <details>/<summary> for nested items)
+#macro( furoSidebarMenuItem $item $depth $collapseDepth )
+#set( $isCurrent = ( $alignedFileName == $item.href ) )
+#furoHasActiveChild( $item )
+#set( $isBranchActive = $hasActive )
+#if( $item.items && $item.items.size() > 0 )
+#set( $shouldOpen = ( $isCurrent || $isBranchActive || !$item.collapse || $depth <= $collapseDepth ) )
+      <li class="furo-nav-item furo-nav-has-children#if( $isCurrent ) is-current#end#if( $isBranchActive ) is-active-branch#end" data-depth="$depth">
+        <details class="furo-nav-details"#if( $shouldOpen ) open="open"#end>
+          <summary class="furo-nav-summary">
+#if( $item.href )
+            <a class="furo-nav-link#if( $isCurrent ) active#end" href="$item.href"#if( $isCurrent ) aria-current="page"#end>$esc.html( $item.name )</a>
+#else
+            <span class="furo-nav-link furo-nav-label">$esc.html( $item.name )</span>
+#end
+            <span class="furo-nav-chevron" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+            </span>
+          </summary>
+          <ul class="furo-nav-sublist list-unstyled">
+#set( $childDepth = $depth + 1 )
+#foreach( $child in $item.items )
+#furoSidebarMenuItem( $child $childDepth $collapseDepth )
+#end
+#set( $depth = $childDepth - 1 )
+          </ul>
+        </details>
+      </li>
+#else
+      <li class="furo-nav-item#if( $isCurrent ) is-current#end" data-depth="$depth">
+        <a class="furo-nav-link#if( $isCurrent ) active#end" href="$item.href"#if( $isCurrent ) aria-current="page"#end#if( $item.target ) target="$item.target"#end>
+          <span class="furo-nav-text">$esc.html( $item.name )</span>
+        </a>
+      </li>
+#end
+#end
+##
+## Render all menus in the left sidebar
+#macro( furoSidebarMenus $menus $collapseDepth )
+#if( $menus && $menus.size() > 0 )
+#foreach( $menu in $menus )
+      <div class="furo-nav-group">
+#if( $menu.name )
+        <div class="furo-nav-caption" role="heading" aria-level="2">$esc.html( $menu.name )</div>
+#end
+        <ul class="furo-nav-list list-unstyled">
+#foreach( $item in $menu.items )
+#furoSidebarMenuItem( $item 1 $collapseDepth )
+#end
+        </ul>
+      </div>
+#end
+#end
+#end
+##
+## Flatten menu items into $flatNavItems to compute Previous / Next page links
+#macro( furoCollectNavItem $item $flatList )
+#if( $item.href && !$item.href.startsWith( "http://" ) && !$item.href.startsWith( "https://" ) && !$item.href.contains( "#" ) )
+#set( $_added = $flatList.add( $item ) )
+#end
+#if( $item.items && $item.items.size() > 0 )
+#foreach( $child in $item.items )
+#furoCollectNavItem( $child $flatList )
+#end
+#end
+#end
+##
+## Render Furo-styled Previous / Next navigation cards at bottom of article
+#macro( furoPrevNextNavigation $menus )
+#set( $flatNavItems = [] )
+#if( $menus )
+#foreach( $menu in $menus )
+#foreach( $item in $menu.items )
+#furoCollectNavItem( $item $flatNavItems )
+#end
+#end
+#end
+#set( $currentIndex = -1 )
+#set( $idx = 0 )
+#foreach( $navItem in $flatNavItems )
+#if( $currentIndex == -1 && $alignedFileName == $navItem.href )
+#set( $currentIndex = $idx )
+#end
+#set( $idx = $idx + 1 )
+#end
+#set( $prevItem = false )
+#set( $nextItem = false )
+#if( $currentIndex > 0 )
+#set( $prevIndex = $currentIndex - 1 )
+#set( $prevItem = $flatNavItems.get( $prevIndex ) )
+#end
+#set( $nextIndex = $currentIndex + 1 )
+#if( $currentIndex >= 0 && $nextIndex < $flatNavItems.size() )
+#set( $nextItem = $flatNavItems.get( $nextIndex ) )
+#end
+#if( $prevItem || $nextItem )
+    <nav class="furo-related-pages not-prose" aria-label="Page navigation">
+#if( $nextItem )
+      <a class="furo-next-page" href="$nextItem.href">
+        <div class="furo-page-info">
+          <div class="furo-context">
+            <span>Next</span>
+          </div>
+          <div class="furo-title">$esc.html( $nextItem.name )</div>
+        </div>
+        <svg class="furo-related-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"></polyline></svg>
+      </a>
+#end
+#if( $prevItem )
+      <a class="furo-prev-page" href="$prevItem.href">
+        <svg class="furo-related-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"></polyline></svg>
+        <div class="furo-page-info">
+          <div class="furo-context">
+            <span>Previous</span>
+          </div>
+          <div class="furo-title">$esc.html( $prevItem.name )</div>
+        </div>
+      </a>
+#end
+    </nav>
+#end
+#end
+##
+## Render Copyright statement
+#macro( furoCopyright )
+#if( $project )
+#set( $currentYear = ${currentDate.year} + 1900 )
+#if( ${project.inceptionYear} && ( ${project.inceptionYear} != ${currentYear.toString()} ) )
+${project.inceptionYear}&#x2013;${currentYear}##
+#else
+${currentYear}##
+#end
+#if( ${project.organization} )
+#if( ${project.organization.name} && ${project.organization.url} )
+ <a href="$project.organization.url">$esc.html( ${project.organization.name} )</a>##
+#elseif( ${project.organization.name} )
+ $esc.html( ${project.organization.name} )##
+#end
+#end
+#end
+#end

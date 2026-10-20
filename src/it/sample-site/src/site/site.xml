@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<site xmlns="http://maven.apache.org/SITE/2.0.0"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:schemaLocation="http://maven.apache.org/SITE/2.0.0 https://maven.apache.org/xsd/site-2.0.0.xsd"
+      name="Sample Furo Site">
+
+  <skin>
+    <groupId>${skinGroupId}</groupId>
+    <artifactId>${skinArtifactId}</artifactId>
+    <version>${skinVersion}</version>
+  </skin>
+
+  <custom>
+    <furoSkin>
+      <defaultTheme>auto</defaultTheme>
+      <announcement>Integration Test Announcement</announcement>
+      <sourceRepository>https://github.com/mepcott/mvn-furo-skin</sourceRepository>
+      <sourceBranch>main</sourceBranch>
+      <sourceDirectory>src/site</sourceDirectory>
+      <lightCssVariables>
+        <color-brand-primary>#0055ff</color-brand-primary>
+      </lightCssVariables>
+      <darkCssVariables>
+        <color-brand-primary>#6699ff</color-brand-primary>
+      </darkCssVariables>
+    </furoSkin>
+  </custom>
+
+  <body>
+    <menu name="Documentation">
+      <item name="Welcome" href="index.html" />
+      <item name="User Guide" href="guide.html" />
+    </menu>
+    <menu ref="reports" />
+  </body>
+</site>

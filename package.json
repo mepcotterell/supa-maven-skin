@@ -1,0 +1,27 @@
+{
+  "name": "mvn-furo-skin",
+  "version": "0.1.0",
+  "description": "A clean, customizable Maven Site Skin inspired by Sphinx Furo, built with Bootstrap 6 (Alpha), Vite, SCSS, and TypeScript.",
+  "license": "Apache-2.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --config src/main/frontend/vite.config.ts",
+    "build": "tsc --noEmit && vite build --config src/main/frontend/vite.config.ts",
+    "test": "vitest run --config src/main/frontend/vite.config.ts",
+    "test:watch": "vitest --config src/main/frontend/vite.config.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@floating-ui/dom": "^1.7.4",
+    "bootstrap": "6.0.0-alpha.1",
+    "highlight.js": "^11.11.1"
+  },
+  "devDependencies": {
+    "happy-dom": "^17.4.4",
+    "sass-embedded": "^1.86.0",
+    "typescript": "^5.8.2",
+    "vite": "^6.2.3",
+    "vitest": "^3.0.9"
+  }
+}
