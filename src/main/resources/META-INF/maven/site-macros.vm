@@ -190,3 +190,39 @@ ${currentYear}##
 #end
 #end
 #end
+##
+## Bootstrap 6 Velocity Helper Macros for Site Authors (.md.vm / .apt.vm / .xhtml.vm)
+#macro( bsAlert $theme $title $body $dismissible )
+<div class="alert theme-$esc.html( $theme ) not-prose my-3" role="alert">
+  <div class="flex-grow-1">
+#if( $title && $title != "" )
+    <div class="alert-heading fw-semibold mb-1">$esc.html( $title )</div>
+#end
+    <div>$body</div>
+  </div>
+#if( $dismissible )
+  <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
+#end
+</div>
+#end
+##
+#macro( bsBadge $theme $variant $text )
+<span class="badge#if( $variant && $variant != '' ) badge-$esc.html( $variant )#end theme-$esc.html( $theme ) not-prose">$esc.html( $text )</span>##
+#end
+##
+#macro( bsCard $title $subtitle $body $footer )
+<div class="card not-prose my-3">
+  <div class="card-body">
+#if( $title && $title != "" )
+    <h5 class="card-title">$esc.html( $title )</h5>
+#end
+#if( $subtitle && $subtitle != "" )
+    <h6 class="card-subtitle mb-2 text-body-secondary">$esc.html( $subtitle )</h6>
+#end
+    <div class="card-text">$body</div>
+  </div>
+#if( $footer && $footer != "" )
+  <div class="card-footer text-body-secondary">$footer</div>
+#end
+</div>
+#end

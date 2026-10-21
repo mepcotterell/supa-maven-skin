@@ -53,6 +53,14 @@
         <item name="Bootstrap 6 UI" href="kitchen-sink.html#bootstrap-6-ui-components" />
         <item name="Diagrams &amp; Math" href="kitchen-sink.html#diagrams-mathematical-notation" />
       </item>
+      <item name="Bootstrap 6 Components" href="bootstrap-components.html">
+        <item name="1. Actions &amp; Buttons" href="bootstrap-components.html#1-actions-buttons" />
+        <item name="2. Badges, Avatars &amp; Chips" href="bootstrap-components.html#2-badges-avatars-chips-indicators" />
+        <item name="3. Alerts &amp; Overlays" href="bootstrap-components.html#3-alerts-overlays-dialogs-drawers-toasts" />
+        <item name="4. Navigation &amp; Steppers" href="bootstrap-components.html#4-navigation-menus-tabs-breadcrumbs-pagination-steppers" />
+        <item name="5. Accordions &amp; Cards" href="bootstrap-components.html#5-containers-disclosure-accordions-cards-list-groups-carousel" />
+        <item name="6. Forms &amp; Rich Inputs" href="bootstrap-components.html#6-forms-bootstrap-6-rich-input-widgets" />
+      </item>
     </menu>
     <menu ref="reports" inherit="bottom" />
   </body>

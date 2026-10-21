@@ -1,0 +1,105 @@
+// ============================================================================
+// Bootstrap 6 Component Integration & .prose Isolation for Maven Furo Skin
+// ============================================================================
+
+:root,
+[data-bs-theme="light"],
+[data-bs-theme="dark"] {
+  --bg-body: var(--color-background-primary);
+  --bg-1: var(--color-background-secondary);
+  --bg-2: var(--color-background-item);
+  --bg-3: var(--color-background-border);
+  --fg-body: var(--color-foreground-primary);
+  --fg-2: var(--color-foreground-secondary);
+  --fg-3: var(--color-foreground-muted);
+  --border-color: var(--color-background-border);
+  --btn-input-bg: var(--color-background-primary);
+  --btn-input-fg: var(--color-foreground-primary);
+}
+
+// ============================================================================
+// CSS Guardrails: Isolate Bootstrap 6 Components inside .furo-article.prose
+// ============================================================================
+.furo-article {
+  // Prevent .prose list bullets and indentation on Bootstrap list-based components
+  ul.nav,
+  ol.nav,
+  ul.navbar-nav,
+  ul.pagination,
+  ol.breadcrumb,
+  ul.list-group,
+  ol.list-group,
+  ol.stepper,
+  ul.stepper,
+  ol.carousel-indicators,
+  ul.menu {
+    list-style: none !important;
+    padding-inline-start: 0 !important;
+    margin-block: 0 !important;
+
+    & > li {
+      margin-block: 0 !important;
+      padding-inline-start: 0 !important;
+    }
+  }
+
+  // Prevent .prose link underlines on Bootstrap interactive elements
+  a.btn,
+  a.badge,
+  a.chip,
+  a.page-link,
+  a.nav-link,
+  a.menu-item,
+  a.list-group-item,
+  a.card-link,
+  a.navbar-brand,
+  a.stepper-item {
+    text-decoration: none !important;
+  }
+
+  // Prevent .prose heading border/margins from leaking into component headers
+  .card,
+  .accordion,
+  .alert,
+  .toast,
+  .dialog,
+  .drawer,
+  .list-group {
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6 {
+      border-bottom: none !important;
+      padding-bottom: 0 !important;
+    }
+  }
+
+  .accordion-header {
+    margin-block: 0 !important;
+  }
+
+  .card-title {
+    margin-block: 0 0.5rem !important;
+  }
+
+  .alert > p:last-child,
+  .card-body > p:last-child,
+  .accordion-body > p:last-child,
+  .toast-body > p:last-child {
+    margin-bottom: 0 !important;
+  }
+}
+
+// ============================================================================
+// Component Showcase Card Container (.furo-component-preview)
+// ============================================================================
+.furo-component-preview {
+  margin: 1.25rem 0 1.5rem;
+  padding: 1.5rem;
+  border-radius: 0.625rem;
+  border: 1px solid var(--color-background-border);
+  background-color: var(--color-background-primary);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}

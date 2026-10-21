@@ -94,7 +94,7 @@ Standard Markdown and Doxia `table.bodyTable` elements are automatically normali
 
 ## Bootstrap 6 UI Components
 
-Because `mvn-furo-skin` bundles **Bootstrap `6.0.0-alpha.1`**, you can use Bootstrap 6 badges, cards, and interactive `<details>` disclosures directly in documentation pages:
+Because `mvn-furo-skin` bundles **all 28 Bootstrap `6.0.0-alpha.1` component families and 20 interactive JS plugins**, you can use Bootstrap 6 buttons, badges, avatars, chips, accordions, steppers, menus, dialogs, drawers, comboboxes, datepickers, and cards directly in documentation pages:
 
 <div class="not-prose my-4">
   <div class="d-flex flex-wrap gap-2 mb-3">
@@ -106,10 +106,13 @@ Because `mvn-furo-skin` bundles **Bootstrap `6.0.0-alpha.1`**, you can use Boots
     <span class="badge theme-danger">Danger</span>
   </div>
   <div class="card p-3" style="background-color: var(--color-background-secondary); border-color: var(--color-background-border); border-radius: 0.5rem;">
-    <div class="fw-semibold mb-1">Native Bootstrap 6 Card Container</div>
-    <p class="mb-0 text-secondary" style="font-size: 0.9rem;">
-      Styled with Bootstrap 6 CSS custom properties and Furo semantic surface tokens (<code>--color-background-secondary</code>).
-    </p>
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+      <div>
+        <div class="fw-semibold mb-1">Full Bootstrap 6 Component Catalog</div>
+        <p class="mb-0 text-secondary" style="font-size: 0.9rem;">Explore all 28 Bootstrap 6 component families, variants, and interactive JS widgets.</p>
+      </div>
+      <a href="bootstrap-components.html" class="btn btn-sm theme-primary">Explore All 28 Components &rarr;</a>
+    </div>
   </div>
 </div>
 

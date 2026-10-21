@@ -1,10 +1,29 @@
 import '../scss/main.scss';
 
-// Import Bootstrap 6 interactive components used by Furo Skin
-import Dialog from 'bootstrap/js/dist/dialog.js';
-import Drawer from 'bootstrap/js/dist/drawer.js';
-import ScrollSpy from 'bootstrap/js/dist/scrollspy.js';
-
+import {
+  Alert,
+  BootstrapPlugins,
+  Button,
+  Carousel,
+  Chips,
+  Collapse,
+  Combobox,
+  Datepicker,
+  Dialog,
+  Drawer,
+  initBootstrapComponents,
+  Menu,
+  NavOverflow,
+  OtpInput,
+  Popover,
+  Range,
+  ScrollSpy,
+  Strength,
+  Tab,
+  Toast,
+  Toggler,
+  Tooltip
+} from './bootstrap-components';
 import { initCodeBlocks } from './code';
 import { initDoxiaEnhancements } from './doxia';
 import { initOptionalLibraries } from './optional';
@@ -60,6 +79,7 @@ export function initBackToTop(): void {
 export function initFuroSkin(): void {
   initTheme();
   initDoxiaEnhancements();
+  initBootstrapComponents();
   initTocAndScrollSpy();
   initCodeBlocks();
   initSearch();
@@ -76,4 +96,26 @@ if (typeof document !== 'undefined') {
   }
 }
 
-export { Dialog, Drawer, ScrollSpy };
+export {
+  Alert,
+  BootstrapPlugins,
+  Button,
+  Carousel,
+  Chips,
+  Collapse,
+  Combobox,
+  Datepicker,
+  Dialog,
+  Drawer,
+  Menu,
+  NavOverflow,
+  OtpInput,
+  Popover,
+  Range,
+  ScrollSpy,
+  Strength,
+  Tab,
+  Toast,
+  Toggler,
+  Tooltip
+};

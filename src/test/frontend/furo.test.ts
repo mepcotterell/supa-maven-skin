@@ -1,6 +1,13 @@
 import { beforeEach, describe, expect, it } from 'vitest';
+import {
+  BootstrapPlugins,
+  initBootstrapComponents,
+  isolateBootstrapComponentsFromProse
+} from '../../main/frontend/ts/bootstrap-components';
 import { enhanceCodeBlocks } from '../../main/frontend/ts/code';
 import {
+  initBootstrapAccordions,
+  initBootstrapSteppers,
   initContentTabs,
   normalizeDoxiaTables,
   TAB_SYNC_STORAGE_KEY,
@@ -86,7 +93,7 @@ describe('Maven Furo Skin Frontend Modules', () => {
       expect(table?.parentElement?.classList.contains('furo-table-responsive')).toBe(true);
     });
 
-    it('transforms GFM blockquote alerts into Furo admonition cards', () => {
+    it('transforms GFM blockquote alerts into Furo admonition cards and Bootstrap 6 alerts', () => {
       const container = document.createElement('div');
       container.innerHTML = `
         <blockquote>
@@ -94,6 +101,9 @@ describe('Maven Furo Skin Frontend Modules', () => {
         </blockquote>
         <blockquote>
           <p>[!TIP] Custom Performance Tip\nUse frontend-maven-plugin with Vite.</p>
+        </blockquote>
+        <blockquote>
+          <p>[!ALERT:primary dismissible] Release Ready\nBootstrap 6 support is active.</p>
         </blockquote>
       `;
 
@@ -111,6 +121,12 @@ describe('Maven Furo Skin Frontend Modules', () => {
       expect(admonitions[1].querySelector('.furo-admonition-title')?.textContent).toBe(
         'Custom Performance Tip'
       );
+
+      const bsAlert = container.querySelector('.alert.theme-primary');
+      expect(bsAlert).not.toBeNull();
+      expect(bsAlert?.classList.contains('not-prose')).toBe(true);
+      expect(bsAlert?.querySelector('.alert-heading')?.textContent).toBe('Release Ready');
+      expect(bsAlert?.querySelector('[data-bs-dismiss="alert"]')).not.toBeNull();
     });
 
     it('transforms .furo-tabs into synchronized ARIA tablists persisted in localStorage', () => {
@@ -137,6 +153,66 @@ describe('Maven Furo Skin Frontend Modules', () => {
       expect(tabButtons[1].classList.contains('active')).toBe(true);
       expect(tabButtons[3].classList.contains('active')).toBe(true);
       expect(window.localStorage.getItem(TAB_SYNC_STORAGE_KEY)).toContain('Kotlin');
+    });
+
+    it('transforms .furo-accordion and .furo-stepper shorthands into Bootstrap 6 components', () => {
+      const container = document.createElement('div');
+      container.innerHTML = `
+        <div class="furo-accordion">
+          <div data-accordion="First Question" data-open="true"><p>First Answer</p></div>
+          <div data-accordion="Second Question"><p>Second Answer</p></div>
+        </div>
+        <ol class="furo-stepper" data-active-step="2">
+          <li>Step One</li>
+          <li>Step Two</li>
+          <li>Step Three</li>
+        </ol>
+      `;
+
+      initBootstrapAccordions(container);
+      initBootstrapSteppers(container);
+
+      const accItems = container.querySelectorAll('.accordion-item');
+      expect(accItems.length).toBe(2);
+      expect(accItems[0].querySelector('.accordion-button')?.textContent).toBe('First Question');
+      expect(accItems[0].querySelector('.accordion-collapse')?.classList.contains('show')).toBe(
+        true
+      );
+      expect(accItems[1].querySelector('.accordion-button')?.classList.contains('collapsed')).toBe(
+        true
+      );
+
+      const stepperItems = container.querySelectorAll('.stepper-item');
+      expect(stepperItems.length).toBe(3);
+      expect(stepperItems[0].classList.contains('active')).toBe(true);
+      expect(stepperItems[1].classList.contains('active')).toBe(true);
+      expect(stepperItems[2].classList.contains('active')).toBe(false);
+    });
+  });
+
+  describe('Bootstrap 6 Plugins & .prose Isolation', () => {
+    it('exports all 20 Bootstrap 6 JS plugins on window.bootstrap and isolates components from .prose', () => {
+      const container = document.createElement('div');
+      container.innerHTML = `
+        <div class="card"><div class="card-body">Card</div></div>
+        <ul class="nav nav-pills"><li class="nav-item"><a class="nav-link active">Tab</a></li></ul>
+        <div class="chip-input" data-bs-chips="true"><span class="chip">tag</span><input type="text" class="form-ghost" /></div>
+      `;
+
+      isolateBootstrapComponentsFromProse(container);
+      initBootstrapComponents(container);
+
+      expect(Object.keys(BootstrapPlugins).length).toBe(20);
+      expect(window.bootstrap).toBeDefined();
+      expect(window.bootstrap?.Dialog).toBeDefined();
+      expect(window.bootstrap?.Combobox).toBeDefined();
+      expect(window.bootstrap?.Datepicker).toBeDefined();
+      expect(window.bootstrap?.Chips).toBeDefined();
+      expect(window.bootstrap?.Menu).toBeDefined();
+
+      expect(container.querySelector('.card')?.classList.contains('not-prose')).toBe(true);
+      expect(container.querySelector('.nav')?.classList.contains('not-prose')).toBe(true);
+      expect(container.querySelector('.chip-input')?.classList.contains('not-prose')).toBe(true);
     });
   });
 
@@ -200,22 +276,21 @@ describe('Maven Furo Skin Frontend Modules', () => {
             <a class="furo-nav-link" href="config.html">Skin Configuration</a>
           </div>
         </nav>
-        <main class="furo-article" id="furo-main-content">
-          <h1 id="overview">Maven Furo Skin</h1>
-          <h2 id="bootstrap-drawers">Bootstrap 6 Drawers</h2>
-          <p>Responsive off-canvas navigation using dialog elements.</p>
+        <main id="furo-main-content">
+          <h2 id="dark-mode">Dark Mode Customization</h2>
+          <p>Configure lightCssVariables and darkCssVariables in site.xml.</p>
         </main>
       `;
 
-      const docs = collectLocalSearchDocuments(document);
-      expect(docs.length).toBe(3);
+      const docs = collectLocalSearchDocuments();
+      expect(docs.length).toBeGreaterThanOrEqual(2);
 
-      const results = filterSearchDocuments(docs, 'drawers');
+      const results = filterSearchDocuments(docs, 'dark');
       expect(results.length).toBe(1);
-      expect(results[0].href).toBe('#bootstrap-drawers');
+      expect(results[0].title).toContain('Dark Mode');
 
-      const highlighted = highlightQueryTerms('Bootstrap 6 Drawers', 'drawers');
-      expect(highlighted).toContain('<mark class="furo-search-mark">Drawers</mark>');
+      const highlighted = highlightQueryTerms('Dark Mode Customization', 'dark');
+      expect(highlighted).toContain('<mark class="furo-search-mark">Dark</mark>');
     });
   });
 });

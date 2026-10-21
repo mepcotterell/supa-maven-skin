@@ -1,4 +1,13 @@
 export type AdmonitionType = 'note' | 'tip' | 'important' | 'warning' | 'caution';
+export type BootstrapThemeName =
+  | 'primary'
+  | 'secondary'
+  | 'success'
+  | 'info'
+  | 'warning'
+  | 'danger'
+  | 'light'
+  | 'dark';
 
 interface AdmonitionMeta {
   type: AdmonitionType;
@@ -40,6 +49,9 @@ const ADMONITION_META: Record<AdmonitionType, AdmonitionMeta> = {
 };
 
 const GFM_ALERT_REGEX = /^\s*\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\](?:[ \t]+([^\n]*))?(?:\n|$)/i;
+const GFM_BS_ALERT_REGEX =
+  /^\s*\[!ALERT:(primary|secondary|success|info|warning|danger|light|dark)(?:[ \t]+(dismissible))?\](?:[ \t]+([^\n]*))?(?:\n|$)/i;
+
 export const TAB_SYNC_STORAGE_KEY = 'furo-tab-sync';
 
 /**
@@ -66,7 +78,8 @@ export function normalizeDoxiaTables(container: HTMLElement): void {
 
 /**
  * Transforms GitHub-Flavored Markdown blockquote alerts (`> [!NOTE]`, `> [!TIP]`,
- * `> [!IMPORTANT]`, `> [!WARNING]`, `> [!CAUTION]`) into Furo admonition cards.
+ * `> [!IMPORTANT]`, `> [!WARNING]`, `> [!CAUTION]`) into Furo admonition cards,
+ * and `> [!ALERT:primary dismissible] Title` into native Bootstrap 6 `.alert` components.
  */
 export function transformGfmAdmonitions(container: HTMLElement): void {
   const blockquotes = container.querySelectorAll<HTMLQuoteElement>('blockquote');
@@ -74,6 +87,56 @@ export function transformGfmAdmonitions(container: HTMLElement): void {
     const firstParagraph = blockquote.querySelector<HTMLParagraphElement>('p:first-child');
     const targetEl = firstParagraph ?? blockquote;
     const rawText = targetEl.innerHTML;
+
+    // 1. Check for Bootstrap 6 alert shorthand: > [!ALERT:primary dismissible] Title
+    const bsMatch = rawText.match(GFM_BS_ALERT_REGEX);
+    if (bsMatch) {
+      const theme = bsMatch[1].toLowerCase() as BootstrapThemeName;
+      const isDismissible = Boolean(bsMatch[2]);
+      const customHeading = bsMatch[3]?.trim();
+
+      const remainingHtml = rawText.slice(bsMatch[0].length).trim();
+      if (firstParagraph) {
+        if (remainingHtml.length > 0) {
+          firstParagraph.innerHTML = remainingHtml;
+        } else {
+          firstParagraph.remove();
+        }
+      } else {
+        blockquote.innerHTML = remainingHtml ? `<p>${remainingHtml}</p>` : '';
+      }
+
+      const alertEl = document.createElement('div');
+      alertEl.className = `alert theme-${theme} not-prose my-3`;
+      alertEl.setAttribute('role', 'alert');
+
+      const contentWrap = document.createElement('div');
+      contentWrap.className = 'flex-grow-1';
+      if (customHeading) {
+        const headingEl = document.createElement('div');
+        headingEl.className = 'alert-heading fw-semibold mb-1';
+        headingEl.textContent = customHeading;
+        contentWrap.appendChild(headingEl);
+      }
+      while (blockquote.firstChild) {
+        contentWrap.appendChild(blockquote.firstChild);
+      }
+      alertEl.appendChild(contentWrap);
+
+      if (isDismissible) {
+        const closeBtn = document.createElement('button');
+        closeBtn.type = 'button';
+        closeBtn.className = 'btn-close ms-auto';
+        closeBtn.setAttribute('data-bs-dismiss', 'alert');
+        closeBtn.setAttribute('aria-label', 'Close');
+        alertEl.appendChild(closeBtn);
+      }
+
+      blockquote.replaceWith(alertEl);
+      return;
+    }
+
+    // 2. Check for Furo Admonition: > [!NOTE] Title
     const match = rawText.match(GFM_ALERT_REGEX);
     if (!match) {
       return;
@@ -261,6 +324,108 @@ export function initContentTabs(container: HTMLElement): void {
   });
 }
 
+/**
+ * Transforms declarative `.furo-accordion` containers (`<div data-accordion="Title">...</div>`)
+ * into full Bootstrap 6 `.accordion` components with `Collapse` data-bs attributes.
+ */
+export function initBootstrapAccordions(container: HTMLElement): void {
+  const accordions = Array.from(container.querySelectorAll<HTMLElement>('.furo-accordion'));
+  accordions.forEach((accBox, boxIdx) => {
+    if (accBox.hasAttribute('data-furo-accordion-ready')) {
+      return;
+    }
+    const rawItems = Array.from(accBox.children).filter(
+      (el): el is HTMLElement => el instanceof HTMLElement && el.hasAttribute('data-accordion')
+    );
+    if (rawItems.length === 0) {
+      return;
+    }
+
+    accBox.setAttribute('data-furo-accordion-ready', 'true');
+    const accId = accBox.id || `furo-accordion-${boxIdx}`;
+    accBox.id = accId;
+    accBox.classList.add('accordion', 'not-prose');
+    if (accBox.getAttribute('data-flush') === 'true') {
+      accBox.classList.add('accordion-flush');
+    }
+    const alwaysOpen = accBox.getAttribute('data-always-open') === 'true';
+
+    rawItems.forEach((itemEl, itemIdx) => {
+      const title = itemEl.getAttribute('data-accordion')?.trim() || `Section ${itemIdx + 1}`;
+      const isOpen =
+        itemEl.getAttribute('data-open') === 'true' ||
+        (itemIdx === 0 && !rawItems.some((el) => el.getAttribute('data-open') === 'true'));
+      const headingId = `${accId}-heading-${itemIdx}`;
+      const collapseId = `${accId}-collapse-${itemIdx}`;
+
+      const wrapper = document.createElement('div');
+      wrapper.className = 'accordion-item';
+
+      const header = document.createElement('h3');
+      header.className = 'accordion-header';
+      header.id = headingId;
+
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = `accordion-button${isOpen ? '' : ' collapsed'}`;
+      btn.setAttribute('data-bs-toggle', 'collapse');
+      btn.setAttribute('data-bs-target', `#${collapseId}`);
+      btn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+      btn.setAttribute('aria-controls', collapseId);
+      btn.textContent = title;
+      header.appendChild(btn);
+
+      const collapse = document.createElement('div');
+      collapse.id = collapseId;
+      collapse.className = `accordion-collapse collapse${isOpen ? ' show' : ''}`;
+      collapse.setAttribute('aria-labelledby', headingId);
+      if (!alwaysOpen) {
+        collapse.setAttribute('data-bs-parent', `#${accId}`);
+      }
+
+      const body = document.createElement('div');
+      body.className = 'accordion-body';
+      while (itemEl.firstChild) {
+        body.appendChild(itemEl.firstChild);
+      }
+
+      collapse.appendChild(body);
+      wrapper.appendChild(header);
+      wrapper.appendChild(collapse);
+      itemEl.replaceWith(wrapper);
+    });
+  });
+}
+
+/**
+ * Transforms declarative `<ol class="furo-stepper" data-active-step="2">` lists
+ * into Bootstrap 6 `.stepper` components.
+ */
+export function initBootstrapSteppers(container: HTMLElement): void {
+  const steppers = Array.from(container.querySelectorAll<HTMLElement>('.furo-stepper'));
+  steppers.forEach((stepperEl) => {
+    if (stepperEl.hasAttribute('data-furo-stepper-ready')) {
+      return;
+    }
+    stepperEl.setAttribute('data-furo-stepper-ready', 'true');
+    stepperEl.classList.add('stepper', 'not-prose');
+    if (stepperEl.getAttribute('data-orientation') !== 'vertical') {
+      stepperEl.classList.add('md:stepper-horizontal');
+    }
+
+    const activeStep = Number.parseInt(stepperEl.getAttribute('data-active-step') || '1', 10);
+    const items = Array.from(stepperEl.children).filter(
+      (el): el is HTMLElement => el instanceof HTMLElement && el.tagName === 'LI'
+    );
+    items.forEach((li, idx) => {
+      li.classList.add('stepper-item');
+      if (idx + 1 <= activeStep) {
+        li.classList.add('active');
+      }
+    });
+  });
+}
+
 export function initDoxiaEnhancements(
   root: HTMLElement | null = document.getElementById('furo-main-content')
 ): void {
@@ -270,4 +435,6 @@ export function initDoxiaEnhancements(
   normalizeDoxiaTables(root);
   transformGfmAdmonitions(root);
   initContentTabs(root);
+  initBootstrapAccordions(root);
+  initBootstrapSteppers(root);
 }
