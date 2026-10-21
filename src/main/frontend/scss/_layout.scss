@@ -161,20 +161,27 @@ body.furo-body {
   }
 }
 
-// Header Accessible Color Scheme Selector
+// Header Accessible Color Scheme Menu Picker
 .furo-palette-picker {
   position: relative;
   display: inline-flex;
   align-items: center;
 }
 
+.furo-palette-btn,
 .furo-palette-select {
   appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4375rem;
   height: 2rem;
-  padding: 0 1.65rem 0 0.625rem;
+  padding: 0 0.5625rem 0 0.625rem;
+  font-family: var(--font-stack);
   font-size: 0.75rem;
   font-weight: 550;
   line-height: 1;
+  white-space: nowrap;
   color: var(--color-foreground-secondary);
   background-color: var(--color-background-secondary);
   border: 1px solid var(--color-background-border);
@@ -182,7 +189,8 @@ body.furo-body {
   cursor: pointer;
   transition: border-color 0.15s ease, color 0.15s ease, background-color 0.15s ease;
 
-  &:hover {
+  &:hover,
+  &[aria-expanded="true"] {
     color: var(--color-foreground-primary);
     border-color: var(--color-foreground-border);
     background-color: var(--color-background-hover);
@@ -193,13 +201,21 @@ body.furo-body {
     outline: var(--focus-ring-width, 2px) solid var(--color-brand-primary);
     outline-offset: var(--focus-ring-offset, 2px);
   }
+
+  &[aria-expanded="true"] .furo-palette-picker-chevron {
+    transform: rotate(180deg);
+  }
 }
 
 .furo-palette-picker-chevron {
-  position: absolute;
-  right: 0.45rem;
+  flex: 0 0 auto;
   pointer-events: none;
   color: var(--color-foreground-muted);
+  transition: transform 0.15s ease;
+}
+
+.furo-palette-menu {
+  --menu-min-width: 14rem;
 }
 
 // Interactive Palette Preview Cards (for documentation & showcase pages)
@@ -449,14 +465,22 @@ html:not([data-furo-theme-mode]) .furo-theme-toggle .furo-theme-icon-auto {
 }
 
 .furo-breadcrumb {
+  display: flex;
+  align-items: center;
   font-size: 0.8125rem;
   line-height: 1.5;
   flex-wrap: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  list-style: none;
+  padding: 0;
+  margin: 0;
 
   .breadcrumb-item {
+    display: inline-flex;
+    align-items: center;
+    flex: 0 0 auto;
     color: var(--color-foreground-secondary);
 
     a {
@@ -470,11 +494,30 @@ html:not([data-furo-theme-mode]) .furo-theme-toggle .furo-theme-icon-auto {
       }
     }
 
+    & + .breadcrumb-item::before {
+      display: inline-block;
+      flex: 0 0 auto;
+      width: var(--breadcrumb-divider-width, 0.375rem);
+      height: var(--breadcrumb-divider-height, 0.75rem);
+      margin-inline: 0.5rem;
+      vertical-align: -0.1em;
+      content: "";
+      background-color: var(--color-foreground-muted);
+      mask-image: var(--breadcrumb-divider-icon);
+      mask-repeat: no-repeat;
+      mask-position: center;
+      mask-size: 100% 100%;
+    }
+
     &.active {
+      display: block;
+      flex: 0 1 auto;
+      min-width: 0;
       color: var(--color-foreground-primary);
       font-weight: 500;
       overflow: hidden;
       text-overflow: ellipsis;
+      white-space: nowrap;
     }
   }
 }

@@ -44,6 +44,7 @@
 #if( $docRenderingContext.generator ) $docRenderingContext.generator#end##
 #if( $docRenderingContext.doxiaSource ) $docRenderingContext.doxiaSourcePath#end##
 #end
+
  | Rendered using Supa Maven Skin @project.version@ (Bootstrap 6.0.0-alpha.1)
 -->
 <html lang="$locale.language"
@@ -196,20 +197,7 @@
       </div>
       <div class="furo-mobile-header-right">
 #if( $colorSchemeSelector )
-        <div class="furo-palette-picker">
-          <select class="furo-palette-select"
-                  data-furo-palette-select="true"
-                  aria-label="Select accessible color scheme"
-                  title="Select accessible color scheme (WCAG 2.2 AA / AAA)">
-            <option value="furo">Furo (AA)</option>
-            <option value="bootstrap">Bootstrap 6 (AA)</option>
-            <option value="modus">Modus (AAA)</option>
-            <option value="modus-tinted">Modus Tinted (AAA)</option>
-            <option value="modus-deuteranopia">Modus Deuteranopia (AAA)</option>
-            <option value="modus-tritanopia">Modus Tritanopia (AAA)</option>
-          </select>
-          <svg class="furo-palette-picker-chevron" viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="4 6 8 10 12 6"></polyline></svg>
-        </div>
+#furoPalettePicker( "" "bottom-end" )
 #end
         <button type="button"
                 class="furo-icon-btn furo-theme-toggle"
@@ -238,8 +226,8 @@
                 aria-label="Toggle table of contents">
           <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <line x1="3" y1="6" x2="21" y2="6"></line>
-            <line x1="9" y1="12" x2="21" y2="12"></line>
-            <line x1="6" y1="18" x2="21" y2="18"></line>
+            <line x1="3" y1="12" x2="21" y2="12"></line>
+            <line x1="3" y1="18" x2="21" y2="18"></line>
           </svg>
         </button>
 #end
@@ -334,22 +322,9 @@
             <div class="furo-sidebar-footer lg:d-none">
 #if( $colorSchemeSelector )
               <div class="furo-sidebar-footer-group">
-                <label class="furo-sidebar-footer-label" for="furoDrawerPaletteSelect">Color scheme</label>
+                <span class="furo-sidebar-footer-label">Color scheme</span>
                 <div class="furo-sidebar-footer-controls">
-                  <div class="furo-palette-picker">
-                    <select id="furoDrawerPaletteSelect"
-                            class="furo-palette-select"
-                            data-furo-palette-select="true"
-                            aria-label="Select accessible color scheme">
-                      <option value="furo">Furo (AA)</option>
-                      <option value="bootstrap">Bootstrap 6 (AA)</option>
-                      <option value="modus">Modus (AAA)</option>
-                      <option value="modus-tinted">Modus Tinted (AAA)</option>
-                      <option value="modus-deuteranopia">Modus Deuteranopia (AAA)</option>
-                      <option value="modus-tritanopia">Modus Tritanopia (AAA)</option>
-                    </select>
-                    <svg class="furo-palette-picker-chevron" viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="4 6 8 10 12 6"></polyline></svg>
-                  </div>
+#furoPalettePicker( "" "top-start" )
                   <button type="button"
                           class="furo-icon-btn furo-theme-toggle"
                           data-furo-theme-toggle="true"
@@ -431,20 +406,7 @@
 #end
 #end
 #if( $colorSchemeSelector )
-                <div class="furo-palette-picker d-none lg:d-inline-flex">
-                  <select class="furo-palette-select"
-                          data-furo-palette-select="true"
-                          aria-label="Select accessible color scheme"
-                          title="Select accessible color scheme (WCAG 2.2 AA / AAA)">
-                    <option value="furo">Furo (AA)</option>
-                    <option value="bootstrap">Bootstrap 6 (AA)</option>
-                    <option value="modus">Modus (AAA)</option>
-                    <option value="modus-tinted">Modus Tinted (AAA)</option>
-                    <option value="modus-deuteranopia">Modus Deuteranopia (AAA)</option>
-                    <option value="modus-tritanopia">Modus Tritanopia (AAA)</option>
-                  </select>
-                  <svg class="furo-palette-picker-chevron" viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="4 6 8 10 12 6"></polyline></svg>
-                </div>
+#furoPalettePicker( "d-none lg:d-inline-flex" "bottom-end" )
 #end
                 <button type="button"
                         class="furo-icon-btn furo-theme-toggle d-none lg:d-inline-flex"

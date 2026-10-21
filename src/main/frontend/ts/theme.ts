@@ -11,6 +11,7 @@ export type FuroPaletteId =
 export interface FuroPaletteMeta {
   id: FuroPaletteId;
   label: string;
+  shortLabel: string;
   wcag: 'AA' | 'AAA';
   description: string;
 }
@@ -22,42 +23,51 @@ export const FURO_PALETTES: readonly FuroPaletteMeta[] = [
   {
     id: 'furo',
     label: 'Furo Default (AA)',
+    shortLabel: 'Furo (AA)',
     wcag: 'AA',
     description: 'Sphinx Furo default documentation palette (WCAG 2.2 AA >= 4.5:1).'
   },
   {
     id: 'bootstrap',
     label: 'Bootstrap 6 OKLCH (AA)',
+    shortLabel: 'Bootstrap 6 (AA)',
     wcag: 'AA',
     description: 'Perceptually uniform Bootstrap 6 OKLCH semantic palette (WCAG 2.2 AA >= 4.5:1).'
   },
   {
     id: 'modus',
     label: 'Modus High Contrast (AAA)',
+    shortLabel: 'Modus (AAA)',
     wcag: 'AAA',
     description: 'Emacs Modus Operandi & Modus Vivendi strict high-contrast palette (WCAG 2.2 AAA >= 7:1).'
   },
   {
     id: 'modus-tinted',
     label: 'Modus Tinted (AAA)',
+    shortLabel: 'Modus Tinted (AAA)',
     wcag: 'AAA',
     description: 'Low-glare warm cream paper & deep night-sky surfaces (WCAG 2.2 AAA >= 7:1).'
   },
   {
     id: 'modus-deuteranopia',
     label: 'Modus Deuteranopia (AAA)',
+    shortLabel: 'Modus Deuteranopia (AAA)',
     wcag: 'AAA',
     description: 'Red-green colorblind-safe Blue / Gold / Warm Amber palette (WCAG 2.2 AAA >= 7:1).'
   },
   {
     id: 'modus-tritanopia',
     label: 'Modus Tritanopia (AAA)',
+    shortLabel: 'Modus Tritanopia (AAA)',
     wcag: 'AAA',
     description: 'Blue-yellow colorblind-safe Teal / Magenta / Crimson palette (WCAG 2.2 AAA >= 7:1).'
   }
 ] as const;
 
 const VALID_PALETTE_IDS = new Set<string>(FURO_PALETTES.map((p) => p.id));
+const PALETTE_SHORT_LABEL_MAP = new Map<FuroPaletteId, string>(
+  FURO_PALETTES.map((p) => [p.id, p.shortLabel])
+);
 const THEME_CYCLE: ThemeMode[] = ['light', 'dark', 'auto'];
 
 function getStorage(): Storage | null {
@@ -117,6 +127,20 @@ export function applyPalette(palette: FuroPaletteId, persist = true): FuroPalett
 }
 
 function updatePaletteControls(palette: FuroPaletteId): void {
+  const shortLabel = PALETTE_SHORT_LABEL_MAP.get(palette) ?? 'Furo (AA)';
+  const labels = document.querySelectorAll<HTMLElement>('[data-furo-palette-label]');
+  labels.forEach((labelEl) => {
+    labelEl.textContent = shortLabel;
+  });
+
+  const options = document.querySelectorAll<HTMLElement>('[data-furo-palette-option]');
+  options.forEach((optionEl) => {
+    const optionPalette = optionEl.getAttribute('data-furo-palette-option');
+    const isActive = optionPalette === palette;
+    optionEl.classList.toggle('selected', isActive);
+    optionEl.setAttribute('aria-checked', isActive ? 'true' : 'false');
+  });
+
   const selects = document.querySelectorAll<HTMLSelectElement>('[data-furo-palette-select]');
   selects.forEach((select) => {
     if (select.value !== palette) {
@@ -241,6 +265,16 @@ export function initTheme(): void {
   buttons.forEach((btn) => {
     btn.addEventListener('click', () => {
       cycleThemeMode();
+    });
+  });
+
+  const options = document.querySelectorAll<HTMLElement>('[data-furo-palette-option]');
+  options.forEach((optionEl) => {
+    optionEl.addEventListener('click', () => {
+      const targetPalette = optionEl.getAttribute('data-furo-palette-option');
+      if (isValidPaletteId(targetPalette)) {
+        applyPalette(targetPalette, true);
+      }
     });
   });
 

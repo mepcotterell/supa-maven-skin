@@ -158,6 +158,52 @@ Apache Maven Doxia Site Renderer#if( $doxiaSiteRendererVersion ) $doxiaSiteRende
 #end
 #end
 ##
+## Render Accessible Color Scheme Menu Picker (Bootstrap 6 .menu)
+#macro( furoPalettePicker $extraClasses $placement )
+        <div class="furo-palette-picker#if( $extraClasses && $extraClasses != '' ) $extraClasses#end">
+          <button type="button"
+                  class="furo-palette-btn"
+                  data-bs-toggle="menu"
+                  data-bs-placement="#if( $placement && $placement != '' )$placement#else bottom-end#end"
+                  data-furo-palette-trigger="true"
+                  aria-expanded="false"
+                  aria-label="Select accessible color scheme"
+                  title="Select accessible color scheme (WCAG 2.2 AA / AAA)">
+            <span class="furo-palette-btn-label" data-furo-palette-label="true">Furo (AA)</span>
+            <svg class="furo-palette-picker-chevron" viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="4 6 8 10 12 6"></polyline></svg>
+          </button>
+          <div class="menu furo-palette-menu" role="menu" aria-label="Accessible color schemes">
+            <h6 class="menu-header">WCAG 2.2 AA Standard</h6>
+            <button type="button" class="menu-item selected" role="menuitemradio" aria-checked="true" data-furo-palette-option="furo">
+              <span class="menu-item-content">Furo (AA)</span>
+              <svg class="menu-item-check" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="2.5 8.5 6.5 12.5 13.5 4.5"></polyline></svg>
+            </button>
+            <button type="button" class="menu-item" role="menuitemradio" aria-checked="false" data-furo-palette-option="bootstrap">
+              <span class="menu-item-content">Bootstrap 6 (AA)</span>
+              <svg class="menu-item-check" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="2.5 8.5 6.5 12.5 13.5 4.5"></polyline></svg>
+            </button>
+            <hr class="menu-divider" />
+            <h6 class="menu-header">WCAG 2.2 AAA High Contrast</h6>
+            <button type="button" class="menu-item" role="menuitemradio" aria-checked="false" data-furo-palette-option="modus">
+              <span class="menu-item-content">Modus (AAA)</span>
+              <svg class="menu-item-check" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="2.5 8.5 6.5 12.5 13.5 4.5"></polyline></svg>
+            </button>
+            <button type="button" class="menu-item" role="menuitemradio" aria-checked="false" data-furo-palette-option="modus-tinted">
+              <span class="menu-item-content">Modus Tinted (AAA)</span>
+              <svg class="menu-item-check" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="2.5 8.5 6.5 12.5 13.5 4.5"></polyline></svg>
+            </button>
+            <button type="button" class="menu-item" role="menuitemradio" aria-checked="false" data-furo-palette-option="modus-deuteranopia">
+              <span class="menu-item-content">Modus Deuteranopia (AAA)</span>
+              <svg class="menu-item-check" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="2.5 8.5 6.5 12.5 13.5 4.5"></polyline></svg>
+            </button>
+            <button type="button" class="menu-item" role="menuitemradio" aria-checked="false" data-furo-palette-option="modus-tritanopia">
+              <span class="menu-item-content">Modus Tritanopia (AAA)</span>
+              <svg class="menu-item-check" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="2.5 8.5 6.5 12.5 13.5 4.5"></polyline></svg>
+            </button>
+          </div>
+        </div>
+#end
+##
 ## Render Copyright statement
 #macro( furoCopyright )
 #if( $project )

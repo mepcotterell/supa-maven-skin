@@ -81,16 +81,21 @@ describe('Supa Maven Skin Frontend Modules', () => {
       expect(document.documentElement.getAttribute('data-furo-theme-mode')).toBe('auto');
     });
 
-    it('applies and persists all 6 accessible color schemes and syncs selectors & preview cards', () => {
+    it('applies and persists all 6 accessible color schemes and syncs menu options, labels & preview cards', () => {
       document.body.innerHTML = `
-        <select data-furo-palette-select="true">
-          <option value="furo">Furo</option>
-          <option value="bootstrap">Bootstrap</option>
-          <option value="modus">Modus</option>
-          <option value="modus-tinted">Modus Tinted</option>
-          <option value="modus-deuteranopia">Modus Deuteranopia</option>
-          <option value="modus-tritanopia">Modus Tritanopia</option>
-        </select>
+        <div class="furo-palette-picker">
+          <button type="button" class="furo-palette-btn" data-bs-toggle="menu">
+            <span data-furo-palette-label="true">Furo (AA)</span>
+          </button>
+          <div class="menu furo-palette-menu">
+            <button type="button" class="menu-item selected" data-furo-palette-option="furo"></button>
+            <button type="button" class="menu-item" data-furo-palette-option="bootstrap"></button>
+            <button type="button" class="menu-item" data-furo-palette-option="modus"></button>
+            <button type="button" class="menu-item" data-furo-palette-option="modus-tinted"></button>
+            <button type="button" class="menu-item" data-furo-palette-option="modus-deuteranopia"></button>
+            <button type="button" class="menu-item" data-furo-palette-option="modus-tritanopia"></button>
+          </div>
+        </div>
         <button type="button" data-furo-palette-card="furo"></button>
         <button type="button" data-furo-palette-card="modus-deuteranopia"></button>
       `;
@@ -104,15 +109,29 @@ describe('Supa Maven Skin Frontend Modules', () => {
       expect(getStoredPalette()).toBe('modus');
       expect(window.localStorage.getItem(PALETTE_STORAGE_KEY)).toBe('modus');
 
-      const select = document.querySelector<HTMLSelectElement>('[data-furo-palette-select]')!;
-      expect(select.value).toBe('modus');
+      const labelEl = document.querySelector<HTMLElement>('[data-furo-palette-label]')!;
+      expect(labelEl.textContent).toBe('Modus (AAA)');
+
+      const modusOption = document.querySelector<HTMLButtonElement>(
+        '[data-furo-palette-option="modus"]'
+      )!;
+      expect(modusOption.classList.contains('selected')).toBe(true);
+      expect(modusOption.getAttribute('aria-checked')).toBe('true');
+
+      const tritOption = document.querySelector<HTMLButtonElement>(
+        '[data-furo-palette-option="modus-tritanopia"]'
+      )!;
+      tritOption.click();
+      expect(document.documentElement.getAttribute('data-furo-palette')).toBe('modus-tritanopia');
+      expect(labelEl.textContent).toBe('Modus Tritanopia (AAA)');
+      expect(tritOption.classList.contains('selected')).toBe(true);
 
       const deutCard = document.querySelector<HTMLButtonElement>(
         '[data-furo-palette-card="modus-deuteranopia"]'
       )!;
       deutCard.click();
       expect(document.documentElement.getAttribute('data-furo-palette')).toBe('modus-deuteranopia');
-      expect(select.value).toBe('modus-deuteranopia');
+      expect(labelEl.textContent).toBe('Modus Deuteranopia (AAA)');
       expect(deutCard.classList.contains('is-active')).toBe(true);
       expect(deutCard.getAttribute('aria-pressed')).toBe('true');
     });
