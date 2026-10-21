@@ -14,7 +14,7 @@
     <supaSkin>
       <defaultTheme>auto</defaultTheme>
       <announcement>Integration Test Announcement</announcement>
-      <sourceRepository>https://git.cotterell.dev/mepcotterell/supa-maven-skin</sourceRepository>
+      <sourceRepository>https://github.com/mepcotterell/supa-maven-skin</sourceRepository>
       <sourceBranch>main</sourceBranch>
       <sourceDirectory>src/site</sourceDirectory>
       <lightCssVariables>

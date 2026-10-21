@@ -14,7 +14,7 @@
     <supaSkin>
       <defaultTheme>auto</defaultTheme>
       <announcement>Supa Maven Skin — Sphinx Furo aesthetics powered by Bootstrap 6 (Alpha) &amp; Vite.</announcement>
-      <sourceRepository>https://git.cotterell.dev/mepcotterell/supa-maven-skin</sourceRepository>
+      <sourceRepository>https://github.com/mepcotterell/supa-maven-skin</sourceRepository>
       <sourceBranch>main</sourceBranch>
       <sourceDirectory>src/site</sourceDirectory>
       <sourceEditButton>true</sourceEditButton>

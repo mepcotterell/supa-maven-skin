@@ -461,7 +461,7 @@
                   </div>
 #end
                   <div class="furo-built-with">
-                    Built with <a href="https://maven.apache.org/plugins/maven-site-plugin/">Maven Site</a> and <a href="https://git.cotterell.dev/mepcotterell/supa-maven-skin">Supa Maven Skin</a> (Bootstrap 6).
+                    Built with <a href="https://maven.apache.org/plugins/maven-site-plugin/">Maven Site</a> and <a href="https://github.com/mepcotterell/supa-maven-skin">Supa Maven Skin</a> (Bootstrap 6).
 #if( $footerTimestamp && $dateFormat )
                     <span class="furo-last-updated">Last updated on $dateFormat.format( $currentDate ).</span>
 #end

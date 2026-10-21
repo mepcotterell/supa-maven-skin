@@ -116,7 +116,7 @@ Click any color scheme card below (or use the palette selector in the top header
     <announcement>Version 1.0 is now available!</announcement>
 
     <!-- Source Repository Links -->
-    <sourceRepository>https://git.cotterell.dev/mepcotterell/supa-maven-skin</sourceRepository>
+    <sourceRepository>https://github.com/mepcotterell/supa-maven-skin</sourceRepository>
     <sourceBranch>main</sourceBranch>
     <sourceDirectory>src/site</sourceDirectory>
     <sourceViewButton>true</sourceViewButton>

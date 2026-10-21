@@ -269,7 +269,7 @@ Authors can write a simple `<ol class="furo-stepper" title="3">` ordered list an
     <li class="active">Compile SCSS &amp; TypeScript</li>
     <li class="active">Package Skin JAR</li>
     <li class="active">Run Invoker Site ITs</li>
-    <li>Publish to git.cotterell.dev</li>
+    <li>Publish to github.com</li>
   </ol>
 </div>
 

@@ -38,7 +38,7 @@ Requires `maven-site-plugin` `3.21.0+` (Doxia 2.0 / Doxia Sitetools 2.0).
       <defaultTheme>auto</defaultTheme>
       <colorScheme>furo</colorScheme>
       <colorSchemeSelector>true</colorSchemeSelector>
-      <sourceRepository>https://git.cotterell.dev/mepcotterell/supa-maven-skin</sourceRepository>
+      <sourceRepository>https://github.com/mepcotterell/supa-maven-skin</sourceRepository>
       <sourceBranch>main</sourceBranch>
       <sourceDirectory>src/site</sourceDirectory>
       <sourceEditButton>true</sourceEditButton>
