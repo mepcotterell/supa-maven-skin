@@ -2,7 +2,7 @@
 <site xmlns="http://maven.apache.org/SITE/2.0.0"
       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
       xsi:schemaLocation="http://maven.apache.org/SITE/2.0.0 https://maven.apache.org/xsd/site-2.0.0.xsd"
-      name="Maven Furo Skin">
+      name="Supa Maven Skin">
 
   <skin>
     <groupId>${project.groupId}</groupId>
@@ -11,10 +11,10 @@
   </skin>
 
   <custom>
-    <furoSkin>
+    <supaSkin>
       <defaultTheme>auto</defaultTheme>
-      <announcement>Maven Furo Skin — Sphinx Furo aesthetics powered by Bootstrap 6 (Alpha) &amp; Vite.</announcement>
-      <sourceRepository>https://git.cotterell.dev/mepcotterell/mvn-furo-skin</sourceRepository>
+      <announcement>Supa Maven Skin — Sphinx Furo aesthetics powered by Bootstrap 6 (Alpha) &amp; Vite.</announcement>
+      <sourceRepository>https://git.cotterell.dev/mepcotterell/supa-maven-skin</sourceRepository>
       <sourceBranch>main</sourceBranch>
       <sourceDirectory>src/site</sourceDirectory>
       <sourceEditButton>true</sourceEditButton>
@@ -31,15 +31,7 @@
       <search>true</search>
       <mermaid>auto</mermaid>
       <katex>auto</katex>
-      <lightCssVariables>
-        <color-brand-primary>#2962ff</color-brand-primary>
-        <color-brand-content>#2a5adf</color-brand-content>
-      </lightCssVariables>
-      <darkCssVariables>
-        <color-brand-primary>#448aff</color-brand-primary>
-        <color-brand-content>#5c9aff</color-brand-content>
-      </darkCssVariables>
-    </furoSkin>
+    </supaSkin>
   </custom>
 
   <body>

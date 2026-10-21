@@ -22,17 +22,17 @@ export default defineConfig({
     minify: 'esbuild',
     rollupOptions: {
       input: {
-        'mvn-furo-skin': resolve(import.meta.dirname, 'ts/index.ts')
+        'supa-maven-skin': resolve(import.meta.dirname, 'ts/index.ts')
       },
       output: {
         format: 'es',
-        entryFileNames: 'js/mvn-furo-skin.min.js',
+        entryFileNames: 'js/supa-maven-skin.min.js',
         chunkFileNames: 'js/[name].min.js',
         inlineDynamicImports: true,
         assetFileNames: (assetInfo) => {
           const names = assetInfo.names ?? (assetInfo.name ? [assetInfo.name] : []);
           if (names.some((n) => n.endsWith('.css'))) {
-            return 'css/mvn-furo-skin.min.css';
+            return 'css/supa-maven-skin.min.css';
           }
           return 'assets/[name][extname]';
         }

@@ -1,36 +1,42 @@
 <!DOCTYPE html>
 #parse( "site-macros.vm" )
 ##
-## Read <custom><furoSkin>...</furoSkin></custom> configuration with sensible Furo defaults
-#set( $furo = $site.getCustomChild( 'furoSkin' ) )
-#set( $defaultTheme = $site.getCustomValue( 'furoSkin.defaultTheme', 'auto' ) )
-#set( $sidebarHideName = $convert.toBoolean( $site.getCustomValue( 'furoSkin.sidebarHideName', 'false' ) ) )
-#set( $lightLogo = $site.getCustomValue( 'furoSkin.lightLogo', '' ) )
-#set( $darkLogo = $site.getCustomValue( 'furoSkin.darkLogo', '' ) )
-#set( $announcement = $site.getCustomValue( 'furoSkin.announcement', '' ) )
-#set( $sourceRepo = $site.getCustomValue( 'furoSkin.sourceRepository', '' ) )
-#set( $sourceBranch = $site.getCustomValue( 'furoSkin.sourceBranch', 'main' ) )
-#set( $sourceDir = $site.getCustomValue( 'furoSkin.sourceDirectory', 'src/site' ) )
-#set( $sourceEditBtn = $convert.toBoolean( $site.getCustomValue( 'furoSkin.sourceEditButton', 'true' ) ) )
-#set( $sourceViewBtn = $convert.toBoolean( $site.getCustomValue( 'furoSkin.sourceViewButton', 'true' ) ) )
-#set( $showBreadcrumb = $convert.toBoolean( $site.getCustomValue( 'furoSkin.breadcrumb', 'true' ) ) )
-#set( $tocSidebar = $convert.toBoolean( $site.getCustomValue( 'furoSkin.tocSidebar', 'true' ) ) )
-#set( $tocTitle = $site.getCustomValue( 'furoSkin.tocTitle', 'On this page' ) )
-#set( $tocMaxDepth = $convert.toNumber( $site.getCustomValue( 'furoSkin.tocMaxDepth', '4' ) ) )
-#set( $prevNextBtns = $convert.toBoolean( $site.getCustomValue( 'furoSkin.prevNextButtons', 'true' ) ) )
-#set( $sidebarCollapseDepth = $convert.toNumber( $site.getCustomValue( 'furoSkin.sidebarCollapseDepth', '1' ) ) )
-#set( $footerTimestamp = $convert.toBoolean( $site.getCustomValue( 'furoSkin.footerTimestamp', 'true' ) ) )
-#set( $footerVersion = $convert.toBoolean( $site.getCustomValue( 'furoSkin.footerVersion', 'true' ) ) )
-#set( $copyCodeBtn = $convert.toBoolean( $site.getCustomValue( 'furoSkin.copyCodeButton', 'true' ) ) )
-#set( $syntaxHighlighting = $convert.toBoolean( $site.getCustomValue( 'furoSkin.syntaxHighlighting', 'true' ) ) )
-#set( $headingPermalinks = $convert.toBoolean( $site.getCustomValue( 'furoSkin.headingPermalinks', 'true' ) ) )
-#set( $permalinkSymbol = $site.getCustomValue( 'furoSkin.headingPermalinkSymbol', '#' ) )
-#set( $enableSearch = $convert.toBoolean( $site.getCustomValue( 'furoSkin.search', 'true' ) ) )
-#set( $mermaidMode = $site.getCustomValue( 'furoSkin.mermaid', 'auto' ) )
-#set( $mermaidCdnUrl = $site.getCustomValue( 'furoSkin.mermaidCdnUrl', 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs' ) )
-#set( $katexMode = $site.getCustomValue( 'furoSkin.katex', 'auto' ) )
-#set( $katexCssCdnUrl = $site.getCustomValue( 'furoSkin.katexCssCdnUrl', 'https://cdn.jsdelivr.net/npm/katex@0.16.21/dist/katex.min.css' ) )
-#set( $katexJsCdnUrl = $site.getCustomValue( 'furoSkin.katexJsCdnUrl', 'https://cdn.jsdelivr.net/npm/katex@0.16.21/dist/contrib/auto-render.mjs' ) )
+## Read <custom><supaSkin>...</supaSkin></custom> (or legacy <furoSkin>) configuration with sensible defaults
+#if( $site.getCustomChild( 'supaSkin' ) )
+#set( $skinCfg = 'supaSkin' )
+#else
+#set( $skinCfg = 'furoSkin' )
+#end
+#set( $defaultTheme = $site.getCustomValue( "${skinCfg}.defaultTheme", 'auto' ) )
+#set( $colorScheme = $site.getCustomValue( "${skinCfg}.colorScheme", 'furo' ) )
+#set( $colorSchemeSelector = $convert.toBoolean( $site.getCustomValue( "${skinCfg}.colorSchemeSelector", 'true' ) ) )
+#set( $sidebarHideName = $convert.toBoolean( $site.getCustomValue( "${skinCfg}.sidebarHideName", 'false' ) ) )
+#set( $lightLogo = $site.getCustomValue( "${skinCfg}.lightLogo", '' ) )
+#set( $darkLogo = $site.getCustomValue( "${skinCfg}.darkLogo", '' ) )
+#set( $announcement = $site.getCustomValue( "${skinCfg}.announcement", '' ) )
+#set( $sourceRepo = $site.getCustomValue( "${skinCfg}.sourceRepository", '' ) )
+#set( $sourceBranch = $site.getCustomValue( "${skinCfg}.sourceBranch", 'main' ) )
+#set( $sourceDir = $site.getCustomValue( "${skinCfg}.sourceDirectory", 'src/site' ) )
+#set( $sourceEditBtn = $convert.toBoolean( $site.getCustomValue( "${skinCfg}.sourceEditButton", 'true' ) ) )
+#set( $sourceViewBtn = $convert.toBoolean( $site.getCustomValue( "${skinCfg}.sourceViewButton", 'true' ) ) )
+#set( $showBreadcrumb = $convert.toBoolean( $site.getCustomValue( "${skinCfg}.breadcrumb", 'true' ) ) )
+#set( $tocSidebar = $convert.toBoolean( $site.getCustomValue( "${skinCfg}.tocSidebar", 'true' ) ) )
+#set( $tocTitle = $site.getCustomValue( "${skinCfg}.tocTitle", 'On this page' ) )
+#set( $tocMaxDepth = $convert.toNumber( $site.getCustomValue( "${skinCfg}.tocMaxDepth", '4' ) ) )
+#set( $prevNextBtns = $convert.toBoolean( $site.getCustomValue( "${skinCfg}.prevNextButtons", 'true' ) ) )
+#set( $sidebarCollapseDepth = $convert.toNumber( $site.getCustomValue( "${skinCfg}.sidebarCollapseDepth", '1' ) ) )
+#set( $footerTimestamp = $convert.toBoolean( $site.getCustomValue( "${skinCfg}.footerTimestamp", 'true' ) ) )
+#set( $footerVersion = $convert.toBoolean( $site.getCustomValue( "${skinCfg}.footerVersion", 'true' ) ) )
+#set( $copyCodeBtn = $convert.toBoolean( $site.getCustomValue( "${skinCfg}.copyCodeButton", 'true' ) ) )
+#set( $syntaxHighlighting = $convert.toBoolean( $site.getCustomValue( "${skinCfg}.syntaxHighlighting", 'true' ) ) )
+#set( $headingPermalinks = $convert.toBoolean( $site.getCustomValue( "${skinCfg}.headingPermalinks", 'true' ) ) )
+#set( $permalinkSymbol = $site.getCustomValue( "${skinCfg}.headingPermalinkSymbol", '#' ) )
+#set( $enableSearch = $convert.toBoolean( $site.getCustomValue( "${skinCfg}.search", 'true' ) ) )
+#set( $mermaidMode = $site.getCustomValue( "${skinCfg}.mermaid", 'auto' ) )
+#set( $mermaidCdnUrl = $site.getCustomValue( "${skinCfg}.mermaidCdnUrl", 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs' ) )
+#set( $katexMode = $site.getCustomValue( "${skinCfg}.katex", 'auto' ) )
+#set( $katexCssCdnUrl = $site.getCustomValue( "${skinCfg}.katexCssCdnUrl", 'https://cdn.jsdelivr.net/npm/katex@0.16.21/dist/katex.min.css' ) )
+#set( $katexJsCdnUrl = $site.getCustomValue( "${skinCfg}.katexJsCdnUrl", 'https://cdn.jsdelivr.net/npm/katex@0.16.21/dist/contrib/auto-render.mjs' ) )
 ##
 <!--
  | Generated by #generatedBy()##
@@ -38,10 +44,12 @@
 #if( $docRenderingContext.generator ) $docRenderingContext.generator#end##
 #if( $docRenderingContext.doxiaSource ) $docRenderingContext.doxiaSourcePath#end##
 #end
- | Rendered using Maven Furo Skin @project.version@ (Bootstrap 6.0.0-alpha.1)
+ | Rendered using Supa Maven Skin @project.version@ (Bootstrap 6.0.0-alpha.1)
 -->
 <html lang="$locale.language"
       data-furo-default-theme="$esc.html( $defaultTheme )"
+      data-furo-default-palette="$esc.html( $colorScheme )"
+      data-furo-palette="$esc.html( $colorScheme )"
       data-furo-project-version="#if( $project && $project.version )$esc.html( $project.version )#else 0.1.0#end"
       data-furo-relative-path="$relativePath">
   <head>
@@ -56,19 +64,23 @@
 #end
     <title>$esc.html( $title )</title>
 
-    <!-- Early Theme Initialization (Prevents FOUC with Bootstrap 6 color-scheme & data-bs-theme) -->
+    <!-- Early Theme & Palette Initialization (Prevents FOUC with Bootstrap 6 color-scheme & data-furo-palette) -->
     <script>
       (function () {
-        var storageKey = 'furo-theme';
-        var defaultMode = document.documentElement.getAttribute('data-furo-default-theme') || 'auto';
+        var root = document.documentElement;
+        var themeKey = 'furo-theme';
+        var paletteKey = 'furo-palette';
+        var defaultMode = root.getAttribute('data-furo-default-theme') || 'auto';
+        var defaultPalette = root.getAttribute('data-furo-default-palette') || 'furo';
         var storedMode = null;
+        var storedPalette = null;
         try {
-          storedMode = localStorage.getItem(storageKey);
+          storedMode = localStorage.getItem(themeKey);
+          storedPalette = localStorage.getItem(paletteKey);
         } catch (e) {}
         var mode = (storedMode === 'light' || storedMode === 'dark' || storedMode === 'auto')
           ? storedMode
           : defaultMode;
-        var root = document.documentElement;
         root.setAttribute('data-furo-theme-mode', mode);
         if (mode === 'light' || mode === 'dark') {
           root.setAttribute('data-bs-theme', mode);
@@ -78,32 +90,45 @@
           var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
           root.setAttribute('data-furo-resolved-theme', prefersDark ? 'dark' : 'light');
         }
+        var validPalettes = {
+          'furo': true,
+          'bootstrap': true,
+          'modus': true,
+          'modus-tinted': true,
+          'modus-deuteranopia': true,
+          'modus-tritanopia': true
+        };
+        var palette = (storedPalette && validPalettes[storedPalette]) ? storedPalette : defaultPalette;
+        root.setAttribute('data-furo-palette', palette);
+        if (storedPalette && validPalettes[storedPalette]) {
+          root.setAttribute('data-furo-palette-locked', 'true');
+        }
       })();
     </script>
 
-    <link rel="stylesheet" href="$relativePath/css/mvn-furo-skin.min.css" />
+    <link rel="stylesheet" href="$relativePath/css/supa-maven-skin.min.css" />
     <link rel="stylesheet" href="$relativePath/css/site.css" onerror="this.remove()" />
 ##
 ## Inject Furo-style <lightCssVariables> and <darkCssVariables> overrides from site.xml
-#set( $lightVars = $site.getCustomChild( 'furoSkin.lightCssVariables' ) )
-#set( $darkVars = $site.getCustomChild( 'furoSkin.darkCssVariables' ) )
+#set( $lightVars = $site.getCustomChild( "${skinCfg}.lightCssVariables" ) )
+#set( $darkVars = $site.getCustomChild( "${skinCfg}.darkCssVariables" ) )
 #if( ( $lightVars && $lightVars.getChildren().size() > 0 ) || ( $darkVars && $darkVars.getChildren().size() > 0 ) )
     <style id="furo-custom-css-variables">
 #if( $lightVars && $lightVars.getChildren().size() > 0 )
-      :root, [data-bs-theme="light"] {
+      html:root, html[data-bs-theme="light"], html[data-furo-palette] {
 #foreach( $child in $lightVars.getChildren() )
         --$child.getName(): $child.getValue();
 #end
       }
 #end
 #if( $darkVars && $darkVars.getChildren().size() > 0 )
-      [data-bs-theme="dark"] {
+      html[data-bs-theme="dark"], html[data-furo-palette][data-bs-theme="dark"] {
 #foreach( $child in $darkVars.getChildren() )
         --$child.getName(): $child.getValue();
 #end
       }
       @media (prefers-color-scheme: dark) {
-        :root:not([data-bs-theme="light"]) {
+        html:root:not([data-bs-theme="light"]), html[data-furo-palette]:not([data-bs-theme="light"]) {
 #foreach( $child in $darkVars.getChildren() )
           --$child.getName(): $child.getValue();
 #end
@@ -170,6 +195,22 @@
         </a>
       </div>
       <div class="furo-mobile-header-right">
+#if( $colorSchemeSelector )
+        <div class="furo-palette-picker">
+          <select class="furo-palette-select"
+                  data-furo-palette-select="true"
+                  aria-label="Select accessible color scheme"
+                  title="Select accessible color scheme (WCAG 2.2 AA / AAA)">
+            <option value="furo">Furo (AA)</option>
+            <option value="bootstrap">Bootstrap 6 (AA)</option>
+            <option value="modus">Modus (AAA)</option>
+            <option value="modus-tinted">Modus Tinted (AAA)</option>
+            <option value="modus-deuteranopia">Modus Deuteranopia (AAA)</option>
+            <option value="modus-tritanopia">Modus Tritanopia (AAA)</option>
+          </select>
+          <svg class="furo-palette-picker-chevron" viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="4 6 8 10 12 6"></polyline></svg>
+        </div>
+#end
         <button type="button"
                 class="furo-icon-btn furo-theme-toggle"
                 data-furo-theme-toggle="true"
@@ -197,8 +238,8 @@
                 aria-label="Toggle table of contents">
           <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <line x1="3" y1="6" x2="21" y2="6"></line>
-            <line x1="3" y1="12" x2="21" y2="12"></line>
-            <line x1="3" y1="18" x2="21" y2="18"></line>
+            <line x1="9" y1="12" x2="21" y2="12"></line>
+            <line x1="6" y1="18" x2="21" y2="18"></line>
           </svg>
         </button>
 #end
@@ -296,7 +337,7 @@
       <div class="furo-main">
         <div class="furo-content">
           <div class="furo-article-container">
-            <!-- Top Content Utility Bar (Breadcrumbs, Source Links, Theme Toggle, Tablet TOC Button) -->
+            <!-- Top Content Utility Bar (Breadcrumbs, Source Links, Palette Picker, Theme Toggle, Tablet TOC Button) -->
             <div class="furo-content-header not-prose">
               <div class="furo-header-left">
 #if( $showBreadcrumb )
@@ -328,7 +369,7 @@
 
               <div class="furo-header-right">
 #if( $sourceRepo && $sourceRepo != "" && $docRenderingContext && $docRenderingContext.doxiaSource )
-#set( $doxiaPath = $docRenderingContext.doxiaSourcePath.replace( '\', '/' ) )
+#set( $doxiaPath = $docRenderingContext.doxiaSourcePath.replace( '\\', '/' ) )
 #if( $sourceDir != "" && !$doxiaPath.startsWith( $sourceDir ) )
 #set( $repoFilePath = "$sourceDir/$doxiaPath" )
 #else
@@ -354,6 +395,22 @@
                   <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                 </a>
 #end
+#end
+#if( $colorSchemeSelector )
+                <div class="furo-palette-picker d-none lg:d-inline-flex">
+                  <select class="furo-palette-select"
+                          data-furo-palette-select="true"
+                          aria-label="Select accessible color scheme"
+                          title="Select accessible color scheme (WCAG 2.2 AA / AAA)">
+                    <option value="furo">Furo (AA)</option>
+                    <option value="bootstrap">Bootstrap 6 (AA)</option>
+                    <option value="modus">Modus (AAA)</option>
+                    <option value="modus-tinted">Modus Tinted (AAA)</option>
+                    <option value="modus-deuteranopia">Modus Deuteranopia (AAA)</option>
+                    <option value="modus-tritanopia">Modus Tritanopia (AAA)</option>
+                  </select>
+                  <svg class="furo-palette-picker-chevron" viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="4 6 8 10 12 6"></polyline></svg>
+                </div>
 #end
                 <button type="button"
                         class="furo-icon-btn furo-theme-toggle d-none lg:d-inline-flex"
@@ -404,14 +461,14 @@
                   </div>
 #end
                   <div class="furo-built-with">
-                    Built with <a href="https://maven.apache.org/plugins/maven-site-plugin/">Maven Site</a> and <a href="https://github.com/mepcott/mvn-furo-skin">Maven Furo Skin</a> (Bootstrap 6).
+                    Built with <a href="https://maven.apache.org/plugins/maven-site-plugin/">Maven Site</a> and <a href="https://git.cotterell.dev/mepcotterell/supa-maven-skin">Supa Maven Skin</a> (Bootstrap 6).
 #if( $footerTimestamp && $dateFormat )
                     <span class="furo-last-updated">Last updated on $dateFormat.format( $currentDate ).</span>
 #end
                   </div>
                 </div>
 
-#set( $navIcons = $site.getCustomChild( 'furoSkin.navIcons' ) )
+#set( $navIcons = $site.getCustomChild( "${skinCfg}.navIcons" ) )
                 <div class="furo-footer-right">
 #if( $navIcons && $navIcons.getChildren().size() > 0 )
                   <div class="furo-footer-icons">
@@ -501,6 +558,6 @@
     </dialog>
 #end
 
-    <script type="module" src="$relativePath/js/mvn-furo-skin.min.js"></script>
+    <script type="module" src="$relativePath/js/supa-maven-skin.min.js"></script>
   </body>
 </html>

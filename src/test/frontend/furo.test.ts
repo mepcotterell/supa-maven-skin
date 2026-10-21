@@ -19,14 +19,18 @@ import {
   highlightQueryTerms
 } from '../../main/frontend/ts/search';
 import {
+  applyPalette,
   applyThemeMode,
   cycleThemeMode,
+  getStoredPalette,
   getStoredThemeMode,
+  initTheme,
+  PALETTE_STORAGE_KEY,
   THEME_STORAGE_KEY
 } from '../../main/frontend/ts/theme';
 import { buildTableOfContents, prepareHeadings, slugifyHeading } from '../../main/frontend/ts/toc';
 
-describe('Maven Furo Skin Frontend Modules', () => {
+describe('Supa Maven Skin Frontend Modules', () => {
   beforeEach(() => {
     const store = new Map<string, string>();
     const mockStorage: Storage = {
@@ -52,10 +56,12 @@ describe('Maven Furo Skin Frontend Modules', () => {
     document.documentElement.removeAttribute('data-bs-theme');
     document.documentElement.removeAttribute('data-furo-theme-mode');
     document.documentElement.removeAttribute('data-furo-resolved-theme');
+    document.documentElement.removeAttribute('data-furo-palette');
+    document.documentElement.removeAttribute('data-furo-palette-locked');
     document.body.innerHTML = '';
   });
 
-  describe('Theme Manager (Light / Dark / Auto)', () => {
+  describe('Theme & Accessible Color Scheme Controller', () => {
     it('applies explicit light and dark themes and removes data-bs-theme in auto mode', () => {
       document.body.innerHTML = `<button data-furo-theme-toggle="true"></button>`;
 
@@ -73,6 +79,42 @@ describe('Maven Furo Skin Frontend Modules', () => {
       expect(next2).toBe('auto');
       expect(document.documentElement.hasAttribute('data-bs-theme')).toBe(false);
       expect(document.documentElement.getAttribute('data-furo-theme-mode')).toBe('auto');
+    });
+
+    it('applies and persists all 6 accessible color schemes and syncs selectors & preview cards', () => {
+      document.body.innerHTML = `
+        <select data-furo-palette-select="true">
+          <option value="furo">Furo</option>
+          <option value="bootstrap">Bootstrap</option>
+          <option value="modus">Modus</option>
+          <option value="modus-tinted">Modus Tinted</option>
+          <option value="modus-deuteranopia">Modus Deuteranopia</option>
+          <option value="modus-tritanopia">Modus Tritanopia</option>
+        </select>
+        <button type="button" data-furo-palette-card="furo"></button>
+        <button type="button" data-furo-palette-card="modus-deuteranopia"></button>
+      `;
+
+      initTheme();
+      expect(document.documentElement.getAttribute('data-furo-palette')).toBe('furo');
+
+      applyPalette('modus');
+      expect(document.documentElement.getAttribute('data-furo-palette')).toBe('modus');
+      expect(document.documentElement.getAttribute('data-furo-palette-locked')).toBe('true');
+      expect(getStoredPalette()).toBe('modus');
+      expect(window.localStorage.getItem(PALETTE_STORAGE_KEY)).toBe('modus');
+
+      const select = document.querySelector<HTMLSelectElement>('[data-furo-palette-select]')!;
+      expect(select.value).toBe('modus');
+
+      const deutCard = document.querySelector<HTMLButtonElement>(
+        '[data-furo-palette-card="modus-deuteranopia"]'
+      )!;
+      deutCard.click();
+      expect(document.documentElement.getAttribute('data-furo-palette')).toBe('modus-deuteranopia');
+      expect(select.value).toBe('modus-deuteranopia');
+      expect(deutCard.classList.contains('is-active')).toBe(true);
+      expect(deutCard.getAttribute('aria-pressed')).toBe('true');
     });
   });
 
@@ -251,17 +293,24 @@ describe('Maven Furo Skin Frontend Modules', () => {
   });
 
   describe('Code Block Highlighting, Language Pill, and Copy Button', () => {
-    it('wraps pre elements, applies Highlight.js, renders language pill, and adds copy button', () => {
+    it('wraps pre elements, applies Highlight.js (including unified diff additions/deletions), renders language pill, and adds copy button', () => {
       const container = document.createElement('div');
-      container.innerHTML = `<pre><code class="language-xml">&lt;skin&gt;&lt;/skin&gt;</code></pre>`;
+      container.innerHTML = `
+        <pre><code class="language-xml">&lt;skin&gt;&lt;/skin&gt;</code></pre>
+        <pre><code class="language-diff"> &lt;skin&gt;\n-  &lt;artifactId&gt;maven-fluido-skin&lt;/artifactId&gt;\n+  &lt;artifactId&gt;supa-maven-skin&lt;/artifactId&gt;\n &lt;/skin&gt;</code></pre>
+      `;
 
       enhanceCodeBlocks(container, true, true);
 
-      const wrapper = container.querySelector('.furo-code-block');
-      expect(wrapper).not.toBeNull();
-      expect(wrapper?.querySelector('code')?.classList.contains('hljs')).toBe(true);
-      expect(wrapper?.querySelector('.furo-code-lang')?.textContent).toBe('xml');
-      expect(wrapper?.querySelector('.furo-copy-btn')).not.toBeNull();
+      const wrappers = container.querySelectorAll('.furo-code-block');
+      expect(wrappers.length).toBe(2);
+      expect(wrappers[0].querySelector('code')?.classList.contains('hljs')).toBe(true);
+      expect(wrappers[0].querySelector('.furo-code-lang')?.textContent).toBe('xml');
+      expect(wrappers[0].querySelector('.furo-copy-btn')).not.toBeNull();
+
+      expect(wrappers[1].querySelector('.furo-code-lang')?.textContent).toBe('diff');
+      expect(wrappers[1].querySelector('.hljs-deletion')).not.toBeNull();
+      expect(wrappers[1].querySelector('.hljs-addition')).not.toBeNull();
     });
   });
 

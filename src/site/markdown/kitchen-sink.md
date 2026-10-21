@@ -1,6 +1,6 @@
 # Kitchen Sink Showcase
 
-This page demonstrates all typography, Furo admonitions, syntax-highlighted code blocks, synchronized content tabs, responsive Doxia tables, Bootstrap 6 components, Mermaid diagrams, and KaTeX math provided by **Maven Furo Skin**.
+This page demonstrates all typography, Furo admonitions, syntax-highlighted code blocks, synchronized content tabs, responsive Doxia tables, Bootstrap 6 components, Mermaid diagrams, and KaTeX math provided by **Supa Maven Skin**.
 
 ## Furo Admonitions
 
@@ -33,20 +33,20 @@ Switch between tabs below—active tab selection is automatically persisted and 
   <div title="Java 21" data-tab="Java 21">
     <pre><code class="language-java">package dev.cotterell.maven.skins;
 import java.util.List;
-public record FuroSkinConfig(
+public record SupaSkinConfig(
     String defaultTheme,
     boolean tocSidebar,
     int tocMaxDepth,
     List&lt;String&gt; languages
 ) {
-    public static FuroSkinConfig defaults() {
-        return new FuroSkinConfig("auto", true, 4, List.of("java", "kotlin", "xml", "ts"));
+    public static SupaSkinConfig defaults() {
+        return new SupaSkinConfig("auto", true, 4, List.of("java", "kotlin", "xml", "ts"));
     }
 }</code></pre>
   </div>
   <div title="Kotlin" data-tab="Kotlin">
     <pre><code class="language-kotlin">package dev.cotterell.maven.skins
-data class FuroSkinConfig(
+data class SupaSkinConfig(
     val defaultTheme: String = "auto",
     val tocSidebar: Boolean = true,
     val tocMaxDepth: Int = 4,
@@ -76,7 +76,7 @@ export function openSearchModal(dialogEl: HTMLDialogElement): void {
 -  <artifactId>maven-fluido-skin</artifactId>
 -  <version>2.0.0-M11</version>
 +  <groupId>dev.cotterell.maven.skins</groupId>
-+  <artifactId>mvn-furo-skin</artifactId>
++  <artifactId>supa-maven-skin</artifactId>
 +  <version>0.1.0-SNAPSHOT</version>
  </skin>
 ```
@@ -94,7 +94,7 @@ Standard Markdown and Doxia `table.bodyTable` elements are automatically normali
 
 ## Bootstrap 6 UI Components
 
-Because `mvn-furo-skin` bundles **all 28 Bootstrap `6.0.0-alpha.1` component families and 20 interactive JS plugins**, you can use Bootstrap 6 buttons, badges, avatars, chips, accordions, steppers, menus, dialogs, drawers, comboboxes, datepickers, and cards directly in documentation pages:
+Because `supa-maven-skin` bundles **all 28 Bootstrap `6.0.0-alpha.1` component families and 20 interactive JS plugins**, you can use Bootstrap 6 buttons, badges, avatars, chips, accordions, steppers, menus, dialogs, drawers, comboboxes, datepickers, and cards directly in documentation pages:
 
 <div class="not-prose my-4">
   <div class="d-flex flex-wrap gap-2 mb-3">
@@ -121,7 +121,7 @@ Because `mvn-furo-skin` bundles **all 28 Bootstrap `6.0.0-alpha.1` component fam
 <details class="mb-3">
   <summary class="fw-semibold" style="cursor: pointer;">Click to expand build pipeline details</summary>
   <p class="mt-2 mb-0">
-    <code>frontend-maven-plugin</code> runs Vite and Dart Sass during the <code>generate-resources</code> phase, outputting <code>css/mvn-furo-skin.min.css</code> and <code>js/mvn-furo-skin.min.js</code> into <code>target/classes/</code>.
+    <code>frontend-maven-plugin</code> runs Vite and Dart Sass during the <code>generate-resources</code> phase, outputting <code>css/supa-maven-skin.min.css</code> and <code>js/supa-maven-skin.min.js</code> into <code>target/classes/</code>.
   </p>
 </details>
 
@@ -129,13 +129,13 @@ Because `mvn-furo-skin` bundles **all 28 Bootstrap `6.0.0-alpha.1` component fam
 
 ### Mermaid Architecture Diagram
 
-When a page contains a `mermaid` code block, `mvn-furo-skin` lazily loads Mermaid from CDN and renders it with matching Light/Dark theme variables:
+When a page contains a `mermaid` code block, `supa-maven-skin` lazily loads Mermaid from CDN and renders it with matching Light/Dark theme variables:
 
 ```mermaid
 flowchart LR
     A[pom.xml & site.xml] --> B[frontend-maven-plugin]
     B --> C[Vite + SCSS + TypeScript]
-    C --> D[mvn-furo-skin.jar]
+    C --> D[supa-maven-skin.jar]
     D --> E[maven-site-plugin 3.21.0]
     E --> F[3-Column Furo HTML5 Site]
 ```

@@ -1,4 +1,4 @@
-# Welcome to Sample Furo Site
+# Welcome to Sample Supa Site
 
 This page tests the Furo 3-column layout and Prev/Next link generation.
 

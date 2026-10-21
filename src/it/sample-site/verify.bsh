@@ -7,12 +7,12 @@ if ( !siteDir.isDirectory() ) {
     throw new IllegalStateException( "target/site directory was not generated" );
 }
 
-File cssFile = new File( siteDir, "css/mvn-furo-skin.min.css" );
+File cssFile = new File( siteDir, "css/supa-maven-skin.min.css" );
 if ( !cssFile.isFile() || cssFile.length() < 1000 ) {
     throw new IllegalStateException( "Bundled CSS asset missing or empty" );
 }
 
-File jsFile = new File( siteDir, "js/mvn-furo-skin.min.js" );
+File jsFile = new File( siteDir, "js/supa-maven-skin.min.js" );
 if ( !jsFile.isFile() || jsFile.length() < 1000 ) {
     throw new IllegalStateException( "Bundled JS asset missing or empty" );
 }

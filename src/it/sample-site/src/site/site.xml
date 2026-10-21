@@ -2,7 +2,7 @@
 <site xmlns="http://maven.apache.org/SITE/2.0.0"
       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
       xsi:schemaLocation="http://maven.apache.org/SITE/2.0.0 https://maven.apache.org/xsd/site-2.0.0.xsd"
-      name="Sample Furo Site">
+      name="Sample Supa Site">
 
   <skin>
     <groupId>${skinGroupId}</groupId>
@@ -11,10 +11,10 @@
   </skin>
 
   <custom>
-    <furoSkin>
+    <supaSkin>
       <defaultTheme>auto</defaultTheme>
       <announcement>Integration Test Announcement</announcement>
-      <sourceRepository>https://github.com/mepcott/mvn-furo-skin</sourceRepository>
+      <sourceRepository>https://git.cotterell.dev/mepcotterell/supa-maven-skin</sourceRepository>
       <sourceBranch>main</sourceBranch>
       <sourceDirectory>src/site</sourceDirectory>
       <lightCssVariables>
@@ -23,7 +23,7 @@
       <darkCssVariables>
         <color-brand-primary>#6699ff</color-brand-primary>
       </darkCssVariables>
-    </furoSkin>
+    </supaSkin>
   </custom>
 
   <body>

@@ -5,16 +5,16 @@
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>dev.cotterell.maven.skins</groupId>
-  <artifactId>mvn-furo-skin</artifactId>
+  <artifactId>supa-maven-skin</artifactId>
   <version>0.1.0-SNAPSHOT</version>
   <packaging>jar</packaging>
 
-  <name>Maven Furo Skin</name>
+  <name>Supa Maven Skin</name>
   <description>
     A clean, responsive Maven Site Skin inspired by Sphinx Furo, built with
     Bootstrap 6 (Alpha), frontend-maven-plugin, Vite, SCSS, and TypeScript.
   </description>
-  <url>https://git.cotterell.dev/mepcotterell/mvn-furo-skin</url>
+  <url>https://git.cotterell.dev/mepcotterell/supa-maven-skin</url>
   <inceptionYear>2026</inceptionYear>
 
   <licenses>
@@ -40,9 +40,9 @@
   </developers>
 
   <scm>
-    <connection>scm:git:https://git.cotterell.dev/mepcotterell/mvn-furo-skin.git</connection>
-    <developerConnection>scm:git:ssh://git@git.cotterell.dev/mepcotterell/mvn-furo-skin.git</developerConnection>
-    <url>https://git.cotterell.dev/mepcotterell/mvn-furo-skin</url>
+    <connection>scm:git:https://git.cotterell.dev/mepcotterell/supa-maven-skin.git</connection>
+    <developerConnection>scm:git:ssh://git@git.cotterell.dev/mepcotterell/supa-maven-skin.git</developerConnection>
+    <url>https://git.cotterell.dev/mepcotterell/supa-maven-skin</url>
     <tag>HEAD</tag>
   </scm>
 

@@ -7,6 +7,6 @@ Second page in the menu to verify Previous / Next navigation cards.
 ```xml
 <skin>
   <groupId>dev.cotterell.maven.skins</groupId>
-  <artifactId>mvn-furo-skin</artifactId>
+  <artifactId>supa-maven-skin</artifactId>
 </skin>
 ```

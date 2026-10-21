@@ -1,11 +1,22 @@
 // ============================================================================
-// Furo Design Tokens & Bootstrap 6 Token Bridge
-// Supports Light, Dark, and Auto (OS preference via light-dark()) modes, plus
-// user overrides via <lightCssVariables> and <darkCssVariables> in site.xml.
+// Furo Design Tokens, Accessible Color Schemes & Bootstrap 6 Token Bridge
+//
+// Built-in Color Schemes (configured via <colorScheme> in site.xml or runtime
+// [data-furo-palette] on <html>):
+//   1. furo                - Sphinx Furo default (WCAG 2.2 AA >= 4.5:1)
+//   2. bootstrap           - Bootstrap 6 native OKLCH (WCAG 2.2 AA >= 4.5:1)
+//   3. modus               - Emacs Modus Operandi / Vivendi (WCAG 2.2 AAA >= 7.0:1)
+//   4. modus-tinted        - Low-glare warm cream / night sky (WCAG 2.2 AAA >= 7.0:1)
+//   5. modus-deuteranopia  - Red-green colorblind safe (WCAG 2.2 AAA >= 7.0:1)
+//   6. modus-tritanopia    - Blue-yellow colorblind safe (WCAG 2.2 AAA >= 7.0:1)
+//
+// All palettes support Light, Dark, and Auto (OS preference via light-dark())
+// polarities, plus user overrides via <lightCssVariables> and <darkCssVariables>.
 // ============================================================================
 
 :root,
-:host {
+:host,
+[data-furo-palette="furo"] {
   // Layout dimensions matching Sphinx Furo
   --furo-sidebar-width: 17.5rem;      // 280px
   --furo-toc-width: 15rem;            // 240px
@@ -16,53 +27,333 @@
   --font-stack: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
   --font-stack--monospace: "SFMono-Regular", Menlo, Consolas, Monaco, "Liberation Mono", "Lucida Console", monospace;
 
-  // Canonical Furo CSS Custom Properties (Light / Dark aware via light-dark())
-  --color-brand-primary: light-dark(#2962ff, #448aff);
-  --color-brand-content: light-dark(#2a5adf, #5c9aff);
+  // 1. Default Palette: Sphinx Furo (WCAG 2.2 AA+ verified across all surfaces)
+  --color-brand-primary: light-dark(#1d50d8, #589bf7);
+  --color-brand-content: light-dark(#1d50d8, #6ba6ff);
 
   --color-background-primary: light-dark(#ffffff, #131416);
   --color-background-secondary: light-dark(#f8f9fb, #1a1c1e);
   --color-background-hover: light-dark(#efeff4, #222529);
-  --color-background-border: light-dark(#eeebee, #2b2e33);
+  --color-background-border: light-dark(#e5e7eb, #2b2e33);
   --color-background-item: light-dark(#f1f3f5, #212529);
 
   --color-foreground-primary: light-dark(#111827, #e5e7eb);
-  --color-foreground-secondary: light-dark(#4b5563, #9ca3af);
-  --color-foreground-muted: light-dark(#6b7280, #6b7280);
-  --color-foreground-border: light-dark(#d1d5db, #374151);
+  --color-foreground-secondary: light-dark(#4b5563, #adb5bd);
+  --color-foreground-muted: light-dark(#525866, #949da7);
+  --color-foreground-border: light-dark(#6e7785, #6c757d);
 
   --color-code-background: light-dark(#f6f8fa, #1c1f24);
-  --color-inline-code-background: light-dark(rgba(175, 184, 193, 0.2), rgba(110, 118, 129, 0.35));
+  --color-inline-code-background: light-dark(rgba(175, 184, 193, 0.22), rgba(110, 118, 129, 0.35));
+  --color-inline-code-text: var(--color-foreground-primary);
 
-  // Admonition Semantic Colors (Note, Tip, Important, Warning, Caution/Danger)
-  --furo-admonition-note-accent: light-dark(#0969da, #4493f8);
+  // Admonition & Semantic Accents (Note/Info, Tip/Success, Important/Accent, Warning, Caution/Danger)
+  --furo-admonition-note-accent: light-dark(#0550ae, #58a6ff);
   --furo-admonition-note-bg: light-dark(#ddf4ff, rgba(56, 139, 253, 0.14));
 
-  --furo-admonition-tip-accent: light-dark(#1a7f37, #3fb950);
+  --furo-admonition-tip-accent: light-dark(#116329, #3fb950);
   --furo-admonition-tip-bg: light-dark(#dafbe1, rgba(46, 160, 67, 0.14));
 
-  --furo-admonition-important-accent: light-dark(#8250df, #a371f7);
+  --furo-admonition-important-accent: light-dark(#6e40c9, #b083f0);
   --furo-admonition-important-bg: light-dark(#fbefff, rgba(163, 113, 247, 0.14));
 
-  --furo-admonition-warning-accent: light-dark(#9a6700, #d29922);
+  --furo-admonition-warning-accent: light-dark(#7d4e00, #d29922);
   --furo-admonition-warning-bg: light-dark(#fff8c5, rgba(187, 128, 9, 0.14));
 
-  --furo-admonition-caution-accent: light-dark(#cf222e, #f85149);
+  --furo-admonition-caution-accent: light-dark(#b62324, #ff7b72);
   --furo-admonition-caution-bg: light-dark(#ffebe9, rgba(248, 81, 73, 0.14));
 
-  // Bridge Furo variables into Bootstrap 6 root tokens
+  // Accessibility metadata & focus tokens
+  --furo-wcag-level: "AA";
+  --furo-link-decoration: none;
+  --focus-ring-width: 2px;
+  --focus-ring-offset: 2px;
+}
+
+// ============================================================================
+// 2. Bootstrap 6 Native OKLCH Palette (WCAG 2.2 AA >= 4.5:1)
+// ============================================================================
+[data-furo-palette="bootstrap"] {
+  --color-brand-primary: light-dark(#0a53be, #6ea8fe);
+  --color-brand-content: light-dark(#0a53be, #6ea8fe);
+
+  --color-background-primary: light-dark(#ffffff, #0f1115);
+  --color-background-secondary: light-dark(#f8f9fa, #161920);
+  --color-background-hover: light-dark(#e9ecef, #212529);
+  --color-background-border: light-dark(#dee2e6, #2b3035);
+  --color-background-item: light-dark(#f1f3f5, #1d2127);
+
+  --color-foreground-primary: light-dark(#181b20, #f1f3f5);
+  --color-foreground-secondary: light-dark(#434952, #adb5bd);
+  --color-foreground-muted: light-dark(#565e69, #9099a2);
+  --color-foreground-border: light-dark(#6c757d, #6c757d);
+
+  --color-code-background: light-dark(#f8f9fa, #161920);
+  --color-inline-code-background: light-dark(rgba(24, 27, 32, 0.08), rgba(241, 243, 245, 0.14));
+  --color-inline-code-text: var(--color-foreground-primary);
+
+  --furo-admonition-note-accent: light-dark(#055160, #6edff6);
+  --furo-admonition-note-bg: light-dark(#cff4fc, rgba(13, 202, 240, 0.15));
+
+  --furo-admonition-tip-accent: light-dark(#0f5132, #75b798);
+  --furo-admonition-tip-bg: light-dark(#d1e7dd, rgba(25, 135, 84, 0.15));
+
+  --furo-admonition-important-accent: light-dark(#59359a, #b39ddb);
+  --furo-admonition-important-bg: light-dark(#e2d9f3, rgba(111, 66, 193, 0.15));
+
+  --furo-admonition-warning-accent: light-dark(#664d03, #ffda6a);
+  --furo-admonition-warning-bg: light-dark(#fff3cd, rgba(255, 193, 7, 0.15));
+
+  --furo-admonition-caution-accent: light-dark(#842029, #ea868f);
+  --furo-admonition-caution-bg: light-dark(#f8d7da, rgba(220, 53, 69, 0.15));
+
+  --furo-wcag-level: "AA";
+  --furo-link-decoration: underline;
+  --focus-ring-width: 3px;
+  --focus-ring-offset: 1px;
+}
+
+// ============================================================================
+// 3. Modus Palette: Modus Operandi (Light) / Modus Vivendi (Dark)
+//    Strict WCAG 2.2 Level AAA (>= 7.0:1 contrast across all text & surfaces)
+//    Inspired by Protesilaos Stavrou's Emacs Modus Themes
+// ============================================================================
+@mixin modus-high-contrast-tokens {
+  --color-brand-primary: light-dark(#0031a9, #2fafff);
+  --color-brand-content: light-dark(#0031a9, #79a8ff);
+
+  --color-background-primary: light-dark(#ffffff, #000000);
+  --color-background-secondary: light-dark(#f2f2f2, #1e1e1e);
+  --color-background-hover: light-dark(#dae5ec, #2d2d2d);
+  --color-background-border: light-dark(#9f9f9f, #646464);
+  --color-background-item: light-dark(#e8e8e8, #282828);
+
+  --color-foreground-primary: light-dark(#000000, #ffffff);
+  --color-foreground-secondary: light-dark(#193668, #c6daff);
+  --color-foreground-muted: light-dark(#505050, #adadad);
+  --color-foreground-border: light-dark(#767676, #888888);
+
+  --color-code-background: light-dark(#f2f2f2, #1e1e1e);
+  --color-inline-code-background: light-dark(#e5e5e5, #2d2d2d);
+  --color-inline-code-text: var(--color-foreground-secondary);
+
+  --furo-admonition-note-accent: light-dark(#005077, #00bcff);
+  --furo-admonition-note-bg: light-dark(#ebf6fa, #0f2537);
+
+  --furo-admonition-tip-accent: light-dark(#005a00, #52c852);
+  --furo-admonition-tip-bg: light-dark(#e8f6e8, #0f2918);
+
+  --furo-admonition-important-accent: light-dark(#531ab6, #b6a0ff);
+  --furo-admonition-important-bg: light-dark(#f4eefc, #211838);
+
+  --furo-admonition-warning-accent: light-dark(#604800, #d0bc00);
+  --furo-admonition-warning-bg: light-dark(#fcf5e0, #2a240a);
+
+  --furo-admonition-caution-accent: light-dark(#970000, #ff7f7a);
+  --furo-admonition-caution-bg: light-dark(#ffecec, #331111);
+
+  --furo-wcag-level: "AAA";
+  --furo-link-decoration: underline;
+  --focus-ring-width: 3px;
+  --focus-ring-offset: 2px;
+}
+
+[data-furo-palette="modus"] {
+  @include modus-high-contrast-tokens;
+}
+
+// Auto-escalate to Modus AAA when the user's OS requests increased contrast
+// and no explicit non-furo palette has been locked.
+@media (prefers-contrast: more) {
+  :root:not([data-furo-palette]),
+  :root[data-furo-palette="furo"]:not([data-furo-palette-locked="true"]) {
+    @include modus-high-contrast-tokens;
+  }
+}
+
+// ============================================================================
+// 4. Modus Tinted: Modus Operandi Tinted / Modus Vivendi Tinted
+//    Softened warm cream (#fbf7f0) & night-sky (#0d0e1c) surfaces to reduce
+//    halation/glare while strictly preserving WCAG 2.2 AAA (>= 7.0:1) contrast
+// ============================================================================
+[data-furo-palette="modus-tinted"] {
+  --color-brand-primary: light-dark(#0031a9, #4cbdff);
+  --color-brand-content: light-dark(#0031a9, #82b0ff);
+
+  --color-background-primary: light-dark(#fbf7f0, #0d0e1c);
+  --color-background-secondary: light-dark(#efe9dd, #1d2235);
+  --color-background-hover: light-dark(#dfd5c0, #2b3045);
+  --color-background-border: light-dark(#9f9690, #61647a);
+  --color-background-item: light-dark(#e5decb, #242a40);
+
+  --color-foreground-primary: light-dark(#000000, #ffffff);
+  --color-foreground-secondary: light-dark(#193668, #c6daff);
+  --color-foreground-muted: light-dark(#4a4845, #b0b8ca);
+  --color-foreground-border: light-dark(#6e6a64, #7c8498);
+
+  --color-code-background: light-dark(#efe9dd, #1d2235);
+  --color-inline-code-background: light-dark(#e3dccb, #2b3045);
+  --color-inline-code-text: var(--color-foreground-secondary);
+
+  --furo-admonition-note-accent: light-dark(#004c70, #00c4ff);
+  --furo-admonition-note-bg: light-dark(#e6eff3, #13283d);
+
+  --furo-admonition-tip-accent: light-dark(#005400, #58cc58);
+  --furo-admonition-tip-bg: light-dark(#e4f1e4, #142b22);
+
+  --furo-admonition-important-accent: light-dark(#531ab6, #bfaaff);
+  --furo-admonition-important-bg: light-dark(#efe8f8, #241e3f);
+
+  --furo-admonition-warning-accent: light-dark(#594300, #d8c400);
+  --furo-admonition-warning-bg: light-dark(#f6eed5, #2d2814);
+
+  --furo-admonition-caution-accent: light-dark(#8f0000, #ff8782);
+  --furo-admonition-caution-bg: light-dark(#f8e4e4, #351822);
+
+  --furo-wcag-level: "AAA";
+  --furo-link-decoration: underline;
+  --focus-ring-width: 3px;
+  --focus-ring-offset: 2px;
+}
+
+// ============================================================================
+// 5. Modus Deuteranopia (Red-Green Colorblind Safe — WCAG 2.2 AAA >= 7.0:1)
+//    Replaces red/green status encoding with Blue / Gold / Warm Amber-Orange
+// ============================================================================
+[data-furo-palette="modus-deuteranopia"] {
+  @include modus-high-contrast-tokens;
+
+  --furo-admonition-note-accent: light-dark(#005077, #00bcff);
+  --furo-admonition-note-bg: light-dark(#ebf6fa, #0f2537);
+
+  // Positive / Tip uses unmistakable royal/sky blue instead of green
+  --furo-admonition-tip-accent: light-dark(#0031a9, #2fafff);
+  --furo-admonition-tip-bg: light-dark(#e8effc, #102240);
+
+  --furo-admonition-important-accent: light-dark(#531ab6, #b6a0ff);
+  --furo-admonition-important-bg: light-dark(#f4eefc, #211838);
+
+  // Warning uses high-contrast olive-gold / yellow
+  --furo-admonition-warning-accent: light-dark(#604800, #d0bc00);
+  --furo-admonition-warning-bg: light-dark(#fcf5e0, #2a240a);
+
+  // Caution / Danger uses deep burnt umber / warm orange instead of red
+  --furo-admonition-caution-accent: light-dark(#6e3b00, #ffa00f);
+  --furo-admonition-caution-bg: light-dark(#f9efe4, #2f1f0a);
+}
+
+// ============================================================================
+// 6. Modus Tritanopia (Blue-Yellow Colorblind Safe — WCAG 2.2 AAA >= 7.0:1)
+//    Uses Deep Teal/Cyan, Magenta-Rose, and Crimson instead of blue/yellow pairs
+// ============================================================================
+[data-furo-palette="modus-tritanopia"] {
+  @include modus-high-contrast-tokens;
+
+  --color-brand-primary: light-dark(#005454, #00d3d0);
+  --color-brand-content: light-dark(#005454, #00d3d0);
+
+  --furo-admonition-note-accent: light-dark(#005077, #00bcff);
+  --furo-admonition-note-bg: light-dark(#ebf6fa, #0f2537);
+
+  // Positive / Tip uses deep teal / aqua
+  --furo-admonition-tip-accent: light-dark(#005454, #00d3d0);
+  --furo-admonition-tip-bg: light-dark(#e6f5f5, #0d2929);
+
+  // Important uses plum / magenta
+  --furo-admonition-important-accent: light-dark(#721045, #feacd0);
+  --furo-admonition-important-bg: light-dark(#faedf4, #301424);
+
+  // Warning uses magenta-berry instead of yellow
+  --furo-admonition-warning-accent: light-dark(#6f0f4a, #f78fe7);
+  --furo-admonition-warning-bg: light-dark(#faecf5, #2e1427);
+
+  // Caution / Danger uses high-contrast crimson / coral
+  --furo-admonition-caution-accent: light-dark(#970000, #ff7f7a);
+  --furo-admonition-caution-bg: light-dark(#ffecec, #331111);
+}
+
+// ============================================================================
+// Universal Semantic Token Bridge (Furo -> Bootstrap 6 OKLCH Component Tokens)
+// Dynamically derives Bootstrap 6 --primary-*, --success-*, --warning-*,
+// --danger-*, --info-*, and --accent-* from the active palette or user overrides!
+// ============================================================================
+:root,
+:host,
+[data-furo-palette] {
   --bg-body: var(--color-background-primary);
   --bg-1: var(--color-background-secondary);
   --bg-2: var(--color-background-hover);
+  --bg-3: var(--color-background-item);
   --fg-body: var(--color-foreground-primary);
   --fg-1: var(--color-foreground-primary);
   --fg-2: var(--color-foreground-secondary);
   --fg-3: var(--color-foreground-muted);
   --border-color: var(--color-background-border);
   --link-color: var(--color-brand-content);
+  --link-decoration: var(--furo-link-decoration, none);
   --link-hover-color: var(--color-brand-primary);
   --body-font-family: var(--font-stack);
   --font-mono: var(--font-stack--monospace);
+
+  // Primary theme tokens derived from --color-brand-primary
+  --primary-base: var(--color-brand-primary);
+  --primary-fg: var(--color-brand-content);
+  --primary-fg-emphasis: color-mix(in oklch, var(--color-brand-content) 82%, var(--color-foreground-primary));
+  --primary-bg: var(--color-brand-primary);
+  --primary-bg-subtle: color-mix(in oklch, var(--color-brand-primary) 12%, var(--color-background-primary));
+  --primary-bg-muted: color-mix(in oklch, var(--color-brand-primary) 22%, var(--color-background-primary));
+  --primary-border: color-mix(in oklch, var(--color-brand-primary) 45%, var(--color-background-primary));
+  --primary-focus-ring: color-mix(in oklch, var(--color-brand-primary) 65%, var(--color-background-primary));
+  --primary-contrast: light-dark(#ffffff, #000000);
+
+  // Accent theme tokens derived from --furo-admonition-important-accent
+  --accent-base: var(--furo-admonition-important-accent);
+  --accent-fg: var(--furo-admonition-important-accent);
+  --accent-fg-emphasis: color-mix(in oklch, var(--furo-admonition-important-accent) 82%, var(--color-foreground-primary));
+  --accent-bg: var(--furo-admonition-important-accent);
+  --accent-bg-subtle: var(--furo-admonition-important-bg);
+  --accent-bg-muted: color-mix(in oklch, var(--furo-admonition-important-accent) 22%, var(--color-background-primary));
+  --accent-border: color-mix(in oklch, var(--furo-admonition-important-accent) 45%, var(--color-background-primary));
+  --accent-contrast: light-dark(#ffffff, #000000);
+
+  // Success theme tokens derived from --furo-admonition-tip-accent
+  --success-base: var(--furo-admonition-tip-accent);
+  --success-fg: var(--furo-admonition-tip-accent);
+  --success-fg-emphasis: color-mix(in oklch, var(--furo-admonition-tip-accent) 82%, var(--color-foreground-primary));
+  --success-bg: var(--furo-admonition-tip-accent);
+  --success-bg-subtle: var(--furo-admonition-tip-bg);
+  --success-bg-muted: color-mix(in oklch, var(--furo-admonition-tip-accent) 22%, var(--color-background-primary));
+  --success-border: color-mix(in oklch, var(--furo-admonition-tip-accent) 45%, var(--color-background-primary));
+  --success-contrast: light-dark(#ffffff, #000000);
+
+  // Info theme tokens derived from --furo-admonition-note-accent
+  --info-base: var(--furo-admonition-note-accent);
+  --info-fg: var(--furo-admonition-note-accent);
+  --info-fg-emphasis: color-mix(in oklch, var(--furo-admonition-note-accent) 82%, var(--color-foreground-primary));
+  --info-bg: var(--furo-admonition-note-accent);
+  --info-bg-subtle: var(--furo-admonition-note-bg);
+  --info-bg-muted: color-mix(in oklch, var(--furo-admonition-note-accent) 22%, var(--color-background-primary));
+  --info-border: color-mix(in oklch, var(--furo-admonition-note-accent) 45%, var(--color-background-primary));
+  --info-contrast: light-dark(#ffffff, #000000);
+
+  // Warning theme tokens derived from --furo-admonition-warning-accent
+  --warning-base: var(--furo-admonition-warning-accent);
+  --warning-fg: var(--furo-admonition-warning-accent);
+  --warning-fg-emphasis: color-mix(in oklch, var(--furo-admonition-warning-accent) 82%, var(--color-foreground-primary));
+  --warning-bg: var(--furo-admonition-warning-accent);
+  --warning-bg-subtle: var(--furo-admonition-warning-bg);
+  --warning-bg-muted: color-mix(in oklch, var(--furo-admonition-warning-accent) 22%, var(--color-background-primary));
+  --warning-border: color-mix(in oklch, var(--furo-admonition-warning-accent) 45%, var(--color-background-primary));
+  --warning-contrast: light-dark(#ffffff, #000000);
+
+  // Danger theme tokens derived from --furo-admonition-caution-accent
+  --danger-base: var(--furo-admonition-caution-accent);
+  --danger-fg: var(--furo-admonition-caution-accent);
+  --danger-fg-emphasis: color-mix(in oklch, var(--furo-admonition-caution-accent) 82%, var(--color-foreground-primary));
+  --danger-bg: var(--furo-admonition-caution-accent);
+  --danger-bg-subtle: var(--furo-admonition-caution-bg);
+  --danger-bg-muted: color-mix(in oklch, var(--furo-admonition-caution-accent) 22%, var(--color-background-primary));
+  --danger-border: color-mix(in oklch, var(--furo-admonition-caution-accent) 45%, var(--color-background-primary));
+  --danger-contrast: light-dark(#ffffff, #000000);
 }
 
 // Explicit theme overrides when data-bs-theme is set

@@ -1,6 +1,6 @@
 # Bootstrap 6 Components Showcase
 
-**Maven Furo Skin** bundles the complete **Bootstrap 6 (`6.0.0-alpha.1`)** component library and all **20 interactive JavaScript plugins**, automatically isolating Bootstrap components from `.prose` typography rules and bridging Furo's adaptive Light/Dark color tokens.
+**Supa Maven Skin** bundles the complete **Bootstrap 6 (`6.0.0-alpha.1`)** component library and all **20 interactive JavaScript plugins**, automatically isolating Bootstrap components from `.prose` typography rules and bridging Furo's adaptive Light/Dark color tokens.
 
 Site authors can use standard Bootstrap 6 HTML markup, declarative Markdown shorthands (`> [!ALERT:theme]`, `.furo-accordion`, `.furo-stepper`), or Velocity helper macros (`#bsAlert`, `#bsBadge`, `#bsCard`).
 
@@ -123,7 +123,7 @@ Bootstrap 6 introduces first-class **Avatars** (`.avatar`, `.avatar-stack`, `.av
   </div>
   <label class="form-label small fw-semibold text-body-secondary">Interactive Chip Input (Type a tag and press comma or Enter):</label>
   <div class="chip-input" data-bs-chips="true" data-bs-placeholder="Add topic tag...">
-    <span class="chip">furo-skin</span>
+    <span class="chip">supa-maven-skin</span>
     <span class="chip">bootstrap-6</span>
     <input type="text" class="form-ghost" placeholder="Add topic tag..." aria-label="Add topic tag" />
   </div>
@@ -183,7 +183,7 @@ In addition to Furo's `> [!NOTE]` admonitions, site authors can use native Boots
     <button type="button" class="btn btn-outline theme-primary" data-bs-toggle="drawer" data-bs-target="#demoRightDrawer">Open Right Drawer</button>
     <button type="button" class="btn btn-subtle theme-success" data-furo-toast-target="#demoLiveToast">Trigger Live Toast</button>
     <button type="button" class="btn btn-outline theme-secondary" data-bs-toggle="tooltip" data-bs-placement="top" title="Tooltip powered by Floating UI in Bootstrap 6">Hover for Tooltip</button>
-    <button type="button" class="btn btn-outline theme-info" data-bs-toggle="popover" data-bs-placement="top" data-bs-title="Bootstrap 6 Popover" data-bs-content="Popovers and Tooltips are automatically initialized by Maven Furo Skin on page load.">Click for Popover</button>
+    <button type="button" class="btn btn-outline theme-info" data-bs-toggle="popover" data-bs-placement="top" data-bs-title="Bootstrap 6 Popover" data-bs-content="Popovers and Tooltips are automatically initialized by Supa Maven Skin on page load.">Click for Popover</button>
   </div>
   <dialog class="dialog" id="demoModalDialog" aria-labelledby="demoModalDialogTitle">
     <div class="dialog-content">
@@ -212,7 +212,7 @@ In addition to Furo's `> [!NOTE]` admonitions, site authors can use native Boots
   <div class="toast-container position-fixed bottom-0 end-0 p-3">
     <div id="demoLiveToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
       <div class="toast-header">
-        <strong class="me-auto">Maven Furo Skin</strong>
+        <strong class="me-auto">Supa Maven Skin</strong>
         <small>Just now</small>
         <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
       </div>
@@ -305,7 +305,7 @@ Authors can write a simple `<ol class="furo-stepper" title="3">` ordered list an
 Wrap `<div title="Question Title">` items inside `<div class="furo-accordion">` to generate a full Bootstrap 6 `.accordion` with `Collapse` transitions and zero blank-line issues:
 
 <div class="furo-accordion">
-  <div title="How does Maven Furo Skin isolate Bootstrap components from .prose?" class="open">
+  <div title="How does Supa Maven Skin isolate Bootstrap components from .prose?" class="open">
     <p><code>initBootstrapComponents()</code> automatically adds <code>.not-prose</code> to top-level Bootstrap component containers and applies CSS guardrails in <code>_bootstrap-furo.scss</code> so lists, links, and headings inside components never inherit article prose styles.</p>
   </div>
   <div title="Are all 20 Bootstrap 6 JavaScript plugins available globally?">

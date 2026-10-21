@@ -1,53 +1,34 @@
 // ============================================================================
-// Center Prose Content, Admonitions, Code Blocks, Tables, Prev/Next & Search
+// Prose Typography & Content Element Refinements (Bootstrap 6 .prose base)
 // ============================================================================
 
 .furo-article {
-  max-width: var(--furo-content-max-width);
-  width: 100%;
-  margin: 0 auto;
-  flex: 1 0 auto;
+  font-family: var(--font-stack);
   color: var(--color-foreground-primary);
   font-size: 1rem;
   line-height: 1.7;
 
-  // Doxia wraps headings and paragraphs in nested <section> tags and inserts
-  // empty <a id="..."></a> anchor tags before headings. Zero out their margins
-  // so spacing is controlled strictly by typographic elements.
-  section {
-    margin: 0 !important;
-    padding: 0 !important;
-  }
-
-  a[id]:empty,
-  a[name]:empty {
-    display: block;
-    height: 0;
-    margin: 0 !important;
-    padding: 0 !important;
-  }
-
-  // Override Bootstrap 6 .prose negative margin-block-end (-0.8125rem) on headings
-  // so headings followed by .not-prose elements (code blocks, admonitions, tables,
-  // diagrams) or Doxia sections always have balanced vertical rhythm.
+  // Heading hierarchy & anchor permalinks
   h1,
   h2,
   h3,
   h4,
   h5,
   h6 {
-    position: relative;
-    scroll-margin-top: 2rem;
-    font-weight: 700;
-    letter-spacing: -0.015em;
+    font-family: var(--font-stack--headings);
     color: var(--color-foreground-primary);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    scroll-margin-top: calc(var(--furo-header-height) + 1.25rem);
+    position: relative;
 
     .furo-headerlink {
-      position: relative;
+      display: inline-block;
       margin-left: 0.4rem;
       font-weight: 400;
+      font-size: 0.85em;
       color: var(--color-foreground-muted);
-      text-decoration: none;
+      text-decoration: none !important;
       opacity: 0;
       transition: opacity 0.15s ease, color 0.15s ease;
 
@@ -56,95 +37,82 @@
         opacity: 1;
         color: var(--color-brand-primary);
       }
-
-      &.is-copied {
-        opacity: 1;
-        color: var(--furo-admonition-tip-accent);
-
-        &::after {
-          content: attr(data-copied-label);
-          position: absolute;
-          left: 100%;
-          top: 50%;
-          transform: translate(0.4rem, -50%);
-          padding: 0.15rem 0.45rem;
-          border-radius: 0.25rem;
-          font-size: 0.6875rem;
-          font-weight: 600;
-          letter-spacing: 0;
-          white-space: nowrap;
-          background-color: var(--color-background-secondary);
-          color: var(--furo-admonition-tip-accent);
-          border: 1px solid var(--color-background-border);
-        }
-      }
     }
 
-    &:hover .furo-headerlink {
+    &:hover .furo-headerlink,
+    &:focus-within .furo-headerlink {
       opacity: 1;
     }
   }
 
   h1 {
     font-size: clamp(1.875rem, 2.5vw, 2.25rem);
-    line-height: 1.22;
-    margin-block: 0 1.25rem !important;
+    line-height: 1.2;
+    margin-top: 0 !important;
+    margin-bottom: 1.5rem !important;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--color-background-border);
   }
 
   h2 {
     font-size: clamp(1.375rem, 1.8vw, 1.625rem);
     line-height: 1.3;
-    margin-block: 2.75rem 1rem !important;
-    padding-bottom: 0.5rem;
+    margin-top: 2.5rem !important;
+    margin-bottom: 1rem !important;
+    padding-bottom: 0.375rem;
     border-bottom: 1px solid var(--color-background-border);
   }
 
   h3 {
     font-size: 1.25rem;
     line-height: 1.35;
-    margin-block: 2rem 0.75rem !important;
+    margin-top: 2rem !important;
+    margin-bottom: 0.75rem !important;
   }
 
   h4 {
     font-size: 1.0625rem;
     line-height: 1.4;
-    margin-block: 1.5rem 0.625rem !important;
+    margin-top: 1.5rem !important;
+    margin-bottom: 0.5rem !important;
   }
 
-  h5,
-  h6 {
-    font-size: 0.9375rem;
-    line-height: 1.45;
-    margin-block: 1.25rem 0.5rem !important;
+  // Strip Doxia legacy section spacing anomalies
+  section {
+    margin: 0;
+    padding: 0;
   }
 
   p {
-    margin-block: 0 1.125rem !important;
+    margin-top: 0;
+    margin-bottom: 1.125rem;
   }
 
   ul,
   ol {
-    margin-block: 0 1.25rem !important;
-    padding-inline-start: 1.5rem;
+    margin-top: 0;
+    margin-bottom: 1.125rem;
+    padding-left: 1.5rem;
 
     li {
-      margin-block: 0.375rem;
-      padding-inline-start: 0.25rem;
+      margin-bottom: 0.35rem;
 
       & > ul,
       & > ol {
-        margin-block: 0.375rem 0.5rem !important;
+        margin-top: 0.35rem;
+        margin-bottom: 0.35rem;
       }
     }
   }
 
   dl {
-    margin-block: 0 1.5rem !important;
+    margin-top: 0;
+    margin-bottom: 1.25rem;
 
     dt {
       font-weight: 650;
-      margin-top: 1rem;
       color: var(--color-foreground-primary);
+      margin-top: 0.875rem;
     }
 
     dd {
@@ -499,7 +467,7 @@
   }
 }
 
-// Highlight.js light/dark adaptive token palette
+// Highlight.js accessible palette-aware token styles
 .hljs {
   color: var(--color-foreground-primary);
   background: transparent;
@@ -507,40 +475,75 @@
 
 .hljs-comment,
 .hljs-quote {
-  color: light-dark(#6a737d, #8b949e);
+  color: var(--color-foreground-muted);
   font-style: italic;
 }
 
 .hljs-keyword,
 .hljs-selector-tag,
-.hljs-type {
-  color: light-dark(#cf222e, #ff7b72);
+.hljs-type,
+.hljs-operator {
+  color: var(--furo-admonition-caution-accent);
 }
 
 .hljs-string,
 .hljs-doctag,
 .hljs-regexp {
-  color: light-dark(#0a3069, #a5d6ff);
+  color: var(--color-brand-content);
 }
 
 .hljs-title,
 .hljs-section,
 .hljs-built_in,
 .hljs-function {
-  color: light-dark(#8250df, #d2a8ff);
+  color: var(--furo-admonition-important-accent);
 }
 
 .hljs-attr,
 .hljs-variable,
 .hljs-template-variable,
 .hljs-number,
-.hljs-literal {
-  color: light-dark(#0550ae, #79c0ff);
+.hljs-literal,
+.hljs-symbol,
+.hljs-bullet,
+.hljs-link,
+.hljs-meta {
+  color: var(--furo-admonition-note-accent);
 }
 
 .hljs-name,
-.hljs-tag {
-  color: light-dark(#116329, #7ee787);
+.hljs-tag,
+.hljs-selector-class,
+.hljs-selector-id {
+  color: var(--furo-admonition-tip-accent);
+}
+
+.hljs-addition {
+  display: inline-block;
+  width: calc(100% + 2.5rem);
+  margin-inline: -1.25rem;
+  padding-inline: 1rem 1.25rem;
+  border-left: 0.25rem solid var(--furo-admonition-tip-accent);
+  color: var(--furo-admonition-tip-accent);
+  background-color: var(--furo-admonition-tip-bg);
+}
+
+.hljs-deletion {
+  display: inline-block;
+  width: calc(100% + 2.5rem);
+  margin-inline: -1.25rem;
+  padding-inline: 1rem 1.25rem;
+  border-left: 0.25rem solid var(--furo-admonition-caution-accent);
+  color: var(--furo-admonition-caution-accent);
+  background-color: var(--furo-admonition-caution-bg);
+}
+
+.hljs-emphasis {
+  font-style: italic;
+}
+
+.hljs-strong {
+  font-weight: 700;
 }
 
 // ============================================================================
@@ -603,260 +606,55 @@
   border: 1px solid var(--color-background-border);
   background-color: var(--color-background-primary);
   color: var(--color-foreground-primary);
-  text-decoration: none;
-  max-width: 48%;
-  min-width: 12.5rem;
-  transition: border-color 0.15s ease, background-color 0.15s ease;
+  text-decoration: none !important;
+  transition: border-color 0.15s ease, background-color 0.15s ease, transform 0.15s ease;
+  max-width: calc(50% - 0.5rem);
+  min-width: 12rem;
 
   &:hover {
     border-color: var(--color-brand-primary);
     background-color: var(--color-background-secondary);
-    text-decoration: none;
-
-    .furo-title {
-      color: var(--color-brand-primary);
-    }
   }
 
-  .furo-page-info {
+  .furo-page-nav-icon {
+    flex: 0 0 auto;
+    color: var(--color-foreground-muted);
+  }
+
+  .furo-page-nav-text {
     display: flex;
     flex-direction: column;
-    gap: 0.15rem;
     min-width: 0;
   }
 
-  .furo-context {
-    font-size: 0.71875rem;
+  .furo-page-nav-context {
+    font-size: 0.72rem;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    color: var(--color-foreground-secondary);
+    color: var(--color-foreground-muted);
   }
 
-  .furo-title {
+  .furo-page-nav-title {
     font-size: 0.9375rem;
     font-weight: 600;
-    color: var(--color-brand-content);
+    color: var(--color-brand-primary);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    transition: color 0.15s ease;
   }
-
-  .furo-related-icon {
-    color: var(--color-foreground-secondary);
-    flex: 0 0 auto;
-  }
-}
-
-.furo-prev-page {
-  margin-right: auto;
-  text-align: left;
-  order: -1;
 }
 
 .furo-next-page {
   margin-left: auto;
   text-align: right;
   justify-content: flex-end;
-  order: 2;
 }
 
-// ============================================================================
-// Furo Back-to-Top Floating Pill
-// ============================================================================
-.furo-back-to-top {
-  position: fixed;
-  top: 1rem;
-  left: 50%;
-  transform: translate(-50%, -150%);
-  z-index: 1030;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.375rem;
-  padding: 0.375rem 0.875rem;
-  border-radius: 999px;
-  border: 1px solid var(--color-background-border);
-  background-color: var(--color-background-primary);
-  color: var(--color-foreground-primary);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
-  font-size: 0.78125rem;
-  font-weight: 600;
-  opacity: 0;
-  pointer-events: none;
-  cursor: pointer;
-  transition: transform 0.2s ease, opacity 0.2s ease, border-color 0.15s ease, color 0.15s ease;
-
-  &:hover {
-    border-color: var(--color-brand-primary);
-    color: var(--color-brand-primary);
-  }
-
-  &.is-visible {
-    transform: translate(-50%, 0);
-    opacity: 1;
-    pointer-events: auto;
-  }
-}
-
-// ============================================================================
-// Search Dialog Modal (<dialog class="dialog">)
-// ============================================================================
-.furo-search-dialog {
-  width: min(40rem, 92vw);
-  max-height: 80vh;
-  padding: 0;
-  border: 1px solid var(--color-foreground-border);
-  border-radius: 0.75rem;
-  background-color: var(--color-background-primary);
-  color: var(--color-foreground-primary);
-  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.22);
-
-  .furo-search-dialog-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.75rem;
-    padding: 0.875rem 1.25rem;
-    border-bottom: 1px solid var(--color-background-border);
-  }
-
-  .furo-search-input-wrapper {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    flex: 1 1 auto;
-    min-width: 0;
-  }
-
-  .furo-search-modal-icon {
-    color: var(--color-foreground-secondary);
-    flex: 0 0 auto;
-  }
-
-  .furo-search-input {
+@media (max-width: 639.98px) {
+  .furo-prev-page,
+  .furo-next-page {
+    max-width: 100%;
     width: 100%;
-    border: none !important;
-    background: transparent !important;
-    box-shadow: none !important;
-    padding: 0.25rem 0;
-    font-size: 1rem;
-    color: var(--color-foreground-primary);
-
-    &:focus {
-      outline: none;
-    }
-  }
-
-  .furo-search-dialog-body {
-    padding: 1rem 1.25rem;
-    max-height: 55vh;
-    overflow-y: auto;
-  }
-
-  .furo-search-status {
-    font-size: 0.78125rem;
-    font-weight: 500;
-    color: var(--color-foreground-secondary);
-    margin-bottom: 0.625rem;
-  }
-
-  .furo-search-results {
-    display: flex;
-    flex-direction: column;
-    gap: 0.375rem;
-  }
-
-  .furo-search-result-item {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-    padding: 0.65rem 0.875rem;
-    border-radius: 0.4375rem;
-    text-decoration: none;
-    color: var(--color-foreground-primary);
-    border: 1px solid transparent;
-    transition: background-color 0.12s ease, border-color 0.12s ease;
-
-    &:hover,
-    &.is-active {
-      background-color: var(--color-background-hover);
-      border-color: var(--color-brand-primary);
-    }
-
-    .furo-search-result-top {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 0.5rem;
-    }
-
-    .furo-search-result-title {
-      font-weight: 600;
-      font-size: 0.9rem;
-      color: var(--color-brand-content);
-      min-width: 0;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    .furo-search-result-badge {
-      flex: 0 0 auto;
-      font-size: 0.6875rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-      padding: 0.1rem 0.45rem;
-      border-radius: 999px;
-      background-color: var(--color-background-secondary);
-      color: var(--color-foreground-secondary);
-      border: 1px solid var(--color-background-border);
-    }
-
-    .furo-search-result-snippet {
-      font-size: 0.8125rem;
-      line-height: 1.45;
-      color: var(--color-foreground-secondary);
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    .furo-search-mark {
-      background-color: color-mix(in srgb, var(--color-brand-primary) 22%, transparent);
-      color: inherit;
-      padding: 0 0.15rem;
-      border-radius: 0.2rem;
-      font-weight: 600;
-    }
-  }
-
-  .furo-search-dialog-footer {
-    display: flex;
-    align-items: center;
-    justify-content: flex-start;
-    gap: 1.25rem;
-    padding: 0.625rem 1.25rem;
-    font-size: 0.75rem;
-    color: var(--color-foreground-secondary);
-    background-color: var(--color-background-secondary);
-    border-top: 1px solid var(--color-background-border);
-
-    .furo-search-hint {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.35rem;
-    }
-
-    kbd {
-      font-family: var(--font-stack--monospace);
-      font-size: 0.6875rem;
-      padding: 0.1rem 0.35rem;
-      border-radius: 0.25rem;
-      background-color: var(--color-background-primary);
-      border: 1px solid var(--color-foreground-border);
-      color: var(--color-foreground-primary);
-    }
   }
 }
