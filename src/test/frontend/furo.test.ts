@@ -194,7 +194,7 @@ describe('Maven Furo Skin Frontend Modules', () => {
       container.innerHTML = `
         <div class="card"><div class="card-body">Card</div></div>
         <ul class="nav nav-pills"><li class="nav-item"><a class="nav-link active">Tab</a></li></ul>
-        <div class="chip-input" data-bs-chips="true"><span class="chip\">tag</span><input type=\"text\" class=\"form-ghost\" /></div>
+        <div class="chip-input" data-bs-chips="true"><span class="chip">tag</span><input type="text" class="form-ghost" /></div>
       `;
 
       isolateBootstrapComponentsFromProse(container);

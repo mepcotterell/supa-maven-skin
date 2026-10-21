@@ -180,6 +180,16 @@
             </configuration>
           </execution>
           <execution>
+            <id>frontend-lint</id>
+            <goals>
+              <goal>npm</goal>
+            </goals>
+            <phase>test</phase>
+            <configuration>
+              <arguments>run lint</arguments>
+            </configuration>
+          </execution>
+          <execution>
             <id>vitest-unit-tests</id>
             <goals>
               <goal>npm</goal>
