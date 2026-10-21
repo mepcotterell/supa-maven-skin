@@ -214,10 +214,10 @@ ${currentYear}##
 <div class="card not-prose my-3">
   <div class="card-body">
 #if( $title && $title != "" )
-    <h5 class="card-title">$esc.html( $title )</h5>
+    <div class="card-title h5">$esc.html( $title )</div>
 #end
 #if( $subtitle && $subtitle != "" )
-    <h6 class="card-subtitle mb-2 text-body-secondary">$esc.html( $subtitle )</h6>
+    <div class="card-subtitle h6 mb-2 text-body-secondary">$esc.html( $subtitle )</div>
 #end
     <div class="card-text">$body</div>
   </div>

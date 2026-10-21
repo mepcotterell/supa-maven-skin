@@ -18,6 +18,41 @@
 }
 
 // ============================================================================
+// Bootstrap 6 Ergonomic Enhancements & Overlay Fixes
+// ============================================================================
+
+// Allow both `.btn.btn-solid.theme-*` and shorthand `.btn.theme-*` to render as solid themed buttons
+.btn[class*="theme-"]:not(.btn-outline):not(.btn-subtle):not(.btn-text):not(.btn-link) {
+  --btn-bg: var(--theme-bg);
+  --btn-color: var(--theme-contrast);
+  --btn-border-color: var(--theme-bg);
+  --btn-hover-bg: oklch(from var(--theme-bg) calc(l * 0.93) calc(c * 1.08) h);
+  --btn-hover-color: var(--theme-contrast);
+  --btn-hover-border-color: var(--btn-hover-bg);
+  --btn-active-bg: oklch(from var(--theme-bg) calc(l * 0.88) calc(c * 1.12) h);
+  --btn-active-color: var(--theme-contrast);
+  --btn-active-border-color: var(--btn-active-bg);
+}
+
+// Ensure closed <dialog class="dialog"> and <dialog class="drawer"> never take up inline document flow
+dialog.dialog:not([open]),
+dialog.drawer:not([open]) {
+  position: fixed !important;
+  pointer-events: none !important;
+}
+
+// Make horizontal steppers span full width cleanly
+.stepper.stepper-horizontal {
+  display: grid;
+  width: 100%;
+}
+
+// Bridge Bootstrap 6 range.js `--bs-range-fill` property to `_form-range.scss` `--range-fill`
+.form-range-input {
+  --range-fill: var(--bs-range-fill, 0.75);
+}
+
+// ============================================================================
 // CSS Guardrails: Isolate Bootstrap 6 Components inside .furo-article.prose
 // ============================================================================
 .furo-article {
@@ -31,6 +66,7 @@
   ol.list-group,
   ol.stepper,
   ul.stepper,
+  ol.furo-stepper,
   ol.carousel-indicators,
   ul.menu {
     list-style: none !important;
@@ -82,6 +118,7 @@
 
   .card-title {
     margin-block: 0 0.5rem !important;
+    font-weight: 600;
   }
 
   .alert > p:last-child,

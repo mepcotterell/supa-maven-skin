@@ -56,7 +56,7 @@ export const TAB_SYNC_STORAGE_KEY = 'furo-tab-sync';
 
 /**
  * Normalizes Doxia tables (`table.bodyTable` and article tables) into responsive
- * Bootstrap 6 tables, and enhances Maven report summary badges where applicable.
+ * Bootstrap 6 tables, and cleans up Doxia inline list-style attributes on Bootstrap lists.
  */
 export function normalizeDoxiaTables(container: HTMLElement): void {
   const tables = container.querySelectorAll<HTMLTableElement>('table');
@@ -74,6 +74,13 @@ export function normalizeDoxiaTables(container: HTMLElement): void {
       wrapper.appendChild(table);
     }
   });
+
+  // Strip Doxia's automatic `style="list-style-type: decimal;"` from Bootstrap <ol> components
+  container
+    .querySelectorAll<HTMLElement>('ol.breadcrumb, ol.stepper, ol.furo-stepper, ol.list-group')
+    .forEach((ol) => {
+      ol.style.removeProperty('list-style-type');
+    });
 }
 
 /**
@@ -183,8 +190,8 @@ export function transformGfmAdmonitions(container: HTMLElement): void {
 }
 
 /**
- * Enhances `.furo-tabs` containers with `<div data-tab="Label">` panels into
- * accessible ARIA tablists (`sphinx-inline-tabs` equivalent) that synchronize
+ * Enhances `.furo-tabs` containers with `<div data-tab="Label">` or `<div title="Label">`
+ * panels into accessible ARIA tablists (`sphinx-inline-tabs` equivalent) that synchronize
  * active tab selection across the entire site via `localStorage`.
  */
 export function initContentTabs(container: HTMLElement): void {
@@ -213,7 +220,8 @@ export function initContentTabs(container: HTMLElement): void {
       return;
     }
     const rawPanels = Array.from(tabBox.children).filter(
-      (el): el is HTMLElement => el instanceof HTMLElement && el.hasAttribute('data-tab')
+      (el): el is HTMLElement =>
+        el instanceof HTMLElement && (el.hasAttribute('data-tab') || el.hasAttribute('title'))
     );
     if (rawPanels.length === 0) {
       return;
@@ -221,7 +229,9 @@ export function initContentTabs(container: HTMLElement): void {
 
     tabBox.setAttribute('data-furo-tabs-ready', 'true');
     tabBox.classList.add('not-prose');
-    const groupKey = tabBox.getAttribute('data-tab-group') || 'default';
+    const groupKey =
+      tabBox.getAttribute('data-tab-group') || tabBox.getAttribute('title') || 'default';
+    tabBox.removeAttribute('title');
 
     const tabList = document.createElement('div');
     tabList.className = 'furo-tab-list';
@@ -268,7 +278,10 @@ export function initContentTabs(container: HTMLElement): void {
     };
 
     rawPanels.forEach((panel, panelIdx) => {
-      const label = panel.getAttribute('data-tab')?.trim() || `Tab ${panelIdx + 1}`;
+      const label =
+        (panel.getAttribute('data-tab') || panel.getAttribute('title'))?.trim() ||
+        `Tab ${panelIdx + 1}`;
+      panel.removeAttribute('title');
       const tabId = `furo-tab-${boxIndex}-${panelIdx}`;
       const panelId = `furo-tabpanel-${boxIndex}-${panelIdx}`;
 
@@ -325,8 +338,8 @@ export function initContentTabs(container: HTMLElement): void {
 }
 
 /**
- * Transforms declarative `.furo-accordion` containers (`<div data-accordion="Title">...</div>`)
- * into full Bootstrap 6 `.accordion` components with `Collapse` data-bs attributes.
+ * Transforms declarative `.furo-accordion` containers (`<div data-accordion="Title">` or `<div title="Title">`)
+ * into native Bootstrap 6 `<details class="accordion-item">` + `<summary class="accordion-header">` accordions.
  */
 export function initBootstrapAccordions(container: HTMLElement): void {
   const accordions = Array.from(container.querySelectorAll<HTMLElement>('.furo-accordion'));
@@ -335,7 +348,9 @@ export function initBootstrapAccordions(container: HTMLElement): void {
       return;
     }
     const rawItems = Array.from(accBox.children).filter(
-      (el): el is HTMLElement => el instanceof HTMLElement && el.hasAttribute('data-accordion')
+      (el): el is HTMLElement =>
+        el instanceof HTMLElement &&
+        (el.hasAttribute('data-accordion') || el.hasAttribute('title'))
     );
     if (rawItems.length === 0) {
       return;
@@ -345,43 +360,49 @@ export function initBootstrapAccordions(container: HTMLElement): void {
     const accId = accBox.id || `furo-accordion-${boxIdx}`;
     accBox.id = accId;
     accBox.classList.add('accordion', 'not-prose');
-    if (accBox.getAttribute('data-flush') === 'true') {
+    if (accBox.getAttribute('data-flush') === 'true' || accBox.classList.contains('flush')) {
       accBox.classList.add('accordion-flush');
     }
-    const alwaysOpen = accBox.getAttribute('data-always-open') === 'true';
+    const alwaysOpen =
+      accBox.getAttribute('data-always-open') === 'true' ||
+      accBox.classList.contains('always-open');
+
+    const hasExplicitOpen = rawItems.some(
+      (el) =>
+        el.getAttribute('data-open') === 'true' ||
+        el.classList.contains('open') ||
+        el.classList.contains('show')
+    );
 
     rawItems.forEach((itemEl, itemIdx) => {
-      const title = itemEl.getAttribute('data-accordion')?.trim() || `Section ${itemIdx + 1}`;
+      const title =
+        (itemEl.getAttribute('data-accordion') || itemEl.getAttribute('title'))?.trim() ||
+        `Section ${itemIdx + 1}`;
+      itemEl.removeAttribute('title');
       const isOpen =
         itemEl.getAttribute('data-open') === 'true' ||
-        (itemIdx === 0 && !rawItems.some((el) => el.getAttribute('data-open') === 'true'));
-      const headingId = `${accId}-heading-${itemIdx}`;
-      const collapseId = `${accId}-collapse-${itemIdx}`;
+        itemEl.classList.contains('open') ||
+        itemEl.classList.contains('show') ||
+        (itemIdx === 0 && !hasExplicitOpen);
 
-      const wrapper = document.createElement('div');
-      wrapper.className = 'accordion-item';
-
-      const header = document.createElement('h3');
-      header.className = 'accordion-header';
-      header.id = headingId;
-
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = `accordion-button${isOpen ? '' : ' collapsed'}`;
-      btn.setAttribute('data-bs-toggle', 'collapse');
-      btn.setAttribute('data-bs-target', `#${collapseId}`);
-      btn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
-      btn.setAttribute('aria-controls', collapseId);
-      btn.textContent = title;
-      header.appendChild(btn);
-
-      const collapse = document.createElement('div');
-      collapse.id = collapseId;
-      collapse.className = `accordion-collapse collapse${isOpen ? ' show' : ''}`;
-      collapse.setAttribute('aria-labelledby', headingId);
+      const details = document.createElement('details');
+      details.className = 'accordion-item';
       if (!alwaysOpen) {
-        collapse.setAttribute('data-bs-parent', `#${accId}`);
+        details.setAttribute('name', accId);
       }
+      if (isOpen) {
+        details.open = true;
+      }
+
+      const summary = document.createElement('summary');
+      summary.className = 'accordion-header fw-semibold';
+      const titleSpan = document.createElement('span');
+      titleSpan.textContent = title;
+      summary.appendChild(titleSpan);
+      summary.insertAdjacentHTML(
+        'beforeend',
+        '<svg class="accordion-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="2 5 8 11 14 5"></polyline></svg>'
+      );
 
       const body = document.createElement('div');
       body.className = 'accordion-body';
@@ -389,17 +410,16 @@ export function initBootstrapAccordions(container: HTMLElement): void {
         body.appendChild(itemEl.firstChild);
       }
 
-      collapse.appendChild(body);
-      wrapper.appendChild(header);
-      wrapper.appendChild(collapse);
-      itemEl.replaceWith(wrapper);
+      details.appendChild(summary);
+      details.appendChild(body);
+      itemEl.replaceWith(details);
     });
   });
 }
 
 /**
- * Transforms declarative `<ol class="furo-stepper" data-active-step="2">` lists
- * into Bootstrap 6 `.stepper` components.
+ * Transforms declarative `<ol class="furo-stepper" data-active-step="2">` (or `title="2"` / `<li class="active">`)
+ * lists into Bootstrap 6 `.stepper.stepper-horizontal` components.
  */
 export function initBootstrapSteppers(container: HTMLElement): void {
   const steppers = Array.from(container.querySelectorAll<HTMLElement>('.furo-stepper'));
@@ -408,18 +428,26 @@ export function initBootstrapSteppers(container: HTMLElement): void {
       return;
     }
     stepperEl.setAttribute('data-furo-stepper-ready', 'true');
+    stepperEl.style.removeProperty('list-style-type');
     stepperEl.classList.add('stepper', 'not-prose');
-    if (stepperEl.getAttribute('data-orientation') !== 'vertical') {
-      stepperEl.classList.add('md:stepper-horizontal');
+    if (
+      stepperEl.getAttribute('data-orientation') !== 'vertical' &&
+      !stepperEl.classList.contains('stepper-vertical')
+    ) {
+      stepperEl.classList.add('stepper-horizontal');
     }
 
-    const activeStep = Number.parseInt(stepperEl.getAttribute('data-active-step') || '1', 10);
+    const attrStep = stepperEl.getAttribute('data-active-step') || stepperEl.getAttribute('title');
+    stepperEl.removeAttribute('title');
     const items = Array.from(stepperEl.children).filter(
       (el): el is HTMLElement => el instanceof HTMLElement && el.tagName === 'LI'
     );
+    const hasExplicitActiveLi = items.some((li) => li.classList.contains('active'));
+    const activeStep = attrStep ? Number.parseInt(attrStep, 10) : hasExplicitActiveLi ? 0 : 1;
+
     items.forEach((li, idx) => {
       li.classList.add('stepper-item');
-      if (idx + 1 <= activeStep) {
+      if (!hasExplicitActiveLi && idx + 1 <= activeStep) {
         li.classList.add('active');
       }
     });

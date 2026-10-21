@@ -159,10 +159,10 @@ describe('Maven Furo Skin Frontend Modules', () => {
       const container = document.createElement('div');
       container.innerHTML = `
         <div class="furo-accordion">
-          <div data-accordion="First Question" data-open="true"><p>First Answer</p></div>
-          <div data-accordion="Second Question"><p>Second Answer</p></div>
+          <div title="First Question" class="open"><p>First Answer</p></div>
+          <div title="Second Question"><p>Second Answer</p></div>
         </div>
-        <ol class="furo-stepper" data-active-step="2">
+        <ol class="furo-stepper" title="2">
           <li>Step One</li>
           <li>Step Two</li>
           <li>Step Three</li>
@@ -172,15 +172,13 @@ describe('Maven Furo Skin Frontend Modules', () => {
       initBootstrapAccordions(container);
       initBootstrapSteppers(container);
 
-      const accItems = container.querySelectorAll('.accordion-item');
+      const accItems = container.querySelectorAll<HTMLDetailsElement>('details.accordion-item');
       expect(accItems.length).toBe(2);
-      expect(accItems[0].querySelector('.accordion-button')?.textContent).toBe('First Question');
-      expect(accItems[0].querySelector('.accordion-collapse')?.classList.contains('show')).toBe(
-        true
+      expect(accItems[0].querySelector('summary.accordion-header span')?.textContent).toBe(
+        'First Question'
       );
-      expect(accItems[1].querySelector('.accordion-button')?.classList.contains('collapsed')).toBe(
-        true
-      );
+      expect(accItems[0].open).toBe(true);
+      expect(accItems[1].open).toBe(false);
 
       const stepperItems = container.querySelectorAll('.stepper-item');
       expect(stepperItems.length).toBe(3);
@@ -196,7 +194,7 @@ describe('Maven Furo Skin Frontend Modules', () => {
       container.innerHTML = `
         <div class="card"><div class="card-body">Card</div></div>
         <ul class="nav nav-pills"><li class="nav-item"><a class="nav-link active">Tab</a></li></ul>
-        <div class="chip-input" data-bs-chips="true"><span class="chip">tag</span><input type="text" class="form-ghost" /></div>
+        <div class="chip-input" data-bs-chips="true"><span class="chip\">tag</span><input type=\"text\" class=\"form-ghost\" /></div>
       `;
 
       isolateBootstrapComponentsFromProse(container);

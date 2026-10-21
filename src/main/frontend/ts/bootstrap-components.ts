@@ -49,27 +49,30 @@ declare global {
 }
 
 /**
- * Selector matching top-level Bootstrap 6 component containers that should be
- * isolated from `.prose` typography rules (list bullets, link underlines, heading margins).
+ * Top-level Bootstrap 6 component root selectors that should automatically be
+ * isolated from `.prose` typography rules when placed inside `.furo-article`.
  */
-export const BOOTSTRAP_COMPONENT_ISOLATION_SELECTOR = [
+const BOOTSTRAP_PROSE_ISOLATION_SELECTORS = [
   '.accordion',
   '.alert',
   '.avatar',
   '.avatar-stack',
+  '.badge',
   '.breadcrumb',
+  '.btn',
   '.btn-group',
+  '.btn-group-vertical',
   '.btn-toolbar',
+  '.callout',
   '.card',
   '.card-group',
   '.carousel',
   '.chip',
   '.chip-input',
-  '.combobox',
-  '.datepicker',
   '.dialog',
   '.drawer',
   '.dropdown',
+  '.form-check',
   '.form-floating',
   '.form-range',
   '.input-group',
@@ -80,19 +83,21 @@ export const BOOTSTRAP_COMPONENT_ISOLATION_SELECTOR = [
   '.otp',
   '.pagination',
   '.progress',
+  '.spinner-border',
+  '.spinner-grow',
   '.stepper',
-  '.stepper-overflow',
   '.strength',
+  '.tab-content',
   '.toast',
   '.toast-container'
 ].join(', ');
 
 /**
- * Automatically adds `.not-prose` to Bootstrap 6 component containers inside `.furo-article`
- * so `.prose` list/heading/link styles never conflict with component layout.
+ * Automatically adds `.not-prose` to Bootstrap 6 component root containers inside
+ * `.furo-article` so site authors don't have to manually wrap every component.
  */
 export function isolateBootstrapComponentsFromProse(container: ParentNode = document): void {
-  const elements = container.querySelectorAll<HTMLElement>(BOOTSTRAP_COMPONENT_ISOLATION_SELECTOR);
+  const elements = container.querySelectorAll<HTMLElement>(BOOTSTRAP_PROSE_ISOLATION_SELECTORS);
   elements.forEach((el) => {
     if (!el.classList.contains('not-prose')) {
       el.classList.add('not-prose');
@@ -101,31 +106,34 @@ export function isolateBootstrapComponentsFromProse(container: ParentNode = docu
 }
 
 /**
- * Initializes all 20 Bootstrap 6 interactive JS components and declarative helpers
- * within the given root container, and exposes `window.bootstrap`.
+ * Attaches all 20 Bootstrap 6 JS plugins to `window.bootstrap` and auto-initializes
+ * opt-in interactive widgets (`Tooltip`, `Popover`, `Toast`, `Combobox`, `Datepicker`,
+ * `Chips`, `OtpInput`, `Range`, `Strength`, `NavOverflow`, `Carousel`).
  */
-export function initBootstrapComponents(root: ParentNode = document): void {
+export function initBootstrapComponents(
+  root: ParentNode = document.getElementById('furo-main-content') ?? document
+): void {
   if (typeof window !== 'undefined') {
     window.bootstrap = BootstrapPlugins;
   }
 
   isolateBootstrapComponentsFromProse(root);
 
-  // 1. Tooltips ([data-bs-toggle="tooltip"])
+  // 1. Tooltips: [data-bs-toggle="tooltip"]
   root.querySelectorAll<HTMLElement>('[data-bs-toggle="tooltip"]').forEach((el) => {
     try {
       Tooltip.getOrCreateInstance(el);
     } catch {
-      // Ignore in non-layout test environments
+      // Ignore initialization errors in headless test DOMs
     }
   });
 
-  // 2. Popovers ([data-bs-toggle="popover"])
+  // 2. Popovers: [data-bs-toggle="popover"]
   root.querySelectorAll<HTMLElement>('[data-bs-toggle="popover"]').forEach((el) => {
     try {
       Popover.getOrCreateInstance(el);
     } catch {
-      // Ignore in non-layout test environments
+      // Ignore
     }
   });
 
@@ -144,18 +152,20 @@ export function initBootstrapComponents(root: ParentNode = document): void {
     }
     trigger.setAttribute('data-furo-toast-bound', 'true');
     trigger.addEventListener('click', () => {
-      const targetSelector = trigger.getAttribute('data-furo-toast-target');
-      if (!targetSelector) {
-        return;
-      }
-      const toastEl = document.querySelector<HTMLElement>(targetSelector);
+      const selector = trigger.getAttribute('data-furo-toast-target');
+      if (!selector) return;
+      const toastEl = document.querySelector<HTMLElement>(selector);
       if (toastEl) {
-        Toast.getOrCreateInstance(toastEl).show();
+        try {
+          Toast.getOrCreateInstance(toastEl).show();
+        } catch {
+          toastEl.classList.add('show');
+        }
       }
     });
   });
 
-  // 4. Combobox ([data-bs-toggle="combobox"])
+  // 4. Comboboxes: [data-bs-toggle="combobox"]
   root.querySelectorAll<HTMLElement>('[data-bs-toggle="combobox"]').forEach((el) => {
     try {
       Combobox.getOrCreateInstance(el);
@@ -164,7 +174,7 @@ export function initBootstrapComponents(root: ParentNode = document): void {
     }
   });
 
-  // 5. Datepicker ([data-bs-toggle="datepicker"])
+  // 5. Datepickers: [data-bs-toggle="datepicker"]
   root.querySelectorAll<HTMLElement>('[data-bs-toggle="datepicker"]').forEach((el) => {
     try {
       Datepicker.getOrCreateInstance(el);
@@ -173,55 +183,71 @@ export function initBootstrapComponents(root: ParentNode = document): void {
     }
   });
 
-  // 6. Chips ([data-bs-chips])
-  root.querySelectorAll<HTMLElement>('[data-bs-chips]').forEach((el) => {
+  // 6. Chips input: [data-bs-chips], .chip-input
+  root.querySelectorAll<HTMLElement>('[data-bs-chips], .chip-input').forEach((el) => {
     try {
+      if (!el.hasAttribute('data-bs-chips')) {
+        el.setAttribute('data-bs-chips', '');
+      }
       Chips.getOrCreateInstance(el);
     } catch {
       // Ignore
     }
   });
 
-  // 7. OTP Input ([data-bs-otp])
-  root.querySelectorAll<HTMLElement>('[data-bs-otp]').forEach((el) => {
+  // 7. OTP inputs: [data-bs-otp], .otp
+  root.querySelectorAll<HTMLElement>('[data-bs-otp], .otp').forEach((el) => {
     try {
+      if (!el.hasAttribute('data-bs-otp')) {
+        el.setAttribute('data-bs-otp', '');
+      }
       OtpInput.getOrCreateInstance(el);
     } catch {
       // Ignore
     }
   });
 
-  // 8. Range Slider (.form-range)
+  // 8. Range sliders: .form-range
   root.querySelectorAll<HTMLElement>('.form-range').forEach((el) => {
     try {
+      if (!el.hasAttribute('data-bs-bubble')) {
+        el.setAttribute('data-bs-bubble', 'true');
+      }
       Range.getOrCreateInstance(el);
     } catch {
       // Ignore
     }
   });
 
-  // 9. Password / Token Strength Meter ([data-bs-strength])
-  root.querySelectorAll<HTMLElement>('[data-bs-strength]').forEach((el) => {
+  // 9. Password / token strength meters: [data-bs-strength], .strength
+  root.querySelectorAll<HTMLElement>('[data-bs-strength], .strength').forEach((el) => {
     try {
+      if (!el.hasAttribute('data-bs-strength')) {
+        el.setAttribute('data-bs-strength', '');
+      }
+      if (!el.hasAttribute('data-bs-input')) {
+        const prevInput = el.previousElementSibling;
+        if (prevInput instanceof HTMLInputElement && prevInput.id) {
+          el.setAttribute('data-bs-input', `#${prevInput.id}`);
+        }
+      }
       Strength.getOrCreateInstance(el);
     } catch {
       // Ignore
     }
   });
 
-  // 10. NavOverflow (.nav-overflow, [data-bs-toggle="nav-overflow"])
-  root
-    .querySelectorAll<HTMLElement>('.nav-overflow, [data-bs-toggle="nav-overflow"]')
-    .forEach((el) => {
-      try {
-        NavOverflow.getOrCreateInstance(el);
-      } catch {
-        // Ignore
-      }
-    });
+  // 10. Overflowing horizontal navigation bars: .nav-overflow
+  root.querySelectorAll<HTMLElement>('.nav-overflow').forEach((el) => {
+    try {
+      NavOverflow.getOrCreateInstance(el);
+    } catch {
+      // Ignore
+    }
+  });
 
-  // 11. Carousel ([data-bs-ride="carousel"])
-  root.querySelectorAll<HTMLElement>('.carousel').forEach((el) => {
+  // 11. Carousels: [data-bs-ride="carousel"], .carousel
+  root.querySelectorAll<HTMLElement>('[data-bs-ride="carousel"], .carousel').forEach((el) => {
     try {
       Carousel.getOrCreateInstance(el);
     } catch {

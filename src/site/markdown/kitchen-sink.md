@@ -29,8 +29,8 @@ Code blocks display a subtle language badge (`JAVA`, `TS`, `DIFF`, `XML`) in the
 
 Switch between tabs below—active tab selection is automatically persisted and synchronized across tab groups:
 
-<div class="furo-tabs" data-tab-group="jvm-lang">
-  <div data-tab="Java 21">
+<div class="furo-tabs" title="jvm-lang" data-tab-group="jvm-lang">
+  <div title="Java 21" data-tab="Java 21">
     <pre><code class="language-java">package dev.cotterell.maven.skins;
 import java.util.List;
 public record FuroSkinConfig(
@@ -44,7 +44,7 @@ public record FuroSkinConfig(
     }
 }</code></pre>
   </div>
-  <div data-tab="Kotlin">
+  <div title="Kotlin" data-tab="Kotlin">
     <pre><code class="language-kotlin">package dev.cotterell.maven.skins
 data class FuroSkinConfig(
     val defaultTheme: String = "auto",
@@ -111,7 +111,7 @@ Because `mvn-furo-skin` bundles **all 28 Bootstrap `6.0.0-alpha.1` component fam
         <div class="fw-semibold mb-1">Full Bootstrap 6 Component Catalog</div>
         <p class="mb-0 text-secondary" style="font-size: 0.9rem;">Explore all 28 Bootstrap 6 component families, variants, and interactive JS widgets.</p>
       </div>
-      <a href="bootstrap-components.html" class="btn btn-sm theme-primary">Explore All 28 Components &rarr;</a>
+      <a href="bootstrap-components.html" class="btn btn-sm btn-solid theme-primary">Explore All 28 Components &rarr;</a>
     </div>
   </div>
 </div>

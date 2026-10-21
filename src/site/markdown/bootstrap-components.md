@@ -8,22 +8,22 @@ Site authors can use standard Bootstrap 6 HTML markup, declarative Markdown shor
 
 ## 1. Actions & Buttons
 
-Bootstrap 6 replaces legacy per-color button classes with composable `.theme-*` utilities (`theme-primary`, `theme-secondary`, `theme-success`, `theme-info`, `theme-warning`, `theme-danger`, `theme-light`, `theme-dark`) paired with surface variants (`.btn` solid, `.btn-outline`, `.btn-subtle`, `.btn-text`, `.btn-link`), sizes (`.btn-xs`, `.btn-sm`, `.btn-lg`), and `.btn-group` toolbars.
+Bootstrap 6 replaces legacy per-color button classes with composable `.theme-*` utilities (`theme-primary`, `theme-secondary`, `theme-success`, `theme-info`, `theme-warning`, `theme-danger`, `theme-light`, `theme-dark`) paired with surface variants (`.btn-solid` / `.btn`, `.btn-outline`, `.btn-subtle`, `.btn-text`, `.btn-link`), sizes (`.btn-xs`, `.btn-sm`, `.btn-lg`), and `.btn-group` toolbars.
 
 ### Semantic Theme Variants (Solid, Outline, Subtle, Text)
 
 <div class="furo-component-preview not-prose">
   <div class="mb-3">
-    <div class="small fw-semibold text-body-secondary mb-2">Solid Buttons (.btn .theme-*)</div>
+    <div class="small fw-semibold text-body-secondary mb-2">Solid Buttons (.btn .btn-solid .theme-*)</div>
     <div class="d-flex flex-wrap gap-2">
-      <button type="button" class="btn theme-primary">Primary</button>
-      <button type="button" class="btn theme-secondary">Secondary</button>
-      <button type="button" class="btn theme-success">Success</button>
-      <button type="button" class="btn theme-info">Info</button>
-      <button type="button" class="btn theme-warning">Warning</button>
-      <button type="button" class="btn theme-danger">Danger</button>
-      <button type="button" class="btn theme-light">Light</button>
-      <button type="button" class="btn theme-dark">Dark</button>
+      <button type="button" class="btn btn-solid theme-primary">Primary</button>
+      <button type="button" class="btn btn-solid theme-secondary">Secondary</button>
+      <button type="button" class="btn btn-solid theme-success">Success</button>
+      <button type="button" class="btn btn-solid theme-info">Info</button>
+      <button type="button" class="btn btn-solid theme-warning">Warning</button>
+      <button type="button" class="btn btn-solid theme-danger">Danger</button>
+      <button type="button" class="btn btn-solid theme-light">Light</button>
+      <button type="button" class="btn btn-solid theme-dark">Dark</button>
     </div>
   </div>
   <div class="mb-3">
@@ -50,10 +50,10 @@ Bootstrap 6 replaces legacy per-color button classes with composable `.theme-*` 
   <div>
     <div class="small fw-semibold text-body-secondary mb-2">Sizes, Button Groups &amp; Toggle State (data-bs-toggle="button")</div>
     <div class="d-flex flex-wrap gap-3 align-items-center">
-      <button type="button" class="btn btn-xs theme-primary">Extra Small (.btn-xs)</button>
-      <button type="button" class="btn btn-sm theme-primary">Small (.btn-sm)</button>
-      <button type="button" class="btn theme-primary">Default</button>
-      <button type="button" class="btn btn-lg theme-primary">Large (.btn-lg)</button>
+      <button type="button" class="btn btn-xs btn-solid theme-primary">Extra Small (.btn-xs)</button>
+      <button type="button" class="btn btn-sm btn-solid theme-primary">Small (.btn-sm)</button>
+      <button type="button" class="btn btn-solid theme-primary">Default</button>
+      <button type="button" class="btn btn-lg btn-solid theme-primary">Large (.btn-lg)</button>
       <button type="button" class="btn btn-outline theme-primary" data-bs-toggle="button" aria-pressed="false">Toggle Button</button>
       <div class="btn-group" role="group" aria-label="Release channel group">
         <button type="button" class="btn btn-outline theme-secondary active">Stable</button>
@@ -81,7 +81,7 @@ Bootstrap 6 introduces first-class **Avatars** (`.avatar`, `.avatar-stack`, `.av
     <span class="badge theme-warning">Warning</span>
     <span class="badge theme-danger">Danger</span>
   </div>
-  <div class="d-flex flex-wrap gap-2 mb-3">
+  <div class="d-flex flex-wrap gap-2">
     <span class="badge badge-subtle theme-primary">Subtle Primary</span>
     <span class="badge badge-subtle theme-success">Subtle Success</span>
     <span class="badge badge-subtle theme-warning">Subtle Warning</span>
@@ -179,7 +179,7 @@ In addition to Furo's `> [!NOTE]` admonitions, site authors can use native Boots
 
 <div class="furo-component-preview not-prose">
   <div class="d-flex flex-wrap gap-2 align-items-center">
-    <button type="button" class="btn theme-primary" data-bs-toggle="dialog" data-bs-target="#demoModalDialog">Open Modal Dialog</button>
+    <button type="button" class="btn btn-solid theme-primary" data-bs-toggle="dialog" data-bs-target="#demoModalDialog">Open Modal Dialog</button>
     <button type="button" class="btn btn-outline theme-primary" data-bs-toggle="drawer" data-bs-target="#demoRightDrawer">Open Right Drawer</button>
     <button type="button" class="btn btn-subtle theme-success" data-furo-toast-target="#demoLiveToast">Trigger Live Toast</button>
     <button type="button" class="btn btn-outline theme-secondary" data-bs-toggle="tooltip" data-bs-placement="top" title="Tooltip powered by Floating UI in Bootstrap 6">Hover for Tooltip</button>
@@ -188,7 +188,7 @@ In addition to Furo's `> [!NOTE]` admonitions, site authors can use native Boots
   <dialog class="dialog" id="demoModalDialog" aria-labelledby="demoModalDialogTitle">
     <div class="dialog-content">
       <div class="dialog-header">
-        <h5 class="dialog-title" id="demoModalDialogTitle">Bootstrap 6 Native &lt;dialog&gt; Modal</h5>
+        <div class="dialog-title fw-semibold" id="demoModalDialogTitle">Bootstrap 6 Native &lt;dialog&gt; Modal</div>
         <button type="button" class="btn-close" data-bs-dismiss="dialog" aria-label="Close"></button>
       </div>
       <div class="dialog-body">
@@ -196,13 +196,13 @@ In addition to Furo's `> [!NOTE]` admonitions, site authors can use native Boots
       </div>
       <div class="dialog-footer">
         <button type="button" class="btn btn-subtle theme-secondary" data-bs-dismiss="dialog">Cancel</button>
-        <button type="button" class="btn theme-primary" data-bs-dismiss="dialog">Confirm Action</button>
+        <button type="button" class="btn btn-solid theme-primary" data-bs-dismiss="dialog">Confirm Action</button>
       </div>
     </div>
   </dialog>
   <dialog class="drawer drawer-end drawer-sheet" id="demoRightDrawer" aria-labelledby="demoRightDrawerTitle">
     <div class="drawer-header">
-      <h5 class="drawer-title" id="demoRightDrawerTitle">Inspector Drawer</h5>
+      <div class="drawer-title fw-semibold" id="demoRightDrawerTitle">Inspector Drawer</div>
       <button type="button" class="btn-close" data-bs-dismiss="drawer" aria-label="Close"></button>
     </div>
     <div class="drawer-body">
@@ -232,9 +232,9 @@ Bootstrap 6 unifies dropdowns and context menus into the new **Menu** component 
 <div class="furo-component-preview not-prose">
   <div class="d-flex flex-wrap gap-4 align-items-center justify-content-between mb-4">
     <div class="position-relative d-inline-block">
-      <button type="button" class="btn theme-primary" data-bs-toggle="menu" aria-expanded="false"> Artifact Actions &#9662; </button>
+      <button type="button" class="btn btn-solid theme-primary" data-bs-toggle="menu" aria-expanded="false"> Artifact Actions &#9662; </button>
       <ul class="menu">
-        <li><h6 class="menu-header">Maven Coordinates</h6></li>
+        <li class="menu-header">Maven Coordinates</li>
         <li><button type="button" class="menu-item">Copy pom.xml Snippet</button></li>
         <li><button type="button" class="menu-item">Download Javadoc JAR</button></li>
         <li><hr class="menu-divider" /></li>
@@ -262,13 +262,13 @@ Bootstrap 6 unifies dropdowns and context menus into the new **Menu** component 
 
 ### Multi-Step Workflow Stepper (`.furo-stepper` Shorthand & `.stepper`)
 
-Authors can write a simple `<ol class="furo-stepper" data-active-step="3">` ordered list and have it enhanced into a responsive horizontal Bootstrap 6 `.stepper`:
+Authors can write a simple `<ol class="furo-stepper" title="3">` ordered list and have it enhanced into a responsive horizontal Bootstrap 6 `.stepper`:
 
 <div class="furo-component-preview not-prose">
-  <ol class="furo-stepper" data-active-step="3">
-    <li>Compile SCSS &amp; TypeScript</li>
-    <li>Package Skin JAR</li>
-    <li>Run Invoker Site ITs</li>
+  <ol class="furo-stepper" title="3">
+    <li class="active">Compile SCSS &amp; TypeScript</li>
+    <li class="active">Package Skin JAR</li>
+    <li class="active">Run Invoker Site ITs</li>
     <li>Publish to git.cotterell.dev</li>
   </ol>
 </div>
@@ -302,16 +302,16 @@ Authors can write a simple `<ol class="furo-stepper" data-active-step="3">` orde
 
 ### Declarative `.furo-accordion` Shorthand
 
-Wrap `<div data-accordion="Question Title">` items inside `<div class="furo-accordion">` to generate a full Bootstrap 6 `.accordion` with `Collapse` transitions and zero blank-line issues:
+Wrap `<div title="Question Title">` items inside `<div class="furo-accordion">` to generate a full Bootstrap 6 `.accordion` with `Collapse` transitions and zero blank-line issues:
 
 <div class="furo-accordion">
-  <div data-accordion="How does Maven Furo Skin isolate Bootstrap components from .prose?" data-open="true">
+  <div title="How does Maven Furo Skin isolate Bootstrap components from .prose?" class="open">
     <p><code>initBootstrapComponents()</code> automatically adds <code>.not-prose</code> to top-level Bootstrap component containers and applies CSS guardrails in <code>_bootstrap-furo.scss</code> so lists, links, and headings inside components never inherit article prose styles.</p>
   </div>
-  <div data-accordion="Are all 20 Bootstrap 6 JavaScript plugins available globally?">
+  <div title="Are all 20 Bootstrap 6 JavaScript plugins available globally?">
     <p>Yes! All 20 Bootstrap 6 plugins (<code>Alert</code>, <code>Button</code>, <code>Carousel</code>, <code>Chips</code>, <code>Collapse</code>, <code>Combobox</code>, <code>Datepicker</code>, <code>Dialog</code>, <code>Drawer</code>, <code>Menu</code>, <code>NavOverflow</code>, <code>OtpInput</code>, <code>Popover</code>, <code>Range</code>, <code>ScrollSpy</code>, <code>Strength</code>, <code>Tab</code>, <code>Toast</code>, <code>Toggler</code>, and <code>Tooltip</code>) are bundled and exposed on <code>window.bootstrap</code>.</p>
   </div>
-  <div data-accordion="Can I use Velocity macros in .md.vm pages?">
+  <div title="Can I use Velocity macros in .md.vm pages?">
     <p>Yes. <code>site-macros.vm</code> provides <code>#bsAlert</code>, <code>#bsBadge</code>, and <code>#bsCard</code> macros for Doxia pages rendered through Velocity.</p>
   </div>
 </div>
@@ -327,9 +327,9 @@ Wrap `<div data-accordion="Question Title">` items inside `<div class="furo-acco
           <span class="badge badge-subtle theme-primary">v0.1.0</span>
         </div>
         <div class="card-body">
-          <h5 class="card-title">Three-Column Furo Layout</h5>
+          <div class="card-title h5">Three-Column Furo Layout</div>
           <p class="card-text text-body-secondary">Sticky 280px navigation sidebar, 48rem centered prose article, and 240px ScrollSpy table of contents.</p>
-          <a href="configuration.html" class="btn btn-sm theme-primary">View Configuration</a>
+          <a href="configuration.html" class="btn btn-sm btn-solid theme-primary">View Configuration</a>
         </div>
         <div class="card-footer small text-body-secondary">Updated via frontend-maven-plugin</div>
       </div>
