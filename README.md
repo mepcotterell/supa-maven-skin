@@ -67,4 +67,4 @@ mvn install site
 
 ## License
 
-Apache License, Version 2.0.
+MIT License. See [LICENSE](LICENSE) for details.

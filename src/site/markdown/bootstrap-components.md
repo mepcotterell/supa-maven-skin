@@ -232,14 +232,14 @@ Bootstrap 6 unifies dropdowns and context menus into the new **Menu** component 
 <div class="furo-component-preview not-prose">
   <div class="d-flex flex-wrap gap-4 align-items-center justify-content-between mb-4">
     <div class="position-relative d-inline-block">
-      <button type="button" class="btn btn-solid theme-primary" data-bs-toggle="menu" aria-expanded="false"> Artifact Actions &#9662; </button>
-      <ul class="menu">
-        <li class="menu-header">Maven Coordinates</li>
-        <li><button type="button" class="menu-item">Copy pom.xml Snippet</button></li>
-        <li><button type="button" class="menu-item">Download Javadoc JAR</button></li>
-        <li><hr class="menu-divider" /></li>
-        <li><button type="button" class="menu-item text-danger">Deprecate Version</button></li>
-      </ul>
+      <button type="button" class="btn btn-solid theme-primary" data-bs-toggle="menu" aria-expanded="false">Artifact Actions &#9662;</button>
+      <div class="menu">
+        <div class="menu-header">Maven Coordinates</div>
+        <button type="button" class="menu-item">Copy pom.xml Snippet</button>
+        <button type="button" class="menu-item">Download Javadoc JAR</button>
+        <hr class="menu-divider" />
+        <button type="button" class="menu-item theme-danger">Deprecate Version</button>
+      </div>
     </div>
     <ul class="nav nav-pills" role="tablist">
       <li class="nav-item" role="presentation">
@@ -279,9 +279,11 @@ Authors can write a simple `<ol class="furo-stepper" title="3">` ordered list an
   <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
     <nav aria-label="Breadcrumb demo">
       <ol class="breadcrumb mb-0">
-        <li class="breadcrumb-item"><a href="index.html">Docs</a></li>
-        <li class="breadcrumb-item"><a href="kitchen-sink.html">Showcase</a></li>
-        <li class="breadcrumb-item active" aria-current="page">Bootstrap 6 Components</li>
+        <li class="breadcrumb-item"><a class="breadcrumb-link" href="index.html">Docs</a></li>
+        <li class="breadcrumb-divider" aria-hidden="true"></li>
+        <li class="breadcrumb-item"><a class="breadcrumb-link" href="kitchen-sink.html">Showcase</a></li>
+        <li class="breadcrumb-divider" aria-hidden="true"></li>
+        <li class="breadcrumb-item"><span class="breadcrumb-link active" aria-current="page">Bootstrap 6 Components</span></li>
       </ol>
     </nav>
     <nav aria-label="Pagination demo">

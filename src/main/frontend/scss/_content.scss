@@ -99,8 +99,8 @@
     margin-bottom: 1.125rem;
   }
 
-  ul,
-  ol {
+  ul:not([class]),
+  ol:not([class]) {
     margin-top: 0;
     margin-bottom: 1.125rem;
     padding-left: 1.5rem;
@@ -108,8 +108,8 @@
     li {
       margin-bottom: 0.35rem;
 
-      & > ul,
-      & > ol {
+      & > ul:not([class]),
+      & > ol:not([class]) {
         margin-top: 0.35rem;
         margin-bottom: 0.35rem;
       }
@@ -133,7 +133,7 @@
     }
   }
 
-  hr {
+  hr:not([class]) {
     margin-block: 2.5rem !important;
     border: 0;
     border-top: 1px solid var(--color-background-border);
@@ -153,7 +153,7 @@
     }
   }
 
-  a:not(.btn):not(.furo-headerlink):not(.nav-link) {
+  a:not(.btn):not(.furo-headerlink):not(.nav-link):not(.page-link):not(.menu-item):not(.breadcrumb-link):not(.list-group-item):not(.card-link):not(.badge):not(.chip):not(.furo-prev-link):not(.furo-next-link) {
     color: var(--color-brand-content);
     text-decoration: underline;
     text-underline-offset: 0.18em;
@@ -400,326 +400,285 @@
       white-space: nowrap;
     }
 
-    .furo-code-header-lang {
-      font-size: 0.6875rem;
+    .furo-code-lang {
+      flex-shrink: 0;
       text-transform: uppercase;
+      font-size: 0.6875rem;
       letter-spacing: 0.05em;
-      padding: 0.1rem 0.4rem;
+      padding: 0.1rem 0.45rem;
       border-radius: 0.25rem;
       background-color: var(--color-background-item);
-      color: var(--color-foreground-secondary);
-      flex: 0 0 auto;
+      color: var(--color-foreground-muted);
     }
-  }
-
-  .furo-code-lang {
-    position: absolute;
-    top: 0.625rem;
-    right: 0.75rem;
-    font-family: var(--font-stack--monospace);
-    font-size: 0.6875rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--color-foreground-muted);
-    pointer-events: none;
-    user-select: none;
-    transition: opacity 0.15s ease;
   }
 
   pre {
     margin: 0 !important;
-    padding: 1rem 1.25rem;
+    padding: 1rem 1.125rem;
     overflow-x: auto;
+    background: transparent !important;
+    border: 0 !important;
     font-family: var(--font-stack--monospace);
-    font-size: 0.84375rem;
+    font-size: var(--code-font-size);
     line-height: 1.6;
-    background: transparent;
-    color: var(--color-foreground-primary);
+    color: var(--color-code-foreground);
 
     code {
+      font-family: inherit;
+      font-size: inherit;
       background: transparent !important;
       padding: 0 !important;
-      font-size: inherit;
+      border: 0 !important;
       color: inherit;
-    }
-  }
-
-  &.has-line-numbers pre .furo-code-line {
-    display: inline-block;
-    width: 100%;
-
-    &::before {
-      content: attr(data-line);
-      display: inline-block;
-      width: 2rem;
-      margin-right: 1rem;
-      text-align: right;
-      color: var(--color-foreground-muted);
-      user-select: none;
+      white-space: pre;
+      word-break: normal;
+      overflow-wrap: normal;
     }
   }
 
   .furo-copy-btn {
     position: absolute;
-    top: 0.625rem;
-    right: 0.625rem;
+    top: 0.5rem;
+    right: 0.5rem;
+    z-index: 2;
     display: inline-flex;
     align-items: center;
-    justify-content: center;
-    width: 2rem;
-    height: 2rem;
-    padding: 0;
+    gap: 0.3rem;
+    padding: 0.3rem 0.55rem;
     border-radius: 0.375rem;
     border: 1px solid var(--color-background-border);
     background-color: var(--color-background-primary);
     color: var(--color-foreground-secondary);
-    opacity: 0;
+    font-family: var(--font-stack);
+    font-size: 0.75rem;
+    font-weight: 500;
+    line-height: 1;
     cursor: pointer;
-    transition: opacity 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+    opacity: 0;
+    transition: opacity 0.15s ease, color 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
+
+    @media (hover: none), (width < 768px) {
+      opacity: 0.9;
+    }
 
     &:hover,
     &:focus-visible {
       opacity: 1;
-      color: var(--color-brand-primary);
-      border-color: var(--color-brand-primary);
+      color: var(--color-foreground-primary);
+      border-color: var(--color-foreground-border);
     }
 
-    &.is-copied {
+    &.copied {
       opacity: 1;
-      color: var(--furo-admonition-tip-accent);
-      border-color: var(--furo-admonition-tip-accent);
+      color: #16a34a;
+      border-color: #16a34a;
     }
   }
 
-  &:hover,
-  &:focus-within {
-    .furo-copy-btn {
-      opacity: 1;
-    }
-
-    .furo-code-lang {
-      opacity: 0;
-    }
+  &:hover .furo-copy-btn,
+  &:focus-within .furo-copy-btn {
+    opacity: 1;
   }
 
-  @media (hover: none), (width < 768px) {
-    .furo-copy-btn {
-      opacity: 1;
-    }
-
-    .furo-code-lang {
-      right: 2.875rem;
-      top: 0.875rem;
-    }
+  .furo-code-header + pre + .furo-copy-btn,
+  .furo-code-header ~ .furo-copy-btn {
+    top: 0.375rem;
   }
 }
 
-// Highlight.js accessible palette-aware token styles
-.hljs {
-  color: var(--color-foreground-primary);
-  background: transparent;
+// ============================================================================
+// Dual-Theme Syntax Highlighting Token Palette (GitHub Light / Dark Default)
+// ============================================================================
+:root,
+[data-bs-theme="light"] {
+  --hljs-comment: #59636e;
+  --hljs-keyword: #cf222e;
+  --hljs-string: #0a3069;
+  --hljs-title: #8250df;
+  --hljs-variable: #953800;
+  --hljs-number: #0550ae;
+  --hljs-tag: #116329;
+  --hljs-deletion-bg: #ffebe9;
+  --hljs-deletion-fg: #82071e;
+  --hljs-addition-bg: #dafbe1;
+  --hljs-addition-fg: #116329;
+}
+
+[data-bs-theme="dark"] {
+  --hljs-comment: #8b949e;
+  --hljs-keyword: #ff7b72;
+  --hljs-string: #a5d6ff;
+  --hljs-title: #d2a8ff;
+  --hljs-variable: #ffa657;
+  --hljs-number: #79c0ff;
+  --hljs-tag: #7ee787;
+  --hljs-deletion-bg: rgba(248, 81, 73, 0.15);
+  --hljs-deletion-fg: #ffdcd7;
+  --hljs-addition-bg: rgba(46, 160, 67, 0.15);
+  --hljs-addition-fg: #aff5b4;
 }
 
 .hljs-comment,
 .hljs-quote {
-  color: var(--color-foreground-muted);
+  color: var(--hljs-comment);
   font-style: italic;
 }
 
 .hljs-keyword,
 .hljs-selector-tag,
-.hljs-type,
-.hljs-operator {
-  color: var(--furo-admonition-caution-accent);
+.hljs-type {
+  color: var(--hljs-keyword);
 }
 
 .hljs-string,
 .hljs-doctag,
 .hljs-regexp {
-  color: var(--color-brand-content);
+  color: var(--hljs-string);
 }
 
 .hljs-title,
 .hljs-section,
-.hljs-built_in,
-.hljs-function {
-  color: var(--furo-admonition-important-accent);
+.hljs-built_in {
+  color: var(--hljs-title);
 }
 
-.hljs-attr,
 .hljs-variable,
 .hljs-template-variable,
+.hljs-attr,
+.hljs-attribute {
+  color: var(--hljs-variable);
+}
+
 .hljs-number,
 .hljs-literal,
 .hljs-symbol,
-.hljs-bullet,
-.hljs-link,
-.hljs-meta {
-  color: var(--furo-admonition-note-accent);
+.hljs-bullet {
+  color: var(--hljs-number);
 }
 
 .hljs-name,
-.hljs-tag,
-.hljs-selector-class,
-.hljs-selector-id {
-  color: var(--furo-admonition-tip-accent);
-}
-
-.hljs-addition {
-  display: inline-block;
-  width: calc(100% + 2.5rem);
-  margin-inline: -1.25rem;
-  padding-inline: 1rem 1.25rem;
-  border-left: 0.25rem solid var(--furo-admonition-tip-accent);
-  color: var(--furo-admonition-tip-accent);
-  background-color: var(--furo-admonition-tip-bg);
+.hljs-selector-id,
+.hljs-selector-class {
+  color: var(--hljs-tag);
 }
 
 .hljs-deletion {
-  display: inline-block;
-  width: calc(100% + 2.5rem);
-  margin-inline: -1.25rem;
-  padding-inline: 1rem 1.25rem;
-  border-left: 0.25rem solid var(--furo-admonition-caution-accent);
-  color: var(--furo-admonition-caution-accent);
-  background-color: var(--furo-admonition-caution-bg);
+  background-color: var(--hljs-deletion-bg);
+  color: var(--hljs-deletion-fg);
 }
 
-.hljs-emphasis {
-  font-style: italic;
-}
-
-.hljs-strong {
-  font-weight: 700;
+.hljs-addition {
+  background-color: var(--hljs-addition-bg);
+  color: var(--hljs-addition-fg);
 }
 
 // ============================================================================
-// Responsive Doxia Tables
+// Responsive Doxia Table Normalization
 // ============================================================================
 .furo-table-responsive {
-  position: relative;
   width: 100%;
   max-width: 100%;
   overflow-x: auto;
-  margin: 1.5rem 0;
+  -webkit-overflow-scrolling: touch;
+  margin: 1.25rem 0 1.5rem;
   border: 1px solid var(--color-background-border);
   border-radius: 0.5rem;
 
   table.table {
-    margin-bottom: 0;
-    font-size: 0.875rem;
-    line-height: 1.55;
+    margin-bottom: 0 !important;
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.90625rem;
 
     th,
     td {
-      padding: 0.75rem 1rem;
-      vertical-align: top;
-    }
-
-    th {
-      background-color: var(--color-background-secondary);
-      font-weight: 650;
-      color: var(--color-foreground-primary);
+      padding: 0.625rem 0.875rem;
       border-bottom: 1px solid var(--color-background-border);
-      white-space: nowrap;
+      vertical-align: top;
+      text-align: left;
     }
 
-    tbody tr:last-child td {
-      border-bottom: none;
+    thead th,
+    tr:first-child th {
+      background-color: var(--color-background-secondary);
+      color: var(--color-foreground-primary);
+      font-weight: 650;
+      border-bottom-width: 1px;
+    }
+
+    tbody tr:last-child td,
+    tbody tr:last-child th {
+      border-bottom: 0;
+    }
+
+    tbody tr:hover {
+      background-color: var(--color-background-hover);
     }
   }
 }
 
 // ============================================================================
-// Previous / Next Page Navigation Cards (Furo Related Pages)
+// Previous / Next Related Pages Footer Navigation (Furo Bottom Cards)
 // ============================================================================
 .furo-related-pages {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  gap: 0.75rem;
-  max-width: var(--furo-content-max-width);
-  width: 100%;
-  margin: 1.5rem auto 2.5rem;
-  padding-top: 1.75rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: 1rem;
+  margin-top: 3.5rem;
+  padding-top: 1.5rem;
   border-top: 1px solid var(--color-background-border);
 
-  @media (width >= 576px) {
-    gap: 1rem;
-  }
-}
-
-.furo-prev-page,
-.furo-next-page {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.75rem 1rem;
-  border-radius: 0.5rem;
-  border: 1px solid var(--color-background-border);
-  background-color: var(--color-background-primary);
-  color: var(--color-foreground-primary);
-  text-decoration: none !important;
-  transition: border-color 0.15s ease, background-color 0.15s ease, transform 0.15s ease;
-  max-width: calc(50% - 0.5rem);
-  min-width: 12rem;
-
-  @media (width >= 576px) {
-    gap: 0.875rem;
-    padding: 0.875rem 1.125rem;
-  }
-
-  &:hover {
-    border-color: var(--color-brand-primary);
-    background-color: var(--color-background-secondary);
-  }
-
-  .furo-related-icon,
-  .furo-page-nav-icon {
-    flex: 0 0 auto;
-    color: var(--color-foreground-muted);
-  }
-
-  .furo-page-info,
-  .furo-page-nav-text {
+  .furo-prev-link,
+  .furo-next-link {
     display: flex;
-    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.875rem 1.125rem;
+    border-radius: 0.5rem;
+    border: 1px solid var(--color-background-border);
+    background-color: var(--color-background-primary);
+    text-decoration: none !important;
+    color: var(--color-foreground-primary) !important;
+    transition: border-color 0.15s ease, background-color 0.15s ease, transform 0.15s ease;
     min-width: 0;
+
+    &:hover {
+      border-color: var(--color-brand-primary);
+      background-color: var(--color-background-secondary);
+    }
+
+    .furo-page-info {
+      display: flex;
+      flex-direction: column;
+      gap: 0.15rem;
+      min-width: 0;
+    }
+
+    .furo-context {
+      font-size: 0.75rem;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--color-foreground-muted);
+    }
+
+    .furo-title {
+      font-size: 0.9375rem;
+      font-weight: 600;
+      color: var(--color-brand-content);
+      overflow-wrap: break-word;
+    }
+
+    .furo-related-icon {
+      flex-shrink: 0;
+      color: var(--color-foreground-muted);
+    }
   }
 
-  .furo-context,
-  .furo-page-nav-context {
-    font-size: 0.6875rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.055em;
-    line-height: 1.25;
-    color: var(--color-foreground-muted);
-  }
-
-  .furo-title,
-  .furo-page-nav-title {
-    font-size: 0.9375rem;
-    font-weight: 600;
-    line-height: 1.35;
-    color: var(--color-brand-primary);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-}
-
-.furo-next-page {
-  margin-left: auto;
-  text-align: right;
-  justify-content: flex-end;
-}
-
-@media (width < 576px) {
-  .furo-prev-page,
-  .furo-next-page {
-    max-width: 100%;
+  .furo-next-link {
+    margin-left: auto;
     width: 100%;
+    justify-content: flex-end;
+    text-align: right;
   }
 }

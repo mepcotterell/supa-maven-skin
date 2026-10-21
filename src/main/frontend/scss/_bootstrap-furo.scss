@@ -10,8 +10,10 @@
   --bg-2: var(--color-background-item);
   --bg-3: var(--color-background-border);
   --fg-body: var(--color-foreground-primary);
+  --fg-1: var(--color-foreground-primary);
   --fg-2: var(--color-foreground-secondary);
   --fg-3: var(--color-foreground-muted);
+  --fg-4: var(--color-foreground-muted);
   --border-color: var(--color-background-border);
   --btn-input-bg: var(--color-background-primary);
   --btn-input-fg: var(--color-foreground-primary);
@@ -40,6 +42,109 @@ dialog.drawer:not([open]) {
   display: none !important;
   position: fixed !important;
   pointer-events: none !important;
+}
+
+// Support both Bootstrap 6 `.breadcrumb-link` + `<li class="breadcrumb-divider">` markup
+// and classic `<li class="breadcrumb-item"><a href="...">` markup inside `.breadcrumb`
+.breadcrumb:not(.furo-breadcrumb) {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  list-style: none;
+  padding: 0;
+  margin-bottom: 0;
+
+  .breadcrumb-link.active {
+    color: var(--breadcrumb-link-active-color, var(--color-foreground-primary));
+    font-weight: 500;
+  }
+
+  .breadcrumb-item {
+    display: inline-flex;
+    align-items: center;
+    color: var(--breadcrumb-link-color, var(--color-foreground-muted));
+
+    & > a:not(.breadcrumb-link) {
+      display: inline-flex;
+      align-items: center;
+      padding: var(--breadcrumb-link-padding-y, 0.25rem) var(--breadcrumb-link-padding-x, 0.5rem);
+      color: var(--breadcrumb-link-color, var(--color-foreground-secondary));
+      text-decoration: none !important;
+      border-radius: var(--breadcrumb-link-border-radius, 0.375rem);
+      transition: color 0.15s ease, background-color 0.15s ease;
+
+      &:hover {
+        color: var(--breadcrumb-link-hover-color, var(--color-foreground-primary));
+        background-color: var(--breadcrumb-link-hover-bg, var(--color-background-secondary));
+      }
+    }
+
+    &.active {
+      color: var(--breadcrumb-link-active-color, var(--color-foreground-primary));
+      font-weight: 500;
+
+      &:not(:has(> .breadcrumb-link)) {
+        padding: var(--breadcrumb-link-padding-y, 0.25rem) var(--breadcrumb-link-padding-x, 0.5rem) var(--breadcrumb-link-padding-y, 0.25rem) 0;
+      }
+    }
+
+    // Automatically render the chevron divider between adjacent .breadcrumb-item elements
+    // when no explicit <li class="breadcrumb-divider"> is placed between them
+    & + .breadcrumb-item::before {
+      display: inline-block;
+      flex-shrink: 0;
+      width: var(--breadcrumb-divider-width, 0.375rem);
+      height: var(--breadcrumb-divider-height, 0.75rem);
+      margin-inline: calc(var(--breadcrumb-link-padding-x, 0.5rem) / 4);
+      content: "";
+      background-color: var(--breadcrumb-divider-color, var(--color-foreground-muted));
+      mask-image: var(--breadcrumb-divider-icon);
+      mask-repeat: no-repeat;
+      mask-position: center;
+      mask-size: 100% 100%;
+    }
+
+    & + .breadcrumb-item.active:not(:has(> .breadcrumb-link))::before {
+      margin-inline-end: calc(var(--breadcrumb-link-padding-x, 0.5rem) * 1.25);
+    }
+  }
+}
+
+// Support `.text-danger`, `.text-success`, `.text-warning`, `.text-info`, `.text-primary` aliases
+// alongside Bootstrap 6's `.fg-*` and `.theme-*` classes (including on `.menu-item`)
+.text-danger {
+  --theme-fg: var(--danger-fg);
+  --theme-fg-emphasis: var(--danger-fg-emphasis);
+  --theme-bg-subtle: var(--danger-bg-subtle);
+  color: var(--danger-fg) !important;
+}
+
+.text-success {
+  --theme-fg: var(--success-fg);
+  --theme-fg-emphasis: var(--success-fg-emphasis);
+  --theme-bg-subtle: var(--success-bg-subtle);
+  color: var(--success-fg) !important;
+}
+
+.text-warning {
+  --theme-fg: var(--warning-fg);
+  --theme-fg-emphasis: var(--warning-fg-emphasis);
+  --theme-bg-subtle: var(--warning-bg-subtle);
+  color: var(--warning-fg) !important;
+}
+
+.text-info {
+  --theme-fg: var(--info-fg);
+  --theme-fg-emphasis: var(--info-fg-emphasis);
+  --theme-bg-subtle: var(--info-bg-subtle);
+  color: var(--info-fg) !important;
+}
+
+.text-primary {
+  --theme-fg: var(--primary-fg);
+  --theme-fg-emphasis: var(--primary-fg-emphasis);
+  --theme-bg-subtle: var(--primary-bg-subtle);
+  color: var(--primary-fg) !important;
 }
 
 // Make horizontal steppers stack vertically on phones (< 576px) and span full width on >= 576px
@@ -123,7 +228,8 @@ dialog.drawer:not([open]) {
 // CSS Guardrails: Isolate Bootstrap 6 Components inside .furo-article.prose
 // ============================================================================
 .furo-article {
-  // Prevent .prose list bullets and indentation on Bootstrap list-based components
+  // Prevent .prose list bullets on Bootstrap list-based components while preserving
+  // internal padding on `.menu`, `.menu-header`, and `.nav-pills`
   ul.nav,
   ol.nav,
   ul.navbar-nav,
@@ -137,13 +243,27 @@ dialog.drawer:not([open]) {
   ol.carousel-indicators,
   ul.menu {
     list-style: none !important;
-    padding-inline-start: 0 !important;
     margin-block: 0 !important;
 
     & > li {
+      list-style: none !important;
       margin-block: 0 !important;
-      padding-inline-start: 0 !important;
     }
+  }
+
+  ul.pagination,
+  ol.breadcrumb,
+  ul.list-group,
+  ol.list-group,
+  ol.stepper,
+  ul.stepper,
+  ol.furo-stepper,
+  ol.carousel-indicators {
+    padding-inline-start: 0 !important;
+  }
+
+  hr.menu-divider {
+    margin: var(--menu-divider-margin-y, 0.125rem) var(--menu-divider-margin-x, 0.25rem) !important;
   }
 
   // Prevent .prose link underlines on Bootstrap interactive elements
@@ -153,6 +273,7 @@ dialog.drawer:not([open]) {
   a.page-link,
   a.nav-link,
   a.menu-item,
+  a.breadcrumb-link,
   a.list-group-item,
   a.card-link,
   a.navbar-brand,
