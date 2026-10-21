@@ -133,7 +133,7 @@ Bootstrap 6 introduces first-class **Avatars** (`.avatar`, `.avatar-stack`, `.av
 
 <div class="furo-component-preview not-prose">
   <div class="row g-4 align-items-center">
-    <div class="col-md-6">
+    <div class="md:col-6">
       <div class="small fw-semibold text-body-secondary mb-2">Progress Bars</div>
       <div class="progress mb-2" role="progressbar" aria-label="Build completion" aria-valuenow="78" aria-valuemin="0" aria-valuemax="100">
         <div class="progress-bar theme-primary" style="width: 78%">78%</div>
@@ -142,7 +142,7 @@ Bootstrap 6 introduces first-class **Avatars** (`.avatar`, `.avatar-stack`, `.av
         <div class="progress-bar progress-bar-striped progress-bar-animated theme-success" style="width: 92%">92% Coverage</div>
       </div>
     </div>
-    <div class="col-md-6">
+    <div class="md:col-6">
       <div class="small fw-semibold text-body-secondary mb-2">Spinners &amp; Placeholders</div>
       <div class="d-flex align-items-center gap-3 mb-2">
         <div class="spinner-border spinner-border-sm theme-primary" role="status"><span class="visually-hidden">Loading...</span></div>
@@ -320,7 +320,7 @@ Wrap `<div title="Question Title">` items inside `<div class="furo-accordion">` 
 
 <div class="furo-component-preview not-prose">
   <div class="row g-3">
-    <div class="col-md-6">
+    <div class="md:col-6">
       <div class="card h-100">
         <div class="card-header d-flex justify-content-between align-items-center">
           <span class="fw-semibold">Skin Architecture</span>
@@ -334,7 +334,7 @@ Wrap `<div title="Question Title">` items inside `<div class="furo-accordion">` 
         <div class="card-footer small text-body-secondary">Updated via frontend-maven-plugin</div>
       </div>
     </div>
-    <div class="col-md-6">
+    <div class="md:col-6">
       <div class="list-group">
         <a href="index.html" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
           <div>
@@ -370,7 +370,7 @@ Bootstrap 6 adds native interactive widgets for **Combobox** (`[data-bs-toggle="
 
 <div class="furo-component-preview not-prose">
   <div class="row g-4">
-    <div class="col-md-6">
+    <div class="md:col-6">
       <label class="form-label fw-semibold">Searchable Combobox (data-bs-toggle="combobox")</label>
       <div class="dropdown mb-3">
         <button type="button" class="form-control combobox-toggle" data-bs-toggle="combobox" aria-expanded="false">
@@ -398,7 +398,7 @@ Bootstrap 6 adds native interactive widgets for **Combobox** (`[data-bs-toggle="
         <label class="form-check-label" for="switchMermaid">Lazy-load Mermaid &amp; KaTeX</label>
       </div>
     </div>
-    <div class="col-md-6">
+    <div class="md:col-6">
       <label class="form-label fw-semibold">6-Digit OTP Verification Input (data-bs-otp)</label>
       <div class="otp mb-3" data-bs-otp="true" data-bs-length="6">
         <input type="text" class="otp-input" maxlength="6" value="428190" aria-label="One-time verification code" />

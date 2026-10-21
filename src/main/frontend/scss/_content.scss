@@ -3,6 +3,9 @@
 // ============================================================================
 
 .furo-article {
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
   font-family: var(--font-stack);
   color: var(--color-foreground-primary);
   font-size: 1rem;
@@ -77,10 +80,12 @@
     margin-bottom: 0.5rem !important;
   }
 
-  // Strip Doxia legacy section spacing anomalies
+  // Strip Doxia legacy section spacing anomalies and prevent flex min-width:auto blowout
   section {
     margin: 0;
     padding: 0;
+    min-width: 0;
+    max-width: 100%;
   }
 
   p {
@@ -345,6 +350,8 @@
 // ============================================================================
 .furo-code-block {
   position: relative;
+  min-width: 0;
+  max-width: 100%;
   margin: 1.25rem 0 1.5rem;
   border-radius: 0.5rem;
   border: 1px solid var(--color-background-border);
@@ -550,7 +557,9 @@
 // Responsive Doxia Tables
 // ============================================================================
 .furo-table-responsive {
+  position: relative;
   width: 100%;
+  max-width: 100%;
   overflow-x: auto;
   margin: 1.5rem 0;
   border: 1px solid var(--color-background-border);
@@ -651,7 +660,7 @@
   justify-content: flex-end;
 }
 
-@media (max-width: 639.98px) {
+@media (width < 576px) {
   .furo-prev-page,
   .furo-next-page {
     max-width: 100%;

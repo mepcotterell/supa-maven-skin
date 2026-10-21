@@ -190,12 +190,12 @@ Every built-in color scheme is verified at build time by `scripts/lint-scss.mjs`
 
 | `<colorScheme>` ID | Inspiration | Target Compliance | Min Text Contrast | Min Border Contrast | Notes |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| `furo` | Sphinx Furo | **WCAG 2.2 AA** | $\ge 4.5:1$ ($6.0:1+$ actual) | $\ge 3.0:1$ | Default crisp documentation palette; automatically escalates to `modus` when `@media (prefers-contrast: more)` is active. |
-| `bootstrap` | Bootstrap 6 Alpha OKLCH | **WCAG 2.2 AA** | $\ge 4.5:1$ ($6.0:1+$ actual) | $\ge 3.0:1$ | Native Bootstrap 6 perceptually uniform OKLCH colors inside Furo's 3-column layout. |
-| `modus` | Emacs `modus-operandi` & `modus-vivendi` | **WCAG 2.2 AAA** | $\ge 7.0:1$ | $\ge 4.5:1$ | Protesilaos Stavrou's strict AAA high-contrast themes ($21:1$ primary text, $\ge 7:1$ muted text and semantic accents). |
-| `modus-tinted` | Emacs `modus-*-tinted` | **WCAG 2.2 AAA** | $\ge 7.0:1$ | $\ge 4.5:1$ | Warm cream paper (`#fbf7f0`) in Light mode and deep night-sky (`#0d0e1c`) in Dark mode to prevent halation/glare. |
-| `modus-deuteranopia` | Emacs `modus-*-deuteranopia` | **WCAG 2.2 AAA** | $\ge 7.0:1$ | $\ge 4.5:1$ | Red-green colorblind-safe semantic palette using royal/sky blue, gold, and warm burnt amber. |
-| `modus-tritanopia` | Emacs `modus-*-tritanopia` | **WCAG 2.2 AAA** | $\ge 7.0:1$ | $\ge 4.5:1$ | Blue-yellow colorblind-safe semantic palette using deep teal/aqua, plum/magenta, and crimson. |
+| `furo` | Sphinx Furo | **WCAG 2.2 AA** | &ge; 4.5:1 (6.0:1+ actual) | &ge; 3.0:1 | Default crisp documentation palette; automatically escalates to `modus` when `@media (prefers-contrast: more)` is active. |
+| `bootstrap` | Bootstrap 6 Alpha OKLCH | **WCAG 2.2 AA** | &ge; 4.5:1 (6.0:1+ actual) | &ge; 3.0:1 | Native Bootstrap 6 perceptually uniform OKLCH colors inside Furo's 3-column layout. |
+| `modus` | Emacs `modus-operandi` & `modus-vivendi` | **WCAG 2.2 AAA** | &ge; 7.0:1 | &ge; 4.5:1 | Protesilaos Stavrou's strict AAA high-contrast themes (21:1 primary text, &ge; 7:1 muted text and semantic accents). |
+| `modus-tinted` | Emacs `modus-*-tinted` | **WCAG 2.2 AAA** | &ge; 7.0:1 | &ge; 4.5:1 | Warm cream paper (`#fbf7f0`) in Light mode and deep night-sky (`#0d0e1c`) in Dark mode to prevent halation/glare. |
+| `modus-deuteranopia` | Emacs `modus-*-deuteranopia` | **WCAG 2.2 AAA** | &ge; 7.0:1 | &ge; 4.5:1 | Red-green colorblind-safe semantic palette using royal/sky blue, gold, and warm burnt amber. |
+| `modus-tritanopia` | Emacs `modus-*-tritanopia` | **WCAG 2.2 AAA** | &ge; 7.0:1 | &ge; 4.5:1 | Blue-yellow colorblind-safe semantic palette using deep teal/aqua, plum/magenta, and crimson. |
 
 ## Extending Palettes via `<lightCssVariables>` & `<darkCssVariables>`
 
@@ -212,7 +212,7 @@ Just like Sphinx Furo's `light_css_variables` and `dark_css_variables`, any chil
 | `color-foreground-primary` | Primary body text and heading color (`--fg-body`). |
 | `color-foreground-secondary` | Secondary metadata, caption, and inactive TOC link color (`--fg-2`). |
 | `color-foreground-muted` | Muted text, permalink `#` indicators, and subtle labels (`--fg-3`). |
-| `color-foreground-border` | Interactive control border color (WCAG 1.4.11 non-text contrast $\ge 3:1$). |
+| `color-foreground-border` | Interactive control border color (WCAG 1.4.11 non-text contrast &ge; 3:1). |
 | `furo-admonition-note-accent` | Note / Info admonition and `.theme-info` accent color. |
 | `furo-admonition-tip-accent` | Tip / Success admonition and `.theme-success` accent color. |
 | `furo-admonition-important-accent` | Important / Accent admonition and `.theme-accent` accent color. |
