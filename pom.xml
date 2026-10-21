@@ -51,13 +51,13 @@
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     <node.version>v22.14.0</node.version>
     <npm.version>10.9.2</npm.version>
-    <frontend-maven-plugin.version>1.15.1</frontend-maven-plugin.version>
-    <maven-resources-plugin.version>3.3.1</maven-resources-plugin.version>
-    <maven-jar-plugin.version>3.4.2</maven-jar-plugin.version>
+    <frontend-maven-plugin.version>2.0.2</frontend-maven-plugin.version>
+    <maven-resources-plugin.version>3.5.0</maven-resources-plugin.version>
+    <maven-jar-plugin.version>3.5.1</maven-jar-plugin.version>
     <maven-site-plugin.version>3.21.0</maven-site-plugin.version>
     <maven-project-info-reports-plugin.version>3.9.0</maven-project-info-reports-plugin.version>
-    <maven-invoker-plugin.version>3.9.0</maven-invoker-plugin.version>
-    <doxia.version>2.0.0</doxia.version>
+    <maven-invoker-plugin.version>3.10.1</maven-invoker-plugin.version>
+    <doxia.version>2.2.0</doxia.version>
   </properties>
 
   <build>
