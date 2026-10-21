@@ -6,10 +6,14 @@
 html {
   scroll-behavior: smooth;
   scroll-padding-top: 4.5rem;
+  max-width: 100%;
+  overflow-x: clip;
 }
 
 body.furo-body {
   min-height: 100vh;
+  width: 100%;
+  max-width: 100%;
   margin: 0;
   background-color: var(--color-background-primary);
   color: var(--color-foreground-primary);
@@ -193,7 +197,7 @@ body.furo-body {
 // Interactive Palette Preview Cards (for documentation & showcase pages)
 .furo-palette-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(15.5rem, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(15.5rem, 100%), 1fr));
   gap: 0.875rem;
   margin: 1.25rem 0 1.75rem;
 }
@@ -286,8 +290,9 @@ html:not([data-furo-theme-mode]) .furo-theme-toggle .furo-theme-icon-auto {
 .furo-page {
   display: flex;
   flex: 1 1 auto;
+  min-width: 0;
   width: 100%;
-  max-width: 96rem; // 1536px max outer frame, centered on ultra-wide screens
+  max-width: min(96rem, 100%); // 1536px max outer frame, centered on ultra-wide screens
   margin: 0 auto;
 }
 
@@ -305,6 +310,12 @@ html:not([data-furo-theme-mode]) .furo-theme-toggle .furo-theme-icon-auto {
 .furo-sidebar-drawer {
   --drawer-width: 18rem;
   --drawer-bg: var(--color-background-secondary);
+
+  @media (width < 1024px) {
+    &:not([open]) {
+      display: none !important;
+    }
+  }
 
   @media (width >= 1024px) {
     position: sticky !important;
@@ -338,8 +349,10 @@ html:not([data-furo-theme-mode]) .furo-theme-toggle .furo-theme-icon-auto {
 
 // 2. Center Main Content + Right TOC Wrapper
 .furo-main {
-  flex: 1 1 auto;
+  flex: 1 1 0%;
   min-width: 0;
+  width: 100%;
+  max-width: 100%;
   display: flex;
   flex-direction: row;
   align-items: stretch;
@@ -347,19 +360,26 @@ html:not([data-furo-theme-mode]) .furo-theme-toggle .furo-theme-icon-auto {
 
 .furo-content {
   display: flex;
-  flex: 1 1 auto;
+  flex: 1 1 0%;
   min-width: 0;
+  width: 100%;
+  max-width: 100%;
   justify-content: center;
 }
 
 .furo-article-container {
-  flex: 1 1 auto;
+  flex: 1 1 0%;
   min-width: 0;
-  max-width: calc(var(--furo-content-max-width) + 7rem);
-  padding: 0 1.5rem;
+  width: 100%;
+  max-width: min(100%, calc(var(--furo-content-max-width) + 7rem));
+  padding: 0 1.25rem;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
+
+  @media (width >= 576px) {
+    padding: 0 1.5rem;
+  }
 
   @media (width >= 768px) {
     padding: 0 2.5rem;
@@ -461,6 +481,12 @@ html:not([data-furo-theme-mode]) .furo-theme-toggle .furo-theme-icon-auto {
 .furo-toc-drawer {
   --drawer-width: 16.5rem;
   --drawer-bg: var(--color-background-primary);
+
+  @media (width < 1280px) {
+    &:not([open]) {
+      display: none !important;
+    }
+  }
 
   @media (width >= 1280px) {
     position: sticky !important;

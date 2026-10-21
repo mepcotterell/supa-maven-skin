@@ -34,9 +34,10 @@
   --btn-active-border-color: var(--btn-active-bg);
 }
 
-// Ensure closed <dialog class="dialog"> and <dialog class="drawer"> never take up inline document flow
+// Ensure closed <dialog class="dialog"> and <dialog class="drawer"> never take up inline document flow or expand iOS Safari viewport
 dialog.dialog:not([open]),
 dialog.drawer:not([open]) {
+  display: none !important;
   position: fixed !important;
   pointer-events: none !important;
 }
