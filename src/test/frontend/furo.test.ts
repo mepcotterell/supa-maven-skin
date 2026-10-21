@@ -2,7 +2,8 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import {
   BootstrapPlugins,
   initBootstrapComponents,
-  isolateBootstrapComponentsFromProse
+  isolateBootstrapComponentsFromProse,
+  Tooltip
 } from '../../main/frontend/ts/bootstrap-components';
 import { enhanceCodeBlocks } from '../../main/frontend/ts/code';
 import {
@@ -13,6 +14,7 @@ import {
   TAB_SYNC_STORAGE_KEY,
   transformGfmAdmonitions
 } from '../../main/frontend/ts/doxia';
+import { Drawer, initDrawers } from '../../main/frontend/ts/index';
 import {
   collectLocalSearchDocuments,
   filterSearchDocuments,
@@ -62,23 +64,50 @@ describe('Supa Maven Skin Frontend Modules', () => {
   });
 
   describe('Theme & Accessible Color Scheme Controller', () => {
-    it('applies explicit light and dark themes and removes data-bs-theme in auto mode', () => {
-      document.body.innerHTML = `<button data-furo-theme-toggle="true"></button>`;
+    it('applies explicit light, dark, and auto themes via mutually exclusive .furo-theme-toggle menu items', () => {
+      document.body.innerHTML = `
+        <div class="furo-theme-toggle">
+          <button type="button" class="furo-icon-btn furo-theme-toggle-btn" data-bs-toggle="menu" data-furo-theme-trigger="true"></button>
+          <div class="menu furo-theme-menu" role="menu">
+            <button type="button" class="menu-item" role="menuitemradio" aria-checked="false" data-furo-theme-option="light">Light</button>
+            <button type="button" class="menu-item" role="menuitemradio" aria-checked="false" data-furo-theme-option="dark">Dark</button>
+            <button type="button" class="menu-item selected" role="menuitemradio" aria-checked="true" data-furo-theme-option="auto">Auto</button>
+          </div>
+        </div>
+      `;
 
-      applyThemeMode('light');
+      initTheme();
+
+      const lightOption = document.querySelector<HTMLButtonElement>('[data-furo-theme-option="light"]')!;
+      const darkOption = document.querySelector<HTMLButtonElement>('[data-furo-theme-option="dark"]')!;
+      const autoOption = document.querySelector<HTMLButtonElement>('[data-furo-theme-option="auto"]')!;
+
+      lightOption.click();
       expect(document.documentElement.getAttribute('data-bs-theme')).toBe('light');
       expect(document.documentElement.getAttribute('data-furo-theme-mode')).toBe('light');
       expect(getStoredThemeMode()).toBe('light');
+      expect(lightOption.classList.contains('selected')).toBe(true);
+      expect(lightOption.getAttribute('aria-checked')).toBe('true');
+      expect(darkOption.classList.contains('selected')).toBe(false);
+      expect(autoOption.classList.contains('selected')).toBe(false);
 
-      const next1 = cycleThemeMode();
-      expect(next1).toBe('dark');
+      darkOption.click();
       expect(document.documentElement.getAttribute('data-bs-theme')).toBe('dark');
       expect(window.localStorage.getItem(THEME_STORAGE_KEY)).toBe('dark');
+      expect(darkOption.classList.contains('selected')).toBe(true);
+      expect(darkOption.getAttribute('aria-checked')).toBe('true');
+      expect(lightOption.classList.contains('selected')).toBe(false);
 
-      const next2 = cycleThemeMode();
-      expect(next2).toBe('auto');
+      autoOption.click();
       expect(document.documentElement.hasAttribute('data-bs-theme')).toBe(false);
       expect(document.documentElement.getAttribute('data-furo-theme-mode')).toBe('auto');
+      expect(autoOption.classList.contains('selected')).toBe(true);
+      expect(autoOption.getAttribute('aria-checked')).toBe('true');
+      expect(darkOption.classList.contains('selected')).toBe(false);
+
+      applyThemeMode('light');
+      const next = cycleThemeMode();
+      expect(next).toBe('dark');
     });
 
     it('applies and persists all 6 accessible color schemes and syncs menu options, labels & preview cards', () => {
@@ -249,7 +278,7 @@ describe('Supa Maven Skin Frontend Modules', () => {
     });
   });
 
-  describe('Bootstrap 6 Plugins & .prose Isolation', () => {
+  describe('Bootstrap 6 Plugins, Drawers & .prose Isolation', () => {
     it('exports all 20 Bootstrap 6 JS plugins on window.bootstrap and isolates components from .prose', () => {
       const container = document.createElement('div');
       container.innerHTML = `
@@ -272,6 +301,111 @@ describe('Supa Maven Skin Frontend Modules', () => {
       expect(container.querySelector('.card')?.classList.contains('not-prose')).toBe(true);
       expect(container.querySelector('.nav')?.classList.contains('not-prose')).toBe(true);
       expect(container.querySelector('.chip-input')?.classList.contains('not-prose')).toBe(true);
+    });
+
+    it('prefers Bootstrap 6 Tooltips over built-in browser title attributes across controls and content', () => {
+      document.body.innerHTML = `
+        <div class="furo-theme-toggle">
+          <button type="button" class="furo-icon-btn furo-theme-toggle-btn" data-bs-toggle="menu" data-furo-theme-trigger="true"></button>
+        </div>
+        <div class="furo-palette-picker">
+          <button type="button" class="furo-palette-btn" data-bs-toggle="menu"></button>
+        </div>
+        <main id="furo-main-content">
+          <h2>Section Heading</h2>
+          <pre><code class="language-xml">&lt;skin/&gt;</code></pre>
+          <span class="avatar" title="Lead Maintainer">MC</span>
+          <a href="https://github.com" class="furo-footer-icon-link" title="GitHub Repository">GH</a>
+        </main>
+      `;
+
+      const article = document.getElementById('furo-main-content')!;
+      initTheme();
+      prepareHeadings(article, true, '#');
+      enhanceCodeBlocks(article, true, true);
+      initBootstrapComponents(document);
+
+      // No visible element in body should retain a native browser `title` attribute
+      expect(document.body.querySelectorAll('[title]').length).toBe(0);
+
+      const themeBtn = document.querySelector<HTMLElement>('.furo-theme-toggle-btn')!;
+      const paletteBtn = document.querySelector<HTMLElement>('.furo-palette-btn')!;
+      const permalink = article.querySelector<HTMLElement>('.furo-headerlink')!;
+      const copyBtn = article.querySelector<HTMLElement>('.furo-copy-btn')!;
+      const avatar = article.querySelector<HTMLElement>('.avatar')!;
+      const ghLink = article.querySelector<HTMLElement>('.furo-footer-icon-link')!;
+
+      expect(themeBtn.getAttribute('data-bs-toggle')).toBe('menu');
+      expect(themeBtn.getAttribute('data-bs-title')).toContain('Color theme:');
+      expect(Tooltip.getInstance(themeBtn)).not.toBeNull();
+
+      expect(paletteBtn.getAttribute('data-bs-toggle')).toBe('menu');
+      expect(paletteBtn.getAttribute('data-bs-title')).toContain('Accessible color scheme:');
+      expect(Tooltip.getInstance(paletteBtn)).not.toBeNull();
+
+      expect(permalink.getAttribute('data-bs-toggle')).toBe('tooltip');
+      expect(permalink.getAttribute('data-bs-title')).toBe('Copy permalink to this heading');
+      expect(Tooltip.getInstance(permalink)).not.toBeNull();
+
+      expect(copyBtn.getAttribute('data-bs-toggle')).toBe('tooltip');
+      expect(copyBtn.getAttribute('data-bs-title')).toBe('Copy code');
+      expect(Tooltip.getInstance(copyBtn)).not.toBeNull();
+
+      expect(avatar.getAttribute('data-bs-toggle')).toBe('tooltip');
+      expect(avatar.getAttribute('data-bs-title')).toBe('Lead Maintainer');
+      expect(Tooltip.getInstance(avatar)).not.toBeNull();
+
+      expect(ghLink.getAttribute('data-bs-toggle')).toBe('tooltip');
+      expect(ghLink.getAttribute('data-bs-title')).toBe('GitHub Repository');
+      expect(Tooltip.getInstance(ghLink)).not.toBeNull();
+    });
+
+    it('configures left #furoSidebarDrawer (.drawer-start) and right #furoTocDrawer (.drawer-end) with body scrolling and backdrop options', () => {
+      document.body.innerHTML = `
+        <dialog class="lg:drawer drawer-start furo-sidebar-drawer"
+                id="furoSidebarDrawer"
+                data-bs-scroll="true"
+                data-bs-backdrop="false"
+                tabindex="-1"></dialog>
+        <dialog class="xl:drawer drawer-end furo-toc-drawer"
+                id="furoTocDrawer"
+                data-bs-scroll="false"
+                data-bs-backdrop="static"
+                tabindex="-1"></dialog>
+      `;
+
+      initDrawers();
+
+      const sidebarDrawer = document.getElementById('furoSidebarDrawer')!;
+      const tocDrawer = document.getElementById('furoTocDrawer')!;
+
+      expect(sidebarDrawer.classList.contains('drawer-start')).toBe(true);
+      expect(sidebarDrawer.classList.contains('drawer-sheet')).toBe(false);
+      expect(tocDrawer.classList.contains('drawer-end')).toBe(true);
+      expect(tocDrawer.classList.contains('drawer-sheet')).toBe(false);
+
+      const sidebarInstance = Drawer.getInstance(sidebarDrawer) as unknown as {
+        _config: { scroll: boolean; backdrop: boolean | string };
+        _getShowOptions: () => { modal: boolean; preventBodyScroll: boolean };
+      };
+      const tocInstance = Drawer.getInstance(tocDrawer) as unknown as {
+        _config: { scroll: boolean; backdrop: boolean | string };
+        _getShowOptions: () => { modal: boolean; preventBodyScroll: boolean };
+      };
+
+      expect(sidebarInstance._config.scroll).toBe(true);
+      expect(sidebarInstance._config.backdrop).toBe(false);
+      expect(sidebarInstance._getShowOptions()).toEqual({
+        modal: false,
+        preventBodyScroll: false
+      });
+
+      expect(tocInstance._config.scroll).toBe(false);
+      expect(tocInstance._config.backdrop).toBe('static');
+      expect(tocInstance._getShowOptions()).toEqual({
+        modal: true,
+        preventBodyScroll: true
+      });
     });
   });
 
@@ -330,6 +464,34 @@ describe('Supa Maven Skin Frontend Modules', () => {
       expect(wrappers[1].querySelector('.furo-code-lang')?.textContent).toBe('diff');
       expect(wrappers[1].querySelector('.hljs-deletion')).not.toBeNull();
       expect(wrappers[1].querySelector('.hljs-addition')).not.toBeNull();
+    });
+
+    it('uses .hljs.language-plaintext for all license <pre> blocks in Project Licenses', () => {
+      const container = document.createElement('div');
+      container.innerHTML = `
+        <section><a id="Overview"></a><h1>Overview</h1></section>
+        <section><a id="Project_Licenses"></a>
+          <h1>Project Licenses</h1>
+          <section><a id="MIT_License"></a>
+            <h2>MIT License</h2>
+            <pre>THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE.</pre>
+          </section>
+          <section><a id="Apache_License"></a>
+            <h2>Apache License, Version 2.0</h2>
+            <pre>Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS.</pre>
+          </section>
+        </section>
+      `;
+
+      enhanceCodeBlocks(container, true, true);
+
+      const pres = container.querySelectorAll('pre');
+      expect(pres.length).toBe(2);
+      pres.forEach((pre) => {
+        expect(pre.classList.contains('hljs')).toBe(true);
+        expect(pre.classList.contains('language-plaintext')).toBe(true);
+        expect(pre.classList.contains('language-sql')).toBe(false);
+      });
     });
   });
 

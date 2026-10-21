@@ -9,9 +9,9 @@
 
 ### Canonical Furo 3-Column Layout
 
-- **Left Navigation Sidebar (`280px` on `lg+`)**: Sticky full-height navigation sidebar with dual-theme brand logos (`<lightLogo>` / `<darkLogo>`), project title and version badge, quick search trigger (`⌘K` / `/`), and collapsible `<details>` / `<summary>` menu hierarchy. Collapses into a native Bootstrap 6 `<dialog class="lg:drawer drawer-start drawer-sheet">` off-canvas sheet on mobile and tablet viewports.
+- **Left Navigation Sidebar (`280px` on `lg+`)**: Sticky full-height navigation sidebar with dual-theme brand logos (`<lightLogo>` / `<darkLogo>`), project title and version badge, quick search trigger (`⌘K` / `/`), and collapsible `<details>` / `<summary>` menu hierarchy. Collapses into a native Bootstrap 6 left drawer (`<dialog id="furoSidebarDrawer" class="lg:drawer drawer-start">`) on mobile and tablet viewports with configurable body scrolling (`data-bs-scroll`) and backdrop (`data-bs-backdrop`).
 - **Center Prose Content (`48rem` max measure)**: Clean `.prose` typography powered by Bootstrap 6, top breadcrumb and source action bar ("View source" / "Edit this page"), Furo-styled **Previous / Next** page navigation cards, and customizable footer.
-- **Right "On this page" Table of Contents (`240px` on `xl+`)**: Sticky right-hand heading tree (`h2`–`h4`) automatically generated from the article DOM and synchronized with **Bootstrap 6 ScrollSpy**. Accessible via a responsive right-side `<dialog class="xl:drawer drawer-end drawer-sheet">` on tablet/mobile.
+- **Right "On this page" Table of Contents (`240px` on `xl+`)**: Sticky right-hand heading tree (`h2`–`h4`) automatically generated from the article DOM and synchronized with **Bootstrap 6 ScrollSpy**. Accessible via a responsive Bootstrap 6 right drawer (`<dialog id="furoTocDrawer" class="xl:drawer drawer-end">`) on tablet/mobile with configurable body scrolling and backdrop.
 
 ### First-Class Dark / Light / Auto Theme Engine & Accessible Palettes
 

@@ -165,10 +165,10 @@ Apache Maven Doxia Site Renderer#if( $doxiaSiteRendererVersion ) $doxiaSiteRende
                   class="furo-palette-btn"
                   data-bs-toggle="menu"
                   data-bs-placement="#if( $placement && $placement != '' )$placement#else bottom-end#end"
+                  data-bs-title="Select accessible color scheme (WCAG 2.2 AA / AAA)"
                   data-furo-palette-trigger="true"
                   aria-expanded="false"
-                  aria-label="Select accessible color scheme"
-                  title="Select accessible color scheme (WCAG 2.2 AA / AAA)">
+                  aria-label="Select accessible color scheme">
             <span class="furo-palette-btn-label" data-furo-palette-label="true">Furo (AA)</span>
             <svg class="furo-palette-picker-chevron" viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="4 6 8 10 12 6"></polyline></svg>
           </button>
@@ -198,6 +198,41 @@ Apache Maven Doxia Site Renderer#if( $doxiaSiteRendererVersion ) $doxiaSiteRende
             </button>
             <button type="button" class="menu-item" role="menuitemradio" aria-checked="false" data-furo-palette-option="modus-tritanopia">
               <span class="menu-item-content">Modus Tritanopia (AAA)</span>
+              <svg class="menu-item-check" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="2.5 8.5 6.5 12.5 13.5 4.5"></polyline></svg>
+            </button>
+          </div>
+        </div>
+#end
+##
+## Render Theme Mode Menu Picker (Bootstrap 6 .menu with mutually exclusive Light / Dark / Auto choices)
+#macro( furoThemeToggle $extraClasses $placement )
+        <div class="furo-theme-toggle#if( $extraClasses && $extraClasses != '' ) $extraClasses#end">
+          <button type="button"
+                  class="furo-icon-btn furo-theme-toggle-btn"
+                  data-bs-toggle="menu"
+                  data-bs-placement="#if( $placement && $placement != '' )$placement#else bottom-end#end"
+                  data-bs-title="Select color theme (Light / Dark / Auto)"
+                  data-furo-theme-trigger="true"
+                  aria-expanded="false"
+                  aria-label="Select color theme (Light / Dark / Auto)">
+            <svg class="furo-theme-icon furo-theme-icon-light" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+            <svg class="furo-theme-icon furo-theme-icon-dark" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+            <svg class="furo-theme-icon furo-theme-icon-auto" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 3v18a9 9 0 0 0 0-18z" fill="currentColor"></path></svg>
+          </button>
+          <div class="menu furo-theme-menu" role="menu" aria-label="Color theme">
+            <button type="button" class="menu-item" role="menuitemradio" aria-checked="false" data-furo-theme-option="light">
+              <svg class="menu-item-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+              <span class="menu-item-content">Light</span>
+              <svg class="menu-item-check" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="2.5 8.5 6.5 12.5 13.5 4.5"></polyline></svg>
+            </button>
+            <button type="button" class="menu-item" role="menuitemradio" aria-checked="false" data-furo-theme-option="dark">
+              <svg class="menu-item-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+              <span class="menu-item-content">Dark</span>
+              <svg class="menu-item-check" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="2.5 8.5 6.5 12.5 13.5 4.5"></polyline></svg>
+            </button>
+            <button type="button" class="menu-item selected" role="menuitemradio" aria-checked="true" data-furo-theme-option="auto">
+              <svg class="menu-item-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 3v18a9 9 0 0 0 0-18z" fill="currentColor"></path></svg>
+              <span class="menu-item-content">Auto</span>
               <svg class="menu-item-check" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="2.5 8.5 6.5 12.5 13.5 4.5"></polyline></svg>
             </button>
           </div>

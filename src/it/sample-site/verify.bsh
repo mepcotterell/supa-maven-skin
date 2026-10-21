@@ -26,11 +26,14 @@ String html = Files.readString( indexHtml.toPath(), StandardCharsets.UTF_8 );
 if ( !html.contains( "class=\"furo-page\"" ) ) {
     throw new IllegalStateException( "Missing Furo 3-column page wrapper" );
 }
-if ( !html.contains( "id=\"furoSidebarDrawer\"" ) ) {
+if ( !html.contains( "id=\"furoSidebarDrawer\"" ) || !html.contains( "lg:drawer drawer-start furo-sidebar-drawer" ) ) {
     throw new IllegalStateException( "Missing Bootstrap 6 left sidebar drawer" );
 }
-if ( !html.contains( "id=\"furoTocDrawer\"" ) ) {
+if ( !html.contains( "id=\"furoTocDrawer\"" ) || !html.contains( "xl:drawer drawer-end furo-toc-drawer" ) ) {
     throw new IllegalStateException( "Missing Bootstrap 6 right TOC drawer" );
+}
+if ( !html.contains( "data-bs-scroll=" ) || !html.contains( "data-bs-backdrop=" ) ) {
+    throw new IllegalStateException( "Missing drawer data-bs-scroll / data-bs-backdrop attributes" );
 }
 if ( !html.contains( "id=\"furoSearchDialog\"" ) ) {
     throw new IllegalStateException( "Missing Bootstrap 6 search dialog" );

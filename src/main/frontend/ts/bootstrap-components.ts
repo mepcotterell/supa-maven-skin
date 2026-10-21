@@ -89,8 +89,170 @@ const BOOTSTRAP_PROSE_ISOLATION_SELECTORS = [
   '.strength',
   '.tab-content',
   '.toast',
-  '.toast-container'
+  '.toast-container',
+  '.tooltip'
 ].join(', ');
+
+const NON_TOOLTIP_TAGS = new Set([
+  'HTML',
+  'HEAD',
+  'TITLE',
+  'META',
+  'LINK',
+  'STYLE',
+  'SCRIPT',
+  'NOSCRIPT',
+  'IFRAME',
+  'FRAME',
+  'OBJECT',
+  'EMBED'
+]);
+
+function isDoxiaShorthandTitleElement(el: HTMLElement): boolean {
+  if (
+    el.classList.contains('furo-tabs') ||
+    el.classList.contains('furo-accordion') ||
+    el.classList.contains('furo-stepper')
+  ) {
+    return true;
+  }
+  const parent = el.parentElement;
+  if (
+    parent &&
+    (parent.classList.contains('furo-tabs') || parent.classList.contains('furo-accordion'))
+  ) {
+    return true;
+  }
+  return false;
+}
+
+function bindTooltipAutoHideOnInteract(el: HTMLElement): void {
+  if (el.hasAttribute('data-furo-tooltip-bound')) {
+    return;
+  }
+  el.setAttribute('data-furo-tooltip-bound', 'true');
+  const hideTip = () => {
+    try {
+      Tooltip.getInstance(el)?.hide();
+    } catch {
+      // Ignore in synthetic DOMs
+    }
+  };
+  el.addEventListener('click', hideTip);
+  el.addEventListener('show.bs.menu', hideTip);
+}
+
+/**
+ * Sets or updates a Bootstrap 6 Tooltip on an element while removing any native
+ * `title` attribute so the browser never displays a built-in tooltip.
+ */
+export function setTooltipTitle(el: HTMLElement, title: string, placement?: string): void {
+  const trimmed = title.trim();
+  el.removeAttribute('title');
+  if (!trimmed) {
+    return;
+  }
+
+  if (!el.getAttribute('aria-label') && !el.textContent?.trim()) {
+    el.setAttribute('aria-label', trimmed);
+  }
+  el.setAttribute('data-bs-title', trimmed);
+  el.setAttribute('data-bs-original-title', trimmed);
+
+  const toggleType = el.getAttribute('data-bs-toggle');
+  const isOverlayTrigger =
+    toggleType === 'menu' || toggleType === 'dialog' || toggleType === 'drawer';
+
+  if (placement && !el.hasAttribute('data-bs-placement')) {
+    el.setAttribute('data-bs-placement', placement);
+  }
+  if (!toggleType) {
+    el.setAttribute('data-bs-toggle', 'tooltip');
+  }
+
+  bindTooltipAutoHideOnInteract(el);
+
+  try {
+    const existing = Tooltip.getInstance(el) as
+      | (InstanceType<typeof Tooltip> & {
+          setContent?: (content: Record<string, string>) => void;
+          _config?: { title?: string };
+        })
+      | null;
+    if (existing) {
+      if (existing._config) {
+        existing._config.title = trimmed;
+      }
+      if (typeof existing.setContent === 'function') {
+        existing.setContent({ '.tooltip-inner': trimmed });
+      }
+    } else {
+      const rawPlacement = el.getAttribute('data-bs-placement') || placement || 'top';
+      const tooltipPlacement = isOverlayTrigger
+        ? rawPlacement.startsWith('top')
+          ? 'top'
+          : 'bottom'
+        : rawPlacement;
+      Tooltip.getOrCreateInstance(el, {
+        placement: tooltipPlacement,
+        trigger: isOverlayTrigger ? 'hover' : 'hover focus'
+      });
+    }
+  } catch {
+    // Ignore initialization errors in headless test DOMs
+  }
+}
+
+/**
+ * Upgrades all `[data-bs-toggle="tooltip"]`, `[data-bs-title]`, and native `[title]`
+ * elements within `root` to Bootstrap 6 `Tooltip` instances and strips native `title`
+ * attributes so built-in browser tooltips are suppressed.
+ */
+export function initTooltips(root: ParentNode = document): void {
+  const selector = [
+    '[data-bs-toggle="tooltip"]',
+    '[data-bs-title]:not([data-bs-toggle="popover"])',
+    '[title]'
+  ].join(', ');
+
+  root.querySelectorAll<HTMLElement>(selector).forEach((el) => {
+    if (!(el instanceof HTMLElement)) {
+      return;
+    }
+    if (NON_TOOLTIP_TAGS.has(el.tagName)) {
+      return;
+    }
+    if (el.getAttribute('data-bs-toggle') === 'popover') {
+      if (el.hasAttribute('title')) {
+        const popoverTitle = el.getAttribute('title')?.trim() ?? '';
+        if (popoverTitle && !el.hasAttribute('data-bs-title')) {
+          el.setAttribute('data-bs-title', popoverTitle);
+        }
+        el.removeAttribute('title');
+      }
+      return;
+    }
+    if (isDoxiaShorthandTitleElement(el)) {
+      return;
+    }
+
+    const explicitTitle =
+      el.getAttribute('data-bs-title')?.trim() ||
+      el.getAttribute('title')?.trim() ||
+      el.getAttribute('data-bs-original-title')?.trim() ||
+      '';
+
+    if (el.hasAttribute('title')) {
+      el.removeAttribute('title');
+    }
+
+    if (!explicitTitle) {
+      return;
+    }
+
+    setTooltipTitle(el, explicitTitle);
+  });
+}
 
 /**
  * Automatically adds `.not-prose` to Bootstrap 6 component root containers inside
@@ -110,23 +272,15 @@ export function isolateBootstrapComponentsFromProse(container: ParentNode = docu
  * opt-in interactive widgets (`Tooltip`, `Popover`, `Toast`, `Combobox`, `Datepicker`,
  * `Chips`, `OtpInput`, `Range`, `Strength`, `NavOverflow`, `Carousel`).
  */
-export function initBootstrapComponents(
-  root: ParentNode = document.getElementById('furo-main-content') ?? document
-): void {
+export function initBootstrapComponents(root: ParentNode = document): void {
   if (typeof window !== 'undefined') {
     window.bootstrap = BootstrapPlugins;
   }
 
   isolateBootstrapComponentsFromProse(root);
 
-  // 1. Tooltips: [data-bs-toggle="tooltip"]
-  root.querySelectorAll<HTMLElement>('[data-bs-toggle="tooltip"]').forEach((el) => {
-    try {
-      Tooltip.getOrCreateInstance(el);
-    } catch {
-      // Ignore initialization errors in headless test DOMs
-    }
-  });
+  // 1. Tooltips (including upgrading native [title] attributes across the page)
+  initTooltips(root);
 
   // 2. Popovers: [data-bs-toggle="popover"]
   root.querySelectorAll<HTMLElement>('[data-bs-toggle="popover"]').forEach((el) => {

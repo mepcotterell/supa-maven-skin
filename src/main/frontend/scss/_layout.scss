@@ -290,10 +290,28 @@ body.furo-body {
   flex: 0 0 auto;
 }
 
-// Theme Toggle Icon State Visibility
+// Theme Toggle Menu Picker & Icon State Visibility
 .furo-theme-toggle {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+
   .furo-theme-icon {
     display: none;
+  }
+}
+
+.furo-theme-toggle-btn[aria-expanded="true"] {
+  background-color: var(--color-background-hover);
+  color: var(--color-foreground-primary);
+}
+
+.furo-theme-menu {
+  --menu-min-width: 9rem;
+
+  .menu-item-icon {
+    align-self: center;
+    margin-top: 0;
   }
 }
 
@@ -320,6 +338,13 @@ html:not([data-furo-theme-mode]) .furo-theme-toggle .furo-theme-icon-auto {
   margin: 0 auto;
 }
 
+// Suppress native ::backdrop when data-bs-backdrop="false" is configured
+// (even when data-bs-scroll="false" opens the dialog via showModal() to lock body scroll)
+dialog[data-bs-backdrop="false"]::backdrop {
+  background-color: transparent !important;
+  backdrop-filter: none !important;
+}
+
 // 1. Left Navigation Sidebar Column
 .furo-sidebar-column {
   flex: 0 0 auto;
@@ -334,12 +359,6 @@ html:not([data-furo-theme-mode]) .furo-theme-toggle .furo-theme-icon-auto {
 .furo-sidebar-drawer {
   --drawer-width: 18rem;
   --drawer-bg: var(--color-background-secondary);
-
-  @media (width < 1024px) {
-    &:not([open]) {
-      display: none !important;
-    }
-  }
 
   @media (width >= 1024px) {
     position: sticky !important;
@@ -541,12 +560,6 @@ html:not([data-furo-theme-mode]) .furo-theme-toggle .furo-theme-icon-auto {
   --drawer-width: 16.5rem;
   --drawer-bg: var(--color-background-primary);
 
-  @media (width < 1280px) {
-    &:not([open]) {
-      display: none !important;
-    }
-  }
-
   @media (width >= 1280px) {
     position: sticky !important;
     top: 0 !important;
@@ -578,6 +591,11 @@ html:not([data-furo-theme-mode]) .furo-theme-toggle .furo-theme-icon-auto {
   margin-top: 2.5rem;
   margin-bottom: auto;
   max-height: calc(100dvh - 5rem);
+  overflow: hidden;
+
+  &[open]:not(.hiding) {
+    overflow: hidden;
+  }
 
   @media (width >= 768px) {
     --dialog-margin: 1.75rem;
@@ -593,6 +611,8 @@ html:not([data-furo-theme-mode]) .furo-theme-toggle .furo-theme-icon-auto {
   gap: 0.75rem;
   padding: 0.75rem 1rem;
   border-bottom: 1px solid var(--color-background-border);
+  border-top-left-radius: calc(var(--dialog-border-radius, 0.75rem) - var(--dialog-border-width, 1px));
+  border-top-right-radius: calc(var(--dialog-border-radius, 0.75rem) - var(--dialog-border-width, 1px));
 }
 
 .furo-search-input-wrapper {
@@ -713,9 +733,12 @@ html:not([data-furo-theme-mode]) .furo-theme-toggle .furo-theme-icon-auto {
 .furo-search-dialog-footer {
   display: none;
   align-items: center;
+  justify-content: flex-start;
   gap: 1rem;
   padding: 0.625rem 1rem;
   border-top: 1px solid var(--color-background-border);
+  border-bottom-left-radius: calc(var(--dialog-border-radius, 0.75rem) - var(--dialog-border-width, 1px));
+  border-bottom-right-radius: calc(var(--dialog-border-radius, 0.75rem) - var(--dialog-border-width, 1px));
   background-color: var(--color-background-secondary);
   font-size: 0.75rem;
   color: var(--color-foreground-muted);
@@ -814,45 +837,4 @@ html:not([data-furo-theme-mode]) .furo-theme-toggle .furo-theme-icon-auto {
   align-items: center;
   justify-content: space-between;
   gap: 1.25rem;
-}
-
-.furo-footer-left {
-  display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
-}
-
-.furo-footer-icons {
-  display: flex;
-  align-items: center;
-  gap: 0.875rem;
-}
-
-.furo-footer-icon-link {
-  color: var(--color-foreground-secondary);
-  display: inline-flex;
-  align-items: center;
-
-  &:hover {
-    color: var(--color-foreground-primary);
-  }
-}
-
-// Print Stylesheet
-@media print {
-  .furo-sidebar-column,
-  .furo-toc-column,
-  .furo-mobile-header,
-  .furo-content-header,
-  .furo-related-pages,
-  .furo-announcement,
-  .furo-copy-btn,
-  .furo-back-to-top {
-    display: none !important;
-  }
-
-  .furo-article-container {
-    max-width: 100% !important;
-    padding: 0 !important;
-  }
 }

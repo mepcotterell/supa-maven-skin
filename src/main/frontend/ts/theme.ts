@@ -1,3 +1,5 @@
+import { setTooltipTitle } from './bootstrap-components';
+
 export type ThemeMode = 'light' | 'dark' | 'auto';
 export type ResolvedTheme = 'light' | 'dark';
 export type FuroPaletteId =
@@ -133,6 +135,16 @@ function updatePaletteControls(palette: FuroPaletteId): void {
     labelEl.textContent = shortLabel;
   });
 
+  const paletteMeta = FURO_PALETTES.find((p) => p.id === palette);
+  const triggerLabel = paletteMeta
+    ? `Accessible color scheme: ${paletteMeta.label}`
+    : 'Select accessible color scheme (WCAG 2.2 AA / AAA)';
+  const paletteBtns = document.querySelectorAll<HTMLButtonElement>('.furo-palette-btn');
+  paletteBtns.forEach((btn) => {
+    btn.setAttribute('aria-label', triggerLabel);
+    setTooltipTitle(btn, triggerLabel, 'bottom');
+  });
+
   const options = document.querySelectorAll<HTMLElement>('[data-furo-palette-option]');
   options.forEach((optionEl) => {
     const optionPalette = optionEl.getAttribute('data-furo-palette-option');
@@ -205,7 +217,7 @@ export function applyThemeMode(mode: ThemeMode, persist = true): ResolvedTheme {
     }
   }
 
-  updateThemeToggleButtons(mode, resolved);
+  updateThemeControls(mode, resolved);
 
   document.dispatchEvent(
     new CustomEvent('furo:theme-changed', {
@@ -227,17 +239,38 @@ export function cycleThemeMode(current?: ThemeMode): ThemeMode {
   return nextMode;
 }
 
-function updateThemeToggleButtons(mode: ThemeMode, resolved: ResolvedTheme): void {
-  const labelMap: Record<ThemeMode, string> = {
+function updateThemeControls(mode: ThemeMode, resolved: ResolvedTheme): void {
+  const triggerLabelMap: Record<ThemeMode, string> = {
+    light: 'Color theme: Light',
+    dark: 'Color theme: Dark',
+    auto: `Color theme: Auto (${resolved === 'dark' ? 'Dark' : 'Light'})`
+  };
+  const triggerLabel = triggerLabelMap[mode];
+  const triggers = document.querySelectorAll<HTMLButtonElement>('[data-furo-theme-trigger]');
+  triggers.forEach((btn) => {
+    btn.setAttribute('aria-label', triggerLabel);
+    setTooltipTitle(btn, triggerLabel, 'bottom');
+    btn.setAttribute('data-furo-current-mode', mode);
+  });
+
+  const themeOptions = document.querySelectorAll<HTMLElement>('[data-furo-theme-option]');
+  themeOptions.forEach((optionEl) => {
+    const optionMode = optionEl.getAttribute('data-furo-theme-option');
+    const isActive = optionMode === mode;
+    optionEl.classList.toggle('selected', isActive);
+    optionEl.setAttribute('aria-checked', isActive ? 'true' : 'false');
+  });
+
+  const toggleLabelMap: Record<ThemeMode, string> = {
     light: 'Color theme: Light (click for Dark)',
     dark: 'Color theme: Dark (click for Auto)',
     auto: `Color theme: Auto (${resolved === 'dark' ? 'Dark' : 'Light'}) (click for Light)`
   };
-  const label = labelMap[mode];
+  const toggleLabel = toggleLabelMap[mode];
   const buttons = document.querySelectorAll<HTMLButtonElement>('[data-furo-theme-toggle]');
   buttons.forEach((btn) => {
-    btn.setAttribute('aria-label', label);
-    btn.setAttribute('title', label);
+    btn.setAttribute('aria-label', toggleLabel);
+    setTooltipTitle(btn, toggleLabel, 'bottom');
     btn.setAttribute('data-furo-current-mode', mode);
   });
 }
@@ -260,6 +293,16 @@ export function initTheme(): void {
 
   const initialPalette = getStoredPalette(defaultPalette);
   applyPalette(initialPalette, false);
+
+  const themeOptions = document.querySelectorAll<HTMLElement>('[data-furo-theme-option]');
+  themeOptions.forEach((optionEl) => {
+    optionEl.addEventListener('click', () => {
+      const targetMode = optionEl.getAttribute('data-furo-theme-option');
+      if (targetMode === 'light' || targetMode === 'dark' || targetMode === 'auto') {
+        applyThemeMode(targetMode, true);
+      }
+    });
+  });
 
   const buttons = document.querySelectorAll<HTMLButtonElement>('[data-furo-theme-toggle]');
   buttons.forEach((btn) => {

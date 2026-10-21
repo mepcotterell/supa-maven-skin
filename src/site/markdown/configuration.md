@@ -122,13 +122,19 @@ Click any color scheme card below (or use the palette selector in the top header
     <sourceViewButton>true</sourceViewButton>
     <sourceEditButton>true</sourceEditButton>
 
-    <!-- Layout & Navigation -->
+    <!-- Layout, Drawers & Navigation -->
     <breadcrumb>true</breadcrumb>
     <tocSidebar>true</tocSidebar>
     <tocTitle>On this page</tocTitle>
     <tocMaxDepth>4</tocMaxDepth>
     <prevNextButtons>true</prevNextButtons>
     <sidebarCollapseDepth>1</sidebarCollapseDepth>
+    <drawerScroll>false</drawerScroll>
+    <drawerBackdrop>true</drawerBackdrop>
+    <sidebarDrawerScroll>false</sidebarDrawerScroll>
+    <sidebarDrawerBackdrop>true</sidebarDrawerBackdrop>
+    <tocDrawerScroll>false</tocDrawerScroll>
+    <tocDrawerBackdrop>true</tocDrawerBackdrop>
     <footerTimestamp>true</footerTimestamp>
     <footerVersion>true</footerVersion>
 
@@ -160,7 +166,7 @@ Click any color scheme card below (or use the palette selector in the top header
 | :--- | :--- | :--- |
 | `<defaultTheme>` | `auto` | Initial light/dark polarity before user selection (`auto`, `light`, or `dark`). |
 | `<colorScheme>` | `furo` | Default accessible color scheme preset (`furo`, `bootstrap`, `modus`, `modus-tinted`, `modus-deuteranopia`, or `modus-tritanopia`). |
-| `<colorSchemeSelector>` | `true` | Render the accessible color scheme selector dropdown in the top header utility bar. |
+| `<colorSchemeSelector>` | `true` | Render the accessible color scheme selector menu in the top header utility bar. |
 | `<announcement>` | *(empty)* | Top announcement banner HTML rendered above the page header. |
 | `<sidebarHideName>` | `false` | Hide the project name text under the logo in the left sidebar. |
 | `<lightLogo>` | *(empty)* | Relative path or URL to logo shown when the resolved theme is light. |
@@ -171,11 +177,17 @@ Click any color scheme card below (or use the palette selector in the top header
 | `<sourceViewButton>` | `true` | Show the "View page source" icon button when `<sourceRepository>` is configured. |
 | `<sourceEditButton>` | `true` | Show the "Edit this page" icon button when `<sourceRepository>` is configured. |
 | `<breadcrumb>` | `true` | Render breadcrumb navigation trail in the top content utility bar. |
-| `<tocSidebar>` | `true` | Enable the right-hand "On this page" table of contents column and mobile drawer. |
+| `<tocSidebar>` | `true` | Enable the right-hand "On this page" table of contents column and right drawer (`#furoTocDrawer`). |
 | `<tocTitle>` | `On this page` | Heading label for the right-hand table of contents. |
 | `<tocMaxDepth>` | `4` | Maximum heading level (`2`–`6`) included in the right-hand TOC. |
 | `<prevNextButtons>` | `true` | Render Furo-styled Previous / Next page navigation cards at the bottom of articles. |
 | `<sidebarCollapseDepth>` | `1` | Menu nesting depth expanded by default in the left sidebar (`<details open>`). |
+| `<drawerScroll>` | `false` | Default `data-bs-scroll` setting (`true` or `false`) for both `#furoSidebarDrawer` and `#furoTocDrawer` controlling whether `<body>` scrolling is enabled while a drawer is open. |
+| `<drawerBackdrop>` | `true` | Default `data-bs-backdrop` setting (`true`, `false`, or `static`) for both `#furoSidebarDrawer` and `#furoTocDrawer` controlling whether a backdrop is rendered when a drawer is open. |
+| `<sidebarDrawerScroll>` | `$drawerScroll` | Override `data-bs-scroll` (`true` or `false`) specifically for the left navigation drawer (`#furoSidebarDrawer`). |
+| `<sidebarDrawerBackdrop>` | `$drawerBackdrop` | Override `data-bs-backdrop` (`true`, `false`, or `static`) specifically for the left navigation drawer (`#furoSidebarDrawer`). |
+| `<tocDrawerScroll>` | `$drawerScroll` | Override `data-bs-scroll` (`true` or `false`) specifically for the right table of contents drawer (`#furoTocDrawer`). |
+| `<tocDrawerBackdrop>` | `$drawerBackdrop` | Override `data-bs-backdrop` (`true`, `false`, or `static`) specifically for the right table of contents drawer (`#furoTocDrawer`). |
 | `<footerTimestamp>` | `true` | Display the build/publish date in the page footer. |
 | `<copyCodeButton>` | `true` | Add a Copy-to-Clipboard button to all `<pre>` code blocks. |
 | `<syntaxHighlighting>` | `true` | Highlight `<pre><code>` blocks offline using bundled `highlight.js`. |

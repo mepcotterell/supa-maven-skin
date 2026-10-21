@@ -1,4 +1,5 @@
 import ScrollSpy from 'bootstrap/js/dist/scrollspy.js';
+import { setTooltipTitle } from './bootstrap-components';
 
 export function slugifyHeading(text: string): string {
   return (
@@ -63,8 +64,8 @@ export function prepareHeadings(
       const anchor = document.createElement('a');
       anchor.className = 'furo-headerlink';
       anchor.href = `#${id}`;
-      anchor.title = 'Copy permalink to this heading';
       anchor.setAttribute('aria-label', `Permalink to ${heading.textContent?.trim() || 'heading'}`);
+      setTooltipTitle(anchor, 'Copy permalink to this heading', 'top');
       anchor.textContent = permalinkSymbol;
 
       anchor.addEventListener('click', async () => {
@@ -75,8 +76,10 @@ export function prepareHeadings(
             await navigator.clipboard.writeText(url.toString());
             anchor.classList.add('is-copied');
             anchor.setAttribute('data-copied-label', 'Copied!');
+            setTooltipTitle(anchor, 'Copied!', 'top');
             window.setTimeout(() => {
               anchor.classList.remove('is-copied');
+              setTooltipTitle(anchor, 'Copy permalink to this heading', 'top');
             }, 1500);
           }
         } catch {

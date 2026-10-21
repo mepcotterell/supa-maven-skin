@@ -25,6 +25,15 @@
 #set( $tocMaxDepth = $convert.toNumber( $site.getCustomValue( "${skinCfg}.tocMaxDepth", '4' ) ) )
 #set( $prevNextBtns = $convert.toBoolean( $site.getCustomValue( "${skinCfg}.prevNextButtons", 'true' ) ) )
 #set( $sidebarCollapseDepth = $convert.toNumber( $site.getCustomValue( "${skinCfg}.sidebarCollapseDepth", '1' ) ) )
+#set( $drawerScrollDefault = $site.getCustomValue( "${skinCfg}.drawerBodyScroll", 'false' ) )
+#set( $drawerScroll = $site.getCustomValue( "${skinCfg}.drawerScroll", $drawerScrollDefault ) )
+#set( $drawerBackdrop = $site.getCustomValue( "${skinCfg}.drawerBackdrop", 'true' ) )
+#set( $sidebarDrawerScrollDefault = $site.getCustomValue( "${skinCfg}.sidebarDrawerBodyScroll", $drawerScroll ) )
+#set( $sidebarDrawerScroll = $site.getCustomValue( "${skinCfg}.sidebarDrawerScroll", $sidebarDrawerScrollDefault ) )
+#set( $sidebarDrawerBackdrop = $site.getCustomValue( "${skinCfg}.sidebarDrawerBackdrop", $drawerBackdrop ) )
+#set( $tocDrawerScrollDefault = $site.getCustomValue( "${skinCfg}.tocDrawerBodyScroll", $drawerScroll ) )
+#set( $tocDrawerScroll = $site.getCustomValue( "${skinCfg}.tocDrawerScroll", $tocDrawerScrollDefault ) )
+#set( $tocDrawerBackdrop = $site.getCustomValue( "${skinCfg}.tocDrawerBackdrop", $drawerBackdrop ) )
 #set( $footerTimestamp = $convert.toBoolean( $site.getCustomValue( "${skinCfg}.footerTimestamp", 'true' ) ) )
 #set( $footerVersion = $convert.toBoolean( $site.getCustomValue( "${skinCfg}.footerVersion", 'true' ) ) )
 #set( $copyCodeBtn = $convert.toBoolean( $site.getCustomValue( "${skinCfg}.copyCodeButton", 'true' ) ) )
@@ -175,6 +184,8 @@
                 class="furo-icon-btn"
                 data-bs-toggle="drawer"
                 data-bs-target="#furoSidebarDrawer"
+                data-bs-placement="bottom"
+                data-bs-title="Toggle navigation sidebar"
                 aria-controls="furoSidebarDrawer"
                 aria-label="Toggle navigation sidebar">
           <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -199,20 +210,14 @@
 #if( $colorSchemeSelector )
 #furoPalettePicker( "" "bottom-end" )
 #end
-        <button type="button"
-                class="furo-icon-btn furo-theme-toggle"
-                data-furo-theme-toggle="true"
-                aria-label="Toggle Light / Dark / Auto color theme"
-                title="Toggle color theme (Light / Dark / Auto)">
-          <svg class="furo-theme-icon furo-theme-icon-light" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
-          <svg class="furo-theme-icon furo-theme-icon-dark" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
-          <svg class="furo-theme-icon furo-theme-icon-auto" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 3v18a9 9 0 0 0 0-18z" fill="currentColor"></path></svg>
-        </button>
+#furoThemeToggle( "" "bottom-end" )
 #if( $enableSearch )
         <button type="button"
                 class="furo-icon-btn"
                 data-bs-toggle="dialog"
                 data-bs-target="#furoSearchDialog"
+                data-bs-placement="bottom"
+                data-bs-title="Search documentation"
                 aria-label="Search documentation">
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
         </button>
@@ -222,12 +227,14 @@
                 class="furo-icon-btn furo-toc-drawer-trigger"
                 data-bs-toggle="drawer"
                 data-bs-target="#furoTocDrawer"
+                data-bs-placement="bottom"
+                data-bs-title="$esc.html( $tocTitle )"
                 aria-controls="furoTocDrawer"
                 aria-label="Toggle table of contents">
           <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <line x1="3" y1="6" x2="21" y2="6"></line>
-            <line x1="3" y1="12" x2="21" y2="12"></line>
-            <line x1="3" y1="18" x2="21" y2="18"></line>
+            <line x1="9" y1="12" x2="21" y2="12"></line>
+            <line x1="6" y1="18" x2="21" y2="18"></line>
           </svg>
         </button>
 #end
@@ -236,10 +243,12 @@
 
     <!-- Main 3-Column Furo Page Grid -->
     <div class="furo-page">
-      <!-- 1. Left Navigation Sidebar (Inline on lg+, Bootstrap 6 Drawer below lg) -->
+      <!-- 1. Left Navigation Sidebar (Inline on lg+, Bootstrap 6 Left Drawer below lg) -->
       <aside class="furo-sidebar-column" aria-label="Primary navigation">
-        <dialog class="lg:drawer drawer-start drawer-sheet furo-sidebar-drawer"
+        <dialog class="lg:drawer drawer-start furo-sidebar-drawer"
                 id="furoSidebarDrawer"
+                data-bs-scroll="$esc.html( $sidebarDrawerScroll )"
+                data-bs-backdrop="$esc.html( $sidebarDrawerBackdrop )"
                 tabindex="-1"
                 aria-labelledby="furoSidebarBrandText">
           <div class="drawer-header lg:d-none furo-drawer-header">
@@ -320,23 +329,15 @@
 
             <!-- Mobile / Tablet Drawer Appearance Footer (< lg) -->
             <div class="furo-sidebar-footer lg:d-none">
-#if( $colorSchemeSelector )
               <div class="furo-sidebar-footer-group">
-                <span class="furo-sidebar-footer-label">Color scheme</span>
+                <span class="furo-sidebar-footer-label">Appearance</span>
                 <div class="furo-sidebar-footer-controls">
+#if( $colorSchemeSelector )
 #furoPalettePicker( "" "top-start" )
-                  <button type="button"
-                          class="furo-icon-btn furo-theme-toggle"
-                          data-furo-theme-toggle="true"
-                          aria-label="Toggle Light / Dark / Auto color theme"
-                          title="Toggle color theme (Light / Dark / Auto)">
-                    <svg class="furo-theme-icon furo-theme-icon-light" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
-                    <svg class="furo-theme-icon furo-theme-icon-dark" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
-                    <svg class="furo-theme-icon furo-theme-icon-auto" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 3v18a9 9 0 0 0 0-18z" fill="currentColor"></path></svg>
-                  </button>
+#end
+#furoThemeToggle( "" "top-end" )
                 </div>
               </div>
-#end
             </div>
           </div>
         </dialog>
@@ -389,7 +390,9 @@
                    href="${sourceRepo}/blob/${sourceBranch}/${repoFilePath}"
                    target="_blank"
                    rel="noopener noreferrer"
-                   title="View page source"
+                   data-bs-toggle="tooltip"
+                   data-bs-placement="bottom"
+                   data-bs-title="View page source"
                    aria-label="View page source">
                   <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
                 </a>
@@ -399,7 +402,9 @@
                    href="${sourceRepo}/edit/${sourceBranch}/${repoFilePath}"
                    target="_blank"
                    rel="noopener noreferrer"
-                   title="Edit this page"
+                   data-bs-toggle="tooltip"
+                   data-bs-placement="bottom"
+                   data-bs-title="Edit this page"
                    aria-label="Edit this page">
                   <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                 </a>
@@ -408,23 +413,16 @@
 #if( $colorSchemeSelector )
 #furoPalettePicker( "d-none lg:d-inline-flex" "bottom-end" )
 #end
-                <button type="button"
-                        class="furo-icon-btn furo-theme-toggle d-none lg:d-inline-flex"
-                        data-furo-theme-toggle="true"
-                        aria-label="Toggle Light / Dark / Auto color theme"
-                        title="Toggle color theme (Light / Dark / Auto)">
-                  <svg class="furo-theme-icon furo-theme-icon-light" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
-                  <svg class="furo-theme-icon furo-theme-icon-dark" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
-                  <svg class="furo-theme-icon furo-theme-icon-auto" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 3v18a9 9 0 0 0 0-18z" fill="currentColor"></path></svg>
-                </button>
+#furoThemeToggle( "d-none lg:d-inline-flex" "bottom-end" )
 #if( $tocSidebar )
                 <button type="button"
                         class="furo-icon-btn furo-toc-drawer-trigger d-none lg:d-inline-flex xl:d-none"
                         data-bs-toggle="drawer"
                         data-bs-target="#furoTocDrawer"
+                        data-bs-placement="bottom"
+                        data-bs-title="$esc.html( $tocTitle )"
                         aria-controls="furoTocDrawer"
-                        aria-label="Toggle table of contents"
-                        title="$esc.html( $tocTitle )">
+                        aria-label="Toggle table of contents">
                   <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                     <line x1="3" y1="6" x2="21" y2="6"></line>
                     <line x1="9" y1="12" x2="21" y2="12"></line>
@@ -477,7 +475,7 @@
 #set( $iconTitle = $iconNode.getChild( 'title' ).getValue() )
 #set( $iconHtml = $iconNode.getChild( 'html' ).getValue() )
 #if( $iconHref )
-                    <a class="furo-footer-icon-link" href="$iconHref"#if( $iconTitle ) title="$esc.html( $iconTitle )" aria-label="$esc.html( $iconTitle )"#end target="_blank" rel="noopener noreferrer">
+                    <a class="furo-footer-icon-link" href="$iconHref"#if( $iconTitle ) data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="$esc.html( $iconTitle )" aria-label="$esc.html( $iconTitle )"#end target="_blank" rel="noopener noreferrer">
 #if( $iconHtml )
                       $iconHtml
 #elseif( $iconTitle )
@@ -495,10 +493,12 @@
         </div>
 
 #if( $tocSidebar )
-        <!-- 3. Right Table of Contents Sidebar ("On this page" — Inline on xl+, Bootstrap 6 Drawer below xl) -->
+        <!-- 3. Right Table of Contents Sidebar ("On this page" — Inline on xl+, Bootstrap 6 Right Drawer below xl) -->
         <aside class="furo-toc-column" aria-label="On this page">
-          <dialog class="xl:drawer drawer-end drawer-sheet furo-toc-drawer"
+          <dialog class="xl:drawer drawer-end furo-toc-drawer"
                   id="furoTocDrawer"
+                  data-bs-scroll="$esc.html( $tocDrawerScroll )"
+                  data-bs-backdrop="$esc.html( $tocDrawerBackdrop )"
                   tabindex="-1"
                   aria-labelledby="furoTocDrawerTitle">
             <div class="drawer-header xl:d-none furo-drawer-header">

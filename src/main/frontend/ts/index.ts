@@ -12,12 +12,14 @@ import {
   Dialog,
   Drawer,
   initBootstrapComponents,
+  initTooltips,
   Menu,
   NavOverflow,
   OtpInput,
   Popover,
   Range,
   ScrollSpy,
+  setTooltipTitle,
   Strength,
   Tab,
   Toast,
@@ -31,9 +33,27 @@ import { initSearch } from './search';
 import { initTheme } from './theme';
 import { initTocAndScrollSpy } from './toc';
 
-function initDrawerLinkAutoClose(): void {
+export function initDrawers(): void {
+  const sidebarDrawer = document.getElementById('furoSidebarDrawer') as HTMLDialogElement | null;
   const tocDrawer = document.getElementById('furoTocDrawer') as HTMLDialogElement | null;
-  if (tocDrawer) {
+
+  [sidebarDrawer, tocDrawer].forEach((drawerEl) => {
+    if (!drawerEl) {
+      return;
+    }
+    try {
+      const existing = Drawer.getInstance(drawerEl);
+      if (existing) {
+        existing.dispose();
+      }
+      Drawer.getOrCreateInstance(drawerEl);
+    } catch {
+      // Ignore initialization errors in synthetic DOM environments
+    }
+  });
+
+  if (tocDrawer && !tocDrawer.hasAttribute('data-furo-drawer-bound')) {
+    tocDrawer.setAttribute('data-furo-drawer-bound', 'true');
     tocDrawer.addEventListener('click', (e) => {
       const link = (e.target as HTMLElement | null)?.closest('a.nav-link');
       if (link && window.innerWidth < 1280 && tocDrawer.open) {
@@ -43,6 +63,41 @@ function initDrawerLinkAutoClose(): void {
           tocDrawer.close?.();
         }
       }
+    });
+  }
+
+  if (sidebarDrawer && !sidebarDrawer.hasAttribute('data-furo-drawer-bound')) {
+    sidebarDrawer.setAttribute('data-furo-drawer-bound', 'true');
+    sidebarDrawer.addEventListener('click', (e) => {
+      const link = (e.target as HTMLElement | null)?.closest('a.furo-nav-link[href*="#"]');
+      if (link && window.innerWidth < 1024 && sidebarDrawer.open) {
+        try {
+          Drawer.getOrCreateInstance(sidebarDrawer).hide();
+        } catch {
+          sidebarDrawer.close?.();
+        }
+      }
+    });
+  }
+
+  if (typeof document !== 'undefined' && !document.documentElement.hasAttribute('data-furo-drawer-sync')) {
+    document.documentElement.setAttribute('data-furo-drawer-sync', 'true');
+    document.addEventListener('show.bs.drawer', (event) => {
+      const target = event.target as HTMLDialogElement | null;
+      if (!target) {
+        return;
+      }
+      document
+        .querySelectorAll<HTMLDialogElement>('dialog.drawer[open], dialog[open][class*=":drawer"]')
+        .forEach((openDrawer) => {
+          if (openDrawer !== target) {
+            try {
+              Drawer.getInstance(openDrawer)?.hide();
+            } catch {
+              openDrawer.close?.();
+            }
+          }
+        });
     });
   }
 }
@@ -56,6 +111,7 @@ export function initBackToTop(): void {
   btn.type = 'button';
   btn.className = 'furo-back-to-top not-prose';
   btn.setAttribute('aria-label', 'Back to top');
+  setTooltipTitle(btn, 'Scroll back to top', 'top');
   btn.innerHTML =
     '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="18 15 12 9 6 15"></polyline></svg><span>Back to top</span>';
 
@@ -79,12 +135,12 @@ export function initBackToTop(): void {
 export function initFuroSkin(): void {
   initTheme();
   initDoxiaEnhancements();
-  initBootstrapComponents();
   initTocAndScrollSpy();
   initCodeBlocks();
   initSearch();
-  initDrawerLinkAutoClose();
+  initDrawers();
   initBackToTop();
+  initBootstrapComponents(document);
   void initOptionalLibraries();
 }
 
@@ -107,12 +163,14 @@ export {
   Datepicker,
   Dialog,
   Drawer,
+  initTooltips,
   Menu,
   NavOverflow,
   OtpInput,
   Popover,
   Range,
   ScrollSpy,
+  setTooltipTitle,
   Strength,
   Tab,
   Toast,

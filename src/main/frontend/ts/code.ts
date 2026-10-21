@@ -16,6 +16,7 @@ import sql from 'highlight.js/lib/languages/sql';
 import typescript from 'highlight.js/lib/languages/typescript';
 import xml from 'highlight.js/lib/languages/xml';
 import yaml from 'highlight.js/lib/languages/yaml';
+import { setTooltipTitle } from './bootstrap-components';
 
 let languagesRegistered = false;
 
@@ -100,6 +101,27 @@ function detectLanguageLabel(pre: HTMLElement, codeEl: HTMLElement | null): stri
   return null;
 }
 
+function isLicenseBlock(pre: HTMLElement, container: HTMLElement): boolean {
+  if (
+    typeof window !== 'undefined' &&
+    /(?:^|\/)licenses?\.html$/i.test(window.location.pathname)
+  ) {
+    return true;
+  }
+  let section = pre.closest('section');
+  while (section && container.contains(section)) {
+    if (
+      section.querySelector(
+        ':scope > a#Project_Licenses, :scope > a[name="Project_Licenses"], :scope > h1#project-licenses, :scope > h2#project-licenses'
+      )
+    ) {
+      return true;
+    }
+    section = section.parentElement?.closest('section') ?? null;
+  }
+  return false;
+}
+
 export function enhanceCodeBlocks(
   container: HTMLElement,
   enableHighlight = true,
@@ -130,11 +152,18 @@ export function enhanceCodeBlocks(
 
     const rawText = (codeEl ?? pre).textContent ?? '';
     const langLabel = detectLanguageLabel(pre, codeEl);
+    const target = codeEl ?? pre;
+    if (!langLabel && isLicenseBlock(pre, container)) {
+      target.classList.add('language-plaintext');
+    }
+
     const blockTitle =
       pre.getAttribute('data-title') ||
       codeEl?.getAttribute('data-title') ||
       pre.getAttribute('title') ||
       '';
+    pre.removeAttribute('title');
+    codeEl?.removeAttribute('title');
 
     if (blockTitle && !wrapper.querySelector('.furo-code-header')) {
       const header = document.createElement('div');
@@ -159,7 +188,6 @@ export function enhanceCodeBlocks(
     }
 
     if (enableHighlight) {
-      const target = codeEl ?? pre;
       if (!target.classList.contains('hljs')) {
         try {
           hljs.highlightElement(target);
@@ -176,7 +204,6 @@ export function enhanceCodeBlocks(
 
     if (wantLineNumbers && !wrapper.classList.contains('has-line-numbers')) {
       wrapper.classList.add('has-line-numbers');
-      const target = codeEl ?? pre;
       const lines = target.innerHTML.replace(/\n$/, '').split('\n');
       if (lines.length > 1) {
         target.innerHTML = lines
@@ -190,7 +217,7 @@ export function enhanceCodeBlocks(
       btn.type = 'button';
       btn.className = 'furo-copy-btn';
       btn.setAttribute('aria-label', 'Copy code to clipboard');
-      btn.setAttribute('title', 'Copy code');
+      setTooltipTitle(btn, 'Copy code', 'left');
       btn.innerHTML = COPY_ICON_SVG;
 
       btn.addEventListener('click', async () => {
@@ -201,10 +228,12 @@ export function enhanceCodeBlocks(
           btn.classList.add('is-copied');
           btn.innerHTML = CHECK_ICON_SVG;
           btn.setAttribute('aria-label', 'Copied!');
+          setTooltipTitle(btn, 'Copied!', 'left');
           window.setTimeout(() => {
             btn.classList.remove('is-copied');
             btn.innerHTML = COPY_ICON_SVG;
             btn.setAttribute('aria-label', 'Copy code to clipboard');
+            setTooltipTitle(btn, 'Copy code', 'left');
           }, 1800);
         } catch {
           // Ignore clipboard write rejections
