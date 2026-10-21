@@ -132,12 +132,11 @@ Because `supa-maven-skin` bundles **all 28 Bootstrap `6.0.0-alpha.1` component f
 When a page contains a `mermaid` code block, `supa-maven-skin` lazily loads Mermaid from CDN and renders it with matching Light/Dark theme variables:
 
 ```mermaid
-flowchart LR
-    A[pom.xml & site.xml] --> B[frontend-maven-plugin]
-    B --> C[Vite + SCSS + TypeScript]
-    C --> D[supa-maven-skin.jar]
-    D --> E[maven-site-plugin 3.21.0]
-    E --> F[3-Column Furo HTML5 Site]
+flowchart TD
+    A["pom.xml & site.xml"] --> B["frontend-maven-plugin (Vite + SCSS + TS)"]
+    B --> C["supa-maven-skin.jar"]
+    C --> D["maven-site-plugin 3.21.0 (Doxia 2.0)"]
+    D --> E["3-Column Furo HTML5 Site"]
 ```
 
 ### KaTeX Math Rendering

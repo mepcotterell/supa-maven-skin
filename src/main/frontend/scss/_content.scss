@@ -192,14 +192,27 @@
 
   // Mermaid Diagrams & Display Math spacing
   .mermaid {
+    display: block;
+    width: 100%;
+    max-width: 100%;
     margin: 1.5rem 0;
-    padding: 1.25rem;
+    padding: 1rem;
     border-radius: 0.5rem;
     border: 1px solid var(--color-background-border);
     background-color: var(--color-background-secondary);
-    display: flex;
-    justify-content: center;
+    text-align: center;
     overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+
+    @media (width >= 576px) {
+      padding: 1.25rem;
+    }
+
+    svg {
+      display: inline-block;
+      max-width: 100%;
+      height: auto;
+    }
   }
 
   .katex-display {
@@ -380,6 +393,13 @@
     font-weight: 600;
     color: var(--color-foreground-secondary);
 
+    .furo-code-title {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
     .furo-code-header-lang {
       font-size: 0.6875rem;
       text-transform: uppercase;
@@ -388,6 +408,7 @@
       border-radius: 0.25rem;
       background-color: var(--color-background-item);
       color: var(--color-foreground-secondary);
+      flex: 0 0 auto;
     }
   }
 
@@ -479,6 +500,17 @@
 
     .furo-code-lang {
       opacity: 0;
+    }
+  }
+
+  @media (hover: none), (width < 768px) {
+    .furo-copy-btn {
+      opacity: 1;
+    }
+
+    .furo-code-lang {
+      right: 2.875rem;
+      top: 0.875rem;
     }
   }
 }
@@ -606,20 +638,24 @@
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
-  gap: 1rem;
+  gap: 0.75rem;
   max-width: var(--furo-content-max-width);
   width: 100%;
   margin: 1.5rem auto 2.5rem;
   padding-top: 1.75rem;
   border-top: 1px solid var(--color-background-border);
+
+  @media (width >= 576px) {
+    gap: 1rem;
+  }
 }
 
 .furo-prev-page,
 .furo-next-page {
   display: flex;
   align-items: center;
-  gap: 0.875rem;
-  padding: 0.875rem 1.125rem;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
   border-radius: 0.5rem;
   border: 1px solid var(--color-background-border);
   background-color: var(--color-background-primary);
@@ -629,33 +665,44 @@
   max-width: calc(50% - 0.5rem);
   min-width: 12rem;
 
+  @media (width >= 576px) {
+    gap: 0.875rem;
+    padding: 0.875rem 1.125rem;
+  }
+
   &:hover {
     border-color: var(--color-brand-primary);
     background-color: var(--color-background-secondary);
   }
 
+  .furo-related-icon,
   .furo-page-nav-icon {
     flex: 0 0 auto;
     color: var(--color-foreground-muted);
   }
 
+  .furo-page-info,
   .furo-page-nav-text {
     display: flex;
     flex-direction: column;
     min-width: 0;
   }
 
+  .furo-context,
   .furo-page-nav-context {
-    font-size: 0.72rem;
-    font-weight: 600;
+    font-size: 0.6875rem;
+    font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.055em;
+    line-height: 1.25;
     color: var(--color-foreground-muted);
   }
 
+  .furo-title,
   .furo-page-nav-title {
     font-size: 0.9375rem;
     font-weight: 600;
+    line-height: 1.35;
     color: var(--color-brand-primary);
     white-space: nowrap;
     overflow: hidden;

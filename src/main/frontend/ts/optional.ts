@@ -47,6 +47,13 @@ export async function initOptionalLibraries(): Promise<void> {
           });
           mermaid.initialize({ startOnLoad: false, theme: resolvedTheme });
           await mermaid.run({ nodes: Array.from(mermaidNodes) });
+          mermaidNodes.forEach((node) => {
+            const svg = node.querySelector<SVGSVGElement>('svg');
+            const vb = svg?.getAttribute('viewBox')?.trim().split(/\s+/).map(Number);
+            if (svg && vb && vb.length === 4 && vb[2] > 480 && vb[3] > 0 && vb[2] / vb[3] > 3.5) {
+              svg.style.minWidth = `${Math.min(Math.round(vb[2]), 560)}px`;
+            }
+          });
         };
         await renderMermaid();
         document.addEventListener('furo:theme-changed', () => {

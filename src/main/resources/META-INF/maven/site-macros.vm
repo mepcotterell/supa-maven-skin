@@ -146,17 +146,6 @@ Apache Maven Doxia Site Renderer#if( $doxiaSiteRendererVersion ) $doxiaSiteRende
 #end
 #if( $prevItem || $nextItem )
     <nav class="furo-related-pages not-prose" aria-label="Page navigation">
-#if( $nextItem )
-      <a class="furo-next-page" href="$nextItem.href">
-        <div class="furo-page-info">
-          <div class="furo-context">
-            <span>Next</span>
-          </div>
-          <div class="furo-title">$esc.html( $nextItem.name )</div>
-        </div>
-        <svg class="furo-related-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"></polyline></svg>
-      </a>
-#end
 #if( $prevItem )
       <a class="furo-prev-page" href="$prevItem.href">
         <svg class="furo-related-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"></polyline></svg>
@@ -166,6 +155,17 @@ Apache Maven Doxia Site Renderer#if( $doxiaSiteRendererVersion ) $doxiaSiteRende
           </div>
           <div class="furo-title">$esc.html( $prevItem.name )</div>
         </div>
+      </a>
+#end
+#if( $nextItem )
+      <a class="furo-next-page" href="$nextItem.href">
+        <div class="furo-page-info">
+          <div class="furo-context">
+            <span>Next</span>
+          </div>
+          <div class="furo-title">$esc.html( $nextItem.name )</div>
+        </div>
+        <svg class="furo-related-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"></polyline></svg>
       </a>
 #end
     </nav>
