@@ -55,6 +55,111 @@ const GFM_BS_ALERT_REGEX =
 export const TAB_SYNC_STORAGE_KEY = 'furo-tab-sync';
 
 /**
+ * Classifies table columns into `.furo-table-col-compact` (single-line identifier/value
+ * columns) and `.furo-table-col-prose` (multi-sentence description columns) so tables
+ * maintain balanced proportions without breaking inline `<code>` identifiers mid-word.
+ */
+function classifyTableColumns(table: HTMLTableElement): void {
+  const bodyRows = Array.from(table.querySelectorAll<HTMLTableRowElement>('tbody tr'));
+  const rows =
+    bodyRows.length > 0
+      ? bodyRows
+      : Array.from(table.querySelectorAll<HTMLTableRowElement>('tr')).filter(
+          (tr) => tr.querySelectorAll('td').length > 0
+        );
+  if (rows.length === 0) {
+    return;
+  }
+
+  const headerCells = Array.from(
+    table.querySelectorAll<HTMLTableCellElement>('thead tr:first-child th, tr:first-child th')
+  );
+  const colCount = rows.reduce((max, tr) => Math.max(max, tr.children.length), 0);
+  if (colCount < 2) {
+    return;
+  }
+
+  const colMeta: Array<{ isCompact: boolean; isProse: boolean }> = [];
+
+  for (let colIdx = 0; colIdx < colCount; colIdx++) {
+    const cells = rows
+      .map((tr) => tr.children[colIdx] as HTMLElement | undefined)
+      .filter((td): td is HTMLElement => Boolean(td && td.tagName === 'TD'));
+
+    if (cells.length === 0) {
+      colMeta.push({ isCompact: false, isProse: false });
+      continue;
+    }
+
+    let maxLen = 0;
+    let hasProseCell = false;
+    let allCompactCells = true;
+
+    for (const td of cells) {
+      const text = (td.textContent ?? '').replace(/\s+/g, ' ').trim();
+      if (text.length > maxLen) {
+        maxLen = text.length;
+      }
+      if (text.length > 45 && text.includes(' ')) {
+        hasProseCell = true;
+      }
+
+      const childCodes = td.querySelectorAll('code');
+      const isSingleCodeOnly =
+        childCodes.length === 1 &&
+        (childCodes[0].textContent ?? '').trim() === text &&
+        text.length <= 40;
+      const spaceCount = (text.match(/ /g) ?? []).length;
+      const hasLineBreak = td.querySelector('br') !== null;
+      const isShortLiteral = !hasLineBreak && text.length <= 24 && spaceCount <= 2;
+      const isCompactLineBreak =
+        hasLineBreak &&
+        td.innerHTML.split(/<br\s*\/?>/i).every((segment) => {
+          const lineText = segment
+            .replace(/<[^>]*>/g, '')
+            .replace(/&[a-z0-9#]+;/gi, 'x')
+            .replace(/\s+/g, ' ')
+            .trim();
+          const lineSpaces = (lineText.match(/ /g) ?? []).length;
+          return lineText.length <= 28 && lineSpaces <= 5;
+        });
+
+      if (!isSingleCodeOnly && !isShortLiteral && !isCompactLineBreak) {
+        allCompactCells = false;
+      }
+    }
+
+    colMeta.push({
+      isCompact: allCompactCells && !hasProseCell && maxLen > 0,
+      isProse: hasProseCell
+    });
+  }
+
+  const hasAnyProseColumn = colMeta.some((c) => c.isProse);
+  if (!hasAnyProseColumn) {
+    return;
+  }
+
+  colMeta.forEach((meta, colIdx) => {
+    const className = meta.isProse
+      ? 'furo-table-col-prose'
+      : meta.isCompact
+        ? 'furo-table-col-compact'
+        : null;
+    if (!className) {
+      return;
+    }
+    headerCells[colIdx]?.classList.add(className);
+    rows.forEach((tr) => {
+      const cell = tr.children[colIdx] as HTMLElement | undefined;
+      if (cell && cell.tagName === 'TD') {
+        cell.classList.add(className);
+      }
+    });
+  });
+}
+
+/**
  * Normalizes Doxia tables (`table.bodyTable` and article tables) into responsive
  * Bootstrap 6 tables, and cleans up Doxia inline list-style attributes on Bootstrap lists.
  */
@@ -66,6 +171,7 @@ export function normalizeDoxiaTables(container: HTMLElement): void {
     }
     table.classList.remove('bodyTable', 'bodyTableBorder');
     table.classList.add('table', 'table-hover');
+    classifyTableColumns(table);
 
     if (!table.parentElement?.classList.contains('furo-table-responsive')) {
       const wrapper = document.createElement('div');
@@ -189,6 +295,27 @@ export function transformGfmAdmonitions(container: HTMLElement): void {
   });
 }
 
+function inferPanelTabLabel(panel: HTMLElement, index: number): string {
+  const explicit = (panel.getAttribute('data-tab') || panel.getAttribute('title'))?.trim();
+  if (explicit) {
+    return explicit;
+  }
+  const codeEl = panel.querySelector('code');
+  if (codeEl) {
+    const cls = codeEl.className;
+    if (/language-(?:markdown|md)\b/i.test(cls)) {
+      return 'Markdown Shorthand';
+    }
+    if (/language-(?:velocity|vm)\b/i.test(cls)) {
+      return 'Velocity Macro (.md.vm)';
+    }
+    if (/language-html\b/i.test(cls)) {
+      return 'Markdown + HTML';
+    }
+  }
+  return `Tab ${index + 1}`;
+}
+
 /**
  * Enhances `.furo-tabs` containers with `<div data-tab="Label">` or `<div title="Label">`
  * panels into accessible ARIA tablists (`sphinx-inline-tabs` equivalent) that synchronize
@@ -219,10 +346,19 @@ export function initContentTabs(container: HTMLElement): void {
     if (tabBox.hasAttribute('data-furo-tabs-ready')) {
       return;
     }
-    const rawPanels = Array.from(tabBox.children).filter(
+    const explicitPanels = Array.from(tabBox.children).filter(
       (el): el is HTMLElement =>
         el instanceof HTMLElement && (el.hasAttribute('data-tab') || el.hasAttribute('title'))
     );
+    const rawPanels =
+      explicitPanels.length > 0
+        ? explicitPanels
+        : Array.from(tabBox.children).filter(
+            (el): el is HTMLElement =>
+              el instanceof HTMLElement &&
+              el.tagName === 'DIV' &&
+              !el.classList.contains('furo-tab-list')
+          );
     if (rawPanels.length === 0) {
       return;
     }
@@ -230,7 +366,9 @@ export function initContentTabs(container: HTMLElement): void {
     tabBox.setAttribute('data-furo-tabs-ready', 'true');
     tabBox.classList.add('not-prose');
     const groupKey =
-      tabBox.getAttribute('data-tab-group') || tabBox.getAttribute('title') || 'default';
+      tabBox.getAttribute('data-tab-group') ||
+      tabBox.getAttribute('title') ||
+      `tab-group-${boxIndex}`;
     tabBox.removeAttribute('title');
 
     const tabList = document.createElement('div');
@@ -256,10 +394,11 @@ export function initContentTabs(container: HTMLElement): void {
         btn.tabIndex = isSelected ? 0 : -1;
       });
 
+      const isCodeCollapsed = Boolean(tabBox.closest('.furo-component-example.is-code-collapsed'));
       panels.forEach((panel, idx) => {
         const isSelected = idx === matchIdx;
         panel.classList.toggle('active', isSelected);
-        panel.hidden = !isSelected;
+        panel.hidden = isCodeCollapsed ? true : !isSelected;
       });
 
       if (persist) {
@@ -278,9 +417,7 @@ export function initContentTabs(container: HTMLElement): void {
     };
 
     rawPanels.forEach((panel, panelIdx) => {
-      const label =
-        (panel.getAttribute('data-tab') || panel.getAttribute('title'))?.trim() ||
-        `Tab ${panelIdx + 1}`;
+      const label = inferPanelTabLabel(panel, panelIdx);
       panel.removeAttribute('title');
       const tabId = `furo-tab-${boxIndex}-${panelIdx}`;
       const panelId = `furo-tabpanel-${boxIndex}-${panelIdx}`;

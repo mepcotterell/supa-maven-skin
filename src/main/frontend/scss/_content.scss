@@ -390,7 +390,7 @@
     border-bottom: 1px solid var(--color-background-border);
     font-family: var(--font-stack--monospace);
     font-size: 0.78125rem;
-    font-weight: 600;
+    font-weight: 650;
     color: var(--color-foreground-secondary);
 
     .furo-code-title {
@@ -602,14 +602,23 @@
   width: 100%;
   max-width: 100%;
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
   margin: 1.5rem 0;
   border: 1px solid var(--color-background-border);
   border-radius: 0.5rem;
 
   table.table {
+    width: 100%;
     margin-bottom: 0;
     font-size: 0.875rem;
     line-height: 1.55;
+
+    // Keep inline code tokens inside tables unbroken on a single line
+    :not(pre) > code {
+      white-space: nowrap;
+      word-break: normal;
+      overflow-wrap: normal;
+    }
 
     th,
     td {
@@ -623,6 +632,16 @@
       color: var(--color-foreground-primary);
       border-bottom: 1px solid var(--color-background-border);
       white-space: nowrap;
+    }
+
+    th.furo-table-col-compact,
+    td.furo-table-col-compact {
+      white-space: nowrap;
+      width: 1%;
+    }
+
+    td.furo-table-col-prose {
+      min-width: 14rem;
     }
 
     tbody tr:last-child td {

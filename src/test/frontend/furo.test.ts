@@ -2,6 +2,8 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import {
   BootstrapPlugins,
   initBootstrapComponents,
+  initComponentExamples,
+  initComponentPlayground,
   isolateBootstrapComponentsFromProse,
   Tooltip
 } from '../../main/frontend/ts/bootstrap-components';
@@ -167,20 +169,37 @@ describe('Supa Maven Skin Frontend Modules', () => {
   });
 
   describe('Doxia HTML Normalization, GFM Admonitions & Synchronized Content Tabs', () => {
-    it('normalizes Doxia bodyTable into responsive Bootstrap 6 table', () => {
+    it('normalizes Doxia bodyTable into responsive Bootstrap 6 table and classifies compact vs prose columns', () => {
       const container = document.createElement('div');
       container.innerHTML = `
-        <table class="bodyTable bodyTableBorder">
+        <table class="bodyTable bodyTableBorder" id="reportTable">
           <thead><tr><th>Goal</th><th>Phase</th></tr></thead>
           <tbody><tr><td>site</td><td>site</td></tr></tbody>
+        </table>
+        <table class="bodyTable" id="configTable">
+          <thead><tr><th>Option</th><th>Default</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><code>&lt;sidebarDrawerBackdrop&gt;</code></td>
+              <td><code>$drawerBackdrop</code></td>
+              <td>Override data-bs-backdrop (true, false, or static) specifically for the left navigation drawer.</td>
+            </tr>
+          </tbody>
         </table>
       `;
       normalizeDoxiaTables(container);
 
-      const table = container.querySelector('table');
-      expect(table?.classList.contains('bodyTable')).toBe(false);
-      expect(table?.classList.contains('table')).toBe(true);
-      expect(table?.parentElement?.classList.contains('furo-table-responsive')).toBe(true);
+      const reportTable = container.querySelector<HTMLTableElement>('#reportTable')!;
+      expect(reportTable.classList.contains('bodyTable')).toBe(false);
+      expect(reportTable.classList.contains('table')).toBe(true);
+      expect(reportTable.parentElement?.classList.contains('furo-table-responsive')).toBe(true);
+      expect(reportTable.querySelectorAll('.furo-table-col-prose').length).toBe(0);
+
+      const configTable = container.querySelector<HTMLTableElement>('#configTable')!;
+      const configTds = configTable.querySelectorAll('tbody td');
+      expect(configTds[0].classList.contains('furo-table-col-compact')).toBe(true);
+      expect(configTds[1].classList.contains('furo-table-col-compact')).toBe(true);
+      expect(configTds[2].classList.contains('furo-table-col-prose')).toBe(true);
     });
 
     it('transforms GFM blockquote alerts into Furo admonition cards and Bootstrap 6 alerts', () => {
@@ -301,6 +320,97 @@ describe('Supa Maven Skin Frontend Modules', () => {
       expect(container.querySelector('.card')?.classList.contains('not-prose')).toBe(true);
       expect(container.querySelector('.nav')?.classList.contains('not-prose')).toBe(true);
       expect(container.querySelector('.chip-input')?.classList.contains('not-prose')).toBe(true);
+    });
+
+    it('pairs .furo-component-preview with code blocks or .furo-tabs into .furo-component-example and powers [data-furo-playground]', () => {
+      const container = document.createElement('div');
+      container.innerHTML = `
+        <div class="furo-playground" data-furo-playground="true">
+          <button type="button" class="furo-playground-pill active" data-playground-component="button"></button>
+          <button type="button" class="furo-playground-pill" data-playground-component="alert"></button>
+          <button type="button" class="furo-playground-pill active" data-playground-theme="primary"></button>
+          <button type="button" class="furo-playground-pill" data-playground-theme="success"></button>
+          <button type="button" class="furo-playground-pill active" data-playground-variant="solid"></button>
+          <button type="button" class="furo-playground-pill" data-playground-variant="outline"></button>
+          <button type="button" class="furo-playground-pill active" data-playground-size="sm"></button>
+          <button type="button" class="furo-playground-pill" data-playground-size="lg"></button>
+          <div class="furo-playground-stage" data-playground-stage="true"></div>
+          <pre><code class="language-html" data-playground-code="true"></code></pre>
+        </div>
+        <div class="furo-component-preview"><button class="btn theme-primary">Demo</button></div>
+        <pre><code class="language-html">&lt;button class="btn theme-primary"&gt;Demo&lt;/button&gt;</code></pre>
+        <div class="furo-component-preview"><span class="badge theme-primary">v1.0.0</span></div>
+        <div class="furo-tabs" title="badge-syntax">
+          <div title="Markdown + HTML"><pre><code class="language-html">&lt;span class="badge theme-primary"&gt;v1.0.0&lt;/span&gt;</code></pre></div>
+          <div title="Velocity Macro (.md.vm)"><pre><code class="language-velocity">#bsBadge("primary", "v1.0.0")</code></pre></div>
+        </div>
+      `;
+
+      initContentTabs(container);
+      enhanceCodeBlocks(container, true, true);
+      initComponentExamples(container);
+      initComponentPlayground(container);
+
+      const examples = container.querySelectorAll<HTMLElement>('.furo-component-example');
+      expect(examples.length).toBe(2);
+
+      // Single code block example
+      const example = examples[0];
+      const toggleBtn = example.querySelector<HTMLButtonElement>('.furo-component-code-toggle')!;
+      const codeBlock = example.querySelector<HTMLElement>('.furo-code-block')!;
+      expect(toggleBtn).not.toBeNull();
+      expect(codeBlock.hidden).toBe(false);
+
+      toggleBtn.click();
+      expect(codeBlock.hidden).toBe(true);
+      expect(example.classList.contains('is-code-collapsed')).toBe(true);
+
+      toggleBtn.click();
+      expect(codeBlock.hidden).toBe(false);
+
+      // Multi-tab (.furo-tabs) example
+      const tabbedExample = examples[1];
+      const tabbedToggleBtn = tabbedExample.querySelector<HTMLButtonElement>(
+        '.furo-tab-list .furo-component-code-toggle'
+      )!;
+      const tabPanels = tabbedExample.querySelectorAll<HTMLElement>('.furo-tab-panel');
+      const tabBtns = tabbedExample.querySelectorAll<HTMLButtonElement>('.furo-tab-btn');
+      expect(tabbedToggleBtn).not.toBeNull();
+      expect(tabPanels.length).toBe(2);
+      expect(tabPanels[0].hidden).toBe(false);
+      expect(tabPanels[1].hidden).toBe(true);
+
+      // Collapse tabbed code panels
+      tabbedToggleBtn.click();
+      expect(tabbedExample.classList.contains('is-code-collapsed')).toBe(true);
+      expect(tabPanels[0].hidden).toBe(true);
+      expect(tabPanels[1].hidden).toBe(true);
+
+      // Clicking a tab button while collapsed should auto-expand and show that tab
+      tabBtns[1].click();
+      expect(tabbedExample.classList.contains('is-code-collapsed')).toBe(false);
+      expect(tabPanels[0].hidden).toBe(true);
+      expect(tabPanels[1].hidden).toBe(false);
+
+      const stage = container.querySelector<HTMLElement>('[data-playground-stage]')!;
+      const pgCode = container.querySelector<HTMLElement>('[data-playground-code]')!;
+      expect(stage.querySelector('.btn.btn-solid.theme-primary.btn-sm')).not.toBeNull();
+
+      container.querySelector<HTMLButtonElement>('[data-playground-theme="success"]')!.click();
+      container.querySelector<HTMLButtonElement>('[data-playground-variant="outline"]')!.click();
+      container.querySelector<HTMLButtonElement>('[data-playground-size="lg"]')!.click();
+      expect(stage.querySelector('.btn.btn-outline.theme-success.btn-lg')).not.toBeNull();
+      expect(pgCode.textContent).toContain('btn-outline theme-success btn-lg');
+
+      container.querySelector<HTMLButtonElement>('[data-playground-component="alert"]')!.click();
+      expect(stage.querySelector('.alert.theme-success')).not.toBeNull();
+      expect(pgCode.textContent).toContain('[!ALERT:success dismissible]');
+
+      // Switch syntax tab inside playground (Markdown Shorthand -> Velocity Macro)
+      const pgVmTab = container.querySelector<HTMLButtonElement>('[data-playground-syntax="vm"]')!;
+      expect(pgVmTab).not.toBeNull();
+      pgVmTab.click();
+      expect(pgCode.textContent).toContain('#bsAlert("success"');
     });
 
     it('prefers Bootstrap 6 Tooltips over built-in browser title attributes across controls and content', () => {

@@ -200,14 +200,14 @@ Click any color scheme card below (or use the palette selector in the top header
 
 Every built-in color scheme is verified at build time by `scripts/lint-scss.mjs` against **WCAG 2.2** relative luminance and contrast rules across both Light and Dark polarities and against both primary (`--color-background-primary`) and secondary (`--color-background-secondary`) surfaces:
 
-| `<colorScheme>` ID | Inspiration | Target Compliance | Min Text Contrast | Min Border Contrast | Notes |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| `furo` | Sphinx Furo | **WCAG 2.2 AA** | &ge; 4.5:1 (6.0:1+ actual) | &ge; 3.0:1 | Default crisp documentation palette; automatically escalates to `modus` when `@media (prefers-contrast: more)` is active. |
-| `bootstrap` | Bootstrap 6 Alpha OKLCH | **WCAG 2.2 AA** | &ge; 4.5:1 (6.0:1+ actual) | &ge; 3.0:1 | Native Bootstrap 6 perceptually uniform OKLCH colors inside Furo's 3-column layout. |
-| `modus` | Emacs `modus-operandi` & `modus-vivendi` | **WCAG 2.2 AAA** | &ge; 7.0:1 | &ge; 4.5:1 | Protesilaos Stavrou's strict AAA high-contrast themes (21:1 primary text, &ge; 7:1 muted text and semantic accents). |
-| `modus-tinted` | Emacs `modus-*-tinted` | **WCAG 2.2 AAA** | &ge; 7.0:1 | &ge; 4.5:1 | Warm cream paper (`#fbf7f0`) in Light mode and deep night-sky (`#0d0e1c`) in Dark mode to prevent halation/glare. |
-| `modus-deuteranopia` | Emacs `modus-*-deuteranopia` | **WCAG 2.2 AAA** | &ge; 7.0:1 | &ge; 4.5:1 | Red-green colorblind-safe semantic palette using royal/sky blue, gold, and warm burnt amber. |
-| `modus-tritanopia` | Emacs `modus-*-tritanopia` | **WCAG 2.2 AAA** | &ge; 7.0:1 | &ge; 4.5:1 | Blue-yellow colorblind-safe semantic palette using deep teal/aqua, plum/magenta, and crimson. |
+| Scheme ID | Inspiration | Contrast | Notes |
+| :--- | :--- | :--- | :--- |
+| `furo` | Sphinx Furo | **WCAG 2.2 AA**<br>&ge; 4.5:1 text / 3.0:1 UI | Default crisp documentation palette; automatically escalates to `modus` when `prefers-contrast: more` is active. |
+| `bootstrap` | Bootstrap 6 OKLCH | **WCAG 2.2 AA**<br>&ge; 4.5:1 text / 3.0:1 UI | Native Bootstrap 6 perceptually uniform OKLCH colors inside Furo's 3-column layout. |
+| `modus` | Emacs Modus | **WCAG 2.2 AAA**<br>&ge; 7.0:1 text / 4.5:1 UI | Protesilaos Stavrou's strict AAA high-contrast themes (21:1 primary text, &ge; 7:1 muted text and semantic accents). |
+| `modus-tinted` | Emacs Modus Tinted | **WCAG 2.2 AAA**<br>&ge; 7.0:1 text / 4.5:1 UI | Warm cream paper (`#fbf7f0`) in Light mode and deep night-sky (`#0d0e1c`) in Dark mode to prevent halation/glare. |
+| `modus-deuteranopia` | Emacs Modus<br>Deuteranopia | **WCAG 2.2 AAA**<br>&ge; 7.0:1 text / 4.5:1 UI | Red-green colorblind-safe semantic palette using royal/sky blue, gold, and warm burnt amber. |
+| `modus-tritanopia` | Emacs Modus<br>Tritanopia | **WCAG 2.2 AAA**<br>&ge; 7.0:1 text / 4.5:1 UI | Blue-yellow colorblind-safe semantic palette using deep teal/aqua, plum/magenta, and crimson. |
 
 ## Extending Palettes via `<lightCssVariables>` & `<darkCssVariables>`
 

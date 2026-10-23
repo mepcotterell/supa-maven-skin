@@ -7,6 +7,7 @@ import java from 'highlight.js/lib/languages/java';
 import javascript from 'highlight.js/lib/languages/javascript';
 import json from 'highlight.js/lib/languages/json';
 import kotlin from 'highlight.js/lib/languages/kotlin';
+import markdown from 'highlight.js/lib/languages/markdown';
 import plaintext from 'highlight.js/lib/languages/plaintext';
 import properties from 'highlight.js/lib/languages/properties';
 import python from 'highlight.js/lib/languages/python';
@@ -20,35 +21,45 @@ import { setTooltipTitle } from './bootstrap-components';
 
 let languagesRegistered = false;
 
+type LanguageFn = Parameters<typeof hljs.registerLanguage>[1];
+
+function cloneLanguage(fn: LanguageFn): LanguageFn {
+  return (hljsInstance) => ({ ...fn(hljsInstance) });
+}
+
 export function registerHighlightLanguages(): void {
   if (languagesRegistered) {
     return;
   }
   hljs.registerLanguage('bash', bash);
-  hljs.registerLanguage('sh', bash);
+  hljs.registerLanguage('sh', cloneLanguage(bash));
   hljs.registerLanguage('shell', shell);
   hljs.registerLanguage('css', css);
   hljs.registerLanguage('diff', diff);
   hljs.registerLanguage('groovy', groovy);
   hljs.registerLanguage('java', java);
   hljs.registerLanguage('javascript', javascript);
-  hljs.registerLanguage('js', javascript);
+  hljs.registerLanguage('js', cloneLanguage(javascript));
   hljs.registerLanguage('json', json);
   hljs.registerLanguage('kotlin', kotlin);
-  hljs.registerLanguage('kt', kotlin);
+  hljs.registerLanguage('kt', cloneLanguage(kotlin));
+  hljs.registerLanguage('markdown', markdown);
+  hljs.registerLanguage('md', cloneLanguage(markdown));
   hljs.registerLanguage('plaintext', plaintext);
-  hljs.registerLanguage('text', plaintext);
+  hljs.registerLanguage('text', cloneLanguage(plaintext));
   hljs.registerLanguage('properties', properties);
   hljs.registerLanguage('python', python);
-  hljs.registerLanguage('py', python);
+  hljs.registerLanguage('py', cloneLanguage(python));
   hljs.registerLanguage('scss', scss);
   hljs.registerLanguage('sql', sql);
   hljs.registerLanguage('typescript', typescript);
-  hljs.registerLanguage('ts', typescript);
+  hljs.registerLanguage('ts', cloneLanguage(typescript));
   hljs.registerLanguage('xml', xml);
-  hljs.registerLanguage('html', xml);
+  hljs.registerLanguage('html', cloneLanguage(xml));
+  hljs.registerLanguage('velocity', cloneLanguage(xml));
+  hljs.registerLanguage('vm', cloneLanguage(xml));
   hljs.registerLanguage('yaml', yaml);
-  hljs.registerLanguage('yml', yaml);
+  hljs.registerLanguage('yml', cloneLanguage(yaml));
   languagesRegistered = true;
 }
 
@@ -65,6 +76,8 @@ const LANGUAGE_LABELS: Record<string, string> = {
   json: 'json',
   kotlin: 'kotlin',
   kt: 'kotlin',
+  markdown: 'md',
+  md: 'md',
   plaintext: 'text',
   text: 'text',
   properties: 'properties',
@@ -76,9 +89,34 @@ const LANGUAGE_LABELS: Record<string, string> = {
   ts: 'ts',
   xml: 'xml',
   html: 'html',
+  velocity: 'vm',
+  vm: 'vm',
   yaml: 'yaml',
   yml: 'yaml'
 };
+
+export function highlightCodeElement(codeEl: HTMLElement, lang?: string): void {
+  registerHighlightLanguages();
+  codeEl.removeAttribute('data-highlighted');
+  Array.from(codeEl.classList).forEach((cls) => {
+    if (cls === 'hljs' || (lang && /^(?:language|lang)-/i.test(cls))) {
+      codeEl.classList.remove(cls);
+    }
+  });
+  if (lang) {
+    codeEl.classList.add(`language-${lang}`);
+    const wrapper = codeEl.closest('.furo-code-block');
+    const langBadge = wrapper?.querySelector<HTMLElement>('.furo-code-lang');
+    if (langBadge) {
+      langBadge.textContent = LANGUAGE_LABELS[lang] || lang;
+    }
+  }
+  try {
+    hljs.highlightElement(codeEl);
+  } catch {
+    // Ignore unknown language errors
+  }
+}
 
 const COPY_ICON_SVG =
   '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>';
@@ -222,8 +260,9 @@ export function enhanceCodeBlocks(
 
       btn.addEventListener('click', async () => {
         try {
+          const textToCopy = (codeEl ?? pre).textContent ?? rawText;
           if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
-            await navigator.clipboard.writeText(rawText);
+            await navigator.clipboard.writeText(textToCopy);
           }
           btn.classList.add('is-copied');
           btn.innerHTML = CHECK_ICON_SVG;
@@ -253,6 +292,5 @@ export function initCodeBlocks(): void {
   const body = document.body;
   const enableHighlight = body.getAttribute('data-furo-syntax-highlight') !== 'false';
   const enableCopy = body.getAttribute('data-furo-copy-code') !== 'false';
-  const enableLineNumbers = body.getAttribute('data-furo-line-numbers') === 'true';
-  enhanceCodeBlocks(article, enableHighlight, enableCopy, enableLineNumbers);
+  enhanceCodeBlocks(article, enableHighlight, enableCopy, false);
 }
