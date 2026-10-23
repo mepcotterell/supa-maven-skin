@@ -33,6 +33,10 @@ jobs:
           distribution: temurin
           java-version: ${{ matrix.java }}
           cache: maven
+          server-id: central
+          server-username: MAVEN_CENTRAL_USERNAME
+          server-password: MAVEN_CENTRAL_TOKEN
+          gpg-private-key: ${{ secrets.MAVEN_GPG_PRIVATE_KEY }}
 
       - name: Cache Node & NPM for frontend-maven-plugin
         uses: actions/cache@v6
@@ -46,6 +50,19 @@ jobs:
 
       - name: Build, lint, test, verify ITs, and generate site
         run: mvn -B -ntp clean install site
+
+      - name: Publish SNAPSHOT to Maven Central
+        if: matrix.java == '21' && github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        env:
+          MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+          MAVEN_CENTRAL_TOKEN: ${{ secrets.MAVEN_CENTRAL_TOKEN }}
+        run: |
+          PROJECT_VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
+          if [[ "$PROJECT_VERSION" == *-SNAPSHOT ]]; then
+            mvn -B -ntp deploy -Prelease -Dinvoker.skip=true
+          else
+            echo "Skipping snapshot deploy for non-SNAPSHOT version $PROJECT_VERSION"
+          fi
 
       - name: Configure GitHub Pages
         if: matrix.java == '21' && github.event_name != 'pull_request' && github.ref == 'refs/heads/main'

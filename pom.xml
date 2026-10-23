@@ -47,6 +47,11 @@
   </scm>
 
   <distributionManagement>
+    <snapshotRepository>
+      <id>central</id>
+      <name>Sonatype Central Portal Snapshots</name>
+      <url>https://central.sonatype.com/repository/maven-snapshots/</url>
+    </snapshotRepository>
     <site>
       <id>github-pages</id>
       <name>GitHub Pages</name>
