@@ -7,7 +7,11 @@ Apache Maven Doxia Site Renderer#if( $doxiaSiteRendererVersion ) $doxiaSiteRende
 ##
 ## Resolve a relative or external link against $relativePath
 #macro( furoResolveHref $href )
-#if( $href && !$href.startsWith( "http://" ) && !$href.startsWith( "https://" ) && !$href.startsWith( "mailto:" ) && !$href.startsWith( "#" ) && !$href.startsWith( "/" ) )
+#if( $href && ( $href == "/project-info.html" || $href == "/project-reports.html" ) )
+#set( $cleanHref = $href.substring( 1 ) )
+#set( $resolvedHref = "$relativePath/$cleanHref" )
+#set( $resolvedHref = $resolvedHref.replace( './', '' ) )
+#elseif( $href && !$href.startsWith( "http://" ) && !$href.startsWith( "https://" ) && !$href.startsWith( "mailto:" ) && !$href.startsWith( "#" ) && !$href.startsWith( "/" ) )
 #set( $resolvedHref = "$relativePath/$href" )
 #set( $resolvedHref = $resolvedHref.replace( './', '' ) )
 #else
@@ -15,18 +19,31 @@ Apache Maven Doxia Site Renderer#if( $doxiaSiteRendererVersion ) $doxiaSiteRende
 #end
 #end
 ##
+## Normalize synthetic leading slash on Maven Site's /project-info.html and /project-reports.html
+#macro( furoMenuItemHref $href )
+#if( $href && ( $href == "/project-info.html" || $href == "/project-reports.html" ) )
+#set( $itemHref = "$relativePath/$href.substring( 1 )" )
+#set( $itemHref = $itemHref.replace( './', '' ) )
+#else
+#set( $itemHref = $href )
+#end
+#end
+##
 ## Check if a menu item or any of its descendants is the current page
 #macro( furoHasActiveChild $menuItem )
 #set( $hasActive = false )
-#if( $alignedFileName == $menuItem.href )
+#furoMenuItemHref( $menuItem.href )
+#if( $alignedFileName == $itemHref )
 #set( $hasActive = true )
 #elseif( $menuItem.items && $menuItem.items.size() > 0 )
 #foreach( $subItem in $menuItem.items )
-#if( $alignedFileName == $subItem.href )
+#furoMenuItemHref( $subItem.href )
+#if( $alignedFileName == $itemHref )
 #set( $hasActive = true )
 #elseif( $subItem.items && $subItem.items.size() > 0 )
 #foreach( $deepItem in $subItem.items )
-#if( $alignedFileName == $deepItem.href )
+#furoMenuItemHref( $deepItem.href )
+#if( $alignedFileName == $itemHref )
 #set( $hasActive = true )
 #end
 #end
@@ -37,7 +54,9 @@ Apache Maven Doxia Site Renderer#if( $doxiaSiteRendererVersion ) $doxiaSiteRende
 ##
 ## Render a single sidebar menu item (supports collapsible <details>/<summary> for nested items)
 #macro( furoSidebarMenuItem $item $depth $collapseDepth )
-#set( $isCurrent = ( $alignedFileName == $item.href ) )
+#furoMenuItemHref( $item.href )
+#set( $currentItemHref = $itemHref )
+#set( $isCurrent = ( $alignedFileName == $currentItemHref ) )
 #furoHasActiveChild( $item )
 #set( $isBranchActive = $hasActive )
 #if( $item.items && $item.items.size() > 0 )
@@ -45,8 +64,8 @@ Apache Maven Doxia Site Renderer#if( $doxiaSiteRendererVersion ) $doxiaSiteRende
       <li class="furo-nav-item furo-nav-has-children#if( $isCurrent ) is-current#end#if( $isBranchActive ) is-active-branch#end" data-depth="$depth">
         <details class="furo-nav-details"#if( $shouldOpen ) open="open"#end>
           <summary class="furo-nav-summary">
-#if( $item.href )
-            <a class="furo-nav-link#if( $isCurrent ) active#end" href="$item.href"#if( $isCurrent ) aria-current="page"#end>$esc.html( $item.name )</a>
+#if( $currentItemHref )
+            <a class="furo-nav-link#if( $isCurrent ) active#end" href="$currentItemHref"#if( $isCurrent ) aria-current="page"#end>$esc.html( $item.name )</a>
 #else
             <span class="furo-nav-link furo-nav-label">$esc.html( $item.name )</span>
 #end
@@ -65,7 +84,7 @@ Apache Maven Doxia Site Renderer#if( $doxiaSiteRendererVersion ) $doxiaSiteRende
       </li>
 #else
       <li class="furo-nav-item#if( $isCurrent ) is-current#end" data-depth="$depth">
-        <a class="furo-nav-link#if( $isCurrent ) active#end" href="$item.href"#if( $isCurrent ) aria-current="page"#end#if( $item.target ) target="$item.target"#end>
+        <a class="furo-nav-link#if( $isCurrent ) active#end" href="$currentItemHref"#if( $isCurrent ) aria-current="page"#end#if( $item.target ) target="$item.target"#end>
           <span class="furo-nav-text">$esc.html( $item.name )</span>
         </a>
       </li>
@@ -92,7 +111,8 @@ Apache Maven Doxia Site Renderer#if( $doxiaSiteRendererVersion ) $doxiaSiteRende
 ##
 ## Flatten menu items into $flatNavItems to compute Previous / Next page links
 #macro( furoCollectNavItem $item $flatList )
-#if( $item.href && !$item.href.startsWith( "http://" ) && !$item.href.startsWith( "https://" ) && !$item.href.contains( "#" ) )
+#furoMenuItemHref( $item.href )
+#if( $itemHref && !$itemHref.startsWith( "http://" ) && !$itemHref.startsWith( "https://" ) && !$itemHref.contains( "#" ) )
 #set( $_added = $flatList.add( $item ) )
 #end
 #if( $item.items && $item.items.size() > 0 )
@@ -115,7 +135,8 @@ Apache Maven Doxia Site Renderer#if( $doxiaSiteRendererVersion ) $doxiaSiteRende
 #set( $currentIndex = -1 )
 #set( $idx = 0 )
 #foreach( $navItem in $flatNavItems )
-#if( $currentIndex == -1 && $alignedFileName == $navItem.href )
+#furoMenuItemHref( $navItem.href )
+#if( $currentIndex == -1 && $alignedFileName == $itemHref )
 #set( $currentIndex = $idx )
 #end
 #set( $idx = $idx + 1 )
@@ -133,7 +154,8 @@ Apache Maven Doxia Site Renderer#if( $doxiaSiteRendererVersion ) $doxiaSiteRende
 #if( $prevItem || $nextItem )
     <nav class="furo-related-pages not-prose" aria-label="Page navigation">
 #if( $prevItem )
-      <a class="furo-prev-page" href="$prevItem.href">
+#furoMenuItemHref( $prevItem.href )
+      <a class="furo-prev-page" href="$itemHref">
         <svg class="furo-related-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"></polyline></svg>
         <div class="furo-page-info">
           <div class="furo-context">
@@ -144,7 +166,8 @@ Apache Maven Doxia Site Renderer#if( $doxiaSiteRendererVersion ) $doxiaSiteRende
       </a>
 #end
 #if( $nextItem )
-      <a class="furo-next-page" href="$nextItem.href">
+#furoMenuItemHref( $nextItem.href )
+      <a class="furo-next-page" href="$itemHref">
         <div class="furo-page-info">
           <div class="furo-context">
             <span>Next</span>

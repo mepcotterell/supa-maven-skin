@@ -1,4 +1,5 @@
 import Dialog from 'bootstrap/js/dist/dialog.js';
+import { slugifyHeading } from './toc';
 
 export interface SearchDocument {
   title: string;
@@ -25,6 +26,24 @@ export function highlightQueryTerms(text: string, rawQuery: string): string {
   return escapedText.replace(regex, '<mark class="furo-search-mark">$1</mark>');
 }
 
+function normalizeSyntheticReportHref(href: string): string {
+  if (href === '/project-info.html' || href === '/project-reports.html') {
+    return href.slice(1);
+  }
+  return href;
+}
+
+function extractCleanDocumentTitle(doc: Document, fallback: string): string {
+  const rawTitle = doc.title?.trim() || '';
+  if (rawTitle) {
+    const cleaned = rawTitle.split(/\s+[–—-]\s+/)[0]?.trim();
+    if (cleaned) {
+      return cleaned;
+    }
+  }
+  return doc.querySelector('#furo-main-content h1')?.textContent?.trim() || fallback;
+}
+
 export function collectLocalSearchDocuments(doc: Document = document): SearchDocument[] {
   const results: SearchDocument[] = [];
   const seenHrefs = new Set<string>();
@@ -32,9 +51,13 @@ export function collectLocalSearchDocuments(doc: Document = document): SearchDoc
   // 1. Collect sidebar navigation links
   const navLinks = doc.querySelectorAll<HTMLAnchorElement>('.furo-sidebar-tree a.furo-nav-link');
   navLinks.forEach((link) => {
-    const href = link.getAttribute('href')?.trim();
+    const rawHref = link.getAttribute('href')?.trim();
     const title = link.textContent?.trim();
-    if (!href || !title || seenHrefs.has(href)) {
+    if (!rawHref || !title) {
+      return;
+    }
+    const href = normalizeSyntheticReportHref(rawHref);
+    if (seenHrefs.has(href)) {
       return;
     }
     seenHrefs.add(href);
@@ -54,8 +77,7 @@ export function collectLocalSearchDocuments(doc: Document = document): SearchDoc
   // 2. Collect headings and section snippets from the current article
   const article = doc.getElementById('furo-main-content');
   if (article) {
-    const pageTitle =
-      doc.querySelector('.furo-article h1')?.textContent?.trim() || doc.title || 'Current Page';
+    const pageTitle = extractCleanDocumentTitle(doc, 'Current Page');
     const headings = article.querySelectorAll<HTMLHeadingElement>('h1[id], h2[id], h3[id], h4[id]');
     headings.forEach((h) => {
       const clone = h.cloneNode(true) as HTMLElement;
@@ -68,6 +90,10 @@ export function collectLocalSearchDocuments(doc: Document = document): SearchDoc
       const isNextHeading = nextEl ? /^H[1-6]$/.test(nextEl.tagName) : false;
       const nextText = !isNextHeading && nextEl ? nextEl.textContent?.trim()?.slice(0, 220) || '' : '';
       const href = `#${h.id}`;
+      if (seenHrefs.has(href)) {
+        return;
+      }
+      seenHrefs.add(href);
       results.push({
         title: headingTitle,
         href,
@@ -132,6 +158,35 @@ export function filterSearchDocuments(
   return scored.slice(0, limit).map((s) => s.doc);
 }
 
+function mergeSearchDocuments(
+  localDocs: SearchDocument[],
+  remoteDocs: SearchDocument[]
+): SearchDocument[] {
+  const currentPageName =
+    typeof window !== 'undefined'
+      ? window.location.pathname.split('/').pop() || 'index.html'
+      : '';
+  const merged: SearchDocument[] = [...localDocs];
+  const seenHrefs = new Set<string>(localDocs.map((d) => d.href));
+
+  for (const doc of remoteDocs) {
+    // Skip remote section entries that duplicate local `#hash` headings on the current page
+    if (
+      currentPageName &&
+      doc.href.startsWith(`${currentPageName}#`) &&
+      seenHrefs.has(doc.href.slice(currentPageName.length))
+    ) {
+      continue;
+    }
+    if (!seenHrefs.has(doc.href)) {
+      seenHrefs.add(doc.href);
+      merged.push(doc);
+    }
+  }
+
+  return merged;
+}
+
 async function fetchSiteIndex(
   localDocs: SearchDocument[],
   cacheKey: string
@@ -142,7 +197,7 @@ async function fetchSiteIndex(
       if (cached) {
         const parsed = JSON.parse(cached) as SearchDocument[];
         if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed;
+          return mergeSearchDocuments(localDocs, parsed);
         }
       }
     }
@@ -150,23 +205,33 @@ async function fetchSiteIndex(
     // Ignore storage read errors
   }
 
-  const internalLinks = localDocs
-    .map((d) => d.href)
-    .filter(
-      (href) =>
-        href &&
-        !href.startsWith('#') &&
-        !href.startsWith('http://') &&
-        !href.startsWith('https://') &&
-        href.endsWith('.html')
-    )
-    .slice(0, 25);
+  const navTitleByHref = new Map<string, string>();
+  for (const doc of localDocs) {
+    if (doc.kind === 'nav' && !doc.href.includes('#')) {
+      navTitleByHref.set(normalizeSyntheticReportHref(doc.href), doc.title);
+    }
+  }
 
-  const fetchedDocs: SearchDocument[] = [...localDocs];
+  const pageHrefs = Array.from(
+    new Set(
+      localDocs
+        .map((d) => normalizeSyntheticReportHref(d.href.split('#')[0]))
+        .filter(
+          (href) =>
+            href &&
+            !href.startsWith('#') &&
+            !href.startsWith('http://') &&
+            !href.startsWith('https://') &&
+            href.endsWith('.html')
+        )
+    )
+  ).slice(0, 30);
+
+  const remoteDocs: SearchDocument[] = [];
   const parser = new DOMParser();
 
   await Promise.all(
-    internalLinks.map(async (href) => {
+    pageHrefs.map(async (href) => {
       try {
         const res = await fetch(href);
         if (!res.ok) {
@@ -178,20 +243,58 @@ async function fetchSiteIndex(
         if (!mainEl) {
           return;
         }
-        const pageTitle =
-          mainEl.querySelector('h1')?.textContent?.trim() ||
-          parsedDoc.title ||
-          href;
+        const pageTitle = extractCleanDocumentTitle(
+          parsedDoc,
+          navTitleByHref.get(href) || href
+        );
         const bodySnippet = (mainEl.textContent || '')
           .replace(/\s+/g, ' ')
           .trim()
           .slice(0, 600);
-        fetchedDocs.push({
+        remoteDocs.push({
           title: pageTitle,
           href,
           section: 'Site Page',
           kind: 'page',
           content: `${pageTitle} ${bodySnippet}`
+        });
+
+        // Also index h1-h4 sections on fetched pages & Maven reports
+        const usedSlugs = new Set<string>();
+        const headings = mainEl.querySelectorAll<HTMLHeadingElement>('h1, h2, h3, h4');
+        headings.forEach((h, idx) => {
+          if (h.closest('.not-prose')) {
+            return;
+          }
+          const headingTitle = h.textContent?.trim();
+          if (!headingTitle) {
+            return;
+          }
+          const baseSlug = h.id?.trim() || slugifyHeading(headingTitle);
+          let slug = baseSlug;
+          let counter = 2;
+          while (usedSlugs.has(slug)) {
+            slug = `${baseSlug}-${counter++}`;
+          }
+          usedSlugs.add(slug);
+
+          // Skip the primary page title h1 if it matches the page title itself
+          if (idx === 0 && h.tagName === 'H1' && headingTitle === pageTitle) {
+            return;
+          }
+
+          const nextEl = h.nextElementSibling;
+          const isNextHeading = nextEl ? /^H[1-6]$/.test(nextEl.tagName) : false;
+          const nextText =
+            !isNextHeading && nextEl ? nextEl.textContent?.trim()?.slice(0, 220) || '' : '';
+
+          remoteDocs.push({
+            title: headingTitle,
+            href: `${href}#${slug}`,
+            section: pageTitle,
+            kind: 'section',
+            content: `${headingTitle} ${nextText}`.trim()
+          });
         });
       } catch {
         // Ignore offline/file:// fetch errors
@@ -200,14 +303,14 @@ async function fetchSiteIndex(
   );
 
   try {
-    if (typeof window !== 'undefined' && window.sessionStorage) {
-      window.sessionStorage.setItem(cacheKey, JSON.stringify(fetchedDocs));
+    if (typeof window !== 'undefined' && window.sessionStorage && remoteDocs.length > 0) {
+      window.sessionStorage.setItem(cacheKey, JSON.stringify(remoteDocs));
     }
   } catch {
     // Ignore storage quota errors
   }
 
-  return fetchedDocs;
+  return mergeSearchDocuments(localDocs, remoteDocs);
 }
 
 export function initSearch(): void {
@@ -230,17 +333,6 @@ export function initSearch(): void {
   const version =
     document.documentElement.getAttribute('data-furo-project-version') || '0.1.0';
   const cacheKey = `furo-search-index-${version}`;
-
-  const ensureSiteIndex = async () => {
-    if (fullSiteIndexed) {
-      return;
-    }
-    fullSiteIndexed = true;
-    searchDocs = await fetchSiteIndex(searchDocs, cacheKey);
-    if (inputEl.value.trim()) {
-      renderResults(inputEl.value);
-    }
-  };
 
   const renderResults = (query: string) => {
     resultsEl.innerHTML = '';
@@ -301,9 +393,26 @@ export function initSearch(): void {
     activeIndex = 0;
   };
 
+  let indexPromise: Promise<void> | null = null;
+  const ensureSiteIndex = (): Promise<void> => {
+    if (fullSiteIndexed) {
+      return Promise.resolve();
+    }
+    if (!indexPromise) {
+      indexPromise = (async () => {
+        searchDocs = await fetchSiteIndex(searchDocs, cacheKey);
+        fullSiteIndexed = true;
+        if (inputEl.value.trim()) {
+          renderResults(inputEl.value);
+        }
+      })();
+    }
+    return indexPromise;
+  };
+
   inputEl.addEventListener('input', () => {
-    void ensureSiteIndex();
     renderResults(inputEl.value);
+    void ensureSiteIndex();
   });
 
   inputEl.addEventListener('keydown', (e) => {
@@ -359,6 +468,7 @@ export function initSearch(): void {
     }
   });
 
+  // Focus input when dialog opens via trigger button
   dialogEl.addEventListener('shown.bs.dialog', () => {
     void ensureSiteIndex();
     inputEl.focus();
