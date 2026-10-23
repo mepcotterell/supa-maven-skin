@@ -1,0 +1,25 @@
+name: Cleanowners
+
+on:
+  schedule:
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  cleanowners:
+    name: Cleanowners
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Run cleanowners action
+        uses: github-community-projects/cleanowners@v2
+        env:
+          GH_TOKEN: ${{ secrets.CLEANOWNERS_TOKEN || secrets.GITHUB_TOKEN }}
+          REPOSITORY: ${{ github.repository }}
+          DRY_RUN: 'false'
+          ENABLE_GITHUB_ACTIONS_STEP_SUMMARY: 'true'
