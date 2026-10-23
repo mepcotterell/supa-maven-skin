@@ -31,7 +31,7 @@ Switch between tabs below—active tab selection is automatically persisted and 
 
 <div class="furo-tabs" title="jvm-lang" data-tab-group="jvm-lang">
   <div title="Java 21" data-tab="Java 21">
-    <pre><code class="language-java">package dev.cotterell.maven.skins;
+    <pre><code class="language-java">package io.github.mepcotterell.skins;
 import java.util.List;
 public record SupaSkinConfig(
     String defaultTheme,
@@ -45,7 +45,7 @@ public record SupaSkinConfig(
 }</code></pre>
   </div>
   <div title="Kotlin" data-tab="Kotlin">
-    <pre><code class="language-kotlin">package dev.cotterell.maven.skins
+    <pre><code class="language-kotlin">package io.github.mepcotterell.skins
 data class SupaSkinConfig(
     val defaultTheme: String = "auto",
     val tocSidebar: Boolean = true,
@@ -75,7 +75,7 @@ export function openSearchModal(dialogEl: HTMLDialogElement): void {
 -  <groupId>org.apache.maven.skins</groupId>
 -  <artifactId>maven-fluido-skin</artifactId>
 -  <version>2.0.0-M11</version>
-+  <groupId>dev.cotterell.maven.skins</groupId>
++  <groupId>io.github.mepcotterell</groupId>
 +  <artifactId>supa-maven-skin</artifactId>
 +  <version>0.1.0-SNAPSHOT</version>
  </skin>

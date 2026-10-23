@@ -40,7 +40,7 @@ Add `supa-maven-skin` to your project's `src/site/site.xml`:
       name="My Project">
 
   <skin>
-    <groupId>dev.cotterell.maven.skins</groupId>
+    <groupId>io.github.mepcotterell</groupId>
     <artifactId>supa-maven-skin</artifactId>
     <version>0.1.0-SNAPSHOT</version>
   </skin>
