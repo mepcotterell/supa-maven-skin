@@ -591,6 +591,64 @@ export function initBootstrapSteppers(container: HTMLElement): void {
   });
 }
 
+const BI_SHORTCODE_REGEX = /:bi-([a-z0-9-]+)(?:\s+([a-zA-Z0-9_:\s-]+?))?:/g;
+
+/**
+ * Transforms Markdown Bootstrap Icon shortcodes (`:bi-<icon-name>:` or
+ * `:bi-<icon-name> <extra-classes>:`) in text nodes into `<i class="bi bi-..." aria-hidden="true"></i>`,
+ * skipping code blocks and inline `<code>` elements.
+ */
+export function transformBootstrapIcons(container: HTMLElement): void {
+  const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+  const textNodes: Text[] = [];
+  let current = walker.nextNode();
+  while (current) {
+    const textNode = current as Text;
+    const parent = textNode.parentElement;
+    if (
+      parent &&
+      !parent.closest('code, pre, script, style, textarea, kbd, samp') &&
+      textNode.nodeValue &&
+      textNode.nodeValue.includes(':bi-')
+    ) {
+      textNodes.push(textNode);
+    }
+    current = walker.nextNode();
+  }
+
+  textNodes.forEach((textNode) => {
+    const raw = textNode.nodeValue || '';
+    BI_SHORTCODE_REGEX.lastIndex = 0;
+    if (!BI_SHORTCODE_REGEX.test(raw)) {
+      return;
+    }
+    BI_SHORTCODE_REGEX.lastIndex = 0;
+
+    const fragment = document.createDocumentFragment();
+    let lastIndex = 0;
+    let match: RegExpExecArray | null;
+
+    while ((match = BI_SHORTCODE_REGEX.exec(raw)) !== null) {
+      if (match.index > lastIndex) {
+        fragment.appendChild(document.createTextNode(raw.slice(lastIndex, match.index)));
+      }
+      const iconName = match[1].trim();
+      const extraClasses = match[2]?.trim() || '';
+      const iconEl = document.createElement('i');
+      iconEl.className = extraClasses ? `bi bi-${iconName} ${extraClasses}` : `bi bi-${iconName}`;
+      iconEl.setAttribute('aria-hidden', 'true');
+      fragment.appendChild(iconEl);
+      lastIndex = match.index + match[0].length;
+    }
+
+    if (lastIndex < raw.length) {
+      fragment.appendChild(document.createTextNode(raw.slice(lastIndex)));
+    }
+
+    textNode.replaceWith(fragment);
+  });
+}
+
 export function initDoxiaEnhancements(
   root: HTMLElement | null = document.getElementById('furo-main-content')
 ): void {
@@ -602,4 +660,5 @@ export function initDoxiaEnhancements(
   initContentTabs(root);
   initBootstrapAccordions(root);
   initBootstrapSteppers(root);
+  transformBootstrapIcons(root);
 }

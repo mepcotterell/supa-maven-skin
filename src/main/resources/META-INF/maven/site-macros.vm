@@ -266,7 +266,19 @@ ${currentYear}##
 #end
 #end
 ##
-## Bootstrap 6 Velocity Helper Macros for Site Authors (.md.vm / .apt.vm / .xhtml.vm)
+## Bootstrap Icons & Bootstrap 6 Velocity Helper Macros for Site Authors (.md.vm / .apt.vm / .xhtml.vm)
+#macro( bi $name )
+<i class="bi bi-$esc.html( $name )" aria-hidden="true"></i>##
+#end
+##
+#macro( furoIcon $name $extraClasses $ariaLabel )
+<i class="bi bi-$esc.html( $name )#if( $extraClasses && $extraClasses != '' ) $esc.html( $extraClasses )#end"#if( $ariaLabel && $ariaLabel != '' ) role="img" aria-label="$esc.html( $ariaLabel )"#else aria-hidden="true"#end></i>##
+#end
+##
+#macro( bsIcon $name $extraClasses $ariaLabel )
+<i class="bi bi-$esc.html( $name )#if( $extraClasses && $extraClasses != '' ) $esc.html( $extraClasses )#end"#if( $ariaLabel && $ariaLabel != '' ) role="img" aria-label="$esc.html( $ariaLabel )"#else aria-hidden="true"#end></i>##
+#end
+##
 #macro( bsAlert $theme $title $body $dismissible )
 <div class="alert theme-$esc.html( $theme ) not-prose my-3" role="alert">
   <div class="flex-grow-1">

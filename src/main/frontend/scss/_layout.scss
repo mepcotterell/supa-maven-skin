@@ -350,9 +350,17 @@ dialog[data-bs-backdrop="false"]::backdrop {
   flex: 0 0 auto;
 
   @media (width >= 1024px) {
+    position: sticky;
+    top: 0;
+    align-self: flex-start;
+    height: 100dvh;
+    max-height: 100dvh;
     width: var(--furo-sidebar-width);
     background-color: var(--color-background-secondary);
     border-right: 1px solid var(--color-background-border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
   }
 }
 
@@ -361,11 +369,10 @@ dialog[data-bs-backdrop="false"]::backdrop {
   --drawer-bg: var(--color-background-secondary);
 
   @media (width >= 1024px) {
-    position: sticky !important;
-    top: 0 !important;
-    height: 100vh !important;
-    max-height: 100vh !important;
-    width: var(--furo-sidebar-width) !important;
+    flex: 1 1 100%;
+    min-height: 0;
+    max-height: 100% !important;
+    width: 100% !important;
     margin: 0 !important;
     padding: 0 !important;
     border: none !important;
@@ -546,7 +553,15 @@ dialog[data-bs-backdrop="false"]::backdrop {
   flex: 0 0 auto;
 
   @media (width >= 1280px) {
+    position: sticky;
+    top: 0;
+    align-self: flex-start;
+    height: 100dvh;
+    max-height: 100dvh;
     width: var(--furo-toc-width);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
   }
 
   &.is-empty {
@@ -561,11 +576,10 @@ dialog[data-bs-backdrop="false"]::backdrop {
   --drawer-bg: var(--color-background-primary);
 
   @media (width >= 1280px) {
-    position: sticky !important;
-    top: 0 !important;
-    height: 100vh !important;
-    max-height: 100vh !important;
-    width: var(--furo-toc-width) !important;
+    flex: 1 1 100%;
+    min-height: 0;
+    max-height: 100% !important;
+    width: 100% !important;
     margin: 0 !important;
     padding: 0 !important;
     border: none !important;
@@ -578,6 +592,27 @@ dialog[data-bs-backdrop="false"]::backdrop {
   .furo-drawer-header {
     @media (width >= 1280px) {
       display: none !important;
+    }
+  }
+}
+
+// Override Bootstrap 6 @layer components .lg:drawer / .xl:drawer !important rules
+@layer base {
+  @media (width >= 1024px) {
+    .furo-sidebar-drawer.lg\:drawer {
+      position: sticky !important;
+      top: 0 !important;
+      height: 100% !important;
+      width: 100% !important;
+    }
+  }
+
+  @media (width >= 1280px) {
+    .furo-toc-drawer.xl\:drawer {
+      position: sticky !important;
+      top: 0 !important;
+      height: 100% !important;
+      width: 100% !important;
     }
   }
 }

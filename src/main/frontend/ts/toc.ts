@@ -13,8 +13,9 @@ export function slugifyHeading(text: string): string {
 }
 
 /**
- * Ensures every heading in the article has a deterministic `id` and optional
- * Furo `#` permalink anchor with copy-to-clipboard feedback.
+ * Ensures every heading in the article has a deterministic clean slug `id`
+ * (e.g. `#1-actions-buttons`) while preserving any preceding Doxia `<a id="...">`
+ * anchor for backward compatibility, and attaches the optional Furo `#` permalink.
  */
 export function prepareHeadings(
   article: HTMLElement,
@@ -29,26 +30,34 @@ export function prepareHeadings(
   allHeadings.forEach((heading) => {
     let id = heading.id?.trim();
 
-    // Check if Doxia placed an <a id="..."> or <a name="..."> inside or right before the heading
-    if (!id) {
-      const innerAnchor = heading.querySelector<HTMLAnchorElement>('a[id], a[name]');
-      if (innerAnchor) {
-        id = innerAnchor.id || innerAnchor.getAttribute('name') || '';
-        if (id && !innerAnchor.textContent?.trim()) {
-          innerAnchor.remove();
-        }
-      }
+    // If Doxia placed an empty <a id="..."> inside the heading, move it before the heading
+    const innerAnchor = heading.querySelector<HTMLAnchorElement>('a[id], a[name]');
+    if (innerAnchor && !innerAnchor.textContent?.trim()) {
+      heading.parentNode?.insertBefore(innerAnchor, heading);
+    }
+
+    // Check if Doxia placed an empty <a id="..."> or <a name="..."> right before the heading
+    const prev = heading.previousElementSibling;
+    const prevAnchor =
+      prev && prev.tagName === 'A' && !prev.textContent?.trim()
+        ? (prev as HTMLAnchorElement)
+        : null;
+    const doxiaId = prevAnchor ? prevAnchor.id || prevAnchor.getAttribute('name') || '' : '';
+    if (doxiaId) {
+      heading.setAttribute('data-doxia-id', doxiaId);
     }
 
     if (!id) {
-      const prev = heading.previousElementSibling;
-      if (prev && prev.tagName === 'A' && !prev.textContent?.trim()) {
-        id = prev.id || prev.getAttribute('name') || '';
-      }
-    }
+      const clone = heading.cloneNode(true) as HTMLElement;
+      clone.querySelectorAll('.furo-headerlink').forEach((el) => el.remove());
+      const baseSlug = slugifyHeading(clone.textContent || 'section');
 
-    if (!id) {
-      const baseSlug = slugifyHeading(heading.textContent || 'section');
+      // If the preceding Doxia anchor already uses the exact same lowercase slug,
+      // remove its id so the heading itself owns that id without DOM duplication.
+      if (prevAnchor && prevAnchor.id === baseSlug) {
+        prevAnchor.removeAttribute('id');
+      }
+
       let candidate = baseSlug;
       let counter = 2;
       while (usedIds.has(candidate) || document.getElementById(candidate)) {
@@ -120,6 +129,7 @@ export function buildTableOfContents(
 
   tocNav.innerHTML = '';
   const tocColumn = tocNav.closest<HTMLElement>('.furo-toc-column');
+  const tocScroll = tocNav.closest<HTMLElement>('.furo-toc-scroll');
   const tocTriggers = document.querySelectorAll<HTMLElement>('.furo-toc-drawer-trigger');
 
   if (headings.length === 0) {
@@ -131,6 +141,7 @@ export function buildTableOfContents(
   tocColumn?.classList.remove('is-empty');
 
   const tocLinksById = new Map<string, HTMLAnchorElement>();
+  const aliasToHeadingId = new Map<string, string>();
 
   headings.forEach((heading, idx) => {
     const level = Number.parseInt(heading.tagName.slice(1), 10);
@@ -144,26 +155,102 @@ export function buildTableOfContents(
     link.textContent = text;
     tocNav.appendChild(link);
     tocLinksById.set(heading.id, link);
+    aliasToHeadingId.set(heading.id, heading.id);
+
+    const doxiaId = heading.getAttribute('data-doxia-id');
+    if (doxiaId) {
+      aliasToHeadingId.set(doxiaId, heading.id);
+    }
   });
 
-  // Also collect any hash sub-links in the left sidebar pointing to sections on this page
+  // Collect hash sub-links in the left sidebar that point to sections on the current page
+  const currentPageName =
+    typeof window !== 'undefined'
+      ? window.location.pathname.split('/').pop() || 'index.html'
+      : '';
   const sidebarHashLinks = Array.from(
     document.querySelectorAll<HTMLAnchorElement>('.furo-sidebar-tree a.furo-nav-link[href*="#"]')
-  );
+  ).filter((link) => {
+    const href = link.getAttribute('href') || '';
+    const hashIdx = href.indexOf('#');
+    if (hashIdx < 0) return false;
+    const pagePart = href.slice(0, hashIdx).split('/').pop() || '';
+    const hashPart = href.slice(hashIdx + 1);
+    if (!pagePart) return true;
+    if (currentPageName && pagePart === currentPageName) return true;
+    return aliasToHeadingId.has(hashPart);
+  });
 
-  const setActiveHeading = (activeId: string) => {
+  const sidebarTargetHeadingIds = new Set<string>();
+  sidebarHashLinks.forEach((link) => {
+    const href = link.getAttribute('href') || '';
+    const hashIdx = href.indexOf('#');
+    if (hashIdx >= 0) {
+      const rawHash = href.slice(hashIdx + 1);
+      const canonical = aliasToHeadingId.get(rawHash);
+      if (canonical) {
+        sidebarTargetHeadingIds.add(canonical);
+      }
+    }
+  });
+
+  const resolveSidebarActiveHeadingId = (activeId: string): string => {
+    if (sidebarTargetHeadingIds.has(activeId)) {
+      return activeId;
+    }
+    const idx = headings.findIndex((h) => h.id === activeId);
+    if (idx > 0) {
+      const activeLevel = Number.parseInt(headings[idx].tagName.slice(1), 10);
+      for (let i = idx - 1; i >= 0; i--) {
+        const candidate = headings[i];
+        const candidateLevel = Number.parseInt(candidate.tagName.slice(1), 10);
+        if (candidateLevel < activeLevel && sidebarTargetHeadingIds.has(candidate.id)) {
+          return candidate.id;
+        }
+      }
+    }
+    return activeId;
+  };
+
+  let lastActiveId = '';
+
+  const setActiveHeading = (rawActiveId: string) => {
+    const activeId = aliasToHeadingId.get(rawActiveId) || rawActiveId;
+    const changed = activeId !== lastActiveId;
+    lastActiveId = activeId;
+
+    let activeLink: HTMLAnchorElement | null = null;
     tocLinksById.forEach((link, id) => {
-      link.classList.toggle('active', id === activeId);
+      const isActive = id === activeId;
+      link.classList.toggle('active', isActive);
+      if (isActive) {
+        activeLink = link;
+      }
     });
 
+    const sidebarActiveId = resolveSidebarActiveHeadingId(activeId);
     sidebarHashLinks.forEach((link) => {
       const href = link.getAttribute('href') || '';
       const hashIdx = href.indexOf('#');
       if (hashIdx >= 0) {
-        const hashId = href.slice(hashIdx + 1);
-        link.classList.toggle('active', hashId === activeId);
+        const rawHash = href.slice(hashIdx + 1);
+        const canonical = aliasToHeadingId.get(rawHash) || rawHash;
+        link.classList.toggle('active', canonical === sidebarActiveId);
       }
     });
+
+    // Keep the active TOC link visible inside the sticky .furo-toc-scroll container
+    if (changed && activeLink && tocScroll && tocScroll.scrollHeight > tocScroll.clientHeight) {
+      const scrollRect = tocScroll.getBoundingClientRect();
+      const linkRect = (activeLink as HTMLElement).getBoundingClientRect();
+      const topPadding = 24;
+      const bottomPadding = 24;
+      if (linkRect.top < scrollRect.top + topPadding) {
+        tocScroll.scrollTop += linkRect.top - (scrollRect.top + topPadding);
+      } else if (linkRect.bottom > scrollRect.bottom - bottomPadding) {
+        tocScroll.scrollTop += linkRect.bottom - (scrollRect.bottom - bottomPadding);
+      }
+    }
   };
 
   try {
@@ -176,9 +263,9 @@ export function buildTableOfContents(
     // Fallback if ScrollSpy cannot initialize in synthetic DOM environments
   }
 
-  // Enforce single active heading (topmost heading above the 22% viewport line)
+  // Enforce single active heading (accounts for heading scroll-margin-top ~144px)
   const syncActiveOnScroll = () => {
-    const threshold = 120;
+    const threshold = 160;
     let currentId = headings[0]?.id || '';
     for (const h of headings) {
       const top = h.getBoundingClientRect().top;
@@ -200,11 +287,13 @@ export function buildTableOfContents(
   };
 
   if (typeof window !== 'undefined') {
+    document.body.addEventListener('activate.bs.scrollspy', syncActiveOnScroll);
     window.addEventListener('scroll', syncActiveOnScroll, { passive: true });
     window.addEventListener('hashchange', () => {
-      const hashId = window.location.hash.replace(/^#/, '');
-      if (hashId && tocLinksById.has(hashId)) {
-        setActiveHeading(hashId);
+      const hashId = decodeURIComponent(window.location.hash.replace(/^#/, ''));
+      const canonical = aliasToHeadingId.get(hashId) || hashId;
+      if (canonical && tocLinksById.has(canonical)) {
+        setActiveHeading(canonical);
       }
     });
     syncActiveOnScroll();
@@ -218,14 +307,23 @@ export function initTocAndScrollSpy(): void {
   }
 
   const body = document.body;
-  const enablePermalinks = body.getAttribute('data-furo-permalinks') !== 'false';
+  const enablePermalinks = body.getAttribute('data-furo-heading-permalinks') !== 'false';
   const permalinkSymbol = body.getAttribute('data-furo-permalink-symbol') || '#';
-  const maxDepth = Number.parseInt(body.getAttribute('data-furo-toc-max-depth') || '4', 10) || 4;
+  const tocMaxDepth = Number.parseInt(body.getAttribute('data-furo-toc-max-depth') || '4', 10);
 
   prepareHeadings(article, enablePermalinks, permalinkSymbol);
 
-  if (body.getAttribute('data-furo-toc') !== 'false') {
-    const tocNav = document.getElementById('furoTocNav');
-    buildTableOfContents(article, tocNav, maxDepth);
+  // If the page loaded with a #hash pointing to a slugified heading id that was assigned
+  // dynamically by prepareHeadings(), scroll to it before building the TOC so initial
+  // active state reflects the scrolled position.
+  if (typeof window !== 'undefined' && window.location.hash.length > 1) {
+    const rawHash = decodeURIComponent(window.location.hash.slice(1));
+    const targetEl = document.getElementById(rawHash);
+    if (targetEl && window.scrollY === 0) {
+      targetEl.scrollIntoView();
+    }
   }
+
+  const tocNav = document.getElementById('furoTocNav');
+  buildTableOfContents(article, tocNav, Number.isNaN(tocMaxDepth) ? 4 : tocMaxDepth);
 }

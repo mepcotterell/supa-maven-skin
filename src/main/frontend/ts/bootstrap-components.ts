@@ -6,6 +6,7 @@ import Collapse from 'bootstrap/js/dist/collapse.js';
 import Combobox from 'bootstrap/js/dist/combobox.js';
 import Datepicker from 'bootstrap/js/dist/datepicker.js';
 import Dialog from 'bootstrap/js/dist/dialog.js';
+import Data from 'bootstrap/js/dist/dom/data.js';
 import Drawer from 'bootstrap/js/dist/drawer.js';
 import Menu from 'bootstrap/js/dist/menu.js';
 import NavOverflow from 'bootstrap/js/dist/nav-overflow.js';
@@ -20,6 +21,49 @@ import Toggler from 'bootstrap/js/dist/toggler.js';
 import Tooltip from 'bootstrap/js/dist/tooltip.js';
 import { highlightCodeElement } from './code';
 import { initContentTabs } from './doxia';
+
+/**
+ * Bootstrap 6.0.0-alpha.1's `dom/data.js` still carries a Bootstrap 5 guard in `Data.set`
+ * that logs `console.error("Bootstrap doesn't allow more than one instance per element...")`
+ * and drops the second instance when two plugins bind to the same element.
+ * However, Bootstrap 6's `Combobox` internally creates a `Menu` instance (`bs.menu`) on the
+ * same toggle element that already holds `bs.combobox`, and triggers with tooltips (`bs.tooltip`)
+ * also share their element with `bs.menu` / `bs.dialog` / `bs.drawer`.
+ * Patch `Data` so each element can hold one instance per distinct `DATA_KEY`.
+ */
+const elementInstanceMap = new Map<Element, Map<string, unknown>>();
+
+Data.set = (element: Element, key: string, instance: unknown): void => {
+  if (!elementInstanceMap.has(element)) {
+    elementInstanceMap.set(element, new Map());
+  }
+  elementInstanceMap.get(element)!.set(key, instance);
+};
+
+Data.get = (element: Element | null, key: string): unknown => {
+  if (element && elementInstanceMap.has(element)) {
+    return elementInstanceMap.get(element)!.get(key) || null;
+  }
+  return null;
+};
+
+Data.getAny = (element: Element | null): unknown => {
+  if (element && elementInstanceMap.has(element)) {
+    return elementInstanceMap.get(element)!.values().next().value || null;
+  }
+  return null;
+};
+
+Data.remove = (element: Element, key: string): void => {
+  if (!elementInstanceMap.has(element)) {
+    return;
+  }
+  const instanceMap = elementInstanceMap.get(element)!;
+  instanceMap.delete(key);
+  if (instanceMap.size === 0) {
+    elementInstanceMap.delete(element);
+  }
+};
 
 export const BootstrapPlugins = {
   Alert,

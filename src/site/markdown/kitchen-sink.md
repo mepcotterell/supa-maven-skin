@@ -1,6 +1,6 @@
 # Kitchen Sink Showcase
 
-This page demonstrates all typography, Furo admonitions, syntax-highlighted code blocks, synchronized content tabs, responsive Doxia tables, Bootstrap 6 components, Mermaid diagrams, and KaTeX math provided by **Supa Maven Skin**.
+This page demonstrates all typography, Furo admonitions, syntax-highlighted code blocks, synchronized content tabs, responsive Doxia tables, Bootstrap 6 components, Bootstrap Icons, Mermaid diagrams, and KaTeX math provided by **Supa Maven Skin**.
 
 ## Furo Admonitions
 
@@ -94,25 +94,59 @@ Standard Markdown and Doxia `table.bodyTable` elements are automatically normali
 
 ## Bootstrap 6 UI Components
 
-Because `supa-maven-skin` bundles **all 28 Bootstrap `6.0.0-alpha.1` component families and 20 interactive JS plugins**, you can use Bootstrap 6 buttons, badges, avatars, chips, accordions, steppers, menus, dialogs, drawers, comboboxes, datepickers, and cards directly in documentation pages:
+Because `supa-maven-skin` bundles **all 28 Bootstrap `6.0.0-alpha.1` component families, 20 interactive JS plugins, and 2,000+ Bootstrap Icons**, you can use Bootstrap 6 buttons, badges, avatars, chips, accordions, steppers, menus, dialogs, drawers, comboboxes, datepickers, cards, and icons directly in documentation pages:
 
 <div class="not-prose my-4">
   <div class="d-flex flex-wrap gap-2 mb-3">
-    <span class="badge theme-primary">Primary Badge</span>
-    <span class="badge theme-secondary">Secondary Badge</span>
-    <span class="badge theme-success">Success</span>
-    <span class="badge theme-info">Info</span>
-    <span class="badge theme-warning">Warning</span>
-    <span class="badge theme-danger">Danger</span>
+    <span class="badge theme-primary"><i class="bi bi-rocket-takeoff me-1" aria-hidden="true"></i>Primary Badge</span>
+    <span class="badge theme-secondary"><i class="bi bi-gear me-1" aria-hidden="true"></i>Secondary Badge</span>
+    <span class="badge theme-success"><i class="bi bi-check-circle-fill me-1" aria-hidden="true"></i>Success</span>
+    <span class="badge theme-info"><i class="bi bi-info-circle-fill me-1" aria-hidden="true"></i>Info</span>
+    <span class="badge theme-warning"><i class="bi bi-exclamation-triangle-fill me-1" aria-hidden="true"></i>Warning</span>
+    <span class="badge theme-danger"><i class="bi bi-shield-exclamation me-1" aria-hidden="true"></i>Danger</span>
   </div>
   <div class="card p-3" style="background-color: var(--color-background-secondary); border-color: var(--color-background-border); border-radius: 0.5rem;">
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
       <div>
-        <div class="fw-semibold mb-1">Full Bootstrap 6 Component Catalog</div>
+        <div class="fw-semibold mb-1"><i class="bi bi-grid-1x2-fill text-primary me-1" aria-hidden="true"></i>Full Bootstrap 6 Component Catalog</div>
         <p class="mb-0 text-secondary" style="font-size: 0.9rem;">Explore all 28 Bootstrap 6 component families, variants, and interactive JS widgets.</p>
       </div>
       <a href="bootstrap-components.html" class="btn btn-sm btn-solid theme-primary">Explore All 28 Components &rarr;</a>
     </div>
+  </div>
+</div>
+
+### Bootstrap Icons (Markdown Shortcodes, HTML & Velocity Macros)
+
+All [Bootstrap Icons](https://icons.getbootstrap.com/) are bundled offline in `supa-maven-skin` (`bootstrap-icons.woff2`) and can be authored using **Markdown shortcodes** (`:bi-<name>:` or `:bi-<name> <classes>:`), **Markdown + HTML** (`<i class="bi bi-..."></i>`), or **Velocity macros** (`#bi`, `#furoIcon`, `#bsIcon` in `.md.vm` templates):
+
+<div class="furo-component-preview">
+  <div class="d-flex flex-wrap align-items-center gap-3">
+    <span class="d-inline-flex align-items-center gap-1 fw-medium">:bi-rocket-takeoff text-primary fs-5: Launch</span>
+    <span class="d-inline-flex align-items-center gap-1 fw-medium">:bi-check-circle-fill text-success fs-5: Verified</span>
+    <span class="d-inline-flex align-items-center gap-1 fw-medium">:bi-lightning-charge-fill text-warning fs-5: Fast Vite Build</span>
+    <span class="d-inline-flex align-items-center gap-1 fw-medium"><i class="bi bi-github fs-5" aria-hidden="true"></i> GitHub Actions</span>
+    <span class="d-inline-flex align-items-center gap-1 fw-medium"><i class="bi bi-universal-access-circle text-info fs-5" aria-hidden="true"></i> WCAG 2.2 AAA</span>
+  </div>
+</div>
+
+<div class="furo-tabs" title="authoring-mode">
+  <div title="Markdown Shorthand">
+    <pre><code class="language-markdown">Inline icons with optional utility classes:
+:bi-rocket-takeoff: Launch
+:bi-check-circle-fill text-success fs-5: Verified
+:bi-lightning-charge-fill text-warning: Fast Vite Build</code></pre>
+  </div>
+  <div title="Markdown + HTML">
+    <pre><code class="language-html">&lt;i class="bi bi-rocket-takeoff text-primary fs-5" aria-hidden="true"&gt;&lt;/i&gt; Launch
+&lt;i class="bi bi-check-circle-fill text-success fs-5" aria-hidden="true"&gt;&lt;/i&gt; Verified
+&lt;i class="bi bi-github fs-5" aria-hidden="true"&gt;&lt;/i&gt; GitHub Actions</code></pre>
+  </div>
+  <div title="Velocity Macro (.md.vm)">
+    <pre><code class="language-velocity">#parse( "site-macros.vm" )
+#bi( "rocket-takeoff" ) Launch
+#furoIcon( "check-circle-fill" "text-success fs-5" "" ) Verified
+#bsIcon( "universal-access-circle" "text-info fs-5" "Accessible" ) WCAG 2.2 AAA</code></pre>
   </div>
 </div>
 

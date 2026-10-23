@@ -46,6 +46,49 @@
     <tag>HEAD</tag>
   </scm>
 
+  <ciManagement>
+    <system>GitHub Actions</system>
+    <url>https://github.com/mepcotterell/supa-maven-skin/actions</url>
+    <notifiers>
+      <notifier>
+        <type>GitHub Actions</type>
+        <sendOnError>true</sendOnError>
+        <sendOnFailure>true</sendOnFailure>
+        <sendOnSuccess>false</sendOnSuccess>
+        <sendOnWarning>false</sendOnWarning>
+        <address>https://github.com/mepcotterell/supa-maven-skin/actions/workflows/ci.yml</address>
+        <configuration>
+          <workflow>CI (Build, Test, Snapshot &amp; Pages)</workflow>
+          <triggers>push (main), pull_request, workflow_dispatch</triggers>
+        </configuration>
+      </notifier>
+      <notifier>
+        <type>GitHub Actions</type>
+        <sendOnError>true</sendOnError>
+        <sendOnFailure>true</sendOnFailure>
+        <sendOnSuccess>false</sendOnSuccess>
+        <sendOnWarning>false</sendOnWarning>
+        <address>https://github.com/mepcotterell/supa-maven-skin/actions/workflows/release.yml</address>
+        <configuration>
+          <workflow>Release to Maven Central</workflow>
+          <triggers>push (tags v*), workflow_dispatch</triggers>
+        </configuration>
+      </notifier>
+      <notifier>
+        <type>GitHub Actions</type>
+        <sendOnError>true</sendOnError>
+        <sendOnFailure>true</sendOnFailure>
+        <sendOnSuccess>false</sendOnSuccess>
+        <sendOnWarning>false</sendOnWarning>
+        <address>https://github.com/mepcotterell/supa-maven-skin/actions/workflows/cleanowners.yml</address>
+        <configuration>
+          <workflow>Cleanowners</workflow>
+          <triggers>schedule (0 6 * * 1), workflow_dispatch</triggers>
+        </configuration>
+      </notifier>
+    </notifiers>
+  </ciManagement>
+
   <distributionManagement>
     <snapshotRepository>
       <id>sonatype-central</id>
@@ -363,6 +406,7 @@
               <report>licenses</report>
               <report>team</report>
               <report>scm</report>
+              <report>ci-management</report>
               <report>plugins</report>
             </reports>
           </reportSet>

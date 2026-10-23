@@ -1,10 +1,12 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   BootstrapPlugins,
+  Combobox,
   initBootstrapComponents,
   initComponentExamples,
   initComponentPlayground,
   isolateBootstrapComponentsFromProse,
+  Menu,
   Tooltip
 } from '../../main/frontend/ts/bootstrap-components';
 import { enhanceCodeBlocks } from '../../main/frontend/ts/code';
@@ -14,6 +16,7 @@ import {
   initContentTabs,
   normalizeDoxiaTables,
   TAB_SYNC_STORAGE_KEY,
+  transformBootstrapIcons,
   transformGfmAdmonitions
 } from '../../main/frontend/ts/doxia';
 import { Drawer, initDrawers } from '../../main/frontend/ts/index';
@@ -295,6 +298,24 @@ describe('Supa Maven Skin Frontend Modules', () => {
       expect(stepperItems[1].classList.contains('active')).toBe(true);
       expect(stepperItems[2].classList.contains('active')).toBe(false);
     });
+
+    it('transforms :bi-...: Markdown shortcodes into <i class="bi bi-..."> while preserving <code> and <pre>', () => {
+      const container = document.createElement('div');
+      container.innerHTML = `
+        <p>Launch :bi-rocket-takeoff: and verify :bi-check-circle-fill text-success fs-5: status.</p>
+        <p>Inline code <code>:bi-rocket-takeoff:</code> and <pre>:bi-github:</pre> stay untouched.</p>
+      `;
+
+      transformBootstrapIcons(container);
+
+      const icons = container.querySelectorAll('i.bi');
+      expect(icons.length).toBe(2);
+      expect(icons[0].className).toBe('bi bi-rocket-takeoff');
+      expect(icons[0].getAttribute('aria-hidden')).toBe('true');
+      expect(icons[1].className).toBe('bi bi-check-circle-fill text-success fs-5');
+      expect(container.querySelector('code')?.textContent).toBe(':bi-rocket-takeoff:');
+      expect(container.querySelector('pre')?.textContent).toBe(':bi-github:');
+    });
   });
 
   describe('Bootstrap 6 Plugins, Drawers & .prose Isolation', () => {
@@ -320,6 +341,37 @@ describe('Supa Maven Skin Frontend Modules', () => {
       expect(container.querySelector('.card')?.classList.contains('not-prose')).toBe(true);
       expect(container.querySelector('.nav')?.classList.contains('not-prose')).toBe(true);
       expect(container.querySelector('.chip-input')?.classList.contains('not-prose')).toBe(true);
+    });
+
+    it('initializes Combobox and internal Menu on the same toggle element without Data.set console errors', () => {
+      const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+      try {
+        const container = document.createElement('div');
+        container.innerHTML = `
+          <div class="dropdown">
+            <button type="button" class="form-control combobox-toggle" data-bs-toggle="combobox" aria-expanded="false">
+              <span class="combobox-value">Apache Maven 3.9+</span>
+            </button>
+            <div class="menu w-100">
+              <div class="combobox-search">
+                <input type="text" class="form-control form-control-sm combobox-search-input" />
+              </div>
+              <button type="button" class="menu-item selected" data-bs-value="maven">Apache Maven 3.9+</button>
+              <button type="button" class="menu-item" data-bs-value="maven4">Apache Maven 4.0</button>
+            </div>
+          </div>
+        `;
+        document.body.appendChild(container);
+
+        initBootstrapComponents(container);
+
+        const toggleBtn = container.querySelector<HTMLElement>('[data-bs-toggle="combobox"]')!;
+        expect(errorSpy).not.toHaveBeenCalled();
+        expect(Combobox.getInstance(toggleBtn)).not.toBeNull();
+        expect(Menu.getInstance(toggleBtn)).not.toBeNull();
+      } finally {
+        errorSpy.mockRestore();
+      }
     });
 
     it('pairs .furo-component-preview with code blocks or .furo-tabs into .furo-component-example and powers [data-furo-playground]', () => {
@@ -524,10 +576,15 @@ describe('Supa Maven Skin Frontend Modules', () => {
       expect(slugifyHeading('Getting Started with Furo!')).toBe('getting-started-with-furo');
 
       document.body.innerHTML = `
+        <nav class="furo-sidebar-tree">
+          <a class="furo-nav-link" href="#getting-started">Getting Started</a>
+          <a class="furo-nav-link" href="#1-actions-buttons">1. Actions &amp; Buttons</a>
+        </nav>
         <main id="furo-main-content">
           <h1>Page Title</h1>
-          <h2>Getting Started</h2>
+          <a id="Getting_Started"></a><h2>Getting Started</h2>
           <h3>Installation</h3>
+          <a id="a1._Actions_.26_Buttons"></a><h2>1. Actions &amp; Buttons</h2>
           <h2>Getting Started</h2>
         </main>
         <aside class="furo-toc-column">
@@ -543,15 +600,19 @@ describe('Supa Maven Skin Frontend Modules', () => {
 
       const h2s = article.querySelectorAll('h2');
       expect(h2s[0].id).toBe('getting-started');
-      expect(h2s[1].id).toBe('getting-started-2');
-      expect(h2s[0].querySelector('.furo-headerlink')?.getAttribute('href')).toBe(
-        '#getting-started'
+      expect(h2s[0].getAttribute('data-doxia-id')).toBe('Getting_Started');
+      expect(h2s[1].id).toBe('1-actions-buttons');
+      expect(h2s[1].getAttribute('data-doxia-id')).toBe('a1._Actions_.26_Buttons');
+      expect(h2s[2].id).toBe('getting-started-2');
+      expect(h2s[1].querySelector('.furo-headerlink')?.getAttribute('href')).toBe(
+        '#1-actions-buttons'
       );
 
       const tocLinks = tocNav.querySelectorAll('a.nav-link');
-      expect(tocLinks.length).toBe(3);
+      expect(tocLinks.length).toBe(4);
       expect(tocLinks[0].textContent).toBe('Getting Started');
       expect(tocLinks[1].classList.contains('furo-toc-level-3')).toBe(true);
+      expect(tocLinks[2].getAttribute('href')).toBe('#1-actions-buttons');
     });
   });
 

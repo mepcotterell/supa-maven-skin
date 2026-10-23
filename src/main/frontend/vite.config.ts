@@ -34,6 +34,9 @@ export default defineConfig({
           if (names.some((n) => n.endsWith('.css'))) {
             return 'css/supa-maven-skin.min.css';
           }
+          if (names.some((n) => n.endsWith('.woff2') || n.endsWith('.woff'))) {
+            return 'css/fonts/[name][extname]';
+          }
           return 'assets/[name][extname]';
         }
       }
