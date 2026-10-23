@@ -637,32 +637,50 @@ describe('Supa Maven Skin Frontend Modules', () => {
       expect(wrappers[1].querySelector('.hljs-addition')).not.toBeNull();
     });
 
-    it('uses .hljs.language-plaintext for all license <pre> blocks in Project Licenses', () => {
-      const container = document.createElement('div');
-      container.innerHTML = `
-        <section><a id="Overview"></a><h1>Overview</h1></section>
-        <section><a id="Project_Licenses"></a>
-          <h1>Project Licenses</h1>
-          <section><a id="MIT_License"></a>
-            <h2>MIT License</h2>
-            <pre>THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE.</pre>
+    it('uses .hljs.language-plaintext for all license <pre> blocks in Project Licenses and preserves Doxia verbatimLink <pre><a ...> without unescaped HTML warnings', () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+      try {
+        const container = document.createElement('div');
+        container.innerHTML = `
+          <section><a id="Overview"></a><h1>Overview</h1></section>
+          <section><a id="Project_Licenses"></a>
+            <h1>Project Licenses</h1>
+            <section><a id="MIT_License"></a>
+              <h2>MIT License</h2>
+              <pre>THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE.</pre>
+            </section>
+            <section><a id="Apache_License"></a>
+              <h2>Apache License, Version 2.0</h2>
+              <pre>Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS.</pre>
+            </section>
           </section>
-          <section><a id="Apache_License"></a>
-            <h2>Apache License, Version 2.0</h2>
-            <pre>Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS.</pre>
+          <section><a id="Access"></a>
+            <h1>Access</h1>
+            <pre><a class="externalLink" href="https://github.com/mepcotterell/supa-maven-skin/actions">https://github.com/mepcotterell/supa-maven-skin/actions</a></pre>
           </section>
-        </section>
-      `;
+        `;
 
-      enhanceCodeBlocks(container, true, true);
+        enhanceCodeBlocks(container, true, true);
 
-      const pres = container.querySelectorAll('pre');
-      expect(pres.length).toBe(2);
-      pres.forEach((pre) => {
-        expect(pre.classList.contains('hljs')).toBe(true);
-        expect(pre.classList.contains('language-plaintext')).toBe(true);
-        expect(pre.classList.contains('language-sql')).toBe(false);
-      });
+        expect(warnSpy).not.toHaveBeenCalled();
+
+        const pres = container.querySelectorAll('pre');
+        expect(pres.length).toBe(3);
+        pres.forEach((pre) => {
+          expect(pre.classList.contains('hljs')).toBe(true);
+          expect(pre.classList.contains('language-plaintext')).toBe(true);
+          expect(pre.classList.contains('language-sql')).toBe(false);
+        });
+
+        // Verify the clickable <a> link inside the Doxia verbatimLink <pre> is preserved
+        const verbatimLink = pres[2].querySelector('a.externalLink');
+        expect(verbatimLink).not.toBeNull();
+        expect(verbatimLink?.getAttribute('href')).toBe(
+          'https://github.com/mepcotterell/supa-maven-skin/actions'
+        );
+      } finally {
+        warnSpy.mockRestore();
+      }
     });
   });
 

@@ -111,6 +111,10 @@ export function highlightCodeElement(codeEl: HTMLElement, lang?: string): void {
       langBadge.textContent = LANGUAGE_LABELS[lang] || lang;
     }
   }
+  if (codeEl.children.length > 0) {
+    codeEl.classList.add('hljs', 'language-plaintext');
+    return;
+  }
   try {
     hljs.highlightElement(codeEl);
   } catch {
@@ -191,6 +195,7 @@ export function enhanceCodeBlocks(
     const rawText = (codeEl ?? pre).textContent ?? '';
     const langLabel = detectLanguageLabel(pre, codeEl);
     const target = codeEl ?? pre;
+    const hasEmbeddedChildElements = target.children.length > 0;
     if (!langLabel && isLicenseBlock(pre, container)) {
       target.classList.add('language-plaintext');
     }
@@ -226,7 +231,13 @@ export function enhanceCodeBlocks(
     }
 
     if (enableHighlight) {
-      if (!target.classList.contains('hljs')) {
+      if (hasEmbeddedChildElements) {
+        // Doxia verbatimLink blocks (e.g., <pre><a class="externalLink" href="...">...</a></pre>
+        // on ci-management.html and scm.html) contain real child elements. Keep the interactive
+        // child markup intact and style as .hljs.language-plaintext without invoking hljs.highlightElement()
+        // (which logs an "unescaped HTML" security warning and strips child elements).
+        target.classList.add('hljs', 'language-plaintext');
+      } else if (!target.classList.contains('hljs')) {
         try {
           hljs.highlightElement(target);
         } catch {
