@@ -7,16 +7,18 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   publish:
-    name: Publish to Maven Central
+    name: Publish to Maven Central & GitHub Releases
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
 
       - name: Set up JDK 21 and GPG
         uses: actions/setup-java@v6
@@ -44,3 +46,38 @@ jobs:
           MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
           MAVEN_CENTRAL_TOKEN: ${{ secrets.MAVEN_CENTRAL_TOKEN }}
         run: mvn -B -ntp clean deploy -Prelease
+
+      - name: Extract release notes from CHANGELOG.md
+        if: startsWith(github.ref, 'refs/tags/v')
+        id: changelog
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          awk -v ver="$VERSION" '
+            $0 ~ "^## \\[" ver "\\]" { found=1; next }
+            found && /^## \[/ { exit }
+            found && /^\[.*\]:/ { exit }
+            found { print }
+          ' CHANGELOG.md > target/release-notes.md
+
+          if [ ! -s target/release-notes.md ]; then
+            echo "has_notes=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_notes=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ "${{ steps.changelog.outputs.has_notes }}" = "true" ]; then
+            gh release create "${GITHUB_REF_NAME}" \
+              target/*.jar target/*.asc \
+              --title "${GITHUB_REF_NAME}" \
+              --notes-file target/release-notes.md
+          else
+            gh release create "${GITHUB_REF_NAME}" \
+              target/*.jar target/*.asc \
+              --title "${GITHUB_REF_NAME}" \
+              --generate-notes
+          fi
