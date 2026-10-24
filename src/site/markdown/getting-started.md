@@ -154,19 +154,18 @@ Select your build tool below:
 
 ## Step 4: Write a Velocity-Enhanced Page (`src/site/markdown/install.md.vm`)
 
-When you name a file with the `.md.vm` extension, Doxia runs **Apache Velocity** before parsing the Markdown. This lets you interpolate Maven properties (such as `${project.groupId}`, `${project.artifactId}`, and `${project.version}`) and invoke **Supa Maven Skin**'s built-in Velocity macros (`#bi`, `#bsAlert`, `#bsBadge`, `#bsCard`) by adding `#parse( "META-INF/maven/site-macros.vm" )` at the top of the file.
+When you name a file with the `.md.vm` extension, Doxia runs **Apache Velocity** before parsing the Markdown. This lets you interpolate Maven properties (such as `${project.groupId}`, `${project.artifactId}`, `${project.version}`, and `${project.properties.getProperty("my.property")}`) and invoke **Supa Maven Skin**'s globally registered Velocity macros (`#bi`, `#bsAlert`, `#bsBadge`, `#bsCard`, `#bsCardGridStart`, `#bsGuideCard`, `#bsCardGridEnd`).
 
 Create `src/site/markdown/install.md.vm`:
 
 ````velocity
-#parse( "META-INF/maven/site-macros.vm" )
 # Installation Guide #bsBadge( "success" "subtle" "v${project.version}" )
 
-#bi( "download" "text-primary me-1" ) Install **`${project.artifactId}`** version **`${project.version}`** in your build.
+#bi( "download" "text-primary me-1" "" ) Install **`${project.artifactId}`** version **`${project.version}`** in your build.
 
 #bsAlert( "info" "Maven Central Coordinates" "Always use the latest release version <code>${project.version}</code>." true )
 
-\## Maven Coordinates
+#[[##]]# Maven Coordinates
 
 ```xml
 <dependency>
@@ -178,7 +177,7 @@ Create `src/site/markdown/install.md.vm`:
 ````
 
 > [!IMPORTANT] Headings Inside `.md.vm` Files
-> In Velocity `.md.vm` templates, `##` starts a single-line Velocity comment. For `<h2>`–`<h6>` Markdown headings inside `.md.vm` files, escape the leading hash (`\## Maven Coordinates`) or configure Velocity/Markdown sections accordingly so Velocity does not strip the line as a comment.
+> In Velocity `.md.vm` templates, `##` starts a single-line Velocity comment. For `<h2>`–`<h6>` Markdown headings inside `.md.vm` files, wrap the hash prefix in Velocity's unparsed block syntax (`#[[##]]# Maven Coordinates` or `#[[###]]# Subsection`) so Velocity emits literal `##` / `###` to the Markdown parser instead of stripping the line as a comment.
 
 ---
 

@@ -328,3 +328,28 @@ ${currentYear}##
 #end
 </div>
 #end
+##
+#macro( bsCardGridStart $extraClasses )
+<div class="row g-3 not-prose my-3#if( $extraClasses && $extraClasses != '' ) $esc.html( $extraClasses )#end">##
+#end
+##
+#macro( bsCardGridEnd )
+</div>
+#end
+##
+#macro( bsGuideCard $colClass $icon $theme $href $title $badge $description )
+  <div class="#if( $colClass && $colClass != '' )$esc.html( $colClass )#else col-12 md:col-6#end">
+    <div class="card h-100 p-3">
+      <div class="d-flex align-items-center gap-2 mb-2">
+#if( $icon && $icon != "" )
+        #bi( $icon "text-$theme fs-5" "" )
+#end
+        <a href="$esc.html( $href )" class="fw-semibold text-decoration-none">$esc.html( $title )</a>
+#if( $badge && $badge != "" )
+        <span class="badge badge-subtle theme-$esc.html( $theme ) ms-auto">$esc.html( $badge )</span>
+#end
+      </div>
+      <p class="mb-0 text-body-secondary small">$description</p>
+    </div>
+  </div>##
+#end

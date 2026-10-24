@@ -58,7 +58,8 @@ function extractXmlTag(xml: string, tagName: string): string | null {
 
 /**
  * Validates CommonMark backtick code fences in a Markdown file so that nested 3-backtick fences
- * cannot prematurely close an outer block and swallow subsequent prose into a bare code block.
+ * cannot prematurely close an outer block and swallow subsequent prose into a bare code block,
+ * and checks that `.md.vm` files escape `##`–`######` headings as `#[[##]]#`–`#[[######]]#` outside fences.
  *
  * @param relPath - Relative file path for error reporting.
  * @param content - Full markdown text content of the file.
@@ -68,29 +69,36 @@ function validateMarkdownCodeFences(relPath: string, content: string): void {
   let inFence = false;
   let fenceLen = 0;
   let fenceStartLine = 0;
+  const isVelocityMarkdown = relPath.endsWith('.md.vm');
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i] ?? '';
     const match = line.match(/^\s*(`{3,})(.*)$/);
-    if (!match) {
+    if (match) {
+      const ticks = match[1] ?? '';
+      const info = (match[2] ?? '').trim();
+
+      if (!inFence) {
+        if (!info) {
+          errors.push(
+            `${relPath}:${i + 1}: Opening code fence "${ticks}" is missing a language identifier (or an earlier nested code block prematurely closed its outer fence; use \`\`\`\` for outer fences wrapping \`\`\` blocks).`
+          );
+        }
+        inFence = true;
+        fenceLen = ticks.length;
+        fenceStartLine = i + 1;
+      } else if (ticks.length >= fenceLen && info === '') {
+        inFence = false;
+        fenceLen = 0;
+        fenceStartLine = 0;
+      }
       continue;
     }
-    const ticks = match[1] ?? '';
-    const info = (match[2] ?? '').trim();
 
-    if (!inFence) {
-      if (!info) {
-        errors.push(
-          `${relPath}:${i + 1}: Opening code fence "${ticks}" is missing a language identifier (or an earlier nested code block prematurely closed its outer fence; use \`\`\`\` for outer fences wrapping \`\`\` blocks).`
-        );
-      }
-      inFence = true;
-      fenceLen = ticks.length;
-      fenceStartLine = i + 1;
-    } else if (ticks.length >= fenceLen && info === '') {
-      inFence = false;
-      fenceLen = 0;
-      fenceStartLine = 0;
+    if (!inFence && isVelocityMarkdown && /^\\?#{2,6}\s+\S/.test(line)) {
+      errors.push(
+        `${relPath}:${i + 1}: Unescaped Markdown heading "${line.trim()}" in .md.vm file; wrap hashes in Velocity unparsed syntax (e.g., "#[[##]]# Heading") so Apache Velocity does not strip it as a comment.`
+      );
     }
   }
 
@@ -134,8 +142,13 @@ function validateInternalLinks(
   let mdMatch: RegExpExecArray | null;
   while ((mdMatch = mdPathRegex.exec(content)) !== null) {
     const mdFile = mdMatch[1] ?? '';
-    // Skip glob/placeholder examples like *.md or page.md
-    if (mdFile === 'page.md' || mdFile === 'page.md.vm' || mdFile === 'install.md.vm') {
+    // Skip glob/placeholder/consumer-tutorial examples like page.md, index.md, or install.md.vm
+    if (
+      mdFile === 'page.md' ||
+      mdFile === 'page.md.vm' ||
+      mdFile === 'index.md' ||
+      mdFile === 'install.md.vm'
+    ) {
       continue;
     }
     const targetPath = path.join(SITE_MARKDOWN_DIR, mdFile);
@@ -252,11 +265,21 @@ const mavenSitePluginVersion: string | null = extractXmlTag(
   'maven-site-plugin.version'
 );
 const doxiaVersion: string | null = extractXmlTag(pomXml, 'doxia.version');
+const pomBootstrapVersion: string | null = extractXmlTag(
+  pomXml,
+  'bootstrap.version'
+);
 const bootstrapVersion: string = (pkgJson.dependencies?.bootstrap ?? '').replace(
   /^[\^~]/,
   ''
 );
 const bootstrapMajor: string = bootstrapVersion.split('.')[0] ?? '';
+
+if (pomBootstrapVersion && pomBootstrapVersion !== bootstrapVersion) {
+  errors.push(
+    `Version mismatch between pom.xml (<bootstrap.version>${pomBootstrapVersion}</bootstrap.version>) and package.json ("bootstrap": "${bootstrapVersion}").`
+  );
+}
 
 if (!fs.existsSync(CHANGELOG_PATH)) {
   errors.push('CHANGELOG.md: File does not exist.');
@@ -338,7 +361,7 @@ for (const relPath of docFiles) {
   let skinMatch: RegExpExecArray | null;
   while ((skinMatch = skinBlockRegex.exec(content)) !== null) {
     const statedSkinVer: string = (skinMatch[1] ?? '').trim();
-    if (statedSkinVer !== pomVersion) {
+    if (statedSkinVer !== pomVersion && statedSkinVer !== '${project.version}') {
       errors.push(
         `${relPath}: supa-maven-skin <version>${statedSkinVer}</version> does not match pom.xml <version>${pomVersion}</version>.`
       );
@@ -351,7 +374,10 @@ for (const relPath of docFiles) {
   let sitePluginMatch: RegExpExecArray | null;
   while ((sitePluginMatch = sitePluginRegex.exec(content)) !== null) {
     const statedSiteVer: string = (sitePluginMatch[1] ?? '').trim();
-    if (statedSiteVer !== mavenSitePluginVersion) {
+    if (
+      statedSiteVer !== mavenSitePluginVersion &&
+      statedSiteVer !== '${maven-site-plugin.version}'
+    ) {
       errors.push(
         `${relPath}: maven-site-plugin <version>${statedSiteVer}</version> does not match pom.xml <maven-site-plugin.version>${mavenSitePluginVersion}</maven-site-plugin.version>.`
       );
@@ -364,7 +390,7 @@ for (const relPath of docFiles) {
   let doxiaMatch: RegExpExecArray | null;
   while ((doxiaMatch = doxiaBlockRegex.exec(content)) !== null) {
     const statedDoxiaVer: string = (doxiaMatch[1] ?? '').trim();
-    if (statedDoxiaVer !== doxiaVersion) {
+    if (statedDoxiaVer !== doxiaVersion && statedDoxiaVer !== '${doxia.version}') {
       errors.push(
         `${relPath}: doxia-module-markdown <version>${statedDoxiaVer}</version> does not match pom.xml <doxia.version>${doxiaVersion}</doxia.version>.`
       );

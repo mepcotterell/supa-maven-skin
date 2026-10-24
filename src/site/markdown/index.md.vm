@@ -1,0 +1,39 @@
+# Supa Maven Skin
+
+**Supa Maven Skin** is a modern [Apache Maven Site](https://maven.apache.org/plugins/maven-site-plugin/) skin inspired by Pradyun Gedam's [Furo](https://pradyunsg.me/furo/) Sphinx documentation theme and built on **Bootstrap 6 (`${project.properties.getProperty("bootstrap.version")}`)**, **Bootstrap Icons**, **Vite**, **Dart Sass (SCSS)**, and **TypeScript**.
+
+> [!NOTE]
+> This documentation site is rendered using **Supa Maven Skin** itself! Try toggling between **Light**, **Dark**, and **Auto** themes or switching accessible color schemes in the top utility bar, or pressing `/` (<kbd>⌘K</kbd> / <kbd>Ctrl+K</kbd>) to open the search dialog.
+
+#[[##]]# Documentation Guide
+
+Explore the documentation by goal:
+
+#bsCardGridStart( "" )
+#bsGuideCard( "col-12 md:col-6" "rocket-takeoff" "primary" "getting-started.html" "Quickstart Tutorial" "Tutorial" "Step-by-step guide to configuring <code>pom.xml</code> and <code>site.xml</code> and writing your first <code>.md</code> and <code>.md.vm</code> pages." )
+#bsGuideCard( "col-12 md:col-6" "journal-code" "success" "authoring-guide.html" "Authoring Rich Content" "How-To Guide" "Practical recipes for Furo admonitions, Bootstrap Icons, code blocks, synchronized tabs, accordions, Mermaid, and KaTeX." )
+#bsGuideCard( "col-12 md:col-6" "sliders" "info" "configuration.html" "Configuration & Macros" "Reference" "Complete lookup tables for <code>&lt;supaSkin&gt;</code> options, WCAG 2.2 AA/AAA color schemes, CSS variables, and Velocity macros." )
+#bsGuideCard( "col-12 md:col-6" "grid-1x2" "info" "components.html" "Components" "Reference" "Interactive playground and catalog for all 28 Bootstrap 6 component families, 20 JS plugins, and 2,000+ Bootstrap Icons." )
+#bsGuideCard( "col-12 md:col-6" "palette2" "info" "kitchen-sink.html" "Kitchen Sink Showcase" "Reference" "Visual stress-test of all 12 Furo admonitions, syntax-highlighted code blocks, responsive Doxia tables, Mermaid diagrams, and KaTeX math." )
+#bsGuideCard( "col-12 md:col-6" "layers" "warning" "architecture.html" "Architecture & Color System" "Explanation" "Deep dive into the 3-column Furo layout, Doxia 2.0 normalization, <code>.prose</code> isolation, and WCAG 2.2 AA/AAA contrast guarantees." )
+#bsCardGridEnd()
+
+#[[##]]# Minimal Quickstart
+
+Add **Supa Maven Skin** to your project's `src/site/site.xml`:
+
+```xml
+<skin>
+  <groupId>${project.groupId}</groupId>
+  <artifactId>${project.artifactId}</artifactId>
+  <version>${project.version}</version>
+</skin>
+```
+
+Then generate your site with `maven-site-plugin` `${project.properties.getProperty("maven-site-plugin.version")}+`:
+
+```bash
+mvn site
+```
+
+For a full walkthrough, head to the **[Quickstart Tutorial](getting-started.html)** or jump straight to **[Authoring Rich Content](authoring-guide.html)**.

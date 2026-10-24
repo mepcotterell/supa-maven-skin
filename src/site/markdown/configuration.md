@@ -298,7 +298,7 @@ Just like Sphinx Furo's `light_css_variables` and `dark_css_variables`, any chil
 
 ## Velocity Helper Macros Reference (`site-macros.vm`)
 
-When authoring Velocity-preprocessed pages (`.md.vm`, `.apt.vm`, `.xhtml.vm`), include `#parse( "META-INF/maven/site-macros.vm" )` to use the following helper macros:
+When authoring Velocity-preprocessed pages (`.md.vm`, `.apt.vm`, `.xhtml.vm`), **Supa Maven Skin** globally registers the following helper macros from `META-INF/maven/site-macros.vm`:
 
 | Macro Signature | Parameters | Description |
 | :--- | :--- | :--- |
@@ -306,3 +306,6 @@ When authoring Velocity-preprocessed pages (`.md.vm`, `.apt.vm`, `.xhtml.vm`), i
 | `#bsAlert( $theme $title $body $dismissible )` | `$theme`: Semantic theme (`"primary"`, `"success"`, etc.)<br>`$title`: Optional heading string<br>`$body`: Alert HTML/text body<br>`$dismissible`: `true` or `false` | Renders an isolated `.alert.theme-$theme.not-prose` banner with an optional `.btn-close` dismiss button. |
 | `#bsBadge( $theme $variant $text )` | `$theme`: Semantic theme (`"primary"`, `"info"`, etc.)<br>`$variant`: `""` (solid), `"subtle"`, or `"outline"`<br>`$text`: Badge label text | Renders an inline `<span class="badge ... theme-$theme not-prose">`. |
 | `#bsCard( $title $subtitle $body $footer )` | `$title`: Card heading<br>`$subtitle`: Optional subtitle<br>`$body`: Card body HTML/text<br>`$footer`: Optional card footer HTML/text | Renders a Bootstrap 6 `.card.not-prose` container. |
+| `#bsCardGridStart( $extraClasses )` | `$extraClasses`: Optional grid utility classes (`""`) | Opens a `<div class="row g-3 not-prose my-3 ...">` card grid container without trailing blank lines so Doxia's CommonMark parser keeps the HTML block contiguous. |
+| `#bsCardGridEnd()` | *(none)* | Closes the `</div>` opened by `#bsCardGridStart`. |
+| `#bsGuideCard( $colClass $icon $theme $href $title $badge $description )` | `$colClass`: Column classes (`"col-12 md:col-6"` default)<br>`$icon`: Bootstrap Icon slug (`"rocket-takeoff"`)<br>`$theme`: Semantic theme (`"primary"`, `"success"`, `"info"`, `"warning"`)<br>`$href`: Link target (`"getting-started.html"`)<br>`$title`: Card link title<br>`$badge`: Optional right-aligned subtle badge label<br>`$description`: Card description HTML/text | Renders a responsive navigation/guide card column inside a `#bsCardGridStart` / `#bsCardGridEnd` block. |

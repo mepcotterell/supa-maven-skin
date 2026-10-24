@@ -11,20 +11,20 @@ Doxia 2.0 supports two ways to author Markdown pages in `src/site/markdown/`:
 | File Extension | Processing Pipeline | Best For |
 | :--- | :--- | :--- |
 | **`page.md`** | CommonMark &rarr; HTML + Furo DOM transforms | Fast, clean prose using `:bi-...:` icon shortcodes, `> [!NOTE]` admonitions, `.supa-tabs`, `.supa-accordion`, and embedded Bootstrap 6 HTML. |
-| **`page.md.vm`** | Apache Velocity &rarr; CommonMark &rarr; HTML + Furo DOM transforms | Pages that need live Maven POM variables (`${project.version}`, `${project.groupId}`) or Velocity helper macros (`#bi`, `#bsAlert`, `#bsBadge`, `#bsCard`). |
+| **`page.md.vm`** | Apache Velocity &rarr; CommonMark &rarr; HTML + Furo DOM transforms | Pages that need live Maven POM variables (`${project.version}`, `${project.groupId}`, `${project.properties.getProperty("...")}`) or Velocity helper macros (`#bi`, `#bsAlert`, `#bsBadge`, `#bsCard`, `#bsCardGridStart`, `#bsGuideCard`, `#bsCardGridEnd`). |
 
 ### Rules for `.md.vm` Files and Embedded HTML
 
-1. **Importing Skin Macros in `.md.vm`**:
-   Add `#parse( "META-INF/maven/site-macros.vm" )` (or `#parse( "site-macros.vm" )` when resolved on the Velocity classpath) at the top of your `.md.vm` file to enable `#bi`, `#bsAlert`, `#bsBadge`, and `#bsCard`.
+1. **Global Skin Macros in `.md.vm`**:
+   **Supa Maven Skin** automatically registers its Velocity helper macros (`#bi`, `#bsAlert`, `#bsBadge`, `#bsCard`, `#bsCardGridStart`, `#bsGuideCard`, `#bsCardGridEnd`) globally via `site-macros.vm` so they can be called directly in `.md.vm` pages.
 2. **Escaping `##` Headings in `.md.vm`**:
-   Because `##` denotes a single-line comment in Apache Velocity, write level-2+ Markdown headings as `\## Section Heading` (or `<h2>Section Heading</h2>`) inside `.md.vm` files.
+   Because `##` denotes a single-line comment in Apache Velocity, wrap level-2+ Markdown heading hashes in Velocity's unparsed block syntax (`#[[##]]# Section Heading` or `#[[###]]# Subsection`) inside `.md.vm` files so Velocity passes `##` / `###` through to the Markdown parser.
 3. **Keeping Multi-Line HTML Blocks Contiguous**:
    In CommonMark (Doxia 2.0), a blank line inside a raw HTML `<div>...</div>` block ends the HTML block early. Keep multi-line HTML component wrappers free of internal empty lines (use `&#10;` if you need a blank line inside an HTML `<pre><code>` block).
 
-### Using Velocity Helper Macros (`#bsBadge` & `#bsCard`)
+### Using Velocity Helper Macros (`#bsBadge`, `#bsCard`, & `#bsGuideCard`)
 
-In `.md.vm` pages, `#bsBadge( $theme $variant $text )` and `#bsCard( $title $subtitle $body $footer )` generate isolated `.not-prose` Bootstrap 6 components that can interpolate Maven properties:
+In `.md.vm` pages, `#bsBadge( $theme $variant $text )`, `#bsCard( $title $subtitle $body $footer )`, and `#bsCardGridStart` / `#bsGuideCard` / `#bsCardGridEnd` generate isolated `.not-prose` Bootstrap 6 components that can interpolate Maven properties:
 
 <div class="supa-component-preview">
   <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
@@ -43,8 +43,6 @@ In `.md.vm` pages, `#bsBadge( $theme $variant $text )` and `#bsCard( $title $sub
 </div>
 
 ```velocity
-#parse( "META-INF/maven/site-macros.vm" )
-
 #bsBadge( "primary" "" "v${project.version}" )
 #bsBadge( "success" "subtle" "Stable API" )
 #bsBadge( "info" "outline" "JDK 21+" )
@@ -55,6 +53,10 @@ In `.md.vm` pages, `#bsBadge( $theme $variant $text )` and `#bsCard( $title $sub
   "Zero-config Sphinx Furo aesthetics powered by Bootstrap 6."
   "MIT License"
 )
+
+#bsCardGridStart( "" )
+#bsGuideCard( "col-12 md:col-6" "rocket-takeoff" "primary" "getting-started.html" "Quickstart Tutorial" "Tutorial" "Step-by-step guide to configuring <code>pom.xml</code> and <code>site.xml</code>." )
+#bsCardGridEnd()
 ```
 
 ---
@@ -165,8 +167,7 @@ When you need a Bootstrap 6 `.alert` banner (supporting all 8 `.theme-*` colors 
 &gt; Use `[!ALERT:theme dismissible]` in Markdown or `#bsAlert` in Velocity.</code></pre>
   </div>
   <div title="Velocity Macro (.md.vm)">
-    <pre><code class="language-velocity">#parse( "META-INF/maven/site-macros.vm" )
-#bsAlert( "primary" "Release Ready" "Use <code>#bsAlert</code> in Velocity templates." true )</code></pre>
+    <pre><code class="language-velocity">#bsAlert( "primary" "Release Ready" "Use <code>&#35;bsAlert</code> in Velocity templates." true )</code></pre>
   </div>
   <div title="Markdown + HTML">
     <pre><code class="language-html">&lt;div class="alert theme-primary not-prose" role="alert"&gt;
@@ -209,18 +210,16 @@ Write `:bi-<icon-name>:` anywhere in prose, table cells, headings, or lists. You
 
 ### 2. Velocity Macro
 
-In `.md.vm` pages, use `#bi( $name $extraClasses $ariaLabel )`. All arguments after `$name` are optional:
+In `.md.vm` pages, use `#bi( $name $extraClasses $ariaLabel )`:
 
 ```velocity
-#parse( "META-INF/maven/site-macros.vm" )
+## Decorative icon (renders aria-hidden="true")
+#bi( "rocket-takeoff" "" "" ) Launch
 
-## 1 argument: decorative icon (renders aria-hidden="true")
-#bi( "rocket-takeoff" ) Launch
+## Icon + extra CSS utility classes (renders aria-hidden="true")
+#bi( "check-circle-fill" "text-success fs-5" "" ) Verified
 
-## 2 arguments: icon + extra CSS utility classes (renders aria-hidden="true")
-#bi( "check-circle-fill" "text-success fs-5" ) Verified
-
-## 3 arguments: semantic accessible icon (renders role="img" aria-label="Accessible")
+## Semantic accessible icon (renders role="img" aria-label="Accessible")
 #bi( "universal-access-circle" "text-info fs-5" "Accessible" ) WCAG 2.2 AAA
 ```
 
