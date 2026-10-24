@@ -2,7 +2,7 @@
 
 This page demonstrates all typography, Furo admonitions, syntax-highlighted code blocks, synchronized content tabs, responsive Doxia tables, Bootstrap 6 components, Bootstrap Icons, Mermaid diagrams, and KaTeX math provided by **Supa Maven Skin**.
 
-## Furo Admonitions
+## Admonitions
 
 All 12 [Sphinx Furo admonition types](https://pradyunsg.me/furo/reference/admonitions/#supported-types) are supported via GitHub-Flavored Markdown blockquote alerts (`> [!TYPE]`) and automatically transformed into `.supa-admonition` cards with **Bootstrap Icons**, tinted headers, colored left borders, custom title support, and nested callout support:
 
@@ -135,7 +135,7 @@ Because **Supa Maven Skin** bundles **all 28 Bootstrap `6.0.0-alpha.1` component
         <div class="fw-semibold mb-1"><i class="bi bi-grid-1x2-fill text-primary me-1" aria-hidden="true"></i>Full Bootstrap 6 Component Catalog</div>
         <p class="mb-0 text-secondary" style="font-size: 0.9rem;">Explore all 28 Bootstrap 6 component families, variants, and interactive JS widgets.</p>
       </div>
-      <a href="bootstrap-components.html" class="btn btn-sm btn-solid theme-primary">Explore All 28 Components &rarr;</a>
+      <a href="components.html" class="btn btn-sm btn-solid theme-primary">Explore All 28 Components &rarr;</a>
     </div>
   </div>
 </div>

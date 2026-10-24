@@ -45,7 +45,7 @@
       <item name="Authoring Rich Content" href="authoring-guide.html">
         <item name="Markdown vs. Velocity" href="authoring-guide.html#choosing-markdown-md-vs-velocity-templates-md-vm" />
         <item name="Admonitions &amp; Alerts" href="authoring-guide.html#writing-admonitions-and-alerts" />
-        <item name="Bootstrap Icons" href="authoring-guide.html#adding-bootstrap-icons" />
+        <item name="Icons" href="authoring-guide.html#adding-bootstrap-icons" />
         <item name="Synchronized Content Tabs" href="authoring-guide.html#creating-synchronized-content-tabs" />
         <item name="Accordions &amp; Steppers" href="authoring-guide.html#building-accordions-and-steppers" />
         <item name="Diagrams &amp; Math" href="authoring-guide.html#rendering-mermaid-diagrams-and-katex-math" />
@@ -53,20 +53,20 @@
     </menu>
     <menu name="Reference">
       <item name="Configuration Reference" href="configuration.html" />
-      <item name="Bootstrap Components" href="bootstrap-components.html">
-        <item name="Interactive Playground" href="bootstrap-components.html#interactive-component-playground" />
-        <item name="1. Actions &amp; Buttons" href="bootstrap-components.html#1-actions-buttons" />
-        <item name="2. Badges, Avatars &amp; Chips" href="bootstrap-components.html#2-badges-avatars-chips-indicators" />
-        <item name="3. Alerts &amp; Overlays" href="bootstrap-components.html#3-alerts-overlays-dialogs-drawers-toasts" />
-        <item name="4. Navigation &amp; Steppers" href="bootstrap-components.html#4-navigation-menus-tabs-breadcrumbs-pagination-steppers" />
-        <item name="5. Accordions &amp; Cards" href="bootstrap-components.html#5-containers-disclosure-accordions-cards-list-groups-carousel" />
-        <item name="6. Forms &amp; Rich Inputs" href="bootstrap-components.html#6-forms-bootstrap-6-rich-input-widgets" />
+      <item name="Components" href="components.html">
+        <item name="Interactive Playground" href="components.html#interactive-component-playground" />
+        <item name="1. Actions &amp; Buttons" href="components.html#1-actions-buttons" />
+        <item name="2. Badges, Avatars &amp; Chips" href="components.html#2-badges-avatars-chips-indicators" />
+        <item name="3. Alerts &amp; Overlays" href="components.html#3-alerts-overlays-dialogs-drawers-toasts" />
+        <item name="4. Navigation &amp; Steppers" href="components.html#4-navigation-menus-tabs-breadcrumbs-pagination-steppers" />
+        <item name="5. Accordions &amp; Cards" href="components.html#5-containers-disclosure-accordions-cards-list-groups-carousel" />
+        <item name="6. Forms &amp; Rich Inputs" href="components.html#6-forms-bootstrap-6-rich-input-widgets" />
       </item>
       <item name="Kitchen Sink Showcase" href="kitchen-sink.html">
-        <item name="Admonitions" href="kitchen-sink.html#furo-admonitions" />
+        <item name="Admonitions" href="kitchen-sink.html#admonitions" />
         <item name="Code Blocks &amp; Tabs" href="kitchen-sink.html#syntax-highlighting-copy-button" />
         <item name="Responsive Tables" href="kitchen-sink.html#responsive-doxia-tables" />
-        <item name="Bootstrap UI" href="kitchen-sink.html#bootstrap-6-ui-components" />
+        <item name="User Interface" href="kitchen-sink.html#bootstrap-6-ui-components" />
         <item name="Diagrams &amp; Math" href="kitchen-sink.html#diagrams-mathematical-notation" />
         <item name="Typography &amp; Prose" href="kitchen-sink.html#typography-prose-elements" />
       </item>

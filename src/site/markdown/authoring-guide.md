@@ -26,79 +26,94 @@ Doxia 2.0 supports two ways to author Markdown pages in `src/site/markdown/`:
 
 ## Writing Admonitions and Alerts
 
-### Furo Admonitions (GFM Blockquote Syntax)
+### Admonitions
 
-**Supa Maven Skin** supports all **12 [Sphinx Furo admonition types](https://pradyunsg.me/furo/reference/admonitions/#supported-types)**, each rendered with a semantic **Bootstrap Icons** glyph (`<i class="bi bi-... supa-admonition-icon" aria-hidden="true"></i>`), tinted header bar, and colored left accent border. Any text after the `[!...]` marker on the first line becomes a custom title, and nested blockquotes (`> > [!WARNING]`) are automatically transformed into nested admonitions:
+**Supa Maven Skin** supports all **12 [Sphinx Furo admonition types](https://pradyunsg.me/furo/reference/admonitions/#supported-types)** across 6 semantic categories, each rendered with a **Bootstrap Icons** glyph (`<i class="bi bi-... supa-admonition-icon" aria-hidden="true"></i>`), tinted header bar, and colored left accent border. Any text after the `[!...]` marker on the first line becomes a custom title, and nested blockquotes (`> > [!WARNING]`) are automatically transformed into nested admonitions.
 
-| Admonition Tag | Default Title | Bootstrap Icon | Semantic Color Group |
-| :--- | :--- | :--- | :--- |
-| `[!ADMONITION]` | `Admonition` | `:bi-card-text:` `bi-card-text` | Important / Accent (`--supa-admonition-important-*`) |
-| `[!ATTENTION]` | `Attention` | `:bi-exclamation-diamond:` `bi-exclamation-diamond` | Danger / Error (`--supa-admonition-caution-*`) |
-| `[!CAUTION]` | `Caution` | `:bi-lightning-charge:` `bi-lightning-charge` | Warning / Caution (`--supa-admonition-warning-*`) |
-| `[!DANGER]` | `Danger` | `:bi-lightning-charge-fill:` `bi-lightning-charge-fill` | Danger / Error (`--supa-admonition-caution-*`) |
-| `[!ERROR]` | `Error` | `:bi-x-octagon:` `bi-x-octagon` | Danger / Error (`--supa-admonition-caution-*`) |
-| `[!HINT]` | `Hint` | `:bi-question-circle:` `bi-question-circle` | Tip / Success (`--supa-admonition-tip-*`) |
-| `[!IMPORTANT]` | `Important` | `:bi-fire:` `bi-fire` | Important / Accent (`--supa-admonition-important-*`) |
-| `[!NOTE]` | `Note` | `:bi-info-circle:` `bi-info-circle` | Note / Info (`--supa-admonition-note-*`) |
-| `[!SEEALSO]` / `[!SEE-ALSO]` | `See also` | `:bi-arrow-up-right-circle:` `bi-arrow-up-right-circle` | Note / Info (`--supa-admonition-note-*`) |
-| `[!TIP]` | `Tip` | `:bi-lightbulb:` `bi-lightbulb` | Tip / Success (`--supa-admonition-tip-*`) |
-| `[!TODO]` | `Todo` | `:bi-check2-square:` `bi-check2-square` | Todo / Neutral (`--supa-admonition-todo-*`) |
-| `[!WARNING]` | `Warning` | `:bi-exclamation-triangle:` `bi-exclamation-triangle` | Warning / Caution (`--supa-admonition-warning-*`) |
+Select a category below to preview the rendered admonitions and copy their Markdown syntax:
 
-<div class="supa-component-preview">
-  <blockquote>
-    <p>[!NOTE]
-    Admonitions automatically adapt to all 6 WCAG 2.2 AA &amp; AAA color schemes in Light and Dark modes.</p>
-  </blockquote>
-  <blockquote>
-    <p>[!TIP] Custom Admonition Title
-    Provide text immediately after <code>[!TIP]</code> on the first line to override the default heading.</p>
-  </blockquote>
-  <blockquote>
-    <p>[!SEEALSO]
-    View the <a href="kitchen-sink.html#furo-admonitions">Kitchen Sink</a> for a live showcase of all 12 Furo admonition types.</p>
-  </blockquote>
+<div class="supa-tabs" title="admonition-categories">
+  <div title="Info">
+    <div class="supa-component-preview">
+      <blockquote>
+        <p>[!NOTE]
+        Renders with <code>bi-info-circle</code> and the <strong>Info</strong> palette tokens. Adapts across all 6 WCAG 2.2 AA &amp; AAA color schemes.</p>
+      </blockquote>
+      <blockquote>
+        <p>[!SEEALSO]
+        Renders with <code>bi-arrow-up-right-circle</code> for cross-references (<code>[!SEE-ALSO]</code> is also supported). See the <a href="kitchen-sink.html#admonitions">Kitchen Sink</a> for all 12 types on one page.</p>
+      </blockquote>
+    </div>
+    <pre><code class="language-markdown">&gt; [!NOTE]&#10;&gt; Renders with `bi-info-circle` and the **Info** palette tokens.&#10;&#10;&gt; [!SEEALSO]&#10;&gt; Cross-reference related sections or external docs (`[!SEE-ALSO]` also works).</code></pre>
+  </div>
+  <div title="Helpful">
+    <div class="supa-component-preview">
+      <blockquote>
+        <p>[!TIP] Custom Admonition Title
+        Renders with <code>bi-lightbulb</code>. Provide text immediately after <code>[!TIP]</code> on the first line to override the default heading.</p>
+      </blockquote>
+      <blockquote>
+        <p>[!HINT]
+        Renders with <code>bi-question-circle</code> and the <strong>Success / Tip</strong> palette tokens for gentle guidance or troubleshooting hints.</p>
+      </blockquote>
+    </div>
+    <pre><code class="language-markdown">&gt; [!TIP] Custom Admonition Title&#10;&gt; Provide text immediately after `[!TIP]` on the first line to override the default heading.&#10;&#10;&gt; [!HINT]&#10;&gt; Gentle guidance or troubleshooting hints (`bi-question-circle`).</code></pre>
+  </div>
+  <div title="Important &amp; Generic">
+    <div class="supa-component-preview">
+      <blockquote>
+        <p>[!IMPORTANT]
+        Renders with <code>bi-fire</code> and the <strong>Important / Accent</strong> palette tokens to highlight key requirements.</p>
+      </blockquote>
+      <blockquote>
+        <p>[!ADMONITION] Custom Admonition Heading
+        Renders with <code>bi-card-text</code> — equivalent to Sphinx's generic <code>.. admonition:: Title</code> directive.</p>
+      </blockquote>
+    </div>
+    <pre><code class="language-markdown">&gt; [!IMPORTANT]&#10;&gt; Highlights essential requirements or prerequisites (`bi-fire`).&#10;&#10;&gt; [!ADMONITION] Custom Admonition Heading&#10;&gt; Equivalent to Sphinx's generic `.. admonition:: Title` directive (`bi-card-text`).</code></pre>
+  </div>
+  <div title="Warnings">
+    <div class="supa-component-preview">
+      <blockquote>
+        <p>[!WARNING]
+        Renders with <code>bi-exclamation-triangle</code> and the <strong>Warning</strong> palette tokens for configuration pitfalls or breaking changes.</p>
+      </blockquote>
+      <blockquote>
+        <p>[!CAUTION]
+        Renders with <code>bi-lightning-charge</code> and the <strong>Warning</strong> palette tokens when advising extra care.</p>
+      </blockquote>
+    </div>
+    <pre><code class="language-markdown">&gt; [!WARNING]&#10;&gt; Warns readers about potential configuration pitfalls (`bi-exclamation-triangle`).&#10;&#10;&gt; [!CAUTION]&#10;&gt; Advises caution before changing sensitive parameters (`bi-lightning-charge`).</code></pre>
+  </div>
+  <div title="Critical">
+    <div class="supa-component-preview">
+      <blockquote>
+        <p>[!ATTENTION]
+        Renders with <code>bi-exclamation-diamond</code> and the <strong>Danger / Error</strong> palette tokens.</p>
+      </blockquote>
+      <blockquote>
+        <p>[!DANGER]
+        Renders with <code>bi-lightning-charge-fill</code> for destructive actions or data-loss risks.</p>
+      </blockquote>
+      <blockquote>
+        <p>[!ERROR]
+        Renders with <code>bi-x-octagon</code> to document failure modes or error states.</p>
+      </blockquote>
+    </div>
+    <pre><code class="language-markdown">&gt; [!ATTENTION]&#10;&gt; Demands immediate attention before proceeding (`bi-exclamation-diamond`).&#10;&#10;&gt; [!DANGER]&#10;&gt; Alerts readers to destructive actions or data-loss risks (`bi-lightning-charge-fill`).&#10;&#10;&gt; [!ERROR]&#10;&gt; Documents known error states or failure modes (`bi-x-octagon`).</code></pre>
+  </div>
+  <div title="Todo">
+    <div class="supa-component-preview">
+      <blockquote>
+        <p>[!TODO]
+        Renders with <code>bi-check2-square</code> and neutral <strong>Todo</strong> tokens for tracking upcoming tasks.</p>
+      </blockquote>
+    </div>
+    <pre><code class="language-markdown">&gt; [!TODO]&#10;&gt; Renders with `bi-check2-square` for tracking upcoming tasks.</code></pre>
+  </div>
 </div>
 
-```markdown
-> [!NOTE]
-> Admonitions automatically adapt to all 6 WCAG 2.2 AA & AAA color schemes in Light and Dark modes.
-
-> [!TIP] Custom Admonition Title
-> Provide text immediately after `[!TIP]` on the first line to override the default heading.
-
-> [!ADMONITION] CustomTitled Admonition
-> Equivalent to Sphinx's generic `.. admonition:: CustomTitled Admonition` directive.
-
-> [!SEEALSO]
-> Cross-reference related documentation sections or external resources.
-
-> [!HINT]
-> Gentle guidance or troubleshooting hints.
-
-> [!IMPORTANT]
-> Highlights essential requirements or prerequisites.
-
-> [!WARNING]
-> Warns readers about potential configuration pitfalls.
-
-> [!CAUTION]
-> Advises caution before changing sensitive parameters.
-
-> [!ATTENTION]
-> Demands immediate attention before proceeding.
-
-> [!DANGER]
-> Alerts readers to destructive actions or data loss risks.
-
-> [!ERROR]
-> Documents known error states or failure modes.
-
-> [!TODO]
-> Tracks upcoming documentation or implementation tasks.
-```
-
-### Bootstrap 6 Semantic Alerts (`[!ALERT:...]` & `#bsAlert`)
+### Bootstrap 6 Semantic Alerts
 
 When you need a Bootstrap 6 `.alert` banner (supporting all 8 `.theme-*` colors and optional dismiss buttons), you can use the GFM blockquote shorthand, raw HTML, or the `#bsAlert` Velocity macro:
 
@@ -144,7 +159,7 @@ When you need a Bootstrap 6 `.alert` banner (supporting all 8 `.theme-*` colors 
   </div>
 </div>
 
-### 1. Markdown Shortcode (`:bi-<name>:`)
+### 1. Markdown Shortcode
 
 Write `:bi-<icon-name>:` anywhere in prose, table cells, headings, or lists. You can optionally append space-separated utility classes (such as `text-primary`, `text-success`, `fs-5`, `me-1`) before the closing colon:
 
@@ -157,7 +172,7 @@ Write `:bi-<icon-name>:` anywhere in prose, table cells, headings, or lists. You
 > [!NOTE] Code Block Safety
 > Shortcodes inside inline `` `code` `` and `<pre><code>` blocks are automatically ignored and left untouched as literal text.
 
-### 2. Velocity Macro (`#bi`)
+### 2. Velocity Macro
 
 In `.md.vm` pages, use `#bi( $name $extraClasses $ariaLabel )`. All arguments after `$name` are optional:
 
@@ -174,7 +189,7 @@ In `.md.vm` pages, use `#bi( $name $extraClasses $ariaLabel )`. All arguments af
 #bi( "universal-access-circle" "text-info fs-5" "Accessible" ) WCAG 2.2 AAA
 ```
 
-### 3. Raw HTML (`<i class="bi bi-..."></i>`)
+### 3. Raw HTML
 
 ```html
 <i class="bi bi-rocket-takeoff text-primary fs-5" aria-hidden="true"></i> Launch

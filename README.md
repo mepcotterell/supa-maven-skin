@@ -25,7 +25,7 @@ The full documentation is organized following the [Diátaxis](https://diataxis.f
 - **[Getting Started (Tutorial)](src/site/markdown/getting-started.md)** — Configure a Maven project with Supa Maven Skin from scratch.
 - **[Authoring Guide (How-To)](src/site/markdown/authoring-guide.md)** — Practical recipes for admonitions, `#bi` icons, synced tabs, accordions, steppers, code blocks, Mermaid diagrams, and KaTeX math.
 - **[Configuration & Tokens (Reference)](src/site/markdown/configuration.md)** — Complete lookup tables for `<supaSkin>` options, WCAG 2.2 AA/AAA palettes, CSS variables, and Velocity macros.
-- **[Bootstrap 6 Components (Reference)](src/site/markdown/bootstrap-components.md)** — Live interactive showcase of all 28 Bootstrap 6 (`6.0.0-alpha.1`) component families styled across all 12 palette × polarity themes.
+- **[Components (Reference)](src/site/markdown/components.md)** — Live interactive showcase of all 28 Bootstrap 6 (`6.0.0-alpha.1`) component families styled across all 12 palette × polarity themes.
 - **[Kitchen Sink (Reference)](src/site/markdown/kitchen-sink.md)** — End-to-end stress test of Doxia typography, tables, alerts, code blocks, and optional integrations.
 - **[Architecture (Explanation)](src/site/markdown/architecture.md)** — How the Vite + Velocity + Doxia 2.0 build pipeline, zero-FOUC theme engine, and automated WCAG contrast verifier work.
 

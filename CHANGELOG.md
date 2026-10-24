@@ -39,7 +39,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - **Bundled Project & Third-Party Licenses inside Skin JAR (`META-INF/`) & Asset Headers**:
   - Packaged the project's `LICENSE` (`META-INF/LICENSE`) alongside `META-INF/THIRD-PARTY-LICENSES.txt` and individual upstream license files (`META-INF/licenses/LICENSE-bootstrap.txt`, `META-INF/licenses/LICENSE-bootstrap-icons.txt`, `META-INF/licenses/LICENSE-highlight.js.txt`) inside `supa-maven-skin.jar`, and prepended `/*! ... */` legal attribution banners to `css/supa-maven-skin.min.css` and `js/supa-maven-skin.min.js`.
 - **Self-Site Documentation (`src/site/`) & Automated Linters (`scripts/`)**:
-  - Organized `src/site/markdown/` around the Diátaxis framework (`index.md`, `getting-started.md`, `authoring-guide.md`, `configuration.md`, `bootstrap-components.md`, `kitchen-sink.md`, `architecture.md`) with custom dual-theme `rocket-takeoff` logos (`src/site/resources/images/logo-light.svg` and `logo-dark.svg`).
+  - Organized `src/site/markdown/` around the Diátaxis framework (`index.md`, `getting-started.md`, `authoring-guide.md`, `configuration.md`, `components.md`, `kitchen-sink.md`, `architecture.md`) with custom dual-theme `rocket-takeoff` logos (`src/site/resources/images/logo-light.svg` and `logo-dark.svg`).
   - Added automated TypeScript linters for SCSS WCAG 2.2 AA/AAA contrast (`scripts/lint-scss.ts`), Velocity directive balance (`scripts/lint-velocity.ts`), and documentation version alignment + Keep a Changelog 1.1.0 compliance (`scripts/lint-docs.ts`), enforced alongside the Google TypeScript Style Guide and Google-style TSDoc (`supa/google-tsdoc`).
 
 [Unreleased]: https://github.com/mepcotterell/supa-maven-skin/commits/main

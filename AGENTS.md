@@ -58,7 +58,7 @@ A change that only updates one layer often leaves Velocity, SCSS, TypeScript, te
   - **Overview:** `index.md` — landing page, feature highlights, and quick navigation.
   - **Tutorial:** `getting-started.md` — step-by-step guide to configuring a new Maven site from scratch.
   - **How-To Guide:** `authoring-guide.md` — task-oriented recipes for alerts, `#bi` icons, synced tabs, code blocks, KaTeX, Mermaid, charts, and calendars.
-  - **Reference:** `configuration.md` (`<supaSkin>` options, palettes, CSS variables, Velocity macros), `bootstrap-components.md` (interactive Bootstrap 6 showcase), and `kitchen-sink.md` (Doxia stress test).
+  - **Reference:** `configuration.md` (`<supaSkin>` options, palettes, CSS variables, Velocity macros), `components.md` (interactive Bootstrap 6 showcase), and `kitchen-sink.md` (Doxia stress test).
   - **Explanation:** `architecture.md` — build pipeline, anti-FOUC theme engine, WCAG 2.2 contrast enforcement, and Doxia normalization design.
 
 ## Dev, testing, and verification loops

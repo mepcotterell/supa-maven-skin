@@ -1,4 +1,4 @@
-# Bootstrap 6 Components Showcase
+# Components Showcase
 
 **Supa Maven Skin** bundles the complete **Bootstrap 6 (`6.0.0-alpha.1`)** component library and all **20 interactive JavaScript plugins**, automatically isolating Bootstrap components from `.prose` typography rules and bridging Furo's adaptive Light/Dark color tokens.
 

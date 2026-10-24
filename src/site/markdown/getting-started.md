@@ -205,4 +205,4 @@ Open `target/site/index.html` (or `http://localhost:8080`) in your browser. You 
 
 - Continue to **[Authoring Rich Content](authoring-guide.html)** for practical recipes covering admonitions, Bootstrap Icons (`#bi`), synchronized tabs, accordions, steppers, Mermaid diagrams, and KaTeX math.
 - Browse the **[Configuration Reference](configuration.html)** to customize palettes, logos, drawers, and CSS variables.
-- Explore **[Bootstrap 6 Components](bootstrap-components.html)** for all 28 component families and the interactive component playground.
+- Explore **[Components](components.html)** for all 28 component families and the interactive component playground.
