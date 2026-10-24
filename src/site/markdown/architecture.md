@@ -40,14 +40,14 @@ Because `doxia-site-renderer` extracts all non-`META-INF/` files from a skin JAR
 
 ## Responsive 3-Column Furo Layout
 
-Inspired by Pradyun Gedam's [Furo](https://pradyunsg.me/furo/) theme for Sphinx, **Supa Maven Skin** organizes technical documentation into three distinct spatial zones that adapt across viewports using native HTML5 `<dialog>` drawers:
+Inspired by Pradyun Gedam's [Furo](https://pradyunsg.me/furo/) theme for Sphinx and aligned with **Bootstrap 6 Docs** breakpoints and prose widths, **Supa Maven Skin** organizes technical documentation into three distinct spatial zones that adapt across viewports using native HTML5 `<dialog>` drawers:
 
-1. **Left Navigation Sidebar (`280px` on `lg+` / `1024px+`)**:
+1. **Left Navigation Sidebar (`256px` on `lg+` / `1024px+`)**:
    - Displays the project brand, dual-theme logo (`<lightLogo>` / `<darkLogo>`), version badge, search trigger (`⌘K` / `/`), and hierarchical `<details>` / `<summary>` navigation menus.
    - Below `1024px`, the same DOM node (`<dialog id="supaSidebarDrawer" class="lg:drawer drawer-start">`) acts as an accessible off-canvas Bootstrap 6 left drawer without duplicating navigation markup.
-2. **Center Article Prose (`48rem` maximum reading measure)**:
-   - Constrains line length to ~65–75 characters per line for comfortable technical reading while allowing tables and code blocks to scroll horizontally inside `.supa-table-responsive` and `.supa-code-block`.
-3. **Right "On this page" Table of Contents (`240px` on `xl+` / `1280px+`)**:
+2. **Center Article Prose (`56rem` / `896px` maximum reading measure)**:
+   - Aligns with Bootstrap 6 Docs prose width on desktop (`56rem` max measure with `3rem` horizontal gutters on `xl+`, and a `47.5rem` / `760px` centered container cap below `lg`) while allowing tables and code blocks to scroll horizontally inside `.supa-table-responsive` and `.supa-code-block`.
+3. **Right "On this page" Table of Contents (`224px` on `xl+` / `1280px+`)**:
    - Dynamically constructed at runtime from `h2`–`h4` headings inside `<main id="supa-main-content">` and bound to Bootstrap 6's `ScrollSpy` plugin.
    - Below `1280px`, `<dialog id="supaTocDrawer" class="xl:drawer drawer-end">` opens as a right-hand drawer from the top utility bar.
 

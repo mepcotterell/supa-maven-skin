@@ -9,10 +9,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ### Added
 
 - **Canonical 3-Column Furo Layout**:
-  - Sticky left navigation sidebar (`280px` on `lg+`) with dual-theme brand logos (`<lightLogo>` / `<darkLogo>`), version badge, quick search trigger (`/` or `⌘K`), and collapsible `<details>` / `<summary>` menu hierarchy.
+  - Sticky left navigation sidebar (`256px` on `lg+`) with dual-theme brand logos (`<lightLogo>` / `<darkLogo>`), version badge, quick search trigger (`/` or `⌘K`), and collapsible `<details>` / `<summary>` menu hierarchy.
   - Center-aligned `.supa-sidebar-brand` content (logo, project title, and version badge) by default to match Sphinx Furo's canonical brand header, configurable via `<sidebarBrandAlign>` (`center`, `left` / `start`, or `right` / `end`) in `site.xml` and `--supa-sidebar-brand-*` CSS custom properties.
-  - Center prose article column (`48rem` max measure) powered by Bootstrap 6 `.prose` typography, top breadcrumb and source action bar (**View source** / **Edit this page**), and Furo-styled **Previous / Next** navigation cards.
-  - Sticky right **"On this page"** Table of Contents (`240px` on `xl+`) with automatic `h2`–`h4` heading extraction, slug permalinks, and Bootstrap 6 `ScrollSpy` active-section tracking.
+  - Center prose article column (`56rem` / `896px` max measure) powered by Bootstrap 6 `.prose` typography, top breadcrumb and source action bar (**View source** / **Edit this page**), and Furo-styled **Previous / Next** navigation cards.
+  - Sticky right **"On this page"** Table of Contents (`224px` on `xl+`) with automatic `h2`–`h4` heading extraction, slug permalinks, and Bootstrap 6 `ScrollSpy` active-section tracking.
   - Responsive off-canvas `<dialog>` drawers for both the left sidebar (`#supaSidebarDrawer.drawer-start`) and right TOC (`#supaTocDrawer.drawer-end`) with configurable `data-bs-scroll` and `data-bs-backdrop` options in `site.xml`.
 - **Adaptive Light / Dark / Auto Theme Engine & 6 Accessible Palettes**:
   - Zero-FOUC inline `<head>` theme & palette initializer persisted via `localStorage` (`supa-theme`, `supa-palette`).

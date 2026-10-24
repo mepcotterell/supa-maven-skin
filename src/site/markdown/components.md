@@ -636,7 +636,7 @@ Wrap `<div title="Question Title">` items inside `<div class="supa-accordion">` 
         </div>
         <div class="card-body">
           <div class="card-title h5">Three-Column Furo Layout</div>
-          <p class="card-text text-body-secondary">Sticky 280px navigation sidebar, 48rem centered prose article, and 240px ScrollSpy table of contents.</p>
+          <p class="card-text text-body-secondary">Sticky 256px navigation sidebar, 56rem centered prose article, and 224px ScrollSpy table of contents.</p>
           <a href="configuration.html" class="btn btn-sm btn-solid theme-primary">View Configuration</a>
         </div>
         <div class="card-footer small text-body-secondary">Updated via frontend-maven-plugin</div>
@@ -679,7 +679,7 @@ Wrap `<div title="Question Title">` items inside `<div class="supa-accordion">` 
   &lt;/div&gt;
   &lt;div class="card-body"&gt;
     &lt;div class="card-title h5"&gt;Three-Column Furo Layout&lt;/div&gt;
-    &lt;p class="card-text text-body-secondary"&gt;Sticky 280px navigation sidebar and 48rem prose article.&lt;/p&gt;
+    &lt;p class="card-text text-body-secondary"&gt;Sticky 256px navigation sidebar and 56rem prose article.&lt;/p&gt;
     &lt;a href="configuration.html" class="btn btn-sm btn-solid theme-primary"&gt;View Configuration&lt;/a&gt;
   &lt;/div&gt;
 &lt;/div&gt;
@@ -690,7 +690,7 @@ Wrap `<div title="Question Title">` items inside `<div class="supa-accordion">` 
     &lt;span class="badge rounded-pill theme-primary"&gt;Guide&lt;/span&gt;
   &lt;/a&gt;
 &lt;/div&gt;</code></pre></div>
-  <div title="Velocity Macro (.md.vm)" data-tab="Velocity Macro (.md.vm)"><pre><code class="language-velocity">#bsCard("Three-Column Furo Layout", "&lt;p&gt;Sticky 280px navigation sidebar, 48rem centered prose article, and 240px ScrollSpy table of contents.&lt;/p&gt;")</code></pre></div>
+  <div title="Velocity Macro (.md.vm)" data-tab="Velocity Macro (.md.vm)"><pre><code class="language-velocity">#bsCard("Three-Column Furo Layout", "&lt;p&gt;Sticky 256px navigation sidebar, 56rem centered prose article, and 224px ScrollSpy table of contents.&lt;/p&gt;")</code></pre></div>
 </div>
 
 ---

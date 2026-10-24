@@ -78,11 +78,27 @@ describe('Supa Maven Skin Frontend Modules', () => {
     it('applies explicit light, dark, and auto themes via mutually exclusive .supa-theme-toggle menu items', () => {
       document.body.innerHTML = `
         <div class="supa-theme-toggle">
-          <button type="button" class="supa-icon-btn supa-theme-toggle-btn" data-bs-toggle="menu" data-supa-theme-trigger="true"></button>
+          <button type="button" class="supa-icon-btn supa-theme-toggle-btn" data-bs-toggle="menu" data-supa-theme-trigger="true">
+            <i class="bi bi-sun supa-theme-icon supa-theme-icon-light" aria-hidden="true"></i>
+            <i class="bi bi-moon-stars supa-theme-icon supa-theme-icon-dark" aria-hidden="true"></i>
+            <i class="bi bi-circle-half supa-theme-icon supa-theme-icon-auto" aria-hidden="true"></i>
+          </button>
           <div class="menu supa-theme-menu" role="menu">
-            <button type="button" class="menu-item" role="menuitemradio" aria-checked="false" data-supa-theme-option="light">Light</button>
-            <button type="button" class="menu-item" role="menuitemradio" aria-checked="false" data-supa-theme-option="dark">Dark</button>
-            <button type="button" class="menu-item selected" role="menuitemradio" aria-checked="true" data-supa-theme-option="auto">Auto</button>
+            <button type="button" class="menu-item" role="menuitemradio" aria-checked="false" data-supa-theme-option="light">
+              <i class="bi bi-sun menu-item-icon" aria-hidden="true"></i>
+              <span>Light</span>
+              <i class="bi bi-check2 menu-item-check" aria-hidden="true"></i>
+            </button>
+            <button type="button" class="menu-item" role="menuitemradio" aria-checked="false" data-supa-theme-option="dark">
+              <i class="bi bi-moon-stars menu-item-icon" aria-hidden="true"></i>
+              <span>Dark</span>
+              <i class="bi bi-check2 menu-item-check" aria-hidden="true"></i>
+            </button>
+            <button type="button" class="menu-item selected" role="menuitemradio" aria-checked="true" data-supa-theme-option="auto">
+              <i class="bi bi-circle-half menu-item-icon" aria-hidden="true"></i>
+              <span>Auto</span>
+              <i class="bi bi-check2 menu-item-check" aria-hidden="true"></i>
+            </button>
           </div>
         </div>
       `;
@@ -397,7 +413,6 @@ describe('Supa Maven Skin Frontend Modules', () => {
       expect(window.bootstrap?.Datepicker).toBeDefined();
       expect(window.bootstrap?.Chips).toBeDefined();
       expect(window.bootstrap?.Menu).toBeDefined();
-
       expect(container.querySelector('.card')?.classList.contains('not-prose')).toBe(true);
       expect(container.querySelector('.nav')?.classList.contains('not-prose')).toBe(true);
       expect(container.querySelector('.chip-input')?.classList.contains('not-prose')).toBe(true);

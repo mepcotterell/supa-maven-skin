@@ -89,6 +89,14 @@ if ( !html.contains( "data-bs-scroll=" ) || !html.contains( "data-bs-backdrop=" 
 if ( !html.contains( "id=\"supaSearchDialog\"" ) ) {
     throw new IllegalStateException( "Missing Bootstrap 6 search dialog" );
 }
+if ( !html.contains( "bi-file-earmark-code" ) || !html.contains( "bi-pencil-square" ) ) {
+    throw new IllegalStateException( "Missing Bootstrap Icons for View page source or Edit this page buttons" );
+}
+if ( !html.contains( "bi-sun supa-theme-icon supa-theme-icon-light" )
+     || !html.contains( "bi-moon-stars supa-theme-icon supa-theme-icon-dark" )
+     || !html.contains( "bi-circle-half supa-theme-icon supa-theme-icon-auto" ) ) {
+    throw new IllegalStateException( "Missing Bootstrap Icons on theme toggle button" );
+}
 if ( !html.contains( "Integration Test Announcement" ) ) {
     throw new IllegalStateException( "Missing custom announcement banner" );
 }

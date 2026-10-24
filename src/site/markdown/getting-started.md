@@ -15,6 +15,9 @@ Make sure your environment meets the following requirements:
 - **Apache Maven**: Maven `3.9.0+`.
 - **Maven Site Plugin**: `maven-site-plugin` `3.21.0+` (which uses Doxia `2.0` and Doxia Sitetools `2.0`).
 
+> [!TIP] No Node.js Installation Required
+> You do **not** need Node.js or npm installed to use **Supa Maven Skin** in your Maven project—all compiled Bootstrap 6 CSS/JS bundles, Bootstrap Icons fonts, and Highlight.js grammars are pre-packaged inside the skin JAR. Even if you build **Supa Maven Skin** itself from source via `mvn verify`, `frontend-maven-plugin` automatically provisions a local Node.js and npm distribution during the Maven build.
+
 ---
 
 ## Step 1: Configure `pom.xml`

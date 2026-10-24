@@ -80,17 +80,17 @@ Explore the documentation by goal:
 
 ### Canonical Furo 3-Column Layout
 
-- **Left Navigation Sidebar (`280px` on `lg+`)**: Sticky full-height navigation sidebar with dual-theme brand logos (`<lightLogo>` / `<darkLogo>`), project title and version badge, quick search trigger (`⌘K` / `/`), and collapsible `<details>` / `<summary>` menu hierarchy. Collapses into a native Bootstrap 6 left drawer (`<dialog id="supaSidebarDrawer" class="lg:drawer drawer-start">`) on mobile and tablet viewports.
-- **Center Prose Content (`48rem` max measure)**: Clean `.prose` typography powered by Bootstrap 6, top breadcrumb and source action bar ("View source" / "Edit this page"), Furo-styled **Previous / Next** page navigation cards, and customizable footer.
-- **Right "On this page" Table of Contents (`240px` on `xl+`)**: Sticky right-hand heading tree (`h2`–`h4`) automatically generated from the article DOM and synchronized with **Bootstrap 6 ScrollSpy**.
+- **Left Navigation Sidebar**: Sticky full-height navigation sidebar with dual color-mode brand logos, project title and version badge, quick search trigger, and collapsible menu hierarchy. Collapses into a native left drawer on mobile and tablet viewports.
+- **Center Prose Content**: Clean typography, top breadcrumb and source action bar, previous and next page navigation cards, and customizable footer.
+- **Right "On this page" Table of Contents**: Sticky right-hand heading tree automatically generated from the article DOM and synchronized with scroll position.
 
 ### Rich Authoring in Markdown (`.md`) & Velocity (`.md.vm`)
 
-- **All 12 Sphinx Furo Admonition Types & Bootstrap 6 Alerts**: Write GitHub-Flavored Markdown blockquote alerts for any of the 12 Furo admonition types (`> [!ADMONITION]`, `> [!ATTENTION]`, `> [!CAUTION]`, `> [!DANGER]`, `> [!ERROR]`, `> [!HINT]`, `> [!IMPORTANT]`, `> [!NOTE]`, `> [!SEEALSO]`, `> [!TIP]`, `> [!TODO]`, `> [!WARNING]`) with Bootstrap Icons and nested callout support, or Bootstrap 6 alerts (`> [!ALERT:primary dismissible]`, `#bsAlert`).
-- **2,000+ Bundled Bootstrap Icons**: Author icons offline via Markdown shortcodes (`:bi-rocket-takeoff text-primary:`), the `#bi` Velocity macro (`#bi( "rocket-takeoff" "text-primary" )`), or HTML `<i class="bi bi-..."></i>`.
-- **Synchronized Content Tabs**: Group multi-language or multi-tool code blocks with `<div class="supa-tabs" title="group-key">` persisted automatically in `localStorage`.
-- **Offline Syntax Highlighting & Copy Button**: Bundles `highlight.js` for 18+ JVM, web, and configuration languages plus file-path header bars (`data-title`), line numbers (`class="line-numbers"`), and a one-click copy-to-clipboard button.
-- **Zero-Config Client-Side Search**: Native `<dialog class="dialog">` modal that indexes sidebar navigation, page headings, and Maven reports (`sessionStorage`-cached) without external SaaS dependencies.
+- **Admonition Types & Alerts**: Write GitHub-Flavored Markdown blockquote alerts for any of 12 admonition types with icons and nested callout support, or alerts.
+- **2,000+ Bundled Bootstrap Icons**: Author icons offline via Markdown shortcodes, the `#bi` Velocity macro, or HTML.
+- **Synchronized Content Tabs**: Group multi-language or multi-tool code blocks with tabs persisted automatically in local storage.
+- **Offline Syntax Highlighting & Copy Button**: Bundles `highlight.js` for 18+ JVM, web, and configuration languages plus file-path header bars, line numbers, and a one-click copy-to-clipboard button.
+- **Zero-Config Client-Side Search**: Native dialog modal that indexes sidebar navigation, page headings, and Maven reports without external SaaS dependencies.
 
 ---
 

@@ -175,46 +175,87 @@ Click any color scheme card below (or use the palette selector in the top header
 
 ## Configuration Options
 
+All `<supaSkin>` options are grouped below by functional area.
+
+### Theme & Branding
+
+Controls the initial Light/Dark polarity, accessible color scheme preset, and left-sidebar brand header (`.supa-sidebar-brand`).
+
 | Option | Default | Description |
 | :--- | :--- | :--- |
 | `<defaultTheme>` | `auto` | Initial light/dark polarity before user selection (`auto`, `light`, or `dark`). |
 | `<colorScheme>` | `furo` | Default accessible color scheme preset (`furo`, `bootstrap`, `modus`, `modus-tinted`, `modus-deuteranopia`, or `modus-tritanopia`). |
 | `<colorSchemeSelector>` | `true` | Render the accessible color scheme selector menu in the top header utility bar. |
-| `<announcement>` | *(empty)* | Top announcement banner HTML rendered above the page header. |
-| `<sidebarHideName>` | `false` | Hide the project name text under the logo in the left sidebar. |
 | `<sidebarBrandAlign>` | `center` | Horizontal alignment of the sidebar brand logo, project title, and version badge (`center`, `left` / `start`, or `right` / `end`). |
-| `<lightLogo>` | *(empty)* | Relative path or URL to logo shown when the resolved theme is light. |
-| `<darkLogo>` | *(empty)* | Relative path or URL to logo shown when the resolved theme is dark. |
-| `<sourceRepository>` | *(empty)* | GitHub/GitLab/Gitea repository URL for "View source" and "Edit this page" buttons. |
-| `<sourceBranch>` | `main` | Git branch name used when constructing source view/edit URLs. |
+| `<sidebarHideName>` | `false` | Hide the project name text under the logo in the left sidebar. |
+| `<lightLogo>` | *(empty)* | Relative path or URL to the logo shown when the resolved theme is light. |
+| `<darkLogo>` | *(empty)* | Relative path or URL to the logo shown when the resolved theme is dark. |
+
+### Source Repository
+
+Configures the "View page source" and "Edit this page" action buttons in the top content header bar.
+
+| Option | Default | Description |
+| :--- | :--- | :--- |
+| `<sourceRepository>` | *(empty)* | GitHub, GitLab, or Gitea repository URL used to build page source links. |
+| `<sourceBranch>` | `main` | Git branch name used when constructing source view and edit URLs. |
 | `<sourceDirectory>` | `src/site` | Relative path to the Maven site directory inside the repository. |
 | `<sourceViewButton>` | `true` | Show the "View page source" icon button when `<sourceRepository>` is configured. |
 | `<sourceEditButton>` | `true` | Show the "Edit this page" icon button when `<sourceRepository>` is configured. |
-| `<breadcrumb>` | `true` | Render breadcrumb navigation trail in the top content utility bar. |
+
+### Layout & Navigation
+
+Configures the top announcement banner, breadcrumbs, left sidebar menu tree, right-hand ScrollSpy table of contents, and bottom page navigation cards.
+
+| Option | Default | Description |
+| :--- | :--- | :--- |
+| `<announcement>` | *(empty)* | Top announcement banner HTML rendered above the page header. |
+| `<breadcrumb>` | `true` | Render the breadcrumb navigation trail in the top content utility bar. |
+| `<sidebarCollapseDepth>` | `1` | Menu nesting depth expanded by default in the left sidebar (`<details open>`). |
 | `<tocSidebar>` | `true` | Enable the right-hand "On this page" table of contents column and right drawer (`#supaTocDrawer`). |
 | `<tocTitle>` | `On this page` | Heading label for the right-hand table of contents. |
 | `<tocMaxDepth>` | `4` | Maximum heading level (`2`–`6`) included in the right-hand TOC. |
 | `<prevNextButtons>` | `true` | Render Furo-styled Previous / Next page navigation cards at the bottom of articles. |
-| `<sidebarCollapseDepth>` | `1` | Menu nesting depth expanded by default in the left sidebar (`<details open>`). |
-| `<drawerScroll>` | `false` | Default `data-bs-scroll` setting (`true` or `false`) for both `#supaSidebarDrawer` and `#supaTocDrawer` controlling whether `<body>` scrolling is enabled while a drawer is open (legacy alias: `<drawerBodyScroll>`). |
-| `<drawerBackdrop>` | `true` | Default `data-bs-backdrop` setting (`true`, `false`, or `static`) for both `#supaSidebarDrawer` and `#supaTocDrawer` controlling whether a backdrop is rendered when a drawer is open. |
+
+### Responsive Drawers
+
+Controls Bootstrap 6 off-canvas `<dialog class="drawer">` behavior on tablet and mobile viewports (`#supaSidebarDrawer` below `lg` and `#supaTocDrawer` below `xl`).
+
+| Option | Default | Description |
+| :--- | :--- | :--- |
+| `<drawerScroll>` | `false` | Default `data-bs-scroll` (`true` or `false`) for both drawers, controlling whether `<body>` scrolling is enabled while a drawer is open (legacy alias: `<drawerBodyScroll>`). |
+| `<drawerBackdrop>` | `true` | Default `data-bs-backdrop` (`true`, `false`, or `static`) for both drawers, controlling whether a backdrop is rendered while a drawer is open. |
 | `<sidebarDrawerScroll>` | `$drawerScroll` | Override `data-bs-scroll` (`true` or `false`) specifically for the left navigation drawer (`#supaSidebarDrawer`; legacy alias: `<sidebarDrawerBodyScroll>`). |
 | `<sidebarDrawerBackdrop>` | `$drawerBackdrop` | Override `data-bs-backdrop` (`true`, `false`, or `static`) specifically for the left navigation drawer (`#supaSidebarDrawer`). |
 | `<tocDrawerScroll>` | `$drawerScroll` | Override `data-bs-scroll` (`true` or `false`) specifically for the right table of contents drawer (`#supaTocDrawer`; legacy alias: `<tocDrawerBodyScroll>`). |
 | `<tocDrawerBackdrop>` | `$drawerBackdrop` | Override `data-bs-backdrop` (`true`, `false`, or `static`) specifically for the right table of contents drawer (`#supaTocDrawer`). |
-| `<footerTimestamp>` | `true` | Display the build/publish date in the page footer. |
+
+### Footer & Links
+
+Controls metadata and icon links in the page footer (`.supa-footer`) and version badge visibility.
+
+| Option | Default | Description |
+| :--- | :--- | :--- |
+| `<footerTimestamp>` | `true` | Display the build/publish date (`Last updated on YYYY-MM-DD`) in the page footer. |
 | `<footerVersion>` | `true` | Display the project version badge next to the project title in the sidebar. |
-| `<navIcons>` | *(empty)* | List of `<icon>` elements (`<href>`, `<title>`, `<html>`) rendered as tooltip-enabled icon links in the right side of the page footer (`.supa-footer-icons`). |
+| `<navIcons>` | *(empty)* | List of `<icon>` elements (`<href>`, `<title>`, `<html>`) rendered as tooltip-enabled icon links on the right side of the page footer (`.supa-footer-icons`). |
+
+### Code, Search, Diagrams & Math
+
+Configures client-side code block enhancements, heading permalinks, offline search, and lazy-loaded Mermaid / KaTeX rendering.
+
+| Option | Default | Description |
+| :--- | :--- | :--- |
 | `<copyCodeButton>` | `true` | Add a Copy-to-Clipboard button to all `<pre>` code blocks. |
 | `<syntaxHighlighting>` | `true` | Highlight `<pre><code>` blocks offline using bundled `highlight.js`. |
 | `<headingPermalinks>` | `true` | Append `#` permalink anchors to article headings (`h2`–`h6`). |
 | `<headingPermalinkSymbol>` | `#` | Symbol rendered inside heading permalink anchors. |
 | `<search>` | `true` | Enable the sidebar search box and `/` (`⌘K` / `Ctrl+K`) search dialog. |
-| `<mermaid>` | `auto` | Lazy-load Mermaid when `.mermaid` or `code.language-mermaid` is present (`auto`, `true`, `false`). |
-| `<mermaidCdnUrl>` | `https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs` | Custom or self-hosted ESM bundle URL for Mermaid when `<mermaid>` is enabled. |
-| `<katex>` | `auto` | Lazy-load KaTeX when math expressions are present (`auto`, `true`, `false`). |
-| `<katexCssCdnUrl>` | `https://cdn.jsdelivr.net/npm/katex@0.16.21/dist/katex.min.css` | Custom or self-hosted stylesheet URL for KaTeX when `<katex>` is enabled. |
-| `<katexJsCdnUrl>` | `https://cdn.jsdelivr.net/npm/katex@0.16.21/dist/contrib/auto-render.mjs` | Custom or self-hosted ESM `auto-render.mjs` URL for KaTeX when `<katex>` is enabled. |
+| `<mermaid>` | `auto` | Lazy-load Mermaid when `.mermaid` or `code.language-mermaid` is present (`auto`, `true`, or `false`). |
+| `<mermaidCdnUrl>` | *(jsDelivr CDN)* | Custom or self-hosted ESM bundle URL for Mermaid (defaults to `https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs`). |
+| `<katex>` | `auto` | Lazy-load KaTeX when `$...$` or `$$...$$` math expressions are present (`auto`, `true`, or `false`). |
+| `<katexCssCdnUrl>` | *(jsDelivr CDN)* | Custom or self-hosted stylesheet URL for KaTeX (defaults to `https://cdn.jsdelivr.net/npm/katex@0.16.21/dist/katex.min.css`). |
+| `<katexJsCdnUrl>` | *(jsDelivr CDN)* | Custom or self-hosted ESM `auto-render.mjs` URL for KaTeX (defaults to `https://cdn.jsdelivr.net/npm/katex@0.16.21/dist/contrib/auto-render.mjs`). |
 
 ## Built-In Accessible Color Schemes
 

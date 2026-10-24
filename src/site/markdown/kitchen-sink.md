@@ -111,9 +111,9 @@ Standard Markdown and Doxia `table.bodyTable` elements are automatically normali
 
 | Component | Desktop (`xl+` / 1280px+) | Laptop (`lg` / 1024px–1279px) | Tablet & Mobile (`< 1024px`) |
 | :--- | :--- | :--- | :--- |
-| **Left Navigation Sidebar** | Sticky `280px` column | Sticky `280px` column | Off-canvas `<dialog class="lg:drawer drawer-start">` |
-| **Center Prose Article** | Centered `48rem` max measure | Centered `48rem` max measure | Fluid width with responsive padding |
-| **Right "On this page" TOC** | Sticky `240px` ScrollSpy column | Off-canvas `<dialog class="xl:drawer drawer-end">` | Off-canvas `<dialog class="xl:drawer drawer-end">` |
+| **Left Navigation Sidebar** | Sticky `256px` column | Sticky `256px` column | Off-canvas `<dialog class="lg:drawer drawer-start">` |
+| **Center Prose Article** | Centered `56rem` (`896px`) max measure | Centered `56rem` (`896px`) max measure | Centered `47.5rem` (`760px`) max container |
+| **Right "On this page" TOC** | Sticky `224px` ScrollSpy column | Off-canvas `<dialog class="xl:drawer drawer-end">` | Off-canvas `<dialog class="xl:drawer drawer-end">` |
 | **Documentation Search** | `<dialog class="dialog">` modal | `<dialog class="dialog">` modal | `<dialog class="dialog">` modal |
 
 ## Bootstrap 6 UI Components

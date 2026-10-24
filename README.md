@@ -5,9 +5,9 @@ A modern, responsive, accessible three-column [Apache Maven Site Skin](https://m
 ## Key Features
 
 - **Canonical 3-Column Furo Layout**:
-  - **Left Navigation Sidebar (`280px` sticky on `lg+` / `1024px+`)**: Brand/logo header, version pill badge, search modal trigger (`/` or `⌘K`), and collapsible `<details>`/`<summary>` navigation tree. Collapses into a native `<dialog class="lg:drawer drawer-start drawer-sheet">` off-canvas drawer below `1024px`.
-  - **Center Prose Content (`48rem` max measure)**: Uses Bootstrap 6 `.prose` typography with refined vertical rhythm, breadcrumb header bar, View/Edit Source action icons, Previous/Next navigation cards, and customizable footer.
-  - **Right "On this page" TOC (`240px` sticky on `xl+` / `1280px+`)**: Auto-generated heading outline (`h2`–`h4`) with single-active ScrollSpy tracking. Collapses into a `<dialog class="xl:drawer drawer-end drawer-sheet">` drawer below `1280px`.
+  - **Left Navigation Sidebar (`256px` sticky on `lg+` / `1024px+`)**: Brand/logo header, version pill badge, search modal trigger (`/` or `⌘K`), and collapsible `<details>`/`<summary>` navigation tree. Collapses into a native `<dialog class="lg:drawer drawer-start drawer-sheet">` off-canvas drawer below `1024px`.
+  - **Center Prose Content (`56rem` / `896px` max measure)**: Uses Bootstrap 6 `.prose` typography with refined vertical rhythm, breadcrumb header bar, View/Edit Source action icons, Previous/Next navigation cards, and customizable footer.
+  - **Right "On this page" TOC (`224px` sticky on `xl+` / `1280px+`)**: Auto-generated heading outline (`h2`–`h4`) with single-active ScrollSpy tracking. Collapses into a `<dialog class="xl:drawer drawer-end drawer-sheet">` drawer below `1280px`.
 - **3-State Adaptive Theme Toggle (`Light` → `Dark` → `Auto`) & 6 Accessible Palettes**:
   - Zero-FOUC inline `<head>` bootstrapper, `localStorage` persistence (`supa-theme`, `supa-palette`), CSS `light-dark()` semantic tokens, and 6 built-in WCAG 2.2 AA/AAA palettes (`furo`, `bootstrap`, `modus`, `modus-tinted`, `modus-deuteranopia`, `modus-tritanopia`).
 - **Rich Authoring Components**:

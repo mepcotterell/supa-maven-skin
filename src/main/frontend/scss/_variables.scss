@@ -17,10 +17,10 @@
 :root,
 :host,
 [data-supa-palette="furo"] {
-  // Layout dimensions matching Sphinx Furo
-  --supa-sidebar-width: 17.5rem;      // 280px
-  --supa-toc-width: 15rem;            // 240px
-  --supa-content-max-width: 48rem;    // 768px readable measure
+  // Layout dimensions aligned with Bootstrap 6 Docs & Sphinx Furo
+  --supa-sidebar-width: 16rem;        // 256px
+  --supa-toc-width: 14rem;            // 224px
+  --supa-content-max-width: 56rem;    // 896px prose measure
   --supa-header-height: 3.25rem;      // 52px
 
   // Typography

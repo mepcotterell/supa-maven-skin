@@ -53,7 +53,14 @@
       </item>
     </menu>
     <menu name="Reference">
-      <item name="Configuration Reference" href="configuration.html" />
+      <item name="Configuration Reference" href="configuration.html">
+        <item name="Color Scheme Preview" href="configuration.html#interactive-accessible-color-scheme-preview" />
+        <item name="Full site.xml Example" href="configuration.html#full-site-xml-example" />
+        <item name="Configuration Options" href="configuration.html#configuration-options" />
+        <item name="Accessible Color Schemes" href="configuration.html#built-in-accessible-color-schemes" />
+        <item name="CSS Variables" href="configuration.html#extending-palettes-via-lightcssvariables-darkcssvariables" />
+        <item name="Velocity Macros" href="configuration.html#velocity-helper-macros-reference-site-macros-vm" />
+      </item>
       <item name="Components" href="components.html">
         <item name="Interactive Playground" href="components.html#interactive-component-playground" />
         <item name="1. Actions &amp; Buttons" href="components.html#1-actions-buttons" />

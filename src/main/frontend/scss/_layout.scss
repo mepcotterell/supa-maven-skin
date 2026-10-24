@@ -1,6 +1,6 @@
 // ============================================================================
 // Furo 3-Column Layout Architecture
-// Left Sidebar (280px on lg+) | Center Article (48rem max) | Right TOC (240px on xl+)
+// Left Sidebar (256px on lg+) | Center Article (56rem max) | Right TOC (224px on xl+)
 // ============================================================================
 
 html {
@@ -143,6 +143,11 @@ body.supa-body {
   cursor: pointer;
   transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
   text-decoration: none;
+
+  & > .bi {
+    font-size: 1.125rem;
+    line-height: 1;
+  }
 
   &:hover,
   &:focus-visible {
@@ -312,20 +317,27 @@ body.supa-body {
   .menu-item-icon {
     align-self: center;
     margin-top: 0;
+    font-size: 1rem;
+    line-height: 1;
+  }
+
+  .menu-item-check {
+    font-size: 0.9375rem;
+    line-height: 1;
   }
 }
 
 html[data-supa-theme-mode="light"] .supa-theme-toggle .supa-theme-icon-light {
-  display: block;
+  display: inline-flex;
 }
 
 html[data-supa-theme-mode="dark"] .supa-theme-toggle .supa-theme-icon-dark {
-  display: block;
+  display: inline-flex;
 }
 
 html[data-supa-theme-mode="auto"] .supa-theme-toggle .supa-theme-icon-auto,
 html:not([data-supa-theme-mode]) .supa-theme-toggle .supa-theme-icon-auto {
-  display: block;
+  display: inline-flex;
 }
 
 // 3-Column Page Container
@@ -334,7 +346,7 @@ html:not([data-supa-theme-mode]) .supa-theme-toggle .supa-theme-icon-auto {
   flex: 1 1 auto;
   min-width: 0;
   width: 100%;
-  max-width: min(96rem, 100%); // 1536px max outer frame, centered on ultra-wide screens
+  max-width: min(96rem, 100%); // 1536px (2xl) max outer frame, centered on ultra-wide screens
   margin: 0 auto;
 }
 
@@ -421,7 +433,7 @@ dialog[data-bs-backdrop="false"]::backdrop {
   flex: 1 1 0%;
   min-width: 0;
   width: 100%;
-  max-width: min(100%, calc(var(--supa-content-max-width) + 7rem));
+  max-width: min(100%, 47.5rem); // Matches Bootstrap 6 Docs .bd-main 760px cap below lg (1024px)
   padding: 0 1.25rem;
   margin: 0 auto;
   display: flex;
@@ -436,7 +448,13 @@ dialog[data-bs-backdrop="false"]::backdrop {
   }
 
   @media (width >= 1024px) {
-    padding: 0 3.5rem;
+    max-width: min(100%, calc(var(--supa-content-max-width) + 5rem));
+    padding: 0 2.5rem;
+  }
+
+  @media (width >= 1280px) {
+    max-width: min(100%, calc(var(--supa-content-max-width) + 6rem));
+    padding: 0 3rem; // Matches Bootstrap 6 Docs --bs-gutter-x: 3rem
   }
 }
 
