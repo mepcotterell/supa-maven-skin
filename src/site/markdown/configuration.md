@@ -9,94 +9,94 @@
 
 Click any color scheme card below (or use the palette selector in the top header bar) to live-preview this documentation site across all 6 built-in palettes and Light/Dark/Auto polarities:
 
-<div class="furo-palette-grid not-prose" role="group" aria-label="Accessible color scheme presets">
-  <button type="button" class="furo-palette-card is-active" data-furo-palette-card="furo" aria-pressed="true">
-    <div class="furo-palette-card-header">
-      <span class="furo-palette-card-title">Furo Default</span>
+<div class="supa-palette-grid not-prose" role="group" aria-label="Accessible color scheme presets">
+  <button type="button" class="supa-palette-card is-active" data-supa-palette-card="furo" aria-pressed="true">
+    <div class="supa-palette-card-header">
+      <span class="supa-palette-card-title">Furo Default</span>
       <span class="badge theme-primary">WCAG AA</span>
     </div>
-    <div class="furo-palette-card-desc">Sphinx Furo crisp documentation palette (&ge; 4.5:1 across all surfaces).</div>
-    <div class="furo-palette-swatches" aria-hidden="true">
-      <span class="furo-palette-swatch" style="background:#ffffff"></span>
-      <span class="furo-palette-swatch" style="background:#131416"></span>
-      <span class="furo-palette-swatch" style="background:#1d50d8"></span>
-      <span class="furo-palette-swatch" style="background:#116329"></span>
-      <span class="furo-palette-swatch" style="background:#6e40c9"></span>
+    <div class="supa-palette-card-desc">Sphinx Furo crisp documentation palette (&ge; 4.5:1 across all surfaces).</div>
+    <div class="supa-palette-swatches" aria-hidden="true">
+      <span class="supa-palette-swatch" style="background:#ffffff"></span>
+      <span class="supa-palette-swatch" style="background:#131416"></span>
+      <span class="supa-palette-swatch" style="background:#1d50d8"></span>
+      <span class="supa-palette-swatch" style="background:#116329"></span>
+      <span class="supa-palette-swatch" style="background:#6e40c9"></span>
     </div>
   </button>
 
-  <button type="button" class="furo-palette-card" data-furo-palette-card="bootstrap" aria-pressed="false">
-    <div class="furo-palette-card-header">
-      <span class="furo-palette-card-title">Bootstrap 6 OKLCH</span>
+  <button type="button" class="supa-palette-card" data-supa-palette-card="bootstrap" aria-pressed="false">
+    <div class="supa-palette-card-header">
+      <span class="supa-palette-card-title">Bootstrap 6 OKLCH</span>
       <span class="badge theme-primary">WCAG AA</span>
     </div>
-    <div class="furo-palette-card-desc">Perceptually uniform Bootstrap 6 OKLCH semantic palette (&ge; 4.5:1).</div>
-    <div class="furo-palette-swatches" aria-hidden="true">
-      <span class="furo-palette-swatch" style="background:#f8f9fa"></span>
-      <span class="furo-palette-swatch" style="background:#0f1115"></span>
-      <span class="furo-palette-swatch" style="background:#0a53be"></span>
-      <span class="furo-palette-swatch" style="background:#0f5132"></span>
-      <span class="furo-palette-swatch" style="background:#842029"></span>
+    <div class="supa-palette-card-desc">Perceptually uniform Bootstrap 6 OKLCH semantic palette (&ge; 4.5:1).</div>
+    <div class="supa-palette-swatches" aria-hidden="true">
+      <span class="supa-palette-swatch" style="background:#f8f9fa"></span>
+      <span class="supa-palette-swatch" style="background:#0f1115"></span>
+      <span class="supa-palette-swatch" style="background:#0a53be"></span>
+      <span class="supa-palette-swatch" style="background:#0f5132"></span>
+      <span class="supa-palette-swatch" style="background:#842029"></span>
     </div>
   </button>
 
-  <button type="button" class="furo-palette-card" data-furo-palette-card="modus" aria-pressed="false">
-    <div class="furo-palette-card-header">
-      <span class="furo-palette-card-title">Modus (Operandi / Vivendi)</span>
+  <button type="button" class="supa-palette-card" data-supa-palette-card="modus" aria-pressed="false">
+    <div class="supa-palette-card-header">
+      <span class="supa-palette-card-title">Modus (Operandi / Vivendi)</span>
       <span class="badge theme-success">WCAG AAA</span>
     </div>
-    <div class="furo-palette-card-desc">Protesilaos Stavrou's Emacs Modus high-contrast themes (&ge; 7.0:1).</div>
-    <div class="furo-palette-swatches" aria-hidden="true">
-      <span class="furo-palette-swatch" style="background:#ffffff"></span>
-      <span class="furo-palette-swatch" style="background:#000000"></span>
-      <span class="furo-palette-swatch" style="background:#0031a9"></span>
-      <span class="furo-palette-swatch" style="background:#2fafff"></span>
-      <span class="furo-palette-swatch" style="background:#531ab6"></span>
+    <div class="supa-palette-card-desc">Protesilaos Stavrou's Emacs Modus high-contrast themes (&ge; 7.0:1).</div>
+    <div class="supa-palette-swatches" aria-hidden="true">
+      <span class="supa-palette-swatch" style="background:#ffffff"></span>
+      <span class="supa-palette-swatch" style="background:#000000"></span>
+      <span class="supa-palette-swatch" style="background:#0031a9"></span>
+      <span class="supa-palette-swatch" style="background:#2fafff"></span>
+      <span class="supa-palette-swatch" style="background:#531ab6"></span>
     </div>
   </button>
 
-  <button type="button" class="furo-palette-card" data-furo-palette-card="modus-tinted" aria-pressed="false">
-    <div class="furo-palette-card-header">
-      <span class="furo-palette-card-title">Modus Tinted</span>
+  <button type="button" class="supa-palette-card" data-supa-palette-card="modus-tinted" aria-pressed="false">
+    <div class="supa-palette-card-header">
+      <span class="supa-palette-card-title">Modus Tinted</span>
       <span class="badge theme-success">WCAG AAA</span>
     </div>
-    <div class="furo-palette-card-desc">Low-glare warm cream paper &amp; night-sky canvas (&ge; 7.0:1 AAA).</div>
-    <div class="furo-palette-swatches" aria-hidden="true">
-      <span class="furo-palette-swatch" style="background:#fbf7f0"></span>
-      <span class="furo-palette-swatch" style="background:#0d0e1c"></span>
-      <span class="furo-palette-swatch" style="background:#0031a9"></span>
-      <span class="furo-palette-swatch" style="background:#4cbdff"></span>
-      <span class="furo-palette-swatch" style="background:#8f0000"></span>
+    <div class="supa-palette-card-desc">Low-glare warm cream paper &amp; night-sky canvas (&ge; 7.0:1 AAA).</div>
+    <div class="supa-palette-swatches" aria-hidden="true">
+      <span class="supa-palette-swatch" style="background:#fbf7f0"></span>
+      <span class="supa-palette-swatch" style="background:#0d0e1c"></span>
+      <span class="supa-palette-swatch" style="background:#0031a9"></span>
+      <span class="supa-palette-swatch" style="background:#4cbdff"></span>
+      <span class="supa-palette-swatch" style="background:#8f0000"></span>
     </div>
   </button>
 
-  <button type="button" class="furo-palette-card" data-furo-palette-card="modus-deuteranopia" aria-pressed="false">
-    <div class="furo-palette-card-header">
-      <span class="furo-palette-card-title">Modus Deuteranopia</span>
+  <button type="button" class="supa-palette-card" data-supa-palette-card="modus-deuteranopia" aria-pressed="false">
+    <div class="supa-palette-card-header">
+      <span class="supa-palette-card-title">Modus Deuteranopia</span>
       <span class="badge theme-success">WCAG AAA</span>
     </div>
-    <div class="furo-palette-card-desc">Red-green colorblind-safe Blue / Gold / Warm Amber palette (&ge; 7.0:1).</div>
-    <div class="furo-palette-swatches" aria-hidden="true">
-      <span class="furo-palette-swatch" style="background:#ffffff"></span>
-      <span class="furo-palette-swatch" style="background:#000000"></span>
-      <span class="furo-palette-swatch" style="background:#0031a9"></span>
-      <span class="furo-palette-swatch" style="background:#604800"></span>
-      <span class="furo-palette-swatch" style="background:#6e3b00"></span>
+    <div class="supa-palette-card-desc">Red-green colorblind-safe Blue / Gold / Warm Amber palette (&ge; 7.0:1).</div>
+    <div class="supa-palette-swatches" aria-hidden="true">
+      <span class="supa-palette-swatch" style="background:#ffffff"></span>
+      <span class="supa-palette-swatch" style="background:#000000"></span>
+      <span class="supa-palette-swatch" style="background:#0031a9"></span>
+      <span class="supa-palette-swatch" style="background:#604800"></span>
+      <span class="supa-palette-swatch" style="background:#6e3b00"></span>
     </div>
   </button>
 
-  <button type="button" class="furo-palette-card" data-furo-palette-card="modus-tritanopia" aria-pressed="false">
-    <div class="furo-palette-card-header">
-      <span class="furo-palette-card-title">Modus Tritanopia</span>
+  <button type="button" class="supa-palette-card" data-supa-palette-card="modus-tritanopia" aria-pressed="false">
+    <div class="supa-palette-card-header">
+      <span class="supa-palette-card-title">Modus Tritanopia</span>
       <span class="badge theme-success">WCAG AAA</span>
     </div>
-    <div class="furo-palette-card-desc">Blue-yellow colorblind-safe Teal / Magenta / Crimson palette (&ge; 7.0:1).</div>
-    <div class="furo-palette-swatches" aria-hidden="true">
-      <span class="furo-palette-swatch" style="background:#ffffff"></span>
-      <span class="furo-palette-swatch" style="background:#000000"></span>
-      <span class="furo-palette-swatch" style="background:#005454"></span>
-      <span class="furo-palette-swatch" style="background:#721045"></span>
-      <span class="furo-palette-swatch" style="background:#970000"></span>
+    <div class="supa-palette-card-desc">Blue-yellow colorblind-safe Teal / Magenta / Crimson palette (&ge; 7.0:1).</div>
+    <div class="supa-palette-swatches" aria-hidden="true">
+      <span class="supa-palette-swatch" style="background:#ffffff"></span>
+      <span class="supa-palette-swatch" style="background:#000000"></span>
+      <span class="supa-palette-swatch" style="background:#005454"></span>
+      <span class="supa-palette-swatch" style="background:#721045"></span>
+      <span class="supa-palette-swatch" style="background:#970000"></span>
     </div>
   </button>
 </div>
@@ -177,21 +177,23 @@ Click any color scheme card below (or use the palette selector in the top header
 | `<sourceViewButton>` | `true` | Show the "View page source" icon button when `<sourceRepository>` is configured. |
 | `<sourceEditButton>` | `true` | Show the "Edit this page" icon button when `<sourceRepository>` is configured. |
 | `<breadcrumb>` | `true` | Render breadcrumb navigation trail in the top content utility bar. |
-| `<tocSidebar>` | `true` | Enable the right-hand "On this page" table of contents column and right drawer (`#furoTocDrawer`). |
+| `<tocSidebar>` | `true` | Enable the right-hand "On this page" table of contents column and right drawer (`#supaTocDrawer`). |
 | `<tocTitle>` | `On this page` | Heading label for the right-hand table of contents. |
 | `<tocMaxDepth>` | `4` | Maximum heading level (`2`–`6`) included in the right-hand TOC. |
 | `<prevNextButtons>` | `true` | Render Furo-styled Previous / Next page navigation cards at the bottom of articles. |
 | `<sidebarCollapseDepth>` | `1` | Menu nesting depth expanded by default in the left sidebar (`<details open>`). |
-| `<drawerScroll>` | `false` | Default `data-bs-scroll` setting (`true` or `false`) for both `#furoSidebarDrawer` and `#furoTocDrawer` controlling whether `<body>` scrolling is enabled while a drawer is open. |
-| `<drawerBackdrop>` | `true` | Default `data-bs-backdrop` setting (`true`, `false`, or `static`) for both `#furoSidebarDrawer` and `#furoTocDrawer` controlling whether a backdrop is rendered when a drawer is open. |
-| `<sidebarDrawerScroll>` | `$drawerScroll` | Override `data-bs-scroll` (`true` or `false`) specifically for the left navigation drawer (`#furoSidebarDrawer`). |
-| `<sidebarDrawerBackdrop>` | `$drawerBackdrop` | Override `data-bs-backdrop` (`true`, `false`, or `static`) specifically for the left navigation drawer (`#furoSidebarDrawer`). |
-| `<tocDrawerScroll>` | `$drawerScroll` | Override `data-bs-scroll` (`true` or `false`) specifically for the right table of contents drawer (`#furoTocDrawer`). |
-| `<tocDrawerBackdrop>` | `$drawerBackdrop` | Override `data-bs-backdrop` (`true`, `false`, or `static`) specifically for the right table of contents drawer (`#furoTocDrawer`). |
+| `<drawerScroll>` | `false` | Default `data-bs-scroll` setting (`true` or `false`) for both `#supaSidebarDrawer` and `#supaTocDrawer` controlling whether `<body>` scrolling is enabled while a drawer is open. |
+| `<drawerBackdrop>` | `true` | Default `data-bs-backdrop` setting (`true`, `false`, or `static`) for both `#supaSidebarDrawer` and `#supaTocDrawer` controlling whether a backdrop is rendered when a drawer is open. |
+| `<sidebarDrawerScroll>` | `$drawerScroll` | Override `data-bs-scroll` (`true` or `false`) specifically for the left navigation drawer (`#supaSidebarDrawer`). |
+| `<sidebarDrawerBackdrop>` | `$drawerBackdrop` | Override `data-bs-backdrop` (`true`, `false`, or `static`) specifically for the left navigation drawer (`#supaSidebarDrawer`). |
+| `<tocDrawerScroll>` | `$drawerScroll` | Override `data-bs-scroll` (`true` or `false`) specifically for the right table of contents drawer (`#supaTocDrawer`). |
+| `<tocDrawerBackdrop>` | `$drawerBackdrop` | Override `data-bs-backdrop` (`true`, `false`, or `static`) specifically for the right table of contents drawer (`#supaTocDrawer`). |
 | `<footerTimestamp>` | `true` | Display the build/publish date in the page footer. |
+| `<footerVersion>` | `true` | Display the project version badge next to the project title in the sidebar. |
 | `<copyCodeButton>` | `true` | Add a Copy-to-Clipboard button to all `<pre>` code blocks. |
 | `<syntaxHighlighting>` | `true` | Highlight `<pre><code>` blocks offline using bundled `highlight.js`. |
 | `<headingPermalinks>` | `true` | Append `#` permalink anchors to article headings (`h2`–`h6`). |
+| `<headingPermalinkSymbol>` | `#` | Symbol rendered inside heading permalink anchors. |
 | `<search>` | `true` | Enable the sidebar search box and `/` (`⌘K` / `Ctrl+K`) search dialog. |
 | `<mermaid>` | `auto` | Lazy-load Mermaid when `.mermaid` or `code.language-mermaid` is present (`auto`, `true`, `false`). |
 | `<katex>` | `auto` | Lazy-load KaTeX when math expressions are present (`auto`, `true`, `false`). |
@@ -225,8 +227,19 @@ Just like Sphinx Furo's `light_css_variables` and `dark_css_variables`, any chil
 | `color-foreground-secondary` | Secondary metadata, caption, and inactive TOC link color (`--fg-2`). |
 | `color-foreground-muted` | Muted text, permalink `#` indicators, and subtle labels (`--fg-3`). |
 | `color-foreground-border` | Interactive control border color (WCAG 1.4.11 non-text contrast &ge; 3:1). |
-| `furo-admonition-note-accent` | Note / Info admonition and `.theme-info` accent color. |
-| `furo-admonition-tip-accent` | Tip / Success admonition and `.theme-success` accent color. |
-| `furo-admonition-important-accent` | Important / Accent admonition and `.theme-accent` accent color. |
-| `furo-admonition-warning-accent` | Warning admonition and `.theme-warning` accent color. |
-| `furo-admonition-caution-accent` | Caution / Danger admonition and `.theme-danger` accent color. |
+| `supa-admonition-note-accent` | Note / Info admonition and `.theme-info` accent color. |
+| `supa-admonition-tip-accent` | Tip / Success admonition and `.theme-success` accent color. |
+| `supa-admonition-important-accent` | Important / Accent admonition and `.theme-accent` accent color. |
+| `supa-admonition-warning-accent` | Warning admonition and `.theme-warning` accent color. |
+| `supa-admonition-caution-accent` | Caution / Danger admonition and `.theme-danger` accent color. |
+
+## Velocity Helper Macros Reference (`site-macros.vm`)
+
+When authoring Velocity-preprocessed pages (`.md.vm`, `.apt.vm`, `.xhtml.vm`), include `#parse( "META-INF/maven/site-macros.vm" )` to use the following helper macros:
+
+| Macro Signature | Parameters | Description |
+| :--- | :--- | :--- |
+| `#bi( $name $extraClasses $ariaLabel )` | `$name`: Icon slug (`"rocket-takeoff"`)<br>`$extraClasses`: Optional utilities (`"text-primary fs-5"`)<br>`$ariaLabel`: Optional accessible label | Renders `<i class="bi bi-$name ..."></i>` with `aria-hidden="true"` when `$ariaLabel` is omitted, or `role="img" aria-label="..."` when `$ariaLabel` is provided. |
+| `#bsAlert( $theme $title $body $dismissible )` | `$theme`: Semantic theme (`"primary"`, `"success"`, etc.)<br>`$title`: Optional heading string<br>`$body`: Alert HTML/text body<br>`$dismissible`: `true` or `false` | Renders an isolated `.alert.theme-$theme.not-prose` banner with an optional `.btn-close` dismiss button. |
+| `#bsBadge( $theme $variant $text )` | `$theme`: Semantic theme (`"primary"`, `"info"`, etc.)<br>`$variant`: `""` (solid), `"subtle"`, or `"outline"`<br>`$text`: Badge label text | Renders an inline `<span class="badge ... theme-$theme not-prose">`. |
+| `#bsCard( $title $subtitle $body $footer )` | `$title`: Card heading<br>`$subtitle`: Optional subtitle<br>`$body`: Card body HTML/text<br>`$footer`: Optional card footer HTML/text | Renders a Bootstrap 6 `.card.not-prose` container. |

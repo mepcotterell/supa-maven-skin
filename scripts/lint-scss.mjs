@@ -158,7 +158,7 @@ if (compiledCss) {
       'modus-deuteranopia',
       'modus-tritanopia'
     ]) {
-      const selectorToken = `[data-furo-palette="${paletteId}"]`;
+      const selectorToken = `[data-supa-palette="${paletteId}"]`;
       if (rule.selector.includes(selectorToken)) {
         if (!paletteTokens.has(paletteId)) {
           paletteTokens.set(paletteId, new Map());
@@ -169,7 +169,7 @@ if (compiledCss) {
             const parsed = parseLightDarkHex(node.value);
             if (parsed) {
               map.set(node.prop, parsed);
-            } else if (node.prop === '--furo-wcag-level') {
+            } else if (node.prop === '--supa-wcag-level') {
               map.set(node.prop, node.value.replace(/["']/g, '').trim());
             }
           }
@@ -184,15 +184,15 @@ if (compiledCss) {
     '--color-foreground-muted',
     '--color-brand-primary',
     '--color-brand-content',
-    '--furo-admonition-note-accent',
-    '--furo-admonition-tip-accent',
-    '--furo-admonition-important-accent',
-    '--furo-admonition-warning-accent',
-    '--furo-admonition-caution-accent'
+    '--supa-admonition-note-accent',
+    '--supa-admonition-tip-accent',
+    '--supa-admonition-important-accent',
+    '--supa-admonition-warning-accent',
+    '--supa-admonition-caution-accent'
   ];
 
   for (const [paletteId, tokens] of paletteTokens.entries()) {
-    const wcagLevel = tokens.get('--furo-wcag-level') || 'AA';
+    const wcagLevel = tokens.get('--supa-wcag-level') || 'AA';
     const minTextContrast = wcagLevel === 'AAA' ? 7.0 : 4.5;
     const minBorderContrast = wcagLevel === 'AAA' ? 4.5 : 3.0;
 

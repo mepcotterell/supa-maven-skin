@@ -57,11 +57,11 @@
  | Rendered using Supa Maven Skin @project.version@ (Bootstrap 6.0.0-alpha.1)
 -->
 <html lang="$locale.language"
-      data-furo-default-theme="$esc.html( $defaultTheme )"
-      data-furo-default-palette="$esc.html( $colorScheme )"
-      data-furo-palette="$esc.html( $colorScheme )"
-      data-furo-project-version="#if( $project && $project.version )$esc.html( $project.version )#else 0.1.0#end"
-      data-furo-relative-path="$relativePath">
+      data-supa-default-theme="$esc.html( $defaultTheme )"
+      data-supa-default-palette="$esc.html( $colorScheme )"
+      data-supa-palette="$esc.html( $colorScheme )"
+      data-supa-project-version="#if( $project && $project.version )$esc.html( $project.version )#else 0.1.0#end"
+      data-supa-relative-path="$relativePath">
   <head>
     <meta charset="${outputEncoding}" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -74,14 +74,14 @@
 #end
     <title>$esc.html( $title )</title>
 
-    <!-- Early Theme & Palette Initialization (Prevents FOUC with Bootstrap 6 color-scheme & data-furo-palette) -->
+    <!-- Early Theme & Palette Initialization (Prevents FOUC with Bootstrap 6 color-scheme & data-supa-palette) -->
     <script>
       (function () {
         var root = document.documentElement;
-        var themeKey = 'furo-theme';
-        var paletteKey = 'furo-palette';
-        var defaultMode = root.getAttribute('data-furo-default-theme') || 'auto';
-        var defaultPalette = root.getAttribute('data-furo-default-palette') || 'furo';
+        var themeKey = 'supa-theme';
+        var paletteKey = 'supa-palette';
+        var defaultMode = root.getAttribute('data-supa-default-theme') || 'auto';
+        var defaultPalette = root.getAttribute('data-supa-default-palette') || 'furo';
         var storedMode = null;
         var storedPalette = null;
         try {
@@ -91,14 +91,14 @@
         var mode = (storedMode === 'light' || storedMode === 'dark' || storedMode === 'auto')
           ? storedMode
           : defaultMode;
-        root.setAttribute('data-furo-theme-mode', mode);
+        root.setAttribute('data-supa-theme-mode', mode);
         if (mode === 'light' || mode === 'dark') {
           root.setAttribute('data-bs-theme', mode);
-          root.setAttribute('data-furo-resolved-theme', mode);
+          root.setAttribute('data-supa-resolved-theme', mode);
         } else {
           root.removeAttribute('data-bs-theme');
           var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-          root.setAttribute('data-furo-resolved-theme', prefersDark ? 'dark' : 'light');
+          root.setAttribute('data-supa-resolved-theme', prefersDark ? 'dark' : 'light');
         }
         var validPalettes = {
           'furo': true,
@@ -109,9 +109,9 @@
           'modus-tritanopia': true
         };
         var palette = (storedPalette && validPalettes[storedPalette]) ? storedPalette : defaultPalette;
-        root.setAttribute('data-furo-palette', palette);
+        root.setAttribute('data-supa-palette', palette);
         if (storedPalette && validPalettes[storedPalette]) {
-          root.setAttribute('data-furo-palette-locked', 'true');
+          root.setAttribute('data-supa-palette-locked', 'true');
         }
       })();
     </script>
@@ -123,22 +123,22 @@
 #set( $lightVars = $site.getCustomChild( "${skinCfg}.lightCssVariables" ) )
 #set( $darkVars = $site.getCustomChild( "${skinCfg}.darkCssVariables" ) )
 #if( ( $lightVars && $lightVars.getChildren().size() > 0 ) || ( $darkVars && $darkVars.getChildren().size() > 0 ) )
-    <style id="furo-custom-css-variables">
+    <style id="supa-custom-css-variables">
 #if( $lightVars && $lightVars.getChildren().size() > 0 )
-      html:root, html[data-bs-theme="light"], html[data-furo-palette] {
+      html:root, html[data-bs-theme="light"], html[data-supa-palette] {
 #foreach( $child in $lightVars.getChildren() )
         --$child.getName(): $child.getValue();
 #end
       }
 #end
 #if( $darkVars && $darkVars.getChildren().size() > 0 )
-      html[data-bs-theme="dark"], html[data-furo-palette][data-bs-theme="dark"] {
+      html[data-bs-theme="dark"], html[data-supa-palette][data-bs-theme="dark"] {
 #foreach( $child in $darkVars.getChildren() )
         --$child.getName(): $child.getValue();
 #end
       }
       @media (prefers-color-scheme: dark) {
-        html:root:not([data-bs-theme="light"]), html[data-furo-palette]:not([data-bs-theme="light"]) {
+        html:root:not([data-bs-theme="light"]), html[data-supa-palette]:not([data-bs-theme="light"]) {
 #foreach( $child in $darkVars.getChildren() )
           --$child.getName(): $child.getValue();
 #end
@@ -154,39 +154,39 @@
     $headContent
 #end
   </head>
-  <body class="furo-body"
-        data-furo-toc="$tocSidebar"
-        data-furo-toc-max-depth="$tocMaxDepth"
-        data-furo-copy-code="$copyCodeBtn"
-        data-furo-syntax-highlight="$syntaxHighlighting"
-        data-furo-permalinks="$headingPermalinks"
-        data-furo-permalink-symbol="$esc.html( $permalinkSymbol )"
-        data-furo-search="$enableSearch"
-        data-furo-mermaid="$esc.html( $mermaidMode )"
-        data-furo-mermaid-url="$esc.html( $mermaidCdnUrl )"
-        data-furo-katex="$esc.html( $katexMode )"
-        data-furo-katex-css-url="$esc.html( $katexCssCdnUrl )"
-        data-furo-katex-js-url="$esc.html( $katexJsCdnUrl )">
+  <body class="supa-body"
+        data-supa-toc="$tocSidebar"
+        data-supa-toc-max-depth="$tocMaxDepth"
+        data-supa-copy-code="$copyCodeBtn"
+        data-supa-syntax-highlight="$syntaxHighlighting"
+        data-supa-permalinks="$headingPermalinks"
+        data-supa-permalink-symbol="$esc.html( $permalinkSymbol )"
+        data-supa-search="$enableSearch"
+        data-supa-mermaid="$esc.html( $mermaidMode )"
+        data-supa-mermaid-url="$esc.html( $mermaidCdnUrl )"
+        data-supa-katex="$esc.html( $katexMode )"
+        data-supa-katex-css-url="$esc.html( $katexCssCdnUrl )"
+        data-supa-katex-js-url="$esc.html( $katexJsCdnUrl )">
 
-    <a class="furo-skip-link visually-hidden-focusable" href="#furo-main-content">Skip to content</a>
+    <a class="supa-skip-link visually-hidden-focusable" href="#supa-main-content">Skip to content</a>
 
 #if( $announcement && $announcement != "" )
     <!-- Optional Top Announcement Banner -->
-    <div class="furo-announcement" role="region" aria-label="Announcement">
-      <div class="furo-announcement-content">$announcement</div>
+    <div class="supa-announcement" role="region" aria-label="Announcement">
+      <div class="supa-announcement-content">$announcement</div>
     </div>
 #end
 
     <!-- Mobile / Tablet Sticky Header Bar (< lg) -->
-    <header class="furo-mobile-header lg:d-none">
-      <div class="furo-mobile-header-left">
+    <header class="supa-mobile-header lg:d-none">
+      <div class="supa-mobile-header-left">
         <button type="button"
-                class="furo-icon-btn"
+                class="supa-icon-btn"
                 data-bs-toggle="drawer"
-                data-bs-target="#furoSidebarDrawer"
+                data-bs-target="#supaSidebarDrawer"
                 data-bs-placement="bottom"
                 data-bs-title="Toggle navigation sidebar"
-                aria-controls="furoSidebarDrawer"
+                aria-controls="supaSidebarDrawer"
                 aria-label="Toggle navigation sidebar">
           <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <line x1="3" y1="6" x2="21" y2="6"></line>
@@ -195,8 +195,8 @@
           </svg>
         </button>
       </div>
-      <div class="furo-mobile-header-center">
-        <a class="furo-mobile-brand" href="$relativePath/index.html">
+      <div class="supa-mobile-header-center">
+        <a class="supa-mobile-brand" href="$relativePath/index.html">
 #if( $site.name )
           $esc.html( $site.name )
 #elseif( $project && $project.name )
@@ -206,16 +206,16 @@
 #end
         </a>
       </div>
-      <div class="furo-mobile-header-right">
+      <div class="supa-mobile-header-right">
 #if( $colorSchemeSelector )
-#furoPalettePicker( "" "bottom-end" )
+#supaPalettePicker( "" "bottom-end" )
 #end
-#furoThemeToggle( "" "bottom-end" )
+#supaThemeToggle( "" "bottom-end" )
 #if( $enableSearch )
         <button type="button"
-                class="furo-icon-btn"
+                class="supa-icon-btn"
                 data-bs-toggle="dialog"
-                data-bs-target="#furoSearchDialog"
+                data-bs-target="#supaSearchDialog"
                 data-bs-placement="bottom"
                 data-bs-title="Search documentation"
                 aria-label="Search documentation">
@@ -224,12 +224,12 @@
 #end
 #if( $tocSidebar )
         <button type="button"
-                class="furo-icon-btn furo-toc-drawer-trigger"
+                class="supa-icon-btn supa-toc-drawer-trigger"
                 data-bs-toggle="drawer"
-                data-bs-target="#furoTocDrawer"
+                data-bs-target="#supaTocDrawer"
                 data-bs-placement="bottom"
                 data-bs-title="$esc.html( $tocTitle )"
-                aria-controls="furoTocDrawer"
+                aria-controls="supaTocDrawer"
                 aria-label="Toggle table of contents">
           <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <line x1="3" y1="6" x2="21" y2="6"></line>
@@ -242,51 +242,51 @@
     </header>
 
     <!-- Main 3-Column Furo Page Grid -->
-    <div class="furo-page">
+    <div class="supa-page">
       <!-- 1. Left Navigation Sidebar (Inline on lg+, Bootstrap 6 Left Drawer below lg) -->
-      <aside class="furo-sidebar-column" aria-label="Primary navigation">
-        <dialog class="lg:drawer drawer-start furo-sidebar-drawer"
-                id="furoSidebarDrawer"
+      <aside class="supa-sidebar-column" aria-label="Primary navigation">
+        <dialog class="lg:drawer drawer-start supa-sidebar-drawer"
+                id="supaSidebarDrawer"
                 data-bs-scroll="$esc.html( $sidebarDrawerScroll )"
                 data-bs-backdrop="$esc.html( $sidebarDrawerBackdrop )"
                 tabindex="-1"
-                aria-labelledby="furoSidebarBrandText">
-          <div class="drawer-header lg:d-none furo-drawer-header">
+                aria-labelledby="supaSidebarBrandText">
+          <div class="drawer-header lg:d-none supa-drawer-header">
             <span class="drawer-title fw-semibold">Navigation</span>
             <button type="button" class="btn-close" data-bs-dismiss="drawer" aria-label="Close navigation"></button>
           </div>
 
-          <div class="drawer-body furo-sidebar-container">
+          <div class="drawer-body supa-sidebar-container">
             <!-- Brand / Logo Area -->
 #set( $brandHref = "$relativePath/index.html" )
 #if( $site.bannerLeft && $site.bannerLeft.href )
-#furoResolveHref( $site.bannerLeft.href )
+#supaResolveHref( $site.bannerLeft.href )
 #set( $brandHref = $resolvedHref )
 #end
-            <a class="furo-sidebar-brand" href="$brandHref">
+            <a class="supa-sidebar-brand" href="$brandHref">
 #if( $lightLogo != "" && $darkLogo != "" )
-#furoResolveHref( $lightLogo )
+#supaResolveHref( $lightLogo )
 #set( $lightLogoUrl = $resolvedHref )
-#furoResolveHref( $darkLogo )
+#supaResolveHref( $darkLogo )
 #set( $darkLogoUrl = $resolvedHref )
-              <div class="furo-sidebar-logo-container">
-                <img class="furo-sidebar-logo only-light" src="$lightLogoUrl" alt="Light Logo" />
-                <img class="furo-sidebar-logo only-dark" src="$darkLogoUrl" alt="Dark Logo" />
+              <div class="supa-sidebar-logo-container">
+                <img class="supa-sidebar-logo only-light" src="$lightLogoUrl" alt="Light Logo" />
+                <img class="supa-sidebar-logo only-dark" src="$darkLogoUrl" alt="Dark Logo" />
               </div>
 #elseif( $lightLogo != "" )
-#furoResolveHref( $lightLogo )
-              <div class="furo-sidebar-logo-container">
-                <img class="furo-sidebar-logo" src="$resolvedHref" alt="Logo" />
+#supaResolveHref( $lightLogo )
+              <div class="supa-sidebar-logo-container">
+                <img class="supa-sidebar-logo" src="$resolvedHref" alt="Logo" />
               </div>
 #elseif( $site.bannerLeft && $site.bannerLeft.image && $site.bannerLeft.image.src )
-#furoResolveHref( $site.bannerLeft.image.src )
-              <div class="furo-sidebar-logo-container">
-                <img class="furo-sidebar-logo" src="$resolvedHref" alt="#if( $site.bannerLeft.name )$esc.html( $site.bannerLeft.name )#else Logo#end" />
+#supaResolveHref( $site.bannerLeft.image.src )
+              <div class="supa-sidebar-logo-container">
+                <img class="supa-sidebar-logo" src="$resolvedHref" alt="#if( $site.bannerLeft.name )$esc.html( $site.bannerLeft.name )#else Logo#end" />
               </div>
 #end
 #if( !$sidebarHideName )
-              <div class="furo-brand-meta">
-                <span class="furo-brand-text" id="furoSidebarBrandText">
+              <div class="supa-brand-meta">
+                <span class="supa-brand-text" id="supaSidebarBrandText">
 #if( $site.bannerLeft && $site.bannerLeft.name )
                   $esc.html( $site.bannerLeft.name )
 #elseif( $site.name )
@@ -298,7 +298,7 @@
 #end
                 </span>
 #if( $project && $project.version && $footerVersion )
-                <span class="furo-version-badge badge theme-secondary">$esc.html( $project.version )</span>
+                <span class="supa-version-badge badge theme-secondary">$esc.html( $project.version )</span>
 #end
               </div>
 #end
@@ -306,36 +306,36 @@
 
 #if( $enableSearch )
             <!-- Sidebar Search Trigger -->
-            <div class="furo-sidebar-search">
+            <div class="supa-sidebar-search">
               <button type="button"
-                      class="furo-search-trigger"
+                      class="supa-search-trigger"
                       data-bs-toggle="dialog"
-                      data-bs-target="#furoSearchDialog"
+                      data-bs-target="#supaSearchDialog"
                       aria-label="Search documentation (Press / or Command+K)">
-                <svg class="furo-search-trigger-icon" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <svg class="supa-search-trigger-icon" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                   <circle cx="11" cy="11" r="8"></circle>
                   <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                 </svg>
-                <span class="furo-search-trigger-placeholder">Search</span>
-                <kbd class="furo-search-kbd" aria-hidden="true">&#x2318;K</kbd>
+                <span class="supa-search-trigger-placeholder">Search</span>
+                <kbd class="supa-search-kbd" aria-hidden="true">&#x2318;K</kbd>
               </button>
             </div>
 #end
 
             <!-- Hierarchical Site Navigation Tree -->
-            <nav class="furo-sidebar-tree" aria-label="Site navigation">
-#furoSidebarMenus( $site.body.menus $sidebarCollapseDepth )
+            <nav class="supa-sidebar-tree" aria-label="Site navigation">
+#supaSidebarMenus( $site.body.menus $sidebarCollapseDepth )
             </nav>
 
             <!-- Mobile / Tablet Drawer Appearance Footer (< lg) -->
-            <div class="furo-sidebar-footer lg:d-none">
-              <div class="furo-sidebar-footer-group">
-                <span class="furo-sidebar-footer-label">Appearance</span>
-                <div class="furo-sidebar-footer-controls">
+            <div class="supa-sidebar-footer lg:d-none">
+              <div class="supa-sidebar-footer-group">
+                <span class="supa-sidebar-footer-label">Appearance</span>
+                <div class="supa-sidebar-footer-controls">
 #if( $colorSchemeSelector )
-#furoPalettePicker( "" "top-start" )
+#supaPalettePicker( "" "top-start" )
 #end
-#furoThemeToggle( "" "top-end" )
+#supaThemeToggle( "" "top-end" )
                 </div>
               </div>
             </div>
@@ -344,15 +344,15 @@
       </aside>
 
       <!-- 2. Center Main Content Area -->
-      <div class="furo-main">
-        <div class="furo-content">
-          <div class="furo-article-container">
+      <div class="supa-main">
+        <div class="supa-content">
+          <div class="supa-article-container">
             <!-- Top Content Utility Bar (Breadcrumbs, Source Links, Palette Picker, Theme Toggle, Tablet TOC Button) -->
-            <div class="furo-content-header not-prose">
-              <div class="furo-header-left">
+            <div class="supa-content-header not-prose">
+              <div class="supa-header-left">
 #if( $showBreadcrumb )
-                <nav aria-label="Breadcrumb" class="furo-breadcrumb-nav">
-                  <ol class="breadcrumb mb-0 furo-breadcrumb">
+                <nav aria-label="Breadcrumb" class="supa-breadcrumb-nav">
+                  <ol class="breadcrumb mb-0 supa-breadcrumb">
                     <li class="breadcrumb-item">
                       <a href="$relativePath/index.html">#if( $site.name )$esc.html( $site.name )#elseif( $project && $project.name )$esc.html( $project.name )#else Home#end</a>
                     </li>
@@ -377,7 +377,7 @@
 #end
               </div>
 
-              <div class="furo-header-right">
+              <div class="supa-header-right">
 #if( $sourceRepo && $sourceRepo != "" && $docRenderingContext && $docRenderingContext.doxiaSource )
 #set( $doxiaPath = $docRenderingContext.doxiaSourcePath.replace( '\\', '/' ) )
 #if( $sourceDir != "" && !$doxiaPath.startsWith( $sourceDir ) )
@@ -386,7 +386,7 @@
 #set( $repoFilePath = $doxiaPath )
 #end
 #if( $sourceViewBtn )
-                <a class="furo-icon-btn"
+                <a class="supa-icon-btn"
                    href="${sourceRepo}/blob/${sourceBranch}/${repoFilePath}"
                    target="_blank"
                    rel="noopener noreferrer"
@@ -398,7 +398,7 @@
                 </a>
 #end
 #if( $sourceEditBtn )
-                <a class="furo-icon-btn"
+                <a class="supa-icon-btn"
                    href="${sourceRepo}/edit/${sourceBranch}/${repoFilePath}"
                    target="_blank"
                    rel="noopener noreferrer"
@@ -411,17 +411,17 @@
 #end
 #end
 #if( $colorSchemeSelector )
-#furoPalettePicker( "d-none lg:d-inline-flex" "bottom-end" )
+#supaPalettePicker( "d-none lg:d-inline-flex" "bottom-end" )
 #end
-#furoThemeToggle( "d-none lg:d-inline-flex" "bottom-end" )
+#supaThemeToggle( "d-none lg:d-inline-flex" "bottom-end" )
 #if( $tocSidebar )
                 <button type="button"
-                        class="furo-icon-btn furo-toc-drawer-trigger d-none lg:d-inline-flex xl:d-none"
+                        class="supa-icon-btn supa-toc-drawer-trigger d-none lg:d-inline-flex xl:d-none"
                         data-bs-toggle="drawer"
-                        data-bs-target="#furoTocDrawer"
+                        data-bs-target="#supaTocDrawer"
                         data-bs-placement="bottom"
                         data-bs-title="$esc.html( $tocTitle )"
-                        aria-controls="furoTocDrawer"
+                        aria-controls="supaTocDrawer"
                         aria-label="Toggle table of contents">
                   <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                     <line x1="3" y1="6" x2="21" y2="6"></line>
@@ -434,48 +434,48 @@
             </div>
 
             <!-- Main Article Prose Content -->
-            <main id="furo-main-content" class="furo-article prose" role="main">
+            <main id="supa-main-content" class="supa-article prose" role="main">
               $bodyContent
             </main>
 
 #if( $prevNextBtns )
             <!-- Previous / Next Page Navigation Cards -->
-#furoPrevNextNavigation( $site.body.menus )
+#supaPrevNextNavigation( $site.body.menus )
 #end
 
             <!-- Page Footer -->
-            <footer class="furo-footer not-prose">
-              <div class="furo-footer-meta">
-                <div class="furo-footer-left">
+            <footer class="supa-footer not-prose">
+              <div class="supa-footer-meta">
+                <div class="supa-footer-left">
 #if( $site.body.footer )
-                  <div class="furo-custom-footer">$render.eval( $site.body.footer )</div>
+                  <div class="supa-custom-footer">$render.eval( $site.body.footer )</div>
 #else
-                  <div class="furo-copyright">
-                    Copyright &#169; #furoCopyright().
+                  <div class="supa-copyright">
+                    Copyright &#169; #supaCopyright().
                   </div>
 #end
-                  <div class="furo-built-with">
+                  <div class="supa-built-with">
                     Built with <a href="https://maven.apache.org/plugins/maven-site-plugin/">Maven Site</a> and <a href="https://github.com/mepcotterell/supa-maven-skin">Supa Maven Skin</a> (Bootstrap 6).
 #if( $footerTimestamp )
 #if( $date )
-                    <span class="furo-last-updated">Last updated on $date.get( 'yyyy-MM-dd' ).</span>
+                    <span class="supa-last-updated">Last updated on $date.get( 'yyyy-MM-dd' ).</span>
 #elseif( $dateFormat && $currentDate )
-                    <span class="furo-last-updated">Last updated on $dateFormat.format( $currentDate ).</span>
+                    <span class="supa-last-updated">Last updated on $dateFormat.format( $currentDate ).</span>
 #end
 #end
                   </div>
                 </div>
 
 #set( $navIcons = $site.getCustomChild( "${skinCfg}.navIcons" ) )
-                <div class="furo-footer-right">
+                <div class="supa-footer-right">
 #if( $navIcons && $navIcons.getChildren().size() > 0 )
-                  <div class="furo-footer-icons">
+                  <div class="supa-footer-icons">
 #foreach( $iconNode in $navIcons.getChildren() )
 #set( $iconHref = $iconNode.getChild( 'href' ).getValue() )
 #set( $iconTitle = $iconNode.getChild( 'title' ).getValue() )
 #set( $iconHtml = $iconNode.getChild( 'html' ).getValue() )
 #if( $iconHref )
-                    <a class="furo-footer-icon-link" href="$iconHref"#if( $iconTitle ) data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="$esc.html( $iconTitle )" aria-label="$esc.html( $iconTitle )"#end target="_blank" rel="noopener noreferrer">
+                    <a class="supa-footer-icon-link" href="$iconHref"#if( $iconTitle ) data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="$esc.html( $iconTitle )" aria-label="$esc.html( $iconTitle )"#end target="_blank" rel="noopener noreferrer">
 #if( $iconHtml )
                       $iconHtml
 #elseif( $iconTitle )
@@ -494,19 +494,19 @@
 
 #if( $tocSidebar )
         <!-- 3. Right Table of Contents Sidebar ("On this page" — Inline on xl+, Bootstrap 6 Right Drawer below xl) -->
-        <aside class="furo-toc-column" aria-label="On this page">
-          <dialog class="xl:drawer drawer-end furo-toc-drawer"
-                  id="furoTocDrawer"
+        <aside class="supa-toc-column" aria-label="On this page">
+          <dialog class="xl:drawer drawer-end supa-toc-drawer"
+                  id="supaTocDrawer"
                   data-bs-scroll="$esc.html( $tocDrawerScroll )"
                   data-bs-backdrop="$esc.html( $tocDrawerBackdrop )"
                   tabindex="-1"
-                  aria-labelledby="furoTocDrawerTitle">
-            <div class="drawer-header xl:d-none furo-drawer-header">
-              <span class="drawer-title fw-semibold" id="furoTocDrawerTitle">$esc.html( $tocTitle )</span>
+                  aria-labelledby="supaTocDrawerTitle">
+            <div class="drawer-header xl:d-none supa-drawer-header">
+              <span class="drawer-title fw-semibold" id="supaTocDrawerTitle">$esc.html( $tocTitle )</span>
               <button type="button" class="btn-close" data-bs-dismiss="drawer" aria-label="Close table of contents"></button>
             </div>
-            <div class="drawer-body furo-toc-container">
-              <div class="furo-toc-title">
+            <div class="drawer-body supa-toc-container">
+              <div class="supa-toc-title">
                 <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                   <line x1="3" y1="6" x2="21" y2="6"></line>
                   <line x1="9" y1="12" x2="21" y2="12"></line>
@@ -514,8 +514,8 @@
                 </svg>
                 <span>$esc.html( $tocTitle )</span>
               </div>
-              <div class="furo-toc-scroll">
-                <nav id="furoTocNav" class="nav flex-column furo-toc-nav" aria-label="$esc.html( $tocTitle )">
+              <div class="supa-toc-scroll">
+                <nav id="supaTocNav" class="nav flex-column supa-toc-nav" aria-label="$esc.html( $tocTitle )">
                   <!-- Populated dynamically from article headings + Bootstrap 6 ScrollSpy -->
                 </nav>
               </div>
@@ -528,32 +528,32 @@
 
 #if( $enableSearch )
     <!-- Native Bootstrap 6 Search Dialog (<dialog class="dialog">) -->
-    <dialog class="dialog furo-search-dialog" id="furoSearchDialog" aria-labelledby="furoSearchDialogTitle">
-      <div class="dialog-header furo-search-dialog-header">
-        <div class="furo-search-input-wrapper">
-          <svg class="furo-search-modal-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <dialog class="dialog supa-search-dialog" id="supaSearchDialog" aria-labelledby="supaSearchDialogTitle">
+      <div class="dialog-header supa-search-dialog-header">
+        <div class="supa-search-input-wrapper">
+          <svg class="supa-search-modal-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <circle cx="11" cy="11" r="8"></circle>
             <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
           </svg>
           <input type="search"
-                 id="furoSearchInput"
-                 class="furo-search-input"
+                 id="supaSearchInput"
+                 class="supa-search-input"
                  placeholder="Search documentation..."
                  autocomplete="off"
                  aria-label="Search documentation" />
         </div>
         <button type="button" class="btn-close" data-bs-dismiss="dialog" aria-label="Close search"></button>
       </div>
-      <div class="dialog-body furo-search-dialog-body">
-        <div id="furoSearchStatus" class="furo-search-status" aria-live="polite">
+      <div class="dialog-body supa-search-dialog-body">
+        <div id="supaSearchStatus" class="supa-search-status" aria-live="polite">
           Type to search navigation, headings, and site pages.
         </div>
-        <div id="furoSearchResults" class="furo-search-results" role="listbox" aria-label="Search results"></div>
+        <div id="supaSearchResults" class="supa-search-results" role="listbox" aria-label="Search results"></div>
       </div>
-      <div class="dialog-footer furo-search-dialog-footer">
-        <span class="furo-search-hint"><kbd>&#x2191;</kbd> <kbd>&#x2193;</kbd> to navigate</span>
-        <span class="furo-search-hint"><kbd>&#x21B5;</kbd> to select</span>
-        <span class="furo-search-hint"><kbd>Esc</kbd> to close</span>
+      <div class="dialog-footer supa-search-dialog-footer">
+        <span class="supa-search-hint"><kbd>&#x2191;</kbd> <kbd>&#x2193;</kbd> to navigate</span>
+        <span class="supa-search-hint"><kbd>&#x21B5;</kbd> to select</span>
+        <span class="supa-search-hint"><kbd>Esc</kbd> to close</span>
       </div>
     </dialog>
 #end

@@ -105,8 +105,8 @@ export function highlightCodeElement(codeEl: HTMLElement, lang?: string): void {
   });
   if (lang) {
     codeEl.classList.add(`language-${lang}`);
-    const wrapper = codeEl.closest('.furo-code-block');
-    const langBadge = wrapper?.querySelector<HTMLElement>('.furo-code-lang');
+    const wrapper = codeEl.closest('.supa-code-block');
+    const langBadge = wrapper?.querySelector<HTMLElement>('.supa-code-lang');
     if (langBadge) {
       langBadge.textContent = LANGUAGE_LABELS[lang] || lang;
     }
@@ -185,9 +185,9 @@ export function enhanceCodeBlocks(
     }
 
     let wrapper = pre.parentElement;
-    if (!wrapper || !wrapper.classList.contains('furo-code-block')) {
+    if (!wrapper || !wrapper.classList.contains('supa-code-block')) {
       wrapper = document.createElement('div');
-      wrapper.className = 'furo-code-block not-prose';
+      wrapper.className = 'supa-code-block not-prose';
       pre.parentNode?.insertBefore(wrapper, pre);
       wrapper.appendChild(pre);
     }
@@ -208,23 +208,23 @@ export function enhanceCodeBlocks(
     pre.removeAttribute('title');
     codeEl?.removeAttribute('title');
 
-    if (blockTitle && !wrapper.querySelector('.furo-code-header')) {
+    if (blockTitle && !wrapper.querySelector('.supa-code-header')) {
       const header = document.createElement('div');
-      header.className = 'furo-code-header';
+      header.className = 'supa-code-header';
       const titleSpan = document.createElement('span');
-      titleSpan.className = 'furo-code-title';
+      titleSpan.className = 'supa-code-title';
       titleSpan.textContent = blockTitle;
       header.appendChild(titleSpan);
       if (langLabel) {
         const badge = document.createElement('span');
-        badge.className = 'furo-code-header-lang';
+        badge.className = 'supa-code-header-lang';
         badge.textContent = langLabel;
         header.appendChild(badge);
       }
       wrapper.insertBefore(header, pre);
-    } else if (langLabel && !wrapper.querySelector('.furo-code-lang')) {
+    } else if (langLabel && !wrapper.querySelector('.supa-code-lang')) {
       const langBadge = document.createElement('span');
-      langBadge.className = 'furo-code-lang';
+      langBadge.className = 'supa-code-lang';
       langBadge.setAttribute('aria-hidden', 'true');
       langBadge.textContent = langLabel;
       wrapper.appendChild(langBadge);
@@ -256,15 +256,15 @@ export function enhanceCodeBlocks(
       const lines = target.innerHTML.replace(/\n$/, '').split('\n');
       if (lines.length > 1) {
         target.innerHTML = lines
-          .map((line, i) => `<span class="furo-code-line" data-line="${i + 1}">${line || ' '}</span>`)
+          .map((line, i) => `<span class="supa-code-line" data-line="${i + 1}">${line || ' '}</span>`)
           .join('\n');
       }
     }
 
-    if (enableCopyButton && !wrapper.querySelector('.furo-copy-btn')) {
+    if (enableCopyButton && !wrapper.querySelector('.supa-copy-btn')) {
       const btn = document.createElement('button');
       btn.type = 'button';
-      btn.className = 'furo-copy-btn';
+      btn.className = 'supa-copy-btn';
       btn.setAttribute('aria-label', 'Copy code to clipboard');
       setTooltipTitle(btn, 'Copy code', 'left');
       btn.innerHTML = COPY_ICON_SVG;
@@ -296,12 +296,12 @@ export function enhanceCodeBlocks(
 }
 
 export function initCodeBlocks(): void {
-  const article = document.getElementById('furo-main-content');
+  const article = document.getElementById('supa-main-content');
   if (!article) {
     return;
   }
   const body = document.body;
-  const enableHighlight = body.getAttribute('data-furo-syntax-highlight') !== 'false';
-  const enableCopy = body.getAttribute('data-furo-copy-code') !== 'false';
+  const enableHighlight = body.getAttribute('data-supa-syntax-highlight') !== 'false';
+  const enableCopy = body.getAttribute('data-supa-copy-code') !== 'false';
   enhanceCodeBlocks(article, enableHighlight, enableCopy, false);
 }

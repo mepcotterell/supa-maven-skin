@@ -6,7 +6,7 @@ Apache Maven Doxia Site Renderer#if( $doxiaSiteRendererVersion ) $doxiaSiteRende
 #end
 ##
 ## Resolve a relative or external link against $relativePath
-#macro( furoResolveHref $href )
+#macro( supaResolveHref $href )
 #if( $href && ( $href == "/project-info.html" || $href == "/project-reports.html" ) )
 #set( $cleanHref = $href.substring( 1 ) )
 #set( $resolvedHref = "$relativePath/$cleanHref" )
@@ -20,7 +20,7 @@ Apache Maven Doxia Site Renderer#if( $doxiaSiteRendererVersion ) $doxiaSiteRende
 #end
 ##
 ## Normalize synthetic leading slash on Maven Site's /project-info.html and /project-reports.html
-#macro( furoMenuItemHref $href )
+#macro( supaMenuItemHref $href )
 #if( $href && ( $href == "/project-info.html" || $href == "/project-reports.html" ) )
 #set( $itemHref = "$relativePath/$href.substring( 1 )" )
 #set( $itemHref = $itemHref.replace( './', '' ) )
@@ -30,19 +30,19 @@ Apache Maven Doxia Site Renderer#if( $doxiaSiteRendererVersion ) $doxiaSiteRende
 #end
 ##
 ## Check if a menu item or any of its descendants is the current page
-#macro( furoHasActiveChild $menuItem )
+#macro( supaHasActiveChild $menuItem )
 #set( $hasActive = false )
-#furoMenuItemHref( $menuItem.href )
+#supaMenuItemHref( $menuItem.href )
 #if( $alignedFileName == $itemHref )
 #set( $hasActive = true )
 #elseif( $menuItem.items && $menuItem.items.size() > 0 )
 #foreach( $subItem in $menuItem.items )
-#furoMenuItemHref( $subItem.href )
+#supaMenuItemHref( $subItem.href )
 #if( $alignedFileName == $itemHref )
 #set( $hasActive = true )
 #elseif( $subItem.items && $subItem.items.size() > 0 )
 #foreach( $deepItem in $subItem.items )
-#furoMenuItemHref( $deepItem.href )
+#supaMenuItemHref( $deepItem.href )
 #if( $alignedFileName == $itemHref )
 #set( $hasActive = true )
 #end
@@ -53,55 +53,55 @@ Apache Maven Doxia Site Renderer#if( $doxiaSiteRendererVersion ) $doxiaSiteRende
 #end
 ##
 ## Render a single sidebar menu item (supports collapsible <details>/<summary> for nested items)
-#macro( furoSidebarMenuItem $item $depth $collapseDepth )
-#furoMenuItemHref( $item.href )
+#macro( supaSidebarMenuItem $item $depth $collapseDepth )
+#supaMenuItemHref( $item.href )
 #set( $currentItemHref = $itemHref )
 #set( $isCurrent = ( $alignedFileName == $currentItemHref ) )
-#furoHasActiveChild( $item )
+#supaHasActiveChild( $item )
 #set( $isBranchActive = $hasActive )
 #if( $item.items && $item.items.size() > 0 )
 #set( $shouldOpen = ( $isCurrent || $isBranchActive || !$item.collapse || $depth <= $collapseDepth ) )
-      <li class="furo-nav-item furo-nav-has-children#if( $isCurrent ) is-current#end#if( $isBranchActive ) is-active-branch#end" data-depth="$depth">
-        <details class="furo-nav-details"#if( $shouldOpen ) open="open"#end>
-          <summary class="furo-nav-summary">
+      <li class="supa-nav-item supa-nav-has-children#if( $isCurrent ) is-current#end#if( $isBranchActive ) is-active-branch#end" data-depth="$depth">
+        <details class="supa-nav-details"#if( $shouldOpen ) open="open"#end>
+          <summary class="supa-nav-summary">
 #if( $currentItemHref )
-            <a class="furo-nav-link#if( $isCurrent ) active#end" href="$currentItemHref"#if( $isCurrent ) aria-current="page"#end>$esc.html( $item.name )</a>
+            <a class="supa-nav-link#if( $isCurrent ) active#end" href="$currentItemHref"#if( $isCurrent ) aria-current="page"#end>$esc.html( $item.name )</a>
 #else
-            <span class="furo-nav-link furo-nav-label">$esc.html( $item.name )</span>
+            <span class="supa-nav-link supa-nav-label">$esc.html( $item.name )</span>
 #end
-            <span class="furo-nav-chevron" aria-hidden="true">
+            <span class="supa-nav-chevron" aria-hidden="true">
               <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
             </span>
           </summary>
-          <ul class="furo-nav-sublist list-unstyled">
+          <ul class="supa-nav-sublist list-unstyled">
 #set( $childDepth = $depth + 1 )
 #foreach( $child in $item.items )
-#furoSidebarMenuItem( $child $childDepth $collapseDepth )
+#supaSidebarMenuItem( $child $childDepth $collapseDepth )
 #end
 #set( $depth = $childDepth - 1 )
           </ul>
         </details>
       </li>
 #else
-      <li class="furo-nav-item#if( $isCurrent ) is-current#end" data-depth="$depth">
-        <a class="furo-nav-link#if( $isCurrent ) active#end" href="$currentItemHref"#if( $isCurrent ) aria-current="page"#end#if( $item.target ) target="$item.target"#end>
-          <span class="furo-nav-text">$esc.html( $item.name )</span>
+      <li class="supa-nav-item#if( $isCurrent ) is-current#end" data-depth="$depth">
+        <a class="supa-nav-link#if( $isCurrent ) active#end" href="$currentItemHref"#if( $isCurrent ) aria-current="page"#end#if( $item.target ) target="$item.target"#end>
+          <span class="supa-nav-text">$esc.html( $item.name )</span>
         </a>
       </li>
 #end
 #end
 ##
 ## Render all menus in the left sidebar
-#macro( furoSidebarMenus $menus $collapseDepth )
+#macro( supaSidebarMenus $menus $collapseDepth )
 #if( $menus && $menus.size() > 0 )
 #foreach( $menu in $menus )
-      <div class="furo-nav-group">
+      <div class="supa-nav-group">
 #if( $menu.name )
-        <div class="furo-nav-caption" role="heading" aria-level="2">$esc.html( $menu.name )</div>
+        <div class="supa-nav-caption" role="heading" aria-level="2">$esc.html( $menu.name )</div>
 #end
-        <ul class="furo-nav-list list-unstyled">
+        <ul class="supa-nav-list list-unstyled">
 #foreach( $item in $menu.items )
-#furoSidebarMenuItem( $item 1 $collapseDepth )
+#supaSidebarMenuItem( $item 1 $collapseDepth )
 #end
         </ul>
       </div>
@@ -110,32 +110,32 @@ Apache Maven Doxia Site Renderer#if( $doxiaSiteRendererVersion ) $doxiaSiteRende
 #end
 ##
 ## Flatten menu items into $flatNavItems to compute Previous / Next page links
-#macro( furoCollectNavItem $item $flatList )
-#furoMenuItemHref( $item.href )
+#macro( supaCollectNavItem $item $flatList )
+#supaMenuItemHref( $item.href )
 #if( $itemHref && !$itemHref.startsWith( "http://" ) && !$itemHref.startsWith( "https://" ) && !$itemHref.contains( "#" ) )
 #set( $_added = $flatList.add( $item ) )
 #end
 #if( $item.items && $item.items.size() > 0 )
 #foreach( $child in $item.items )
-#furoCollectNavItem( $child $flatList )
+#supaCollectNavItem( $child $flatList )
 #end
 #end
 #end
 ##
 ## Render Furo-styled Previous / Next navigation cards at bottom of article
-#macro( furoPrevNextNavigation $menus )
+#macro( supaPrevNextNavigation $menus )
 #set( $flatNavItems = [] )
 #if( $menus )
 #foreach( $menu in $menus )
 #foreach( $item in $menu.items )
-#furoCollectNavItem( $item $flatNavItems )
+#supaCollectNavItem( $item $flatNavItems )
 #end
 #end
 #end
 #set( $currentIndex = -1 )
 #set( $idx = 0 )
 #foreach( $navItem in $flatNavItems )
-#furoMenuItemHref( $navItem.href )
+#supaMenuItemHref( $navItem.href )
 #if( $currentIndex == -1 && $alignedFileName == $itemHref )
 #set( $currentIndex = $idx )
 #end
@@ -152,29 +152,29 @@ Apache Maven Doxia Site Renderer#if( $doxiaSiteRendererVersion ) $doxiaSiteRende
 #set( $nextItem = $flatNavItems.get( $nextIndex ) )
 #end
 #if( $prevItem || $nextItem )
-    <nav class="furo-related-pages not-prose" aria-label="Page navigation">
+    <nav class="supa-related-pages not-prose" aria-label="Page navigation">
 #if( $prevItem )
-#furoMenuItemHref( $prevItem.href )
-      <a class="furo-prev-page" href="$itemHref">
-        <svg class="furo-related-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"></polyline></svg>
-        <div class="furo-page-info">
-          <div class="furo-context">
+#supaMenuItemHref( $prevItem.href )
+      <a class="supa-prev-page" href="$itemHref">
+        <svg class="supa-related-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"></polyline></svg>
+        <div class="supa-page-info">
+          <div class="supa-context">
             <span>Previous</span>
           </div>
-          <div class="furo-title">$esc.html( $prevItem.name )</div>
+          <div class="supa-title">$esc.html( $prevItem.name )</div>
         </div>
       </a>
 #end
 #if( $nextItem )
-#furoMenuItemHref( $nextItem.href )
-      <a class="furo-next-page" href="$itemHref">
-        <div class="furo-page-info">
-          <div class="furo-context">
+#supaMenuItemHref( $nextItem.href )
+      <a class="supa-next-page" href="$itemHref">
+        <div class="supa-page-info">
+          <div class="supa-context">
             <span>Next</span>
           </div>
-          <div class="furo-title">$esc.html( $nextItem.name )</div>
+          <div class="supa-title">$esc.html( $nextItem.name )</div>
         </div>
-        <svg class="furo-related-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"></polyline></svg>
+        <svg class="supa-related-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"></polyline></svg>
       </a>
 #end
     </nav>
@@ -182,44 +182,44 @@ Apache Maven Doxia Site Renderer#if( $doxiaSiteRendererVersion ) $doxiaSiteRende
 #end
 ##
 ## Render Accessible Color Scheme Menu Picker (Bootstrap 6 .menu)
-#macro( furoPalettePicker $extraClasses $placement )
-        <div class="furo-palette-picker#if( $extraClasses && $extraClasses != '' ) $extraClasses#end">
+#macro( supaPalettePicker $extraClasses $placement )
+        <div class="supa-palette-picker#if( $extraClasses && $extraClasses != '' ) $extraClasses#end">
           <button type="button"
-                  class="furo-palette-btn"
+                  class="supa-palette-btn"
                   data-bs-toggle="menu"
                   data-bs-placement="#if( $placement && $placement != '' )$placement#else bottom-end#end"
                   data-bs-title="Select accessible color scheme (WCAG 2.2 AA / AAA)"
-                  data-furo-palette-trigger="true"
+                  data-supa-palette-trigger="true"
                   aria-expanded="false"
                   aria-label="Select accessible color scheme">
-            <span class="furo-palette-btn-label" data-furo-palette-label="true">Furo (AA)</span>
-            <svg class="furo-palette-picker-chevron" viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="4 6 8 10 12 6"></polyline></svg>
+            <span class="supa-palette-btn-label" data-supa-palette-label="true">Furo (AA)</span>
+            <svg class="supa-palette-picker-chevron" viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="4 6 8 10 12 6"></polyline></svg>
           </button>
-          <div class="menu furo-palette-menu" role="menu" aria-label="Accessible color schemes">
+          <div class="menu supa-palette-menu" role="menu" aria-label="Accessible color schemes">
             <h6 class="menu-header">WCAG 2.2 AA Standard</h6>
-            <button type="button" class="menu-item selected" role="menuitemradio" aria-checked="true" data-furo-palette-option="furo">
+            <button type="button" class="menu-item selected" role="menuitemradio" aria-checked="true" data-supa-palette-option="furo">
               <span class="menu-item-content">Furo (AA)</span>
               <svg class="menu-item-check" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="2.5 8.5 6.5 12.5 13.5 4.5"></polyline></svg>
             </button>
-            <button type="button" class="menu-item" role="menuitemradio" aria-checked="false" data-furo-palette-option="bootstrap">
+            <button type="button" class="menu-item" role="menuitemradio" aria-checked="false" data-supa-palette-option="bootstrap">
               <span class="menu-item-content">Bootstrap 6 (AA)</span>
               <svg class="menu-item-check" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="2.5 8.5 6.5 12.5 13.5 4.5"></polyline></svg>
             </button>
             <hr class="menu-divider" />
             <h6 class="menu-header">WCAG 2.2 AAA High Contrast</h6>
-            <button type="button" class="menu-item" role="menuitemradio" aria-checked="false" data-furo-palette-option="modus">
+            <button type="button" class="menu-item" role="menuitemradio" aria-checked="false" data-supa-palette-option="modus">
               <span class="menu-item-content">Modus (AAA)</span>
               <svg class="menu-item-check" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="2.5 8.5 6.5 12.5 13.5 4.5"></polyline></svg>
             </button>
-            <button type="button" class="menu-item" role="menuitemradio" aria-checked="false" data-furo-palette-option="modus-tinted">
+            <button type="button" class="menu-item" role="menuitemradio" aria-checked="false" data-supa-palette-option="modus-tinted">
               <span class="menu-item-content">Modus Tinted (AAA)</span>
               <svg class="menu-item-check" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="2.5 8.5 6.5 12.5 13.5 4.5"></polyline></svg>
             </button>
-            <button type="button" class="menu-item" role="menuitemradio" aria-checked="false" data-furo-palette-option="modus-deuteranopia">
+            <button type="button" class="menu-item" role="menuitemradio" aria-checked="false" data-supa-palette-option="modus-deuteranopia">
               <span class="menu-item-content">Modus Deuteranopia (AAA)</span>
               <svg class="menu-item-check" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="2.5 8.5 6.5 12.5 13.5 4.5"></polyline></svg>
             </button>
-            <button type="button" class="menu-item" role="menuitemradio" aria-checked="false" data-furo-palette-option="modus-tritanopia">
+            <button type="button" class="menu-item" role="menuitemradio" aria-checked="false" data-supa-palette-option="modus-tritanopia">
               <span class="menu-item-content">Modus Tritanopia (AAA)</span>
               <svg class="menu-item-check" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="2.5 8.5 6.5 12.5 13.5 4.5"></polyline></svg>
             </button>
@@ -228,32 +228,32 @@ Apache Maven Doxia Site Renderer#if( $doxiaSiteRendererVersion ) $doxiaSiteRende
 #end
 ##
 ## Render Theme Mode Menu Picker (Bootstrap 6 .menu with mutually exclusive Light / Dark / Auto choices)
-#macro( furoThemeToggle $extraClasses $placement )
-        <div class="furo-theme-toggle#if( $extraClasses && $extraClasses != '' ) $extraClasses#end">
+#macro( supaThemeToggle $extraClasses $placement )
+        <div class="supa-theme-toggle#if( $extraClasses && $extraClasses != '' ) $extraClasses#end">
           <button type="button"
-                  class="furo-icon-btn furo-theme-toggle-btn"
+                  class="supa-icon-btn supa-theme-toggle-btn"
                   data-bs-toggle="menu"
                   data-bs-placement="#if( $placement && $placement != '' )$placement#else bottom-end#end"
                   data-bs-title="Select color theme (Light / Dark / Auto)"
-                  data-furo-theme-trigger="true"
+                  data-supa-theme-trigger="true"
                   aria-expanded="false"
                   aria-label="Select color theme (Light / Dark / Auto)">
-            <svg class="furo-theme-icon furo-theme-icon-light" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
-            <svg class="furo-theme-icon furo-theme-icon-dark" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
-            <svg class="furo-theme-icon furo-theme-icon-auto" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 3v18a9 9 0 0 0 0-18z" fill="currentColor"></path></svg>
+            <svg class="supa-theme-icon supa-theme-icon-light" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+            <svg class="supa-theme-icon supa-theme-icon-dark" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+            <svg class="supa-theme-icon supa-theme-icon-auto" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 3v18a9 9 0 0 0 0-18z" fill="currentColor"></path></svg>
           </button>
-          <div class="menu furo-theme-menu" role="menu" aria-label="Color theme">
-            <button type="button" class="menu-item" role="menuitemradio" aria-checked="false" data-furo-theme-option="light">
+          <div class="menu supa-theme-menu" role="menu" aria-label="Color theme">
+            <button type="button" class="menu-item" role="menuitemradio" aria-checked="false" data-supa-theme-option="light">
               <svg class="menu-item-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
               <span class="menu-item-content">Light</span>
               <svg class="menu-item-check" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="2.5 8.5 6.5 12.5 13.5 4.5"></polyline></svg>
             </button>
-            <button type="button" class="menu-item" role="menuitemradio" aria-checked="false" data-furo-theme-option="dark">
+            <button type="button" class="menu-item" role="menuitemradio" aria-checked="false" data-supa-theme-option="dark">
               <svg class="menu-item-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
               <span class="menu-item-content">Dark</span>
               <svg class="menu-item-check" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="2.5 8.5 6.5 12.5 13.5 4.5"></polyline></svg>
             </button>
-            <button type="button" class="menu-item selected" role="menuitemradio" aria-checked="true" data-furo-theme-option="auto">
+            <button type="button" class="menu-item selected" role="menuitemradio" aria-checked="true" data-supa-theme-option="auto">
               <svg class="menu-item-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 3v18a9 9 0 0 0 0-18z" fill="currentColor"></path></svg>
               <span class="menu-item-content">Auto</span>
               <svg class="menu-item-check" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="2.5 8.5 6.5 12.5 13.5 4.5"></polyline></svg>
@@ -263,7 +263,7 @@ Apache Maven Doxia Site Renderer#if( $doxiaSiteRendererVersion ) $doxiaSiteRende
 #end
 ##
 ## Render Copyright statement
-#macro( furoCopyright )
+#macro( supaCopyright )
 #if( $project )
 #set( $currentYear = "" )
 #if( $date && $date.year )
@@ -290,15 +290,7 @@ ${currentYear}##
 #end
 ##
 ## Bootstrap Icons & Bootstrap 6 Velocity Helper Macros for Site Authors (.md.vm / .apt.vm / .xhtml.vm)
-#macro( bi $name )
-<i class="bi bi-$esc.html( $name )" aria-hidden="true"></i>##
-#end
-##
-#macro( furoIcon $name $extraClasses $ariaLabel )
-<i class="bi bi-$esc.html( $name )#if( $extraClasses && $extraClasses != '' ) $esc.html( $extraClasses )#end"#if( $ariaLabel && $ariaLabel != '' ) role="img" aria-label="$esc.html( $ariaLabel )"#else aria-hidden="true"#end></i>##
-#end
-##
-#macro( bsIcon $name $extraClasses $ariaLabel )
+#macro( bi $name $extraClasses $ariaLabel )
 <i class="bi bi-$esc.html( $name )#if( $extraClasses && $extraClasses != '' ) $esc.html( $extraClasses )#end"#if( $ariaLabel && $ariaLabel != '' ) role="img" aria-label="$esc.html( $ariaLabel )"#else aria-hidden="true"#end></i>##
 #end
 ##

@@ -2,7 +2,7 @@ import { setTooltipTitle } from './bootstrap-components';
 
 export type ThemeMode = 'light' | 'dark' | 'auto';
 export type ResolvedTheme = 'light' | 'dark';
-export type FuroPaletteId =
+export type SupaPaletteId =
   | 'furo'
   | 'bootstrap'
   | 'modus'
@@ -10,18 +10,18 @@ export type FuroPaletteId =
   | 'modus-deuteranopia'
   | 'modus-tritanopia';
 
-export interface FuroPaletteMeta {
-  id: FuroPaletteId;
+export interface SupaPaletteMeta {
+  id: SupaPaletteId;
   label: string;
   shortLabel: string;
   wcag: 'AA' | 'AAA';
   description: string;
 }
 
-export const THEME_STORAGE_KEY = 'furo-theme';
-export const PALETTE_STORAGE_KEY = 'furo-palette';
+export const THEME_STORAGE_KEY = 'supa-theme';
+export const PALETTE_STORAGE_KEY = 'supa-palette';
 
-export const FURO_PALETTES: readonly FuroPaletteMeta[] = [
+export const SUPA_PALETTES: readonly SupaPaletteMeta[] = [
   {
     id: 'furo',
     label: 'Furo Default (AA)',
@@ -66,9 +66,9 @@ export const FURO_PALETTES: readonly FuroPaletteMeta[] = [
   }
 ] as const;
 
-const VALID_PALETTE_IDS = new Set<string>(FURO_PALETTES.map((p) => p.id));
-const PALETTE_SHORT_LABEL_MAP = new Map<FuroPaletteId, string>(
-  FURO_PALETTES.map((p) => [p.id, p.shortLabel])
+const VALID_PALETTE_IDS = new Set<string>(SUPA_PALETTES.map((p) => p.id));
+const PALETTE_SHORT_LABEL_MAP = new Map<SupaPaletteId, string>(
+  SUPA_PALETTES.map((p) => [p.id, p.shortLabel])
 );
 const THEME_CYCLE: ThemeMode[] = ['light', 'dark', 'auto'];
 
@@ -87,11 +87,11 @@ function getStorage(): Storage | null {
   return null;
 }
 
-export function isValidPaletteId(value: string | null | undefined): value is FuroPaletteId {
+export function isValidPaletteId(value: string | null | undefined): value is SupaPaletteId {
   return typeof value === 'string' && VALID_PALETTE_IDS.has(value);
 }
 
-export function getStoredPalette(defaultPalette: FuroPaletteId = 'furo'): FuroPaletteId {
+export function getStoredPalette(defaultPalette: SupaPaletteId = 'furo'): SupaPaletteId {
   try {
     const raw = getStorage()?.getItem(PALETTE_STORAGE_KEY);
     if (isValidPaletteId(raw)) {
@@ -103,13 +103,13 @@ export function getStoredPalette(defaultPalette: FuroPaletteId = 'furo'): FuroPa
   return defaultPalette;
 }
 
-export function applyPalette(palette: FuroPaletteId, persist = true): FuroPaletteId {
+export function applyPalette(palette: SupaPaletteId, persist = true): SupaPaletteId {
   const root = document.documentElement;
-  const resolvedPalette: FuroPaletteId = isValidPaletteId(palette) ? palette : 'furo';
+  const resolvedPalette: SupaPaletteId = isValidPaletteId(palette) ? palette : 'furo';
 
-  root.setAttribute('data-furo-palette', resolvedPalette);
+  root.setAttribute('data-supa-palette', resolvedPalette);
   if (persist) {
-    root.setAttribute('data-furo-palette-locked', 'true');
+    root.setAttribute('data-supa-palette-locked', 'true');
     try {
       getStorage()?.setItem(PALETTE_STORAGE_KEY, resolvedPalette);
     } catch {
@@ -120,7 +120,7 @@ export function applyPalette(palette: FuroPaletteId, persist = true): FuroPalett
   updatePaletteControls(resolvedPalette);
 
   document.dispatchEvent(
-    new CustomEvent('furo:palette-changed', {
+    new CustomEvent('supa:palette-changed', {
       detail: { palette: resolvedPalette }
     })
   );
@@ -128,41 +128,41 @@ export function applyPalette(palette: FuroPaletteId, persist = true): FuroPalett
   return resolvedPalette;
 }
 
-function updatePaletteControls(palette: FuroPaletteId): void {
+function updatePaletteControls(palette: SupaPaletteId): void {
   const shortLabel = PALETTE_SHORT_LABEL_MAP.get(palette) ?? 'Furo (AA)';
-  const labels = document.querySelectorAll<HTMLElement>('[data-furo-palette-label]');
+  const labels = document.querySelectorAll<HTMLElement>('[data-supa-palette-label]');
   labels.forEach((labelEl) => {
     labelEl.textContent = shortLabel;
   });
 
-  const paletteMeta = FURO_PALETTES.find((p) => p.id === palette);
+  const paletteMeta = SUPA_PALETTES.find((p) => p.id === palette);
   const triggerLabel = paletteMeta
     ? `Accessible color scheme: ${paletteMeta.label}`
     : 'Select accessible color scheme (WCAG 2.2 AA / AAA)';
-  const paletteBtns = document.querySelectorAll<HTMLButtonElement>('.furo-palette-btn');
+  const paletteBtns = document.querySelectorAll<HTMLButtonElement>('.supa-palette-btn');
   paletteBtns.forEach((btn) => {
     btn.setAttribute('aria-label', triggerLabel);
     setTooltipTitle(btn, triggerLabel, 'bottom');
   });
 
-  const options = document.querySelectorAll<HTMLElement>('[data-furo-palette-option]');
+  const options = document.querySelectorAll<HTMLElement>('[data-supa-palette-option]');
   options.forEach((optionEl) => {
-    const optionPalette = optionEl.getAttribute('data-furo-palette-option');
+    const optionPalette = optionEl.getAttribute('data-supa-palette-option');
     const isActive = optionPalette === palette;
     optionEl.classList.toggle('selected', isActive);
     optionEl.setAttribute('aria-checked', isActive ? 'true' : 'false');
   });
 
-  const selects = document.querySelectorAll<HTMLSelectElement>('[data-furo-palette-select]');
+  const selects = document.querySelectorAll<HTMLSelectElement>('[data-supa-palette-select]');
   selects.forEach((select) => {
     if (select.value !== palette) {
       select.value = palette;
     }
   });
 
-  const cards = document.querySelectorAll<HTMLElement>('[data-furo-palette-card]');
+  const cards = document.querySelectorAll<HTMLElement>('[data-supa-palette-card]');
   cards.forEach((card) => {
-    const cardPalette = card.getAttribute('data-furo-palette-card');
+    const cardPalette = card.getAttribute('data-supa-palette-card');
     const isActive = cardPalette === palette;
     card.classList.toggle('is-active', isActive);
     card.setAttribute('aria-pressed', isActive ? 'true' : 'false');
@@ -200,8 +200,8 @@ export function applyThemeMode(mode: ThemeMode, persist = true): ResolvedTheme {
   const root = document.documentElement;
   const resolved = resolveTheme(mode);
 
-  root.setAttribute('data-furo-theme-mode', mode);
-  root.setAttribute('data-furo-resolved-theme', resolved);
+  root.setAttribute('data-supa-theme-mode', mode);
+  root.setAttribute('data-supa-resolved-theme', resolved);
 
   if (mode === 'light' || mode === 'dark') {
     root.setAttribute('data-bs-theme', mode);
@@ -220,7 +220,7 @@ export function applyThemeMode(mode: ThemeMode, persist = true): ResolvedTheme {
   updateThemeControls(mode, resolved);
 
   document.dispatchEvent(
-    new CustomEvent('furo:theme-changed', {
+    new CustomEvent('supa:theme-changed', {
       detail: { mode, resolvedTheme: resolved }
     })
   );
@@ -232,7 +232,7 @@ export function cycleThemeMode(current?: ThemeMode): ThemeMode {
   const root = document.documentElement;
   const activeMode =
     current ??
-    ((root.getAttribute('data-furo-theme-mode') as ThemeMode | null) || 'auto');
+    ((root.getAttribute('data-supa-theme-mode') as ThemeMode | null) || 'auto');
   const idx = THEME_CYCLE.indexOf(activeMode);
   const nextMode = THEME_CYCLE[(idx + 1) % THEME_CYCLE.length];
   applyThemeMode(nextMode, true);
@@ -246,16 +246,16 @@ function updateThemeControls(mode: ThemeMode, resolved: ResolvedTheme): void {
     auto: `Color theme: Auto (${resolved === 'dark' ? 'Dark' : 'Light'})`
   };
   const triggerLabel = triggerLabelMap[mode];
-  const triggers = document.querySelectorAll<HTMLButtonElement>('[data-furo-theme-trigger]');
+  const triggers = document.querySelectorAll<HTMLButtonElement>('[data-supa-theme-trigger]');
   triggers.forEach((btn) => {
     btn.setAttribute('aria-label', triggerLabel);
     setTooltipTitle(btn, triggerLabel, 'bottom');
-    btn.setAttribute('data-furo-current-mode', mode);
+    btn.setAttribute('data-supa-current-mode', mode);
   });
 
-  const themeOptions = document.querySelectorAll<HTMLElement>('[data-furo-theme-option]');
+  const themeOptions = document.querySelectorAll<HTMLElement>('[data-supa-theme-option]');
   themeOptions.forEach((optionEl) => {
-    const optionMode = optionEl.getAttribute('data-furo-theme-option');
+    const optionMode = optionEl.getAttribute('data-supa-theme-option');
     const isActive = optionMode === mode;
     optionEl.classList.toggle('selected', isActive);
     optionEl.setAttribute('aria-checked', isActive ? 'true' : 'false');
@@ -267,24 +267,24 @@ function updateThemeControls(mode: ThemeMode, resolved: ResolvedTheme): void {
     auto: `Color theme: Auto (${resolved === 'dark' ? 'Dark' : 'Light'}) (click for Light)`
   };
   const toggleLabel = toggleLabelMap[mode];
-  const buttons = document.querySelectorAll<HTMLButtonElement>('[data-furo-theme-toggle]');
+  const buttons = document.querySelectorAll<HTMLButtonElement>('[data-supa-theme-toggle]');
   buttons.forEach((btn) => {
     btn.setAttribute('aria-label', toggleLabel);
     setTooltipTitle(btn, toggleLabel, 'bottom');
-    btn.setAttribute('data-furo-current-mode', mode);
+    btn.setAttribute('data-supa-current-mode', mode);
   });
 }
 
 export function initTheme(): void {
   const root = document.documentElement;
-  const defaultAttr = root.getAttribute('data-furo-default-theme');
+  const defaultAttr = root.getAttribute('data-supa-default-theme');
   const defaultMode: ThemeMode =
     defaultAttr === 'light' || defaultAttr === 'dark' || defaultAttr === 'auto'
       ? defaultAttr
       : 'auto';
 
-  const defaultPaletteAttr = root.getAttribute('data-furo-default-palette');
-  const defaultPalette: FuroPaletteId = isValidPaletteId(defaultPaletteAttr)
+  const defaultPaletteAttr = root.getAttribute('data-supa-default-palette');
+  const defaultPalette: SupaPaletteId = isValidPaletteId(defaultPaletteAttr)
     ? defaultPaletteAttr
     : 'furo';
 
@@ -294,34 +294,34 @@ export function initTheme(): void {
   const initialPalette = getStoredPalette(defaultPalette);
   applyPalette(initialPalette, false);
 
-  const themeOptions = document.querySelectorAll<HTMLElement>('[data-furo-theme-option]');
+  const themeOptions = document.querySelectorAll<HTMLElement>('[data-supa-theme-option]');
   themeOptions.forEach((optionEl) => {
     optionEl.addEventListener('click', () => {
-      const targetMode = optionEl.getAttribute('data-furo-theme-option');
+      const targetMode = optionEl.getAttribute('data-supa-theme-option');
       if (targetMode === 'light' || targetMode === 'dark' || targetMode === 'auto') {
         applyThemeMode(targetMode, true);
       }
     });
   });
 
-  const buttons = document.querySelectorAll<HTMLButtonElement>('[data-furo-theme-toggle]');
+  const buttons = document.querySelectorAll<HTMLButtonElement>('[data-supa-theme-toggle]');
   buttons.forEach((btn) => {
     btn.addEventListener('click', () => {
       cycleThemeMode();
     });
   });
 
-  const options = document.querySelectorAll<HTMLElement>('[data-furo-palette-option]');
+  const options = document.querySelectorAll<HTMLElement>('[data-supa-palette-option]');
   options.forEach((optionEl) => {
     optionEl.addEventListener('click', () => {
-      const targetPalette = optionEl.getAttribute('data-furo-palette-option');
+      const targetPalette = optionEl.getAttribute('data-supa-palette-option');
       if (isValidPaletteId(targetPalette)) {
         applyPalette(targetPalette, true);
       }
     });
   });
 
-  const selects = document.querySelectorAll<HTMLSelectElement>('[data-furo-palette-select]');
+  const selects = document.querySelectorAll<HTMLSelectElement>('[data-supa-palette-select]');
   selects.forEach((select) => {
     select.value = initialPalette;
     select.addEventListener('change', () => {
@@ -331,10 +331,10 @@ export function initTheme(): void {
     });
   });
 
-  const cards = document.querySelectorAll<HTMLElement>('[data-furo-palette-card]');
+  const cards = document.querySelectorAll<HTMLElement>('[data-supa-palette-card]');
   cards.forEach((card) => {
     card.addEventListener('click', () => {
-      const targetPalette = card.getAttribute('data-furo-palette-card');
+      const targetPalette = card.getAttribute('data-supa-palette-card');
       if (isValidPaletteId(targetPalette)) {
         applyPalette(targetPalette, true);
       }
@@ -345,7 +345,7 @@ export function initTheme(): void {
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
     const handleMediaChange = () => {
       const currentMode =
-        (root.getAttribute('data-furo-theme-mode') as ThemeMode | null) || 'auto';
+        (root.getAttribute('data-supa-theme-mode') as ThemeMode | null) || 'auto';
       if (currentMode === 'auto') {
         applyThemeMode('auto', false);
       }

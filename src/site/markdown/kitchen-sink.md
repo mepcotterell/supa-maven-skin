@@ -29,7 +29,7 @@ Code blocks display a subtle language badge (`JAVA`, `TS`, `DIFF`, `XML`) in the
 
 Switch between tabs below—active tab selection is automatically persisted and synchronized across tab groups:
 
-<div class="furo-tabs" title="jvm-lang" data-tab-group="jvm-lang">
+<div class="supa-tabs" title="jvm-lang" data-tab-group="jvm-lang">
   <div title="Java 21" data-tab="Java 21">
     <pre><code class="language-java">package io.github.mepcotterell.skins;
 import java.util.List;
@@ -116,11 +116,11 @@ Because `supa-maven-skin` bundles **all 28 Bootstrap `6.0.0-alpha.1` component f
   </div>
 </div>
 
-### Bootstrap Icons (Markdown Shortcodes, HTML & Velocity Macros)
+### Bootstrap Icons (Markdown Shortcodes, HTML & Velocity Macro)
 
-All [Bootstrap Icons](https://icons.getbootstrap.com/) are bundled offline in `supa-maven-skin` (`bootstrap-icons.woff2`) and can be authored using **Markdown shortcodes** (`:bi-<name>:` or `:bi-<name> <classes>:`), **Markdown + HTML** (`<i class="bi bi-..."></i>`), or **Velocity macros** (`#bi`, `#furoIcon`, `#bsIcon` in `.md.vm` templates):
+All [Bootstrap Icons](https://icons.getbootstrap.com/) are bundled offline in `supa-maven-skin` (`bootstrap-icons.woff2`) and can be authored using **Markdown shortcodes** (`:bi-<name>:` or `:bi-<name> <classes>:`), **Markdown + HTML** (`<i class="bi bi-..."></i>`), or the **Velocity macro** (`#bi` in `.md.vm` templates):
 
-<div class="furo-component-preview">
+<div class="supa-component-preview">
   <div class="d-flex flex-wrap align-items-center gap-3">
     <span class="d-inline-flex align-items-center gap-1 fw-medium">:bi-rocket-takeoff text-primary fs-5: Launch</span>
     <span class="d-inline-flex align-items-center gap-1 fw-medium">:bi-check-circle-fill text-success fs-5: Verified</span>
@@ -130,7 +130,7 @@ All [Bootstrap Icons](https://icons.getbootstrap.com/) are bundled offline in `s
   </div>
 </div>
 
-<div class="furo-tabs" title="authoring-mode">
+<div class="supa-tabs" title="authoring-mode">
   <div title="Markdown Shorthand">
     <pre><code class="language-markdown">Inline icons with optional utility classes:
 :bi-rocket-takeoff: Launch
@@ -145,8 +145,8 @@ All [Bootstrap Icons](https://icons.getbootstrap.com/) are bundled offline in `s
   <div title="Velocity Macro (.md.vm)">
     <pre><code class="language-velocity">#parse( "site-macros.vm" )
 #bi( "rocket-takeoff" ) Launch
-#furoIcon( "check-circle-fill" "text-success fs-5" "" ) Verified
-#bsIcon( "universal-access-circle" "text-info fs-5" "Accessible" ) WCAG 2.2 AAA</code></pre>
+#bi( "check-circle-fill" "text-success fs-5" ) Verified
+#bi( "universal-access-circle" "text-info fs-5" "Accessible" ) WCAG 2.2 AAA</code></pre>
   </div>
 </div>
 

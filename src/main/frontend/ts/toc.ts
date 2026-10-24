@@ -49,7 +49,7 @@ export function prepareHeadings(
 
     if (!id) {
       const clone = heading.cloneNode(true) as HTMLElement;
-      clone.querySelectorAll('.furo-headerlink').forEach((el) => el.remove());
+      clone.querySelectorAll('.supa-headerlink').forEach((el) => el.remove());
       const baseSlug = slugifyHeading(clone.textContent || 'section');
 
       // If the preceding Doxia anchor already uses the exact same lowercase slug,
@@ -69,9 +69,9 @@ export function prepareHeadings(
     usedIds.add(id);
     heading.id = id;
 
-    if (enablePermalinks && heading.tagName !== 'H1' && !heading.querySelector('.furo-headerlink')) {
+    if (enablePermalinks && heading.tagName !== 'H1' && !heading.querySelector('.supa-headerlink')) {
       const anchor = document.createElement('a');
-      anchor.className = 'furo-headerlink';
+      anchor.className = 'supa-headerlink';
       anchor.href = `#${id}`;
       anchor.setAttribute('aria-label', `Permalink to ${heading.textContent?.trim() || 'heading'}`);
       setTooltipTitle(anchor, 'Copy permalink to this heading', 'top');
@@ -104,7 +104,7 @@ export function prepareHeadings(
 }
 
 /**
- * Builds the right-hand "On this page" table of contents (`#furoTocNav`) and
+ * Builds the right-hand "On this page" table of contents (`#supaTocNav`) and
  * maintains a single active section indicator synced with both the right TOC
  * and any hash sub-links in the left navigation sidebar.
  */
@@ -128,9 +128,9 @@ export function buildTableOfContents(
   ).filter((h) => !h.closest('.not-prose') && h.id);
 
   tocNav.innerHTML = '';
-  const tocColumn = tocNav.closest<HTMLElement>('.furo-toc-column');
-  const tocScroll = tocNav.closest<HTMLElement>('.furo-toc-scroll');
-  const tocTriggers = document.querySelectorAll<HTMLElement>('.furo-toc-drawer-trigger');
+  const tocColumn = tocNav.closest<HTMLElement>('.supa-toc-column');
+  const tocScroll = tocNav.closest<HTMLElement>('.supa-toc-scroll');
+  const tocTriggers = document.querySelectorAll<HTMLElement>('.supa-toc-drawer-trigger');
 
   if (headings.length === 0) {
     tocColumn?.classList.add('is-empty');
@@ -146,11 +146,11 @@ export function buildTableOfContents(
   headings.forEach((heading, idx) => {
     const level = Number.parseInt(heading.tagName.slice(1), 10);
     const clone = heading.cloneNode(true) as HTMLElement;
-    clone.querySelectorAll('.furo-headerlink').forEach((el) => el.remove());
+    clone.querySelectorAll('.supa-headerlink').forEach((el) => el.remove());
     const text = clone.textContent?.trim() || heading.id;
 
     const link = document.createElement('a');
-    link.className = `nav-link furo-toc-level-${level}${idx === 0 ? ' active' : ''}`;
+    link.className = `nav-link supa-toc-level-${level}${idx === 0 ? ' active' : ''}`;
     link.href = `#${heading.id}`;
     link.textContent = text;
     tocNav.appendChild(link);
@@ -169,7 +169,7 @@ export function buildTableOfContents(
       ? window.location.pathname.split('/').pop() || 'index.html'
       : '';
   const sidebarHashLinks = Array.from(
-    document.querySelectorAll<HTMLAnchorElement>('.furo-sidebar-tree a.furo-nav-link[href*="#"]')
+    document.querySelectorAll<HTMLAnchorElement>('.supa-sidebar-tree a.supa-nav-link[href*="#"]')
   ).filter((link) => {
     const href = link.getAttribute('href') || '';
     const hashIdx = href.indexOf('#');
@@ -239,7 +239,7 @@ export function buildTableOfContents(
       }
     });
 
-    // Keep the active TOC link visible inside the sticky .furo-toc-scroll container
+    // Keep the active TOC link visible inside the sticky .supa-toc-scroll container
     if (changed && activeLink && tocScroll && tocScroll.scrollHeight > tocScroll.clientHeight) {
       const scrollRect = tocScroll.getBoundingClientRect();
       const linkRect = (activeLink as HTMLElement).getBoundingClientRect();
@@ -255,7 +255,7 @@ export function buildTableOfContents(
 
   try {
     new ScrollSpy(document.body, {
-      target: '#furoTocNav',
+      target: '#supaTocNav',
       rootMargin: '0px 0px -70%',
       smoothScroll: true
     });
@@ -301,15 +301,15 @@ export function buildTableOfContents(
 }
 
 export function initTocAndScrollSpy(): void {
-  const article = document.getElementById('furo-main-content');
+  const article = document.getElementById('supa-main-content');
   if (!article) {
     return;
   }
 
   const body = document.body;
-  const enablePermalinks = body.getAttribute('data-furo-heading-permalinks') !== 'false';
-  const permalinkSymbol = body.getAttribute('data-furo-permalink-symbol') || '#';
-  const tocMaxDepth = Number.parseInt(body.getAttribute('data-furo-toc-max-depth') || '4', 10);
+  const enablePermalinks = body.getAttribute('data-supa-heading-permalinks') !== 'false';
+  const permalinkSymbol = body.getAttribute('data-supa-permalink-symbol') || '#';
+  const tocMaxDepth = Number.parseInt(body.getAttribute('data-supa-toc-max-depth') || '4', 10);
 
   prepareHeadings(article, enablePermalinks, permalinkSymbol);
 
@@ -324,6 +324,6 @@ export function initTocAndScrollSpy(): void {
     }
   }
 
-  const tocNav = document.getElementById('furoTocNav');
+  const tocNav = document.getElementById('supaTocNav');
   buildTableOfContents(article, tocNav, Number.isNaN(tocMaxDepth) ? 4 : tocMaxDepth);
 }

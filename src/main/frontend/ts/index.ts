@@ -34,8 +34,8 @@ import { initTheme } from './theme';
 import { initTocAndScrollSpy } from './toc';
 
 export function initDrawers(): void {
-  const sidebarDrawer = document.getElementById('furoSidebarDrawer') as HTMLDialogElement | null;
-  const tocDrawer = document.getElementById('furoTocDrawer') as HTMLDialogElement | null;
+  const sidebarDrawer = document.getElementById('supaSidebarDrawer') as HTMLDialogElement | null;
+  const tocDrawer = document.getElementById('supaTocDrawer') as HTMLDialogElement | null;
 
   [sidebarDrawer, tocDrawer].forEach((drawerEl) => {
     if (!drawerEl) {
@@ -52,8 +52,8 @@ export function initDrawers(): void {
     }
   });
 
-  if (tocDrawer && !tocDrawer.hasAttribute('data-furo-drawer-bound')) {
-    tocDrawer.setAttribute('data-furo-drawer-bound', 'true');
+  if (tocDrawer && !tocDrawer.hasAttribute('data-supa-drawer-bound')) {
+    tocDrawer.setAttribute('data-supa-drawer-bound', 'true');
     tocDrawer.addEventListener('click', (e) => {
       const link = (e.target as HTMLElement | null)?.closest('a.nav-link');
       if (link && window.innerWidth < 1280 && tocDrawer.open) {
@@ -66,10 +66,10 @@ export function initDrawers(): void {
     });
   }
 
-  if (sidebarDrawer && !sidebarDrawer.hasAttribute('data-furo-drawer-bound')) {
-    sidebarDrawer.setAttribute('data-furo-drawer-bound', 'true');
+  if (sidebarDrawer && !sidebarDrawer.hasAttribute('data-supa-drawer-bound')) {
+    sidebarDrawer.setAttribute('data-supa-drawer-bound', 'true');
     sidebarDrawer.addEventListener('click', (e) => {
-      const link = (e.target as HTMLElement | null)?.closest('a.furo-nav-link[href*="#"]');
+      const link = (e.target as HTMLElement | null)?.closest('a.supa-nav-link[href*="#"]');
       if (link && window.innerWidth < 1024 && sidebarDrawer.open) {
         try {
           Drawer.getOrCreateInstance(sidebarDrawer).hide();
@@ -80,8 +80,8 @@ export function initDrawers(): void {
     });
   }
 
-  if (typeof document !== 'undefined' && !document.documentElement.hasAttribute('data-furo-drawer-sync')) {
-    document.documentElement.setAttribute('data-furo-drawer-sync', 'true');
+  if (typeof document !== 'undefined' && !document.documentElement.hasAttribute('data-supa-drawer-sync')) {
+    document.documentElement.setAttribute('data-supa-drawer-sync', 'true');
     document.addEventListener('show.bs.drawer', (event) => {
       const target = event.target as HTMLDialogElement | null;
       if (!target) {
@@ -103,13 +103,13 @@ export function initDrawers(): void {
 }
 
 export function initBackToTop(): void {
-  if (typeof document === 'undefined' || document.querySelector('.furo-back-to-top')) {
+  if (typeof document === 'undefined' || document.querySelector('.supa-back-to-top')) {
     return;
   }
 
   const btn = document.createElement('button');
   btn.type = 'button';
-  btn.className = 'furo-back-to-top not-prose';
+  btn.className = 'supa-back-to-top not-prose';
   btn.setAttribute('aria-label', 'Back to top');
   setTooltipTitle(btn, 'Scroll back to top', 'top');
   btn.innerHTML =
@@ -132,7 +132,7 @@ export function initBackToTop(): void {
   }
 }
 
-export function initFuroSkin(): void {
+export function initSupaSkin(): void {
   initTheme();
   initDoxiaEnhancements();
   initTocAndScrollSpy();
@@ -146,9 +146,9 @@ export function initFuroSkin(): void {
 
 if (typeof document !== 'undefined') {
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => initFuroSkin());
+    document.addEventListener('DOMContentLoaded', () => initSupaSkin());
   } else {
-    initFuroSkin();
+    initSupaSkin();
   }
 }
 

@@ -2,7 +2,7 @@
 
 **Supa Maven Skin** bundles the complete **Bootstrap 6 (`6.0.0-alpha.1`)** component library and all **20 interactive JavaScript plugins**, automatically isolating Bootstrap components from `.prose` typography rules and bridging Furo's adaptive Light/Dark color tokens.
 
-Site authors can use standard Bootstrap 6 HTML markup inside Markdown (`.md`), declarative Markdown shorthands (`> [!ALERT:theme]`, `.furo-accordion`, `.furo-stepper`), or Velocity helper macros (`#bsAlert`, `#bsBadge`, `#bsCard` in `.md.vm` pages). Every example below pairs the live interactive component with the exact syntax needed to render it.
+Site authors can use standard Bootstrap 6 HTML markup inside Markdown (`.md`), declarative Markdown shorthands (`> [!ALERT:theme]`, `.supa-accordion`, `.supa-stepper`), or Velocity helper macros (`#bsAlert`, `#bsBadge`, `#bsCard` in `.md.vm` pages). Every example below pairs the live interactive component with the exact syntax needed to render it.
 
 > [!IMPORTANT] Embedding HTML in Doxia 2.0 Markdown Pages
 > When placing multi-line Bootstrap 6 HTML directly inside a `.md` file, keep each top-level `<div>...</div>` block free of internal blank lines so Doxia's CommonMark parser treats the block as uninterrupted HTML.
@@ -13,50 +13,50 @@ Site authors can use standard Bootstrap 6 HTML markup inside Markdown (`.md`), d
 
 Inspired by the official [Bootstrap 6 Button Playground](https://getbootstrap.com/docs/6.0/components/button/#playground), select a component, semantic `.theme-*`, surface variant, and size below to live-preview the rendered component and generate copy-ready **Markdown + HTML** syntax:
 
-<div class="furo-playground not-prose" data-furo-playground="true">
-  <div class="furo-playground-controls">
-    <div class="furo-playground-row">
-      <span class="furo-playground-label">Component</span>
-      <div class="furo-playground-pills" role="group" aria-label="Playground component">
-        <button type="button" class="furo-playground-pill active" data-playground-component="button" aria-pressed="true">Buttons</button>
-        <button type="button" class="furo-playground-pill" data-playground-component="alert" aria-pressed="false">Alerts</button>
-        <button type="button" class="furo-playground-pill" data-playground-component="badge" aria-pressed="false">Badges &amp; Chips</button>
-        <button type="button" class="furo-playground-pill" data-playground-component="card" aria-pressed="false">Card</button>
+<div class="supa-playground not-prose" data-supa-playground="true">
+  <div class="supa-playground-controls">
+    <div class="supa-playground-row">
+      <span class="supa-playground-label">Component</span>
+      <div class="supa-playground-pills" role="group" aria-label="Playground component">
+        <button type="button" class="supa-playground-pill active" data-playground-component="button" aria-pressed="true">Buttons</button>
+        <button type="button" class="supa-playground-pill" data-playground-component="alert" aria-pressed="false">Alerts</button>
+        <button type="button" class="supa-playground-pill" data-playground-component="badge" aria-pressed="false">Badges &amp; Chips</button>
+        <button type="button" class="supa-playground-pill" data-playground-component="card" aria-pressed="false">Card</button>
       </div>
     </div>
-    <div class="furo-playground-row">
-      <span class="furo-playground-label">Theme</span>
-      <div class="furo-playground-pills" role="group" aria-label="Playground semantic theme">
-        <button type="button" class="furo-playground-pill active" data-playground-theme="primary" aria-pressed="true">Primary</button>
-        <button type="button" class="furo-playground-pill" data-playground-theme="accent" aria-pressed="false">Accent</button>
-        <button type="button" class="furo-playground-pill" data-playground-theme="success" aria-pressed="false">Success</button>
-        <button type="button" class="furo-playground-pill" data-playground-theme="danger" aria-pressed="false">Danger</button>
-        <button type="button" class="furo-playground-pill" data-playground-theme="warning" aria-pressed="false">Warning</button>
-        <button type="button" class="furo-playground-pill" data-playground-theme="info" aria-pressed="false">Info</button>
-        <button type="button" class="furo-playground-pill" data-playground-theme="secondary" aria-pressed="false">Secondary</button>
+    <div class="supa-playground-row">
+      <span class="supa-playground-label">Theme</span>
+      <div class="supa-playground-pills" role="group" aria-label="Playground semantic theme">
+        <button type="button" class="supa-playground-pill active" data-playground-theme="primary" aria-pressed="true">Primary</button>
+        <button type="button" class="supa-playground-pill" data-playground-theme="accent" aria-pressed="false">Accent</button>
+        <button type="button" class="supa-playground-pill" data-playground-theme="success" aria-pressed="false">Success</button>
+        <button type="button" class="supa-playground-pill" data-playground-theme="danger" aria-pressed="false">Danger</button>
+        <button type="button" class="supa-playground-pill" data-playground-theme="warning" aria-pressed="false">Warning</button>
+        <button type="button" class="supa-playground-pill" data-playground-theme="info" aria-pressed="false">Info</button>
+        <button type="button" class="supa-playground-pill" data-playground-theme="secondary" aria-pressed="false">Secondary</button>
       </div>
     </div>
-    <div class="furo-playground-row">
-      <span class="furo-playground-label">Variant</span>
-      <div class="furo-playground-pills" role="group" aria-label="Playground surface variant">
-        <button type="button" class="furo-playground-pill active" data-playground-variant="solid" aria-pressed="true">Solid (.btn-solid)</button>
-        <button type="button" class="furo-playground-pill" data-playground-variant="outline" aria-pressed="false">Outline (.btn-outline)</button>
-        <button type="button" class="furo-playground-pill" data-playground-variant="subtle" aria-pressed="false">Subtle (.btn-subtle)</button>
-        <button type="button" class="furo-playground-pill" data-playground-variant="text" aria-pressed="false">Text (.btn-text)</button>
-        <button type="button" class="furo-playground-pill" data-playground-variant="styled" aria-pressed="false">Styled 3D (.btn-styled)</button>
+    <div class="supa-playground-row">
+      <span class="supa-playground-label">Variant</span>
+      <div class="supa-playground-pills" role="group" aria-label="Playground surface variant">
+        <button type="button" class="supa-playground-pill active" data-playground-variant="solid" aria-pressed="true">Solid (.btn-solid)</button>
+        <button type="button" class="supa-playground-pill" data-playground-variant="outline" aria-pressed="false">Outline (.btn-outline)</button>
+        <button type="button" class="supa-playground-pill" data-playground-variant="subtle" aria-pressed="false">Subtle (.btn-subtle)</button>
+        <button type="button" class="supa-playground-pill" data-playground-variant="text" aria-pressed="false">Text (.btn-text)</button>
+        <button type="button" class="supa-playground-pill" data-playground-variant="styled" aria-pressed="false">Styled 3D (.btn-styled)</button>
       </div>
     </div>
-    <div class="furo-playground-row">
-      <span class="furo-playground-label">Size</span>
-      <div class="furo-playground-pills" role="group" aria-label="Playground size">
-        <button type="button" class="furo-playground-pill" data-playground-size="xs" aria-pressed="false">Extra small (xs)</button>
-        <button type="button" class="furo-playground-pill active" data-playground-size="sm" aria-pressed="true">Small (sm)</button>
-        <button type="button" class="furo-playground-pill" data-playground-size="md" aria-pressed="false">Medium (default)</button>
-        <button type="button" class="furo-playground-pill" data-playground-size="lg" aria-pressed="false">Large (lg)</button>
+    <div class="supa-playground-row">
+      <span class="supa-playground-label">Size</span>
+      <div class="supa-playground-pills" role="group" aria-label="Playground size">
+        <button type="button" class="supa-playground-pill" data-playground-size="xs" aria-pressed="false">Extra small (xs)</button>
+        <button type="button" class="supa-playground-pill active" data-playground-size="sm" aria-pressed="true">Small (sm)</button>
+        <button type="button" class="supa-playground-pill" data-playground-size="md" aria-pressed="false">Medium (default)</button>
+        <button type="button" class="supa-playground-pill" data-playground-size="lg" aria-pressed="false">Large (lg)</button>
       </div>
     </div>
   </div>
-  <div class="furo-playground-stage" data-playground-stage="true">
+  <div class="supa-playground-stage" data-playground-stage="true">
     <button type="button" class="btn btn-solid theme-primary btn-sm">Primary</button>
   </div>
   <pre><code class="language-html" data-playground-code="true">&lt;button type="button" class="btn btn-solid theme-primary btn-sm"&gt;Primary&lt;/button&gt;</code></pre>
@@ -70,7 +70,7 @@ Bootstrap 6 replaces legacy per-color button classes with composable `.theme-*` 
 
 ### Semantic Theme Variants (Solid, Outline, Subtle, Text & Styled 3D)
 
-<div class="furo-component-preview not-prose">
+<div class="supa-component-preview not-prose">
   <div class="mb-3">
     <div class="small fw-semibold text-body-secondary mb-2">Solid Buttons (.btn .btn-solid .theme-*)</div>
     <div class="d-flex flex-wrap gap-2">
@@ -155,7 +155,7 @@ Bootstrap 6 introduces first-class **Avatars** (`.avatar`, `.avatar-stack`, `.av
 
 ### Badges (Solid, Subtle, Outline & Pill)
 
-<div class="furo-component-preview not-prose">
+<div class="supa-component-preview not-prose">
   <div class="d-flex flex-wrap gap-2 mb-3">
     <span class="badge theme-primary">Primary</span>
     <span class="badge theme-secondary">Secondary</span>
@@ -175,7 +175,7 @@ Bootstrap 6 introduces first-class **Avatars** (`.avatar`, `.avatar-stack`, `.av
   </div>
 </div>
 
-<div class="furo-tabs" title="syntax-badges" data-tab-group="syntax-badges">
+<div class="supa-tabs" title="syntax-badges" data-tab-group="syntax-badges">
   <div title="Markdown + HTML" data-tab="Markdown + HTML"><pre><code class="language-html">&lt;!-- Solid, Subtle, Outline &amp; Pill Badges --&gt;
 &lt;span class="badge theme-primary"&gt;Primary&lt;/span&gt;
 &lt;span class="badge theme-success"&gt;Success&lt;/span&gt;
@@ -189,7 +189,7 @@ Bootstrap 6 introduces first-class **Avatars** (`.avatar`, `.avatar-stack`, `.av
 
 ### Avatars, Sizes, Status Dots & Avatar Stacks
 
-<div class="furo-component-preview not-prose">
+<div class="supa-component-preview not-prose">
   <div class="d-flex flex-wrap gap-4 align-items-center">
     <div class="d-flex align-items-center gap-2">
       <span class="avatar avatar-xs theme-primary">XS</span>
@@ -224,7 +224,7 @@ Bootstrap 6 introduces first-class **Avatars** (`.avatar`, `.avatar-stack`, `.av
 
 ### Interactive Chips & Chip Input (`[data-bs-chips]`)
 
-<div class="furo-component-preview not-prose">
+<div class="supa-component-preview not-prose">
   <div class="d-flex flex-wrap gap-2 mb-3">
     <span class="chip active theme-primary">maven-site-plugin</span>
     <span class="chip theme-success">doxia-2.0</span>
@@ -255,7 +255,7 @@ Bootstrap 6 introduces first-class **Avatars** (`.avatar`, `.avatar-stack`, `.av
 
 ### Progress Bars, Spinners & Skeleton Placeholders
 
-<div class="furo-component-preview not-prose">
+<div class="supa-component-preview not-prose">
   <div class="row g-4 align-items-center">
     <div class="md:col-6">
       <div class="small fw-semibold text-body-secondary mb-2">Progress Bars</div>
@@ -309,7 +309,7 @@ In addition to Furo's `> [!NOTE]` admonitions, site authors can use native Boots
 
 ### Bootstrap 6 Alerts (`> [!ALERT:theme dismissible]` & `.alert`)
 
-<div class="furo-component-preview not-prose">
+<div class="supa-component-preview not-prose">
   <div class="alert theme-primary not-prose mb-3" role="alert">
     <div class="flex-grow-1">
       <div class="alert-heading fw-semibold mb-1">Maven Central Release Available</div>
@@ -332,7 +332,7 @@ In addition to Furo's `> [!NOTE]` admonitions, site authors can use native Boots
   </div>
 </div>
 
-<div class="furo-tabs" title="syntax-alerts" data-tab-group="syntax-alerts">
+<div class="supa-tabs" title="syntax-alerts" data-tab-group="syntax-alerts">
   <div title="Markdown Shorthand" data-tab="Markdown Shorthand"><pre><code class="language-markdown">&gt; [!ALERT:primary dismissible] Maven Central Release Available
 &gt; Version `0.1.0-SNAPSHOT` is ready for staging with full Doxia 2.0 and Bootstrap 6 component support.
 &gt;
@@ -354,11 +354,11 @@ In addition to Furo's `> [!NOTE]` admonitions, site authors can use native Boots
 
 ### Interactive Overlays: Dialog Modal, Drawer Sheet, Live Toast, Tooltips & Popovers
 
-<div class="furo-component-preview not-prose">
+<div class="supa-component-preview not-prose">
   <div class="d-flex flex-wrap gap-2 align-items-center">
     <button type="button" class="btn btn-solid theme-primary" data-bs-toggle="dialog" data-bs-target="#demoModalDialog">Open Modal Dialog</button>
     <button type="button" class="btn btn-outline theme-primary" data-bs-toggle="drawer" data-bs-target="#demoRightDrawer">Open Right Drawer</button>
-    <button type="button" class="btn btn-subtle theme-success" data-furo-toast-target="#demoLiveToast">Trigger Live Toast</button>
+    <button type="button" class="btn btn-subtle theme-success" data-supa-toast-target="#demoLiveToast">Trigger Live Toast</button>
     <button type="button" class="btn btn-outline theme-secondary" data-bs-toggle="tooltip" data-bs-placement="top" title="Tooltip powered by Floating UI in Bootstrap 6">Hover for Tooltip</button>
     <button type="button" class="btn btn-outline theme-info" data-bs-toggle="popover" data-bs-placement="top" data-bs-title="Bootstrap 6 Popover" data-bs-content="Popovers and Tooltips are automatically initialized by Supa Maven Skin on page load.">Click for Popover</button>
   </div>
@@ -402,7 +402,7 @@ In addition to Furo's `> [!NOTE]` admonitions, site authors can use native Boots
 <!-- Triggers for Dialog, Drawer, Toast, Tooltip & Popover -->
 <button type="button" class="btn btn-solid theme-primary" data-bs-toggle="dialog" data-bs-target="#demoModalDialog">Open Modal Dialog</button>
 <button type="button" class="btn btn-outline theme-primary" data-bs-toggle="drawer" data-bs-target="#demoRightDrawer">Open Right Drawer</button>
-<button type="button" class="btn btn-subtle theme-success" data-furo-toast-target="#demoLiveToast">Trigger Live Toast</button>
+<button type="button" class="btn btn-subtle theme-success" data-supa-toast-target="#demoLiveToast">Trigger Live Toast</button>
 <button type="button" class="btn btn-outline theme-secondary" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Tooltip powered by Floating UI">Hover for Tooltip</button>
 <button type="button" class="btn btn-outline theme-info" data-bs-toggle="popover" data-bs-placement="top" data-bs-title="Bootstrap 6 Popover" data-bs-content="Auto-initialized on page load.">Click for Popover</button>
 
@@ -443,7 +443,7 @@ Bootstrap 6 unifies dropdowns and context menus into the new **Menu** component 
 
 ### Menus (`[data-bs-toggle="menu"]`), Nav Pills & Underline Tabs
 
-<div class="furo-component-preview not-prose">
+<div class="supa-component-preview not-prose">
   <div class="d-flex flex-wrap gap-4 align-items-center justify-content-between mb-4">
     <div class="position-relative d-inline-block">
       <button type="button" class="btn btn-solid theme-primary" data-bs-toggle="menu" aria-expanded="false">Artifact Actions &#9662;</button>
@@ -504,12 +504,12 @@ Bootstrap 6 unifies dropdowns and context menus into the new **Menu** component 
 </div>
 ```
 
-### Multi-Step Workflow Stepper (`.furo-stepper` Shorthand & `.stepper`)
+### Multi-Step Workflow Stepper (`.supa-stepper` Shorthand & `.stepper`)
 
-Authors can write a simple `<ol class="furo-stepper" title="3">` ordered list or full Bootstrap 6 `.stepper.stepper-horizontal` markup:
+Authors can write a simple `<ol class="supa-stepper" title="3">` ordered list or full Bootstrap 6 `.stepper.stepper-horizontal` markup:
 
-<div class="furo-component-preview not-prose">
-  <ol class="furo-stepper" title="3">
+<div class="supa-component-preview not-prose">
+  <ol class="supa-stepper" title="3">
     <li class="active">Compile SCSS &amp; TypeScript</li>
     <li class="active">Package Skin JAR</li>
     <li class="active">Run Invoker Site ITs</li>
@@ -517,8 +517,8 @@ Authors can write a simple `<ol class="furo-stepper" title="3">` ordered list or
   </ol>
 </div>
 
-<div class="furo-tabs" title="syntax-stepper" data-tab-group="syntax-stepper">
-  <div title="Declarative .furo-stepper Shorthand" data-tab="Declarative .furo-stepper Shorthand"><pre><code class="language-html">&lt;ol class="furo-stepper" title="3"&gt;
+<div class="supa-tabs" title="syntax-stepper" data-tab-group="syntax-stepper">
+  <div title="Declarative .supa-stepper Shorthand" data-tab="Declarative .supa-stepper Shorthand"><pre><code class="language-html">&lt;ol class="supa-stepper" title="3"&gt;
   &lt;li class="active"&gt;Compile SCSS &amp;amp; TypeScript&lt;/li&gt;
   &lt;li class="active"&gt;Package Skin JAR&lt;/li&gt;
   &lt;li class="active"&gt;Run Invoker Site ITs&lt;/li&gt;
@@ -534,7 +534,7 @@ Authors can write a simple `<ol class="furo-stepper" title="3">` ordered list or
 
 ### Breadcrumbs & Pagination
 
-<div class="furo-component-preview not-prose">
+<div class="supa-component-preview not-prose">
   <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
     <nav aria-label="Breadcrumb demo">
       <ol class="breadcrumb mb-0">
@@ -585,14 +585,14 @@ Authors can write a simple `<ol class="furo-stepper" title="3">` ordered list or
 
 ## 5. Containers & Disclosure: Accordions, Cards, List Groups & Carousel
 
-### Declarative `.furo-accordion` Shorthand & Native `<details class="accordion-item">`
+### Declarative `.supa-accordion` Shorthand & Native `<details class="accordion-item">`
 
-Wrap `<div title="Question Title">` items inside `<div class="furo-accordion">` (or use Bootstrap 6's native `<details class="accordion-item">`) to generate a full Bootstrap 6 `.accordion`:
+Wrap `<div title="Question Title">` items inside `<div class="supa-accordion">` (or use Bootstrap 6's native `<details class="accordion-item">`) to generate a full Bootstrap 6 `.accordion`:
 
-<div class="furo-component-preview not-prose">
-  <div class="furo-accordion">
+<div class="supa-component-preview not-prose">
+  <div class="supa-accordion">
     <div title="How does Supa Maven Skin isolate Bootstrap components from .prose?" class="open">
-      <p><code>initBootstrapComponents()</code> automatically adds <code>.not-prose</code> to top-level Bootstrap component containers and applies CSS guardrails in <code>_bootstrap-furo.scss</code> so lists, links, and headings inside components never inherit article prose styles.</p>
+      <p><code>initBootstrapComponents()</code> automatically adds <code>.not-prose</code> to top-level Bootstrap component containers and applies CSS guardrails in <code>_bootstrap-supa.scss</code> so lists, links, and headings inside components never inherit article prose styles.</p>
     </div>
     <div title="Are all 20 Bootstrap 6 JavaScript plugins available globally?">
       <p>Yes! All 20 Bootstrap 6 plugins (<code>Alert</code>, <code>Button</code>, <code>Carousel</code>, <code>Chips</code>, <code>Collapse</code>, <code>Combobox</code>, <code>Datepicker</code>, <code>Dialog</code>, <code>Drawer</code>, <code>Menu</code>, <code>NavOverflow</code>, <code>OtpInput</code>, <code>Popover</code>, <code>Range</code>, <code>ScrollSpy</code>, <code>Strength</code>, <code>Tab</code>, <code>Toast</code>, <code>Toggler</code>, and <code>Tooltip</code>) are bundled and exposed on <code>window.bootstrap</code>.</p>
@@ -603,8 +603,8 @@ Wrap `<div title="Question Title">` items inside `<div class="furo-accordion">` 
   </div>
 </div>
 
-<div class="furo-tabs" title="syntax-accordion" data-tab-group="syntax-accordion">
-  <div title="Declarative .furo-accordion Shorthand" data-tab="Declarative .furo-accordion Shorthand"><pre><code class="language-html">&lt;div class="furo-accordion"&gt;
+<div class="supa-tabs" title="syntax-accordion" data-tab-group="syntax-accordion">
+  <div title="Declarative .supa-accordion Shorthand" data-tab="Declarative .supa-accordion Shorthand"><pre><code class="language-html">&lt;div class="supa-accordion"&gt;
   &lt;div title="How does Supa Maven Skin isolate Bootstrap components from .prose?" class="open"&gt;
     &lt;p&gt;&lt;code&gt;initBootstrapComponents()&lt;/code&gt; automatically adds &lt;code&gt;.not-prose&lt;/code&gt; to top-level Bootstrap component containers.&lt;/p&gt;
   &lt;/div&gt;
@@ -626,7 +626,7 @@ Wrap `<div title="Question Title">` items inside `<div class="furo-accordion">` 
 
 ### Cards & Actionable List Groups
 
-<div class="furo-component-preview not-prose">
+<div class="supa-component-preview not-prose">
   <div class="row g-3">
     <div class="md:col-6">
       <div class="card h-100">
@@ -670,7 +670,7 @@ Wrap `<div title="Question Title">` items inside `<div class="furo-accordion">` 
   </div>
 </div>
 
-<div class="furo-tabs" title="syntax-cards" data-tab-group="syntax-cards">
+<div class="supa-tabs" title="syntax-cards" data-tab-group="syntax-cards">
   <div title="Markdown + HTML" data-tab="Markdown + HTML"><pre><code class="language-html">&lt;!-- Bootstrap 6 Card --&gt;
 &lt;div class="card"&gt;
   &lt;div class="card-header d-flex justify-content-between align-items-center"&gt;
@@ -699,7 +699,7 @@ Wrap `<div title="Question Title">` items inside `<div class="furo-accordion">` 
 
 Bootstrap 6 adds native interactive widgets for **Combobox** (`[data-bs-toggle="combobox"]`), **Datepicker** (`[data-bs-toggle="datepicker"]`), **OTP Input** (`[data-bs-otp]`), **Range Slider** (`.form-range`), and **Password Strength Meter** (`[data-bs-strength]`), alongside standard `.form-control`, `.form-select`, `.form-check`, `.form-switch`, and `.input-group`.
 
-<div class="furo-component-preview not-prose">
+<div class="supa-component-preview not-prose">
   <div class="row g-4">
     <div class="md:col-6">
       <label class="form-label fw-semibold">Searchable Combobox (data-bs-toggle="combobox")</label>
@@ -739,7 +739,7 @@ Bootstrap 6 adds native interactive widgets for **Combobox** (`[data-bs-toggle="
         <input type="range" id="demoRangeInput" class="form-range-input" min="0" max="100" value="75" aria-label="Sidebar width scale" />
       </div>
       <label class="form-label fw-semibold" for="demoStrengthInput">Token / Password Strength Meter (data-bs-strength)</label>
-      <input type="password" id="demoStrengthInput" class="form-control" value="FuroBootstrap6!2026" aria-label="Sample token input" />
+      <input type="password" id="demoStrengthInput" class="form-control" value="SupaBootstrap6!2026" aria-label="Sample token input" />
       <div class="strength" data-bs-strength="strong" data-bs-input="#demoStrengthInput">
         <span class="strength-segment active"></span>
         <span class="strength-segment active"></span>
@@ -774,7 +774,7 @@ Bootstrap 6 adds native interactive widgets for **Combobox** (`[data-bs-toggle="
 <div class="form-range" data-bs-bubble="true">
   <input type="range" class="form-range-input" min="0" max="100" value="75" aria-label="Scale" />
 </div>
-<input type="password" id="demoStrengthInput" class="form-control" value="FuroBootstrap6!2026" />
+<input type="password" id="demoStrengthInput" class="form-control" value="SupaBootstrap6!2026" />
 <div class="strength" data-bs-strength="strong" data-bs-input="#demoStrengthInput">
   <span class="strength-segment active"></span>
   <span class="strength-segment active"></span>

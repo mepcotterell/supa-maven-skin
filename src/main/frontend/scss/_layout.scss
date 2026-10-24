@@ -10,7 +10,7 @@ html {
   overflow-x: clip;
 }
 
-body.furo-body {
+body.supa-body {
   min-height: 100vh;
   width: 100%;
   max-width: 100%;
@@ -25,7 +25,7 @@ body.furo-body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-.furo-skip-link {
+.supa-skip-link {
   position: fixed;
   top: 0.75rem;
   left: 0.75rem;
@@ -39,7 +39,7 @@ body.furo-body {
 }
 
 // Top Announcement Bar
-.furo-announcement {
+.supa-announcement {
   background-color: var(--color-brand-primary);
   color: var(--primary-contrast, #ffffff);
   padding: 0.5rem 1.5rem;
@@ -58,11 +58,11 @@ body.furo-body {
 }
 
 // Mobile / Tablet Header (< lg / 1024px)
-.furo-mobile-header {
+.supa-mobile-header {
   position: sticky;
   top: 0;
   z-index: 1020;
-  height: var(--furo-header-height);
+  height: var(--supa-header-height);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -81,27 +81,27 @@ body.furo-body {
     display: none !important;
   }
 
-  .furo-palette-picker {
+  .supa-palette-picker {
     @media (width < 768px) {
       display: none !important;
     }
   }
 }
 
-.furo-mobile-header-left {
+.supa-mobile-header-left {
   display: flex;
   align-items: center;
   flex: 0 0 auto;
 }
 
-.furo-mobile-header-center {
+.supa-mobile-header-center {
   display: flex;
   align-items: center;
   flex: 1 1 auto;
   min-width: 0;
 }
 
-.furo-mobile-header-right {
+.supa-mobile-header-right {
   display: flex;
   align-items: center;
   gap: 0.25rem;
@@ -112,7 +112,7 @@ body.furo-body {
   }
 }
 
-.furo-mobile-brand {
+.supa-mobile-brand {
   font-weight: 650;
   font-size: 0.95rem;
   color: var(--color-foreground-primary);
@@ -129,7 +129,7 @@ body.furo-body {
 }
 
 // Shared Icon Button
-.furo-icon-btn {
+.supa-icon-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -162,14 +162,14 @@ body.furo-body {
 }
 
 // Header Accessible Color Scheme Menu Picker
-.furo-palette-picker {
+.supa-palette-picker {
   position: relative;
   display: inline-flex;
   align-items: center;
 }
 
-.furo-palette-btn,
-.furo-palette-select {
+.supa-palette-btn,
+.supa-palette-select {
   appearance: none;
   display: inline-flex;
   align-items: center;
@@ -202,31 +202,31 @@ body.furo-body {
     outline-offset: var(--focus-ring-offset, 2px);
   }
 
-  &[aria-expanded="true"] .furo-palette-picker-chevron {
+  &[aria-expanded="true"] .supa-palette-picker-chevron {
     transform: rotate(180deg);
   }
 }
 
-.furo-palette-picker-chevron {
+.supa-palette-picker-chevron {
   flex: 0 0 auto;
   pointer-events: none;
   color: var(--color-foreground-muted);
   transition: transform 0.15s ease;
 }
 
-.furo-palette-menu {
+.supa-palette-menu {
   --menu-min-width: 14rem;
 }
 
 // Interactive Palette Preview Cards (for documentation & showcase pages)
-.furo-palette-grid {
+.supa-palette-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(15.5rem, 100%), 1fr));
   gap: 0.875rem;
   margin: 1.25rem 0 1.75rem;
 }
 
-.furo-palette-card {
+.supa-palette-card {
   display: flex;
   flex-direction: column;
   gap: 0.625rem;
@@ -255,7 +255,7 @@ body.furo-body {
   }
 }
 
-.furo-palette-card-header {
+.supa-palette-card-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -263,26 +263,26 @@ body.furo-body {
   width: 100%;
 }
 
-.furo-palette-card-title {
+.supa-palette-card-title {
   font-weight: 650;
   font-size: 0.875rem;
   color: var(--color-foreground-primary);
 }
 
-.furo-palette-card-desc {
+.supa-palette-card-desc {
   font-size: 0.78125rem;
   line-height: 1.45;
   color: var(--color-foreground-secondary);
 }
 
-.furo-palette-swatches {
+.supa-palette-swatches {
   display: flex;
   align-items: center;
   gap: 0.35rem;
   margin-top: 0.15rem;
 }
 
-.furo-palette-swatch {
+.supa-palette-swatch {
   width: 1.25rem;
   height: 1.25rem;
   border-radius: 999px;
@@ -291,22 +291,22 @@ body.furo-body {
 }
 
 // Theme Toggle Menu Picker & Icon State Visibility
-.furo-theme-toggle {
+.supa-theme-toggle {
   position: relative;
   display: inline-flex;
   align-items: center;
 
-  .furo-theme-icon {
+  .supa-theme-icon {
     display: none;
   }
 }
 
-.furo-theme-toggle-btn[aria-expanded="true"] {
+.supa-theme-toggle-btn[aria-expanded="true"] {
   background-color: var(--color-background-hover);
   color: var(--color-foreground-primary);
 }
 
-.furo-theme-menu {
+.supa-theme-menu {
   --menu-min-width: 9rem;
 
   .menu-item-icon {
@@ -315,21 +315,21 @@ body.furo-body {
   }
 }
 
-html[data-furo-theme-mode="light"] .furo-theme-toggle .furo-theme-icon-light {
+html[data-supa-theme-mode="light"] .supa-theme-toggle .supa-theme-icon-light {
   display: block;
 }
 
-html[data-furo-theme-mode="dark"] .furo-theme-toggle .furo-theme-icon-dark {
+html[data-supa-theme-mode="dark"] .supa-theme-toggle .supa-theme-icon-dark {
   display: block;
 }
 
-html[data-furo-theme-mode="auto"] .furo-theme-toggle .furo-theme-icon-auto,
-html:not([data-furo-theme-mode]) .furo-theme-toggle .furo-theme-icon-auto {
+html[data-supa-theme-mode="auto"] .supa-theme-toggle .supa-theme-icon-auto,
+html:not([data-supa-theme-mode]) .supa-theme-toggle .supa-theme-icon-auto {
   display: block;
 }
 
 // 3-Column Page Container
-.furo-page {
+.supa-page {
   display: flex;
   flex: 1 1 auto;
   min-width: 0;
@@ -346,7 +346,7 @@ dialog[data-bs-backdrop="false"]::backdrop {
 }
 
 // 1. Left Navigation Sidebar Column
-.furo-sidebar-column {
+.supa-sidebar-column {
   flex: 0 0 auto;
 
   @media (width >= 1024px) {
@@ -355,7 +355,7 @@ dialog[data-bs-backdrop="false"]::backdrop {
     align-self: flex-start;
     height: 100dvh;
     max-height: 100dvh;
-    width: var(--furo-sidebar-width);
+    width: var(--supa-sidebar-width);
     background-color: var(--color-background-secondary);
     border-right: 1px solid var(--color-background-border);
     display: flex;
@@ -364,7 +364,7 @@ dialog[data-bs-backdrop="false"]::backdrop {
   }
 }
 
-.furo-sidebar-drawer {
+.supa-sidebar-drawer {
   --drawer-width: 18rem;
   --drawer-bg: var(--color-background-secondary);
 
@@ -382,14 +382,14 @@ dialog[data-bs-backdrop="false"]::backdrop {
     overflow: hidden;
   }
 
-  .furo-drawer-header {
+  .supa-drawer-header {
     @media (width >= 1024px) {
       display: none !important;
     }
   }
 }
 
-.furo-drawer-header {
+.supa-drawer-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -398,7 +398,7 @@ dialog[data-bs-backdrop="false"]::backdrop {
 }
 
 // 2. Center Main Content + Right TOC Wrapper
-.furo-main {
+.supa-main {
   flex: 1 1 0%;
   min-width: 0;
   width: 100%;
@@ -408,7 +408,7 @@ dialog[data-bs-backdrop="false"]::backdrop {
   align-items: stretch;
 }
 
-.furo-content {
+.supa-content {
   display: flex;
   flex: 1 1 0%;
   min-width: 0;
@@ -417,11 +417,11 @@ dialog[data-bs-backdrop="false"]::backdrop {
   justify-content: center;
 }
 
-.furo-article-container {
+.supa-article-container {
   flex: 1 1 0%;
   min-width: 0;
   width: 100%;
-  max-width: min(100%, calc(var(--furo-content-max-width) + 7rem));
+  max-width: min(100%, calc(var(--supa-content-max-width) + 7rem));
   padding: 0 1.25rem;
   margin: 0 auto;
   display: flex;
@@ -441,7 +441,7 @@ dialog[data-bs-backdrop="false"]::backdrop {
 }
 
 // Top Content Utility Header (Breadcrumbs + Source/Theme Actions)
-.furo-content-header {
+.supa-content-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -460,14 +460,14 @@ dialog[data-bs-backdrop="false"]::backdrop {
     font-size: 0.8125rem;
   }
 
-  .furo-palette-picker,
-  .furo-theme-toggle {
+  .supa-palette-picker,
+  .supa-theme-toggle {
     @media (width < 1024px) {
       display: none !important;
     }
   }
 
-  .furo-toc-drawer-trigger {
+  .supa-toc-drawer-trigger {
     @media (width < 1024px) {
       display: none !important;
     }
@@ -478,19 +478,19 @@ dialog[data-bs-backdrop="false"]::backdrop {
   }
 }
 
-.furo-header-left {
+.supa-header-left {
   min-width: 0;
   flex: 1 1 auto;
 }
 
-.furo-header-right {
+.supa-header-right {
   display: flex;
   align-items: center;
   gap: 0.375rem;
   flex: 0 0 auto;
 }
 
-.furo-breadcrumb {
+.supa-breadcrumb {
   display: flex;
   align-items: center;
   font-size: 0.8125rem;
@@ -549,7 +549,7 @@ dialog[data-bs-backdrop="false"]::backdrop {
 }
 
 // 3. Right "On this page" TOC Column
-.furo-toc-column {
+.supa-toc-column {
   flex: 0 0 auto;
 
   @media (width >= 1280px) {
@@ -558,7 +558,7 @@ dialog[data-bs-backdrop="false"]::backdrop {
     align-self: flex-start;
     height: 100dvh;
     max-height: 100dvh;
-    width: var(--furo-toc-width);
+    width: var(--supa-toc-width);
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -571,7 +571,7 @@ dialog[data-bs-backdrop="false"]::backdrop {
   }
 }
 
-.furo-toc-drawer {
+.supa-toc-drawer {
   --drawer-width: 16.5rem;
   --drawer-bg: var(--color-background-primary);
 
@@ -589,7 +589,7 @@ dialog[data-bs-backdrop="false"]::backdrop {
     overflow: hidden;
   }
 
-  .furo-drawer-header {
+  .supa-drawer-header {
     @media (width >= 1280px) {
       display: none !important;
     }
@@ -599,7 +599,7 @@ dialog[data-bs-backdrop="false"]::backdrop {
 // Override Bootstrap 6 @layer components .lg:drawer / .xl:drawer !important rules
 @layer base {
   @media (width >= 1024px) {
-    .furo-sidebar-drawer.lg\:drawer {
+    .supa-sidebar-drawer.lg\:drawer {
       position: sticky !important;
       top: 0 !important;
       height: 100% !important;
@@ -608,7 +608,7 @@ dialog[data-bs-backdrop="false"]::backdrop {
   }
 
   @media (width >= 1280px) {
-    .furo-toc-drawer.xl\:drawer {
+    .supa-toc-drawer.xl\:drawer {
       position: sticky !important;
       top: 0 !important;
       height: 100% !important;
@@ -617,8 +617,8 @@ dialog[data-bs-backdrop="false"]::backdrop {
   }
 }
 
-// Native Bootstrap 6 Search Dialog (<dialog class="dialog furo-search-dialog">)
-.furo-search-dialog {
+// Native Bootstrap 6 Search Dialog (<dialog class="dialog supa-search-dialog">)
+.supa-search-dialog {
   --dialog-width: 38rem;
   --dialog-margin: 1rem;
   --dialog-bg: var(--color-background-primary);
@@ -639,7 +639,7 @@ dialog[data-bs-backdrop="false"]::backdrop {
   }
 }
 
-.furo-search-dialog-header {
+.supa-search-dialog-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -650,7 +650,7 @@ dialog[data-bs-backdrop="false"]::backdrop {
   border-top-right-radius: calc(var(--dialog-border-radius, 0.75rem) - var(--dialog-border-width, 1px));
 }
 
-.furo-search-input-wrapper {
+.supa-search-input-wrapper {
   display: flex;
   align-items: center;
   gap: 0.625rem;
@@ -658,12 +658,12 @@ dialog[data-bs-backdrop="false"]::backdrop {
   min-width: 0;
 }
 
-.furo-search-modal-icon {
+.supa-search-modal-icon {
   flex: 0 0 auto;
   color: var(--color-foreground-muted);
 }
 
-.furo-search-input {
+.supa-search-input {
   flex: 1 1 auto;
   min-width: 0;
   width: 100%;
@@ -680,25 +680,25 @@ dialog[data-bs-backdrop="false"]::backdrop {
   }
 }
 
-.furo-search-dialog-body {
+.supa-search-dialog-body {
   padding: 0.75rem 1rem;
   overflow-y: auto;
   max-height: 55dvh;
 }
 
-.furo-search-status {
+.supa-search-status {
   font-size: 0.78125rem;
   color: var(--color-foreground-muted);
   margin-bottom: 0.5rem;
 }
 
-.furo-search-results {
+.supa-search-results {
   display: flex;
   flex-direction: column;
   gap: 0.375rem;
 }
 
-.furo-search-result-item {
+.supa-search-result-item {
   display: flex;
   flex-direction: column;
   gap: 0.2rem;
@@ -717,7 +717,7 @@ dialog[data-bs-backdrop="false"]::backdrop {
   }
 }
 
-.furo-search-result-top {
+.supa-search-result-top {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -725,7 +725,7 @@ dialog[data-bs-backdrop="false"]::backdrop {
   min-width: 0;
 }
 
-.furo-search-result-title {
+.supa-search-result-title {
   font-size: 0.875rem;
   font-weight: 600;
   color: var(--color-brand-primary);
@@ -735,7 +735,7 @@ dialog[data-bs-backdrop="false"]::backdrop {
   white-space: nowrap;
 }
 
-.furo-search-result-badge {
+.supa-search-result-badge {
   flex: 0 0 auto;
   font-size: 0.6875rem;
   font-weight: 600;
@@ -747,7 +747,7 @@ dialog[data-bs-backdrop="false"]::backdrop {
   color: var(--color-foreground-secondary);
 }
 
-.furo-search-result-snippet {
+.supa-search-result-snippet {
   font-size: 0.78125rem;
   line-height: 1.45;
   color: var(--color-foreground-secondary);
@@ -757,7 +757,7 @@ dialog[data-bs-backdrop="false"]::backdrop {
   overflow: hidden;
 }
 
-.furo-search-mark {
+.supa-search-mark {
   padding: 0 0.15rem;
   border-radius: 0.2rem;
   background-color: color-mix(in srgb, var(--color-brand-primary) 22%, transparent);
@@ -765,7 +765,7 @@ dialog[data-bs-backdrop="false"]::backdrop {
   font-weight: 600;
 }
 
-.furo-search-dialog-footer {
+.supa-search-dialog-footer {
   display: none;
   align-items: center;
   justify-content: flex-start;
@@ -783,7 +783,7 @@ dialog[data-bs-backdrop="false"]::backdrop {
   }
 }
 
-.furo-search-hint {
+.supa-search-hint {
   display: inline-flex;
   align-items: center;
   gap: 0.25rem;
@@ -800,7 +800,7 @@ dialog[data-bs-backdrop="false"]::backdrop {
 }
 
 // Floating Back-to-Top Pill Button
-.furo-back-to-top {
+.supa-back-to-top {
   position: fixed;
   right: 1rem;
   bottom: 1rem;
@@ -848,7 +848,7 @@ dialog[data-bs-backdrop="false"]::backdrop {
 }
 
 // Footer
-.furo-footer {
+.supa-footer {
   margin-top: auto;
   padding: 2.25rem 0 3rem;
   border-top: 1px solid var(--color-background-border);
@@ -866,7 +866,7 @@ dialog[data-bs-backdrop="false"]::backdrop {
   }
 }
 
-.furo-footer-meta {
+.supa-footer-meta {
   display: flex;
   flex-wrap: wrap;
   align-items: center;

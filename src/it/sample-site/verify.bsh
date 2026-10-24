@@ -23,19 +23,19 @@ if ( !indexHtml.isFile() ) {
 }
 String html = Files.readString( indexHtml.toPath(), StandardCharsets.UTF_8 );
 
-if ( !html.contains( "class=\"furo-page\"" ) ) {
+if ( !html.contains( "class=\"supa-page\"" ) ) {
     throw new IllegalStateException( "Missing Furo 3-column page wrapper" );
 }
-if ( !html.contains( "id=\"furoSidebarDrawer\"" ) || !html.contains( "lg:drawer drawer-start furo-sidebar-drawer" ) ) {
+if ( !html.contains( "id=\"supaSidebarDrawer\"" ) || !html.contains( "lg:drawer drawer-start supa-sidebar-drawer" ) ) {
     throw new IllegalStateException( "Missing Bootstrap 6 left sidebar drawer" );
 }
-if ( !html.contains( "id=\"furoTocDrawer\"" ) || !html.contains( "xl:drawer drawer-end furo-toc-drawer" ) ) {
+if ( !html.contains( "id=\"supaTocDrawer\"" ) || !html.contains( "xl:drawer drawer-end supa-toc-drawer" ) ) {
     throw new IllegalStateException( "Missing Bootstrap 6 right TOC drawer" );
 }
 if ( !html.contains( "data-bs-scroll=" ) || !html.contains( "data-bs-backdrop=" ) ) {
     throw new IllegalStateException( "Missing drawer data-bs-scroll / data-bs-backdrop attributes" );
 }
-if ( !html.contains( "id=\"furoSearchDialog\"" ) ) {
+if ( !html.contains( "id=\"supaSearchDialog\"" ) ) {
     throw new IllegalStateException( "Missing Bootstrap 6 search dialog" );
 }
 if ( !html.contains( "Integration Test Announcement" ) ) {
@@ -47,7 +47,7 @@ if ( !html.contains( "--color-brand-primary: #0055ff;" ) ) {
 if ( !html.contains( "--color-brand-primary: #6699ff;" ) ) {
     throw new IllegalStateException( "Missing custom darkCssVariables" );
 }
-if ( !html.contains( "furo-next-page" ) || !html.contains( "guide.html" ) ) {
+if ( !html.contains( "supa-next-page" ) || !html.contains( "guide.html" ) ) {
     throw new IllegalStateException( "Missing Next page navigation card on index.html" );
 }
 
@@ -56,7 +56,7 @@ if ( !guideHtml.isFile() ) {
     throw new IllegalStateException( "guide.html was not generated" );
 }
 String guideText = Files.readString( guideHtml.toPath(), StandardCharsets.UTF_8 );
-if ( !guideText.contains( "furo-prev-page" ) ) {
+if ( !guideText.contains( "supa-prev-page" ) ) {
     throw new IllegalStateException( "Missing Previous page navigation card on guide.html" );
 }
 

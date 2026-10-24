@@ -52,11 +52,11 @@ const GFM_ALERT_REGEX = /^\s*\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\](?:[ \t]+(
 const GFM_BS_ALERT_REGEX =
   /^\s*\[!ALERT:(primary|secondary|success|info|warning|danger|light|dark)(?:[ \t]+(dismissible))?\](?:[ \t]+([^\n]*))?(?:\n|$)/i;
 
-export const TAB_SYNC_STORAGE_KEY = 'furo-tab-sync';
+export const TAB_SYNC_STORAGE_KEY = 'supa-tab-sync';
 
 /**
- * Classifies table columns into `.furo-table-col-compact` (single-line identifier/value
- * columns) and `.furo-table-col-prose` (multi-sentence description columns) so tables
+ * Classifies table columns into `.supa-table-col-compact` (single-line identifier/value
+ * columns) and `.supa-table-col-prose` (multi-sentence description columns) so tables
  * maintain balanced proportions without breaking inline `<code>` identifiers mid-word.
  */
 function classifyTableColumns(table: HTMLTableElement): void {
@@ -142,9 +142,9 @@ function classifyTableColumns(table: HTMLTableElement): void {
 
   colMeta.forEach((meta, colIdx) => {
     const className = meta.isProse
-      ? 'furo-table-col-prose'
+      ? 'supa-table-col-prose'
       : meta.isCompact
-        ? 'furo-table-col-compact'
+        ? 'supa-table-col-compact'
         : null;
     if (!className) {
       return;
@@ -173,9 +173,9 @@ export function normalizeDoxiaTables(container: HTMLElement): void {
     table.classList.add('table', 'table-hover');
     classifyTableColumns(table);
 
-    if (!table.parentElement?.classList.contains('furo-table-responsive')) {
+    if (!table.parentElement?.classList.contains('supa-table-responsive')) {
       const wrapper = document.createElement('div');
-      wrapper.className = 'furo-table-responsive not-prose';
+      wrapper.className = 'supa-table-responsive not-prose';
       table.parentNode?.insertBefore(wrapper, table);
       wrapper.appendChild(table);
     }
@@ -183,7 +183,7 @@ export function normalizeDoxiaTables(container: HTMLElement): void {
 
   // Strip Doxia's automatic `style="list-style-type: decimal;"` from Bootstrap <ol> components
   container
-    .querySelectorAll<HTMLElement>('ol.breadcrumb, ol.stepper, ol.furo-stepper, ol.list-group')
+    .querySelectorAll<HTMLElement>('ol.breadcrumb, ol.stepper, ol.supa-stepper, ol.list-group')
     .forEach((ol) => {
       ol.style.removeProperty('list-style-type');
     });
@@ -272,11 +272,11 @@ export function transformGfmAdmonitions(container: HTMLElement): void {
     }
 
     const admonition = document.createElement('div');
-    admonition.className = `furo-admonition admonition-${meta.type} not-prose`;
+    admonition.className = `supa-admonition admonition-${meta.type} not-prose`;
     admonition.setAttribute('role', 'note');
 
     const titleEl = document.createElement('p');
-    titleEl.className = 'furo-admonition-title';
+    titleEl.className = 'supa-admonition-title';
     titleEl.innerHTML = `${meta.iconSvg}<span></span>`;
     const span = titleEl.querySelector('span');
     if (span) {
@@ -284,7 +284,7 @@ export function transformGfmAdmonitions(container: HTMLElement): void {
     }
 
     const bodyEl = document.createElement('div');
-    bodyEl.className = 'furo-admonition-body';
+    bodyEl.className = 'supa-admonition-body';
     while (blockquote.firstChild) {
       bodyEl.appendChild(blockquote.firstChild);
     }
@@ -317,12 +317,12 @@ function inferPanelTabLabel(panel: HTMLElement, index: number): string {
 }
 
 /**
- * Enhances `.furo-tabs` containers with `<div data-tab="Label">` or `<div title="Label">`
+ * Enhances `.supa-tabs` containers with `<div data-tab="Label">` or `<div title="Label">`
  * panels into accessible ARIA tablists (`sphinx-inline-tabs` equivalent) that synchronize
  * active tab selection across the entire site via `localStorage`.
  */
 export function initContentTabs(container: HTMLElement): void {
-  const tabContainers = Array.from(container.querySelectorAll<HTMLElement>('.furo-tabs'));
+  const tabContainers = Array.from(container.querySelectorAll<HTMLElement>('.supa-tabs'));
   if (tabContainers.length === 0) {
     return;
   }
@@ -343,7 +343,7 @@ export function initContentTabs(container: HTMLElement): void {
   }> = [];
 
   tabContainers.forEach((tabBox, boxIndex) => {
-    if (tabBox.hasAttribute('data-furo-tabs-ready')) {
+    if (tabBox.hasAttribute('data-supa-tabs-ready')) {
       return;
     }
     const explicitPanels = Array.from(tabBox.children).filter(
@@ -357,13 +357,13 @@ export function initContentTabs(container: HTMLElement): void {
             (el): el is HTMLElement =>
               el instanceof HTMLElement &&
               el.tagName === 'DIV' &&
-              !el.classList.contains('furo-tab-list')
+              !el.classList.contains('supa-tab-list')
           );
     if (rawPanels.length === 0) {
       return;
     }
 
-    tabBox.setAttribute('data-furo-tabs-ready', 'true');
+    tabBox.setAttribute('data-supa-tabs-ready', 'true');
     tabBox.classList.add('not-prose');
     const groupKey =
       tabBox.getAttribute('data-tab-group') ||
@@ -372,7 +372,7 @@ export function initContentTabs(container: HTMLElement): void {
     tabBox.removeAttribute('title');
 
     const tabList = document.createElement('div');
-    tabList.className = 'furo-tab-list';
+    tabList.className = 'supa-tab-list';
     tabList.setAttribute('role', 'tablist');
 
     const buttons: HTMLButtonElement[] = [];
@@ -394,7 +394,7 @@ export function initContentTabs(container: HTMLElement): void {
         btn.tabIndex = isSelected ? 0 : -1;
       });
 
-      const isCodeCollapsed = Boolean(tabBox.closest('.furo-component-example.is-code-collapsed'));
+      const isCodeCollapsed = Boolean(tabBox.closest('.supa-component-example.is-code-collapsed'));
       panels.forEach((panel, idx) => {
         const isSelected = idx === matchIdx;
         panel.classList.toggle('active', isSelected);
@@ -419,13 +419,13 @@ export function initContentTabs(container: HTMLElement): void {
     rawPanels.forEach((panel, panelIdx) => {
       const label = inferPanelTabLabel(panel, panelIdx);
       panel.removeAttribute('title');
-      const tabId = `furo-tab-${boxIndex}-${panelIdx}`;
-      const panelId = `furo-tabpanel-${boxIndex}-${panelIdx}`;
+      const tabId = `supa-tab-${boxIndex}-${panelIdx}`;
+      const panelId = `supa-tabpanel-${boxIndex}-${panelIdx}`;
 
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.id = tabId;
-      btn.className = 'furo-tab-btn';
+      btn.className = 'supa-tab-btn';
       btn.setAttribute('role', 'tab');
       btn.setAttribute('aria-controls', panelId);
       btn.setAttribute('data-tab-label', label);
@@ -449,7 +449,7 @@ export function initContentTabs(container: HTMLElement): void {
       });
 
       panel.id = panelId;
-      panel.classList.add('furo-tab-panel');
+      panel.classList.add('supa-tab-panel');
       panel.setAttribute('role', 'tabpanel');
       panel.setAttribute('aria-labelledby', tabId);
 
@@ -475,13 +475,13 @@ export function initContentTabs(container: HTMLElement): void {
 }
 
 /**
- * Transforms declarative `.furo-accordion` containers (`<div data-accordion="Title">` or `<div title="Title">`)
+ * Transforms declarative `.supa-accordion` containers (`<div data-accordion="Title">` or `<div title="Title">`)
  * into native Bootstrap 6 `<details class="accordion-item">` + `<summary class="accordion-header">` accordions.
  */
 export function initBootstrapAccordions(container: HTMLElement): void {
-  const accordions = Array.from(container.querySelectorAll<HTMLElement>('.furo-accordion'));
+  const accordions = Array.from(container.querySelectorAll<HTMLElement>('.supa-accordion'));
   accordions.forEach((accBox, boxIdx) => {
-    if (accBox.hasAttribute('data-furo-accordion-ready')) {
+    if (accBox.hasAttribute('data-supa-accordion-ready')) {
       return;
     }
     const rawItems = Array.from(accBox.children).filter(
@@ -493,8 +493,8 @@ export function initBootstrapAccordions(container: HTMLElement): void {
       return;
     }
 
-    accBox.setAttribute('data-furo-accordion-ready', 'true');
-    const accId = accBox.id || `furo-accordion-${boxIdx}`;
+    accBox.setAttribute('data-supa-accordion-ready', 'true');
+    const accId = accBox.id || `supa-accordion-${boxIdx}`;
     accBox.id = accId;
     accBox.classList.add('accordion', 'not-prose');
     if (accBox.getAttribute('data-flush') === 'true' || accBox.classList.contains('flush')) {
@@ -555,16 +555,16 @@ export function initBootstrapAccordions(container: HTMLElement): void {
 }
 
 /**
- * Transforms declarative `<ol class="furo-stepper" data-active-step="2">` (or `title="2"` / `<li class="active">`)
+ * Transforms declarative `<ol class="supa-stepper" data-active-step="2">` (or `title="2"` / `<li class="active">`)
  * lists into Bootstrap 6 `.stepper.stepper-horizontal` components.
  */
 export function initBootstrapSteppers(container: HTMLElement): void {
-  const steppers = Array.from(container.querySelectorAll<HTMLElement>('.furo-stepper'));
+  const steppers = Array.from(container.querySelectorAll<HTMLElement>('.supa-stepper'));
   steppers.forEach((stepperEl) => {
-    if (stepperEl.hasAttribute('data-furo-stepper-ready')) {
+    if (stepperEl.hasAttribute('data-supa-stepper-ready')) {
       return;
     }
-    stepperEl.setAttribute('data-furo-stepper-ready', 'true');
+    stepperEl.setAttribute('data-supa-stepper-ready', 'true');
     stepperEl.style.removeProperty('list-style-type');
     stepperEl.classList.add('stepper', 'not-prose');
     if (
@@ -650,7 +650,7 @@ export function transformBootstrapIcons(container: HTMLElement): void {
 }
 
 export function initDoxiaEnhancements(
-  root: HTMLElement | null = document.getElementById('furo-main-content')
+  root: HTMLElement | null = document.getElementById('supa-main-content')
 ): void {
   if (!root) {
     return;

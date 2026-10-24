@@ -46,7 +46,7 @@ dialog.drawer:not([open]) {
 
 // Support both Bootstrap 6 `.breadcrumb-link` + `<li class="breadcrumb-divider">` markup
 // and classic `<li class="breadcrumb-item"><a href="...">` markup inside `.breadcrumb`
-.breadcrumb:not(.furo-breadcrumb) {
+.breadcrumb:not(.supa-breadcrumb) {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -225,9 +225,9 @@ dialog.drawer:not([open]) {
 }
 
 // ============================================================================
-// CSS Guardrails: Isolate Bootstrap 6 Components inside .furo-article.prose
+// CSS Guardrails: Isolate Bootstrap 6 Components inside .supa-article.prose
 // ============================================================================
-.furo-article {
+.supa-article {
   // Prevent .prose list bullets on Bootstrap list-based components while preserving
   // internal padding on `.menu`, `.menu-header`, and `.nav-pills`
   ul.nav,
@@ -239,7 +239,7 @@ dialog.drawer:not([open]) {
   ol.list-group,
   ol.stepper,
   ul.stepper,
-  ol.furo-stepper,
+  ol.supa-stepper,
   ol.carousel-indicators,
   ul.menu {
     list-style: none !important;
@@ -257,7 +257,7 @@ dialog.drawer:not([open]) {
   ol.list-group,
   ol.stepper,
   ul.stepper,
-  ol.furo-stepper,
+  ol.supa-stepper,
   ol.carousel-indicators {
     padding-inline-start: 0 !important;
   }
@@ -318,10 +318,10 @@ dialog.drawer:not([open]) {
 }
 
 // ============================================================================
-// Component Showcase Card Container (.furo-component-preview & .furo-component-example)
+// Component Showcase Card Container (.supa-component-preview & .supa-component-example)
 // Inspired by Bootstrap 6 Docs (.bd-example-snippet & #playground)
 // ============================================================================
-.furo-component-preview {
+.supa-component-preview {
   margin: 1.25rem 0 1.5rem;
   padding: 1rem;
   border-radius: 0.625rem;
@@ -336,7 +336,7 @@ dialog.drawer:not([open]) {
   }
 }
 
-.furo-component-example {
+.supa-component-example {
   margin: 1.25rem 0 1.75rem;
   border-radius: 0.625rem;
   border: 1px solid var(--color-background-border);
@@ -346,7 +346,7 @@ dialog.drawer:not([open]) {
   max-width: 100%;
   overflow: hidden;
 
-  & > .furo-component-preview {
+  & > .supa-component-preview {
     margin: 0;
     border: none;
     border-radius: 0;
@@ -354,48 +354,48 @@ dialog.drawer:not([open]) {
     border-bottom: 1px solid var(--color-background-border);
   }
 
-  &.is-code-collapsed > .furo-component-example-bar {
+  &.is-code-collapsed > .supa-component-example-bar {
     border-bottom: none;
   }
 
-  & > .furo-code-block {
+  & > .supa-code-block {
     margin: 0;
     border: none;
     border-radius: 0;
   }
 
-  & > .furo-tabs {
+  & > .supa-tabs {
     margin: 0;
     border: none;
     border-radius: 0;
 
-    .furo-tab-list {
+    .supa-tab-list {
       align-items: center;
       padding: 0.25rem 0.875rem 0;
 
-      .furo-component-code-toggle {
+      .supa-component-code-toggle {
         margin-left: auto;
         margin-bottom: 0.25rem;
       }
     }
 
-    .furo-tab-panel {
+    .supa-tab-panel {
       padding: 0;
     }
 
-    .furo-code-block {
+    .supa-code-block {
       margin: 0;
       border: none;
       border-radius: 0;
     }
   }
 
-  &.is-code-collapsed > .furo-tabs .furo-tab-list {
+  &.is-code-collapsed > .supa-tabs .supa-tab-list {
     border-bottom: none;
   }
 }
 
-.furo-component-example-bar {
+.supa-component-example-bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -405,7 +405,7 @@ dialog.drawer:not([open]) {
   border-bottom: 1px solid var(--color-background-border);
 }
 
-.furo-component-example-label {
+.supa-component-example-label {
   display: inline-flex;
   align-items: center;
   gap: 0.4375rem;
@@ -420,7 +420,7 @@ dialog.drawer:not([open]) {
   }
 }
 
-.furo-component-code-toggle {
+.supa-component-code-toggle {
   appearance: none;
   display: inline-flex;
   align-items: center;
@@ -443,20 +443,20 @@ dialog.drawer:not([open]) {
     border-color: var(--color-brand-primary);
   }
 
-  .furo-code-toggle-chevron {
+  .supa-code-toggle-chevron {
     transition: transform 0.15s ease;
     transform: rotate(180deg);
   }
 
-  &[aria-expanded="false"] .furo-code-toggle-chevron {
+  &[aria-expanded="false"] .supa-code-toggle-chevron {
     transform: rotate(0deg);
   }
 }
 
 // ============================================================================
-// Interactive Component Playground (.furo-playground)
+// Interactive Component Playground (.supa-playground)
 // ============================================================================
-.furo-playground {
+.supa-playground {
   margin: 1.25rem 0 2rem;
   border-radius: 0.625rem;
   border: 1px solid var(--color-background-border);
@@ -465,7 +465,7 @@ dialog.drawer:not([open]) {
   overflow: hidden;
 }
 
-.furo-playground-controls {
+.supa-playground-controls {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
@@ -474,14 +474,14 @@ dialog.drawer:not([open]) {
   border-bottom: 1px solid var(--color-background-border);
 }
 
-.furo-playground-row {
+.supa-playground-row {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 0.5rem;
 }
 
-.furo-playground-label {
+.supa-playground-label {
   font-size: 0.75rem;
   font-weight: 700;
   text-transform: uppercase;
@@ -490,13 +490,13 @@ dialog.drawer:not([open]) {
   min-width: 5.25rem;
 }
 
-.furo-playground-pills {
+.supa-playground-pills {
   display: flex;
   flex-wrap: wrap;
   gap: 0.375rem;
 }
 
-.furo-playground-pill {
+.supa-playground-pill {
   appearance: none;
   display: inline-flex;
   align-items: center;
@@ -525,7 +525,7 @@ dialog.drawer:not([open]) {
   }
 }
 
-.furo-playground-stage {
+.supa-playground-stage {
   padding: 1.5rem 1.25rem;
   background-color: var(--color-background-primary);
   border-bottom: 1px solid var(--color-background-border);
@@ -534,7 +534,7 @@ dialog.drawer:not([open]) {
   align-items: center;
 }
 
-.furo-playground-bar {
+.supa-playground-bar {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -543,7 +543,7 @@ dialog.drawer:not([open]) {
   background-color: var(--color-background-secondary);
   border-bottom: 1px solid var(--color-background-border);
 
-  .furo-tab-btn {
+  .supa-tab-btn {
     appearance: none;
     border: none;
     background: transparent;
@@ -566,17 +566,17 @@ dialog.drawer:not([open]) {
     }
   }
 
-  .furo-component-code-toggle {
+  .supa-component-code-toggle {
     margin-left: auto;
     margin-bottom: 0.25rem;
   }
 }
 
-.furo-playground.is-code-collapsed > .furo-playground-bar {
+.supa-playground.is-code-collapsed > .supa-playground-bar {
   border-bottom: none;
 }
 
-.furo-playground > .furo-code-block {
+.supa-playground > .supa-code-block {
   margin: 0;
   border: none;
   border-radius: 0;

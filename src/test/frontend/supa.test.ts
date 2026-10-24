@@ -61,35 +61,35 @@ describe('Supa Maven Skin Frontend Modules', () => {
     });
 
     document.documentElement.removeAttribute('data-bs-theme');
-    document.documentElement.removeAttribute('data-furo-theme-mode');
-    document.documentElement.removeAttribute('data-furo-resolved-theme');
-    document.documentElement.removeAttribute('data-furo-palette');
-    document.documentElement.removeAttribute('data-furo-palette-locked');
+    document.documentElement.removeAttribute('data-supa-theme-mode');
+    document.documentElement.removeAttribute('data-supa-resolved-theme');
+    document.documentElement.removeAttribute('data-supa-palette');
+    document.documentElement.removeAttribute('data-supa-palette-locked');
     document.body.innerHTML = '';
   });
 
   describe('Theme & Accessible Color Scheme Controller', () => {
-    it('applies explicit light, dark, and auto themes via mutually exclusive .furo-theme-toggle menu items', () => {
+    it('applies explicit light, dark, and auto themes via mutually exclusive .supa-theme-toggle menu items', () => {
       document.body.innerHTML = `
-        <div class="furo-theme-toggle">
-          <button type="button" class="furo-icon-btn furo-theme-toggle-btn" data-bs-toggle="menu" data-furo-theme-trigger="true"></button>
-          <div class="menu furo-theme-menu" role="menu">
-            <button type="button" class="menu-item" role="menuitemradio" aria-checked="false" data-furo-theme-option="light">Light</button>
-            <button type="button" class="menu-item" role="menuitemradio" aria-checked="false" data-furo-theme-option="dark">Dark</button>
-            <button type="button" class="menu-item selected" role="menuitemradio" aria-checked="true" data-furo-theme-option="auto">Auto</button>
+        <div class="supa-theme-toggle">
+          <button type="button" class="supa-icon-btn supa-theme-toggle-btn" data-bs-toggle="menu" data-supa-theme-trigger="true"></button>
+          <div class="menu supa-theme-menu" role="menu">
+            <button type="button" class="menu-item" role="menuitemradio" aria-checked="false" data-supa-theme-option="light">Light</button>
+            <button type="button" class="menu-item" role="menuitemradio" aria-checked="false" data-supa-theme-option="dark">Dark</button>
+            <button type="button" class="menu-item selected" role="menuitemradio" aria-checked="true" data-supa-theme-option="auto">Auto</button>
           </div>
         </div>
       `;
 
       initTheme();
 
-      const lightOption = document.querySelector<HTMLButtonElement>('[data-furo-theme-option="light"]')!;
-      const darkOption = document.querySelector<HTMLButtonElement>('[data-furo-theme-option="dark"]')!;
-      const autoOption = document.querySelector<HTMLButtonElement>('[data-furo-theme-option="auto"]')!;
+      const lightOption = document.querySelector<HTMLButtonElement>('[data-supa-theme-option="light"]')!;
+      const darkOption = document.querySelector<HTMLButtonElement>('[data-supa-theme-option="dark"]')!;
+      const autoOption = document.querySelector<HTMLButtonElement>('[data-supa-theme-option="auto"]')!;
 
       lightOption.click();
       expect(document.documentElement.getAttribute('data-bs-theme')).toBe('light');
-      expect(document.documentElement.getAttribute('data-furo-theme-mode')).toBe('light');
+      expect(document.documentElement.getAttribute('data-supa-theme-mode')).toBe('light');
       expect(getStoredThemeMode()).toBe('light');
       expect(lightOption.classList.contains('selected')).toBe(true);
       expect(lightOption.getAttribute('aria-checked')).toBe('true');
@@ -105,7 +105,7 @@ describe('Supa Maven Skin Frontend Modules', () => {
 
       autoOption.click();
       expect(document.documentElement.hasAttribute('data-bs-theme')).toBe(false);
-      expect(document.documentElement.getAttribute('data-furo-theme-mode')).toBe('auto');
+      expect(document.documentElement.getAttribute('data-supa-theme-mode')).toBe('auto');
       expect(autoOption.classList.contains('selected')).toBe(true);
       expect(autoOption.getAttribute('aria-checked')).toBe('true');
       expect(darkOption.classList.contains('selected')).toBe(false);
@@ -117,54 +117,54 @@ describe('Supa Maven Skin Frontend Modules', () => {
 
     it('applies and persists all 6 accessible color schemes and syncs menu options, labels & preview cards', () => {
       document.body.innerHTML = `
-        <div class="furo-palette-picker">
-          <button type="button" class="furo-palette-btn" data-bs-toggle="menu">
-            <span data-furo-palette-label="true">Furo (AA)</span>
+        <div class="supa-palette-picker">
+          <button type="button" class="supa-palette-btn" data-bs-toggle="menu">
+            <span data-supa-palette-label="true">Furo (AA)</span>
           </button>
-          <div class="menu furo-palette-menu">
-            <button type="button" class="menu-item selected" data-furo-palette-option="furo"></button>
-            <button type="button" class="menu-item" data-furo-palette-option="bootstrap"></button>
-            <button type="button" class="menu-item" data-furo-palette-option="modus"></button>
-            <button type="button" class="menu-item" data-furo-palette-option="modus-tinted"></button>
-            <button type="button" class="menu-item" data-furo-palette-option="modus-deuteranopia"></button>
-            <button type="button" class="menu-item" data-furo-palette-option="modus-tritanopia"></button>
+          <div class="menu supa-palette-menu">
+            <button type="button" class="menu-item selected" data-supa-palette-option="furo"></button>
+            <button type="button" class="menu-item" data-supa-palette-option="bootstrap"></button>
+            <button type="button" class="menu-item" data-supa-palette-option="modus"></button>
+            <button type="button" class="menu-item" data-supa-palette-option="modus-tinted"></button>
+            <button type="button" class="menu-item" data-supa-palette-option="modus-deuteranopia"></button>
+            <button type="button" class="menu-item" data-supa-palette-option="modus-tritanopia"></button>
           </div>
         </div>
-        <button type="button" data-furo-palette-card="furo"></button>
-        <button type="button" data-furo-palette-card="modus-deuteranopia"></button>
+        <button type="button" data-supa-palette-card="furo"></button>
+        <button type="button" data-supa-palette-card="modus-deuteranopia"></button>
       `;
 
       initTheme();
-      expect(document.documentElement.getAttribute('data-furo-palette')).toBe('furo');
+      expect(document.documentElement.getAttribute('data-supa-palette')).toBe('furo');
 
       applyPalette('modus');
-      expect(document.documentElement.getAttribute('data-furo-palette')).toBe('modus');
-      expect(document.documentElement.getAttribute('data-furo-palette-locked')).toBe('true');
+      expect(document.documentElement.getAttribute('data-supa-palette')).toBe('modus');
+      expect(document.documentElement.getAttribute('data-supa-palette-locked')).toBe('true');
       expect(getStoredPalette()).toBe('modus');
       expect(window.localStorage.getItem(PALETTE_STORAGE_KEY)).toBe('modus');
 
-      const labelEl = document.querySelector<HTMLElement>('[data-furo-palette-label]')!;
+      const labelEl = document.querySelector<HTMLElement>('[data-supa-palette-label]')!;
       expect(labelEl.textContent).toBe('Modus (AAA)');
 
       const modusOption = document.querySelector<HTMLButtonElement>(
-        '[data-furo-palette-option="modus"]'
+        '[data-supa-palette-option="modus"]'
       )!;
       expect(modusOption.classList.contains('selected')).toBe(true);
       expect(modusOption.getAttribute('aria-checked')).toBe('true');
 
       const tritOption = document.querySelector<HTMLButtonElement>(
-        '[data-furo-palette-option="modus-tritanopia"]'
+        '[data-supa-palette-option="modus-tritanopia"]'
       )!;
       tritOption.click();
-      expect(document.documentElement.getAttribute('data-furo-palette')).toBe('modus-tritanopia');
+      expect(document.documentElement.getAttribute('data-supa-palette')).toBe('modus-tritanopia');
       expect(labelEl.textContent).toBe('Modus Tritanopia (AAA)');
       expect(tritOption.classList.contains('selected')).toBe(true);
 
       const deutCard = document.querySelector<HTMLButtonElement>(
-        '[data-furo-palette-card="modus-deuteranopia"]'
+        '[data-supa-palette-card="modus-deuteranopia"]'
       )!;
       deutCard.click();
-      expect(document.documentElement.getAttribute('data-furo-palette')).toBe('modus-deuteranopia');
+      expect(document.documentElement.getAttribute('data-supa-palette')).toBe('modus-deuteranopia');
       expect(labelEl.textContent).toBe('Modus Deuteranopia (AAA)');
       expect(deutCard.classList.contains('is-active')).toBe(true);
       expect(deutCard.getAttribute('aria-pressed')).toBe('true');
@@ -195,14 +195,14 @@ describe('Supa Maven Skin Frontend Modules', () => {
       const reportTable = container.querySelector<HTMLTableElement>('#reportTable')!;
       expect(reportTable.classList.contains('bodyTable')).toBe(false);
       expect(reportTable.classList.contains('table')).toBe(true);
-      expect(reportTable.parentElement?.classList.contains('furo-table-responsive')).toBe(true);
-      expect(reportTable.querySelectorAll('.furo-table-col-prose').length).toBe(0);
+      expect(reportTable.parentElement?.classList.contains('supa-table-responsive')).toBe(true);
+      expect(reportTable.querySelectorAll('.supa-table-col-prose').length).toBe(0);
 
       const configTable = container.querySelector<HTMLTableElement>('#configTable')!;
       const configTds = configTable.querySelectorAll('tbody td');
-      expect(configTds[0].classList.contains('furo-table-col-compact')).toBe(true);
-      expect(configTds[1].classList.contains('furo-table-col-compact')).toBe(true);
-      expect(configTds[2].classList.contains('furo-table-col-prose')).toBe(true);
+      expect(configTds[0].classList.contains('supa-table-col-compact')).toBe(true);
+      expect(configTds[1].classList.contains('supa-table-col-compact')).toBe(true);
+      expect(configTds[2].classList.contains('supa-table-col-prose')).toBe(true);
     });
 
     it('transforms GFM blockquote alerts into Furo admonition cards and Bootstrap 6 alerts', () => {
@@ -221,16 +221,16 @@ describe('Supa Maven Skin Frontend Modules', () => {
 
       transformGfmAdmonitions(container);
 
-      const admonitions = container.querySelectorAll('.furo-admonition');
+      const admonitions = container.querySelectorAll('.supa-admonition');
       expect(admonitions.length).toBe(2);
       expect(admonitions[0].classList.contains('admonition-note')).toBe(true);
-      expect(admonitions[0].querySelector('.furo-admonition-title')?.textContent).toBe('Note');
-      expect(admonitions[0].querySelector('.furo-admonition-body')?.textContent?.trim()).toBe(
+      expect(admonitions[0].querySelector('.supa-admonition-title')?.textContent).toBe('Note');
+      expect(admonitions[0].querySelector('.supa-admonition-body')?.textContent?.trim()).toBe(
         'Furo uses Bootstrap 6 Alpha under the hood.'
       );
 
       expect(admonitions[1].classList.contains('admonition-tip')).toBe(true);
-      expect(admonitions[1].querySelector('.furo-admonition-title')?.textContent).toBe(
+      expect(admonitions[1].querySelector('.supa-admonition-title')?.textContent).toBe(
         'Custom Performance Tip'
       );
 
@@ -241,14 +241,14 @@ describe('Supa Maven Skin Frontend Modules', () => {
       expect(bsAlert?.querySelector('[data-bs-dismiss="alert"]')).not.toBeNull();
     });
 
-    it('transforms .furo-tabs into synchronized ARIA tablists persisted in localStorage', () => {
+    it('transforms .supa-tabs into synchronized ARIA tablists persisted in localStorage', () => {
       const container = document.createElement('div');
       container.innerHTML = `
-        <div class="furo-tabs" data-tab-group="lang">
+        <div class="supa-tabs" data-tab-group="lang">
           <div data-tab="Java">Java code</div>
           <div data-tab="Kotlin">Kotlin code</div>
         </div>
-        <div class="furo-tabs" data-tab-group="lang">
+        <div class="supa-tabs" data-tab-group="lang">
           <div data-tab="Java">Second Java</div>
           <div data-tab="Kotlin">Second Kotlin</div>
         </div>
@@ -256,7 +256,7 @@ describe('Supa Maven Skin Frontend Modules', () => {
 
       initContentTabs(container);
 
-      const tabButtons = container.querySelectorAll<HTMLButtonElement>('.furo-tab-btn');
+      const tabButtons = container.querySelectorAll<HTMLButtonElement>('.supa-tab-btn');
       expect(tabButtons.length).toBe(4);
       expect(tabButtons[0].classList.contains('active')).toBe(true);
 
@@ -267,14 +267,14 @@ describe('Supa Maven Skin Frontend Modules', () => {
       expect(window.localStorage.getItem(TAB_SYNC_STORAGE_KEY)).toContain('Kotlin');
     });
 
-    it('transforms .furo-accordion and .furo-stepper shorthands into Bootstrap 6 components', () => {
+    it('transforms .supa-accordion and .supa-stepper shorthands into Bootstrap 6 components', () => {
       const container = document.createElement('div');
       container.innerHTML = `
-        <div class="furo-accordion">
+        <div class="supa-accordion">
           <div title="First Question" class="open"><p>First Answer</p></div>
           <div title="Second Question"><p>Second Answer</p></div>
         </div>
-        <ol class="furo-stepper" title="2">
+        <ol class="supa-stepper" title="2">
           <li>Step One</li>
           <li>Step Two</li>
           <li>Step Three</li>
@@ -374,25 +374,25 @@ describe('Supa Maven Skin Frontend Modules', () => {
       }
     });
 
-    it('pairs .furo-component-preview with code blocks or .furo-tabs into .furo-component-example and powers [data-furo-playground]', () => {
+    it('pairs .supa-component-preview with code blocks or .supa-tabs into .supa-component-example and powers [data-supa-playground]', () => {
       const container = document.createElement('div');
       container.innerHTML = `
-        <div class="furo-playground" data-furo-playground="true">
-          <button type="button" class="furo-playground-pill active" data-playground-component="button"></button>
-          <button type="button" class="furo-playground-pill" data-playground-component="alert"></button>
-          <button type="button" class="furo-playground-pill active" data-playground-theme="primary"></button>
-          <button type="button" class="furo-playground-pill" data-playground-theme="success"></button>
-          <button type="button" class="furo-playground-pill active" data-playground-variant="solid"></button>
-          <button type="button" class="furo-playground-pill" data-playground-variant="outline"></button>
-          <button type="button" class="furo-playground-pill active" data-playground-size="sm"></button>
-          <button type="button" class="furo-playground-pill" data-playground-size="lg"></button>
-          <div class="furo-playground-stage" data-playground-stage="true"></div>
+        <div class="supa-playground" data-supa-playground="true">
+          <button type="button" class="supa-playground-pill active" data-playground-component="button"></button>
+          <button type="button" class="supa-playground-pill" data-playground-component="alert"></button>
+          <button type="button" class="supa-playground-pill active" data-playground-theme="primary"></button>
+          <button type="button" class="supa-playground-pill" data-playground-theme="success"></button>
+          <button type="button" class="supa-playground-pill active" data-playground-variant="solid"></button>
+          <button type="button" class="supa-playground-pill" data-playground-variant="outline"></button>
+          <button type="button" class="supa-playground-pill active" data-playground-size="sm"></button>
+          <button type="button" class="supa-playground-pill" data-playground-size="lg"></button>
+          <div class="supa-playground-stage" data-playground-stage="true"></div>
           <pre><code class="language-html" data-playground-code="true"></code></pre>
         </div>
-        <div class="furo-component-preview"><button class="btn theme-primary">Demo</button></div>
+        <div class="supa-component-preview"><button class="btn theme-primary">Demo</button></div>
         <pre><code class="language-html">&lt;button class="btn theme-primary"&gt;Demo&lt;/button&gt;</code></pre>
-        <div class="furo-component-preview"><span class="badge theme-primary">v1.0.0</span></div>
-        <div class="furo-tabs" title="badge-syntax">
+        <div class="supa-component-preview"><span class="badge theme-primary">v1.0.0</span></div>
+        <div class="supa-tabs" title="badge-syntax">
           <div title="Markdown + HTML"><pre><code class="language-html">&lt;span class="badge theme-primary"&gt;v1.0.0&lt;/span&gt;</code></pre></div>
           <div title="Velocity Macro (.md.vm)"><pre><code class="language-velocity">#bsBadge("primary", "v1.0.0")</code></pre></div>
         </div>
@@ -403,13 +403,13 @@ describe('Supa Maven Skin Frontend Modules', () => {
       initComponentExamples(container);
       initComponentPlayground(container);
 
-      const examples = container.querySelectorAll<HTMLElement>('.furo-component-example');
+      const examples = container.querySelectorAll<HTMLElement>('.supa-component-example');
       expect(examples.length).toBe(2);
 
       // Single code block example
       const example = examples[0];
-      const toggleBtn = example.querySelector<HTMLButtonElement>('.furo-component-code-toggle')!;
-      const codeBlock = example.querySelector<HTMLElement>('.furo-code-block')!;
+      const toggleBtn = example.querySelector<HTMLButtonElement>('.supa-component-code-toggle')!;
+      const codeBlock = example.querySelector<HTMLElement>('.supa-code-block')!;
       expect(toggleBtn).not.toBeNull();
       expect(codeBlock.hidden).toBe(false);
 
@@ -420,13 +420,13 @@ describe('Supa Maven Skin Frontend Modules', () => {
       toggleBtn.click();
       expect(codeBlock.hidden).toBe(false);
 
-      // Multi-tab (.furo-tabs) example
+      // Multi-tab (.supa-tabs) example
       const tabbedExample = examples[1];
       const tabbedToggleBtn = tabbedExample.querySelector<HTMLButtonElement>(
-        '.furo-tab-list .furo-component-code-toggle'
+        '.supa-tab-list .supa-component-code-toggle'
       )!;
-      const tabPanels = tabbedExample.querySelectorAll<HTMLElement>('.furo-tab-panel');
-      const tabBtns = tabbedExample.querySelectorAll<HTMLButtonElement>('.furo-tab-btn');
+      const tabPanels = tabbedExample.querySelectorAll<HTMLElement>('.supa-tab-panel');
+      const tabBtns = tabbedExample.querySelectorAll<HTMLButtonElement>('.supa-tab-btn');
       expect(tabbedToggleBtn).not.toBeNull();
       expect(tabPanels.length).toBe(2);
       expect(tabPanels[0].hidden).toBe(false);
@@ -467,21 +467,21 @@ describe('Supa Maven Skin Frontend Modules', () => {
 
     it('prefers Bootstrap 6 Tooltips over built-in browser title attributes across controls and content', () => {
       document.body.innerHTML = `
-        <div class="furo-theme-toggle">
-          <button type="button" class="furo-icon-btn furo-theme-toggle-btn" data-bs-toggle="menu" data-furo-theme-trigger="true"></button>
+        <div class="supa-theme-toggle">
+          <button type="button" class="supa-icon-btn supa-theme-toggle-btn" data-bs-toggle="menu" data-supa-theme-trigger="true"></button>
         </div>
-        <div class="furo-palette-picker">
-          <button type="button" class="furo-palette-btn" data-bs-toggle="menu"></button>
+        <div class="supa-palette-picker">
+          <button type="button" class="supa-palette-btn" data-bs-toggle="menu"></button>
         </div>
-        <main id="furo-main-content">
+        <main id="supa-main-content">
           <h2>Section Heading</h2>
           <pre><code class="language-xml">&lt;skin/&gt;</code></pre>
           <span class="avatar" title="Lead Maintainer">MC</span>
-          <a href="https://github.com" class="furo-footer-icon-link" title="GitHub Repository">GH</a>
+          <a href="https://github.com" class="supa-footer-icon-link" title="GitHub Repository">GH</a>
         </main>
       `;
 
-      const article = document.getElementById('furo-main-content')!;
+      const article = document.getElementById('supa-main-content')!;
       initTheme();
       prepareHeadings(article, true, '#');
       enhanceCodeBlocks(article, true, true);
@@ -490,12 +490,12 @@ describe('Supa Maven Skin Frontend Modules', () => {
       // No visible element in body should retain a native browser `title` attribute
       expect(document.body.querySelectorAll('[title]').length).toBe(0);
 
-      const themeBtn = document.querySelector<HTMLElement>('.furo-theme-toggle-btn')!;
-      const paletteBtn = document.querySelector<HTMLElement>('.furo-palette-btn')!;
-      const permalink = article.querySelector<HTMLElement>('.furo-headerlink')!;
-      const copyBtn = article.querySelector<HTMLElement>('.furo-copy-btn')!;
+      const themeBtn = document.querySelector<HTMLElement>('.supa-theme-toggle-btn')!;
+      const paletteBtn = document.querySelector<HTMLElement>('.supa-palette-btn')!;
+      const permalink = article.querySelector<HTMLElement>('.supa-headerlink')!;
+      const copyBtn = article.querySelector<HTMLElement>('.supa-copy-btn')!;
       const avatar = article.querySelector<HTMLElement>('.avatar')!;
-      const ghLink = article.querySelector<HTMLElement>('.furo-footer-icon-link')!;
+      const ghLink = article.querySelector<HTMLElement>('.supa-footer-icon-link')!;
 
       expect(themeBtn.getAttribute('data-bs-toggle')).toBe('menu');
       expect(themeBtn.getAttribute('data-bs-title')).toContain('Color theme:');
@@ -522,15 +522,15 @@ describe('Supa Maven Skin Frontend Modules', () => {
       expect(Tooltip.getInstance(ghLink)).not.toBeNull();
     });
 
-    it('configures left #furoSidebarDrawer (.drawer-start) and right #furoTocDrawer (.drawer-end) with body scrolling and backdrop options', () => {
+    it('configures left #supaSidebarDrawer (.drawer-start) and right #supaTocDrawer (.drawer-end) with body scrolling and backdrop options', () => {
       document.body.innerHTML = `
-        <dialog class="lg:drawer drawer-start furo-sidebar-drawer"
-                id="furoSidebarDrawer"
+        <dialog class="lg:drawer drawer-start supa-sidebar-drawer"
+                id="supaSidebarDrawer"
                 data-bs-scroll="true"
                 data-bs-backdrop="false"
                 tabindex="-1"></dialog>
-        <dialog class="xl:drawer drawer-end furo-toc-drawer"
-                id="furoTocDrawer"
+        <dialog class="xl:drawer drawer-end supa-toc-drawer"
+                id="supaTocDrawer"
                 data-bs-scroll="false"
                 data-bs-backdrop="static"
                 tabindex="-1"></dialog>
@@ -538,8 +538,8 @@ describe('Supa Maven Skin Frontend Modules', () => {
 
       initDrawers();
 
-      const sidebarDrawer = document.getElementById('furoSidebarDrawer')!;
-      const tocDrawer = document.getElementById('furoTocDrawer')!;
+      const sidebarDrawer = document.getElementById('supaSidebarDrawer')!;
+      const tocDrawer = document.getElementById('supaTocDrawer')!;
 
       expect(sidebarDrawer.classList.contains('drawer-start')).toBe(true);
       expect(sidebarDrawer.classList.contains('drawer-sheet')).toBe(false);
@@ -576,24 +576,24 @@ describe('Supa Maven Skin Frontend Modules', () => {
       expect(slugifyHeading('Getting Started with Furo!')).toBe('getting-started-with-furo');
 
       document.body.innerHTML = `
-        <nav class="furo-sidebar-tree">
-          <a class="furo-nav-link" href="#getting-started">Getting Started</a>
-          <a class="furo-nav-link" href="#1-actions-buttons">1. Actions &amp; Buttons</a>
+        <nav class="supa-sidebar-tree">
+          <a class="supa-nav-link" href="#getting-started">Getting Started</a>
+          <a class="supa-nav-link" href="#1-actions-buttons">1. Actions &amp; Buttons</a>
         </nav>
-        <main id="furo-main-content">
+        <main id="supa-main-content">
           <h1>Page Title</h1>
           <a id="Getting_Started"></a><h2>Getting Started</h2>
           <h3>Installation</h3>
           <a id="a1._Actions_.26_Buttons"></a><h2>1. Actions &amp; Buttons</h2>
           <h2>Getting Started</h2>
         </main>
-        <aside class="furo-toc-column">
-          <nav id="furoTocNav"></nav>
+        <aside class="supa-toc-column">
+          <nav id="supaTocNav"></nav>
         </aside>
       `;
 
-      const article = document.getElementById('furo-main-content')!;
-      const tocNav = document.getElementById('furoTocNav')!;
+      const article = document.getElementById('supa-main-content')!;
+      const tocNav = document.getElementById('supaTocNav')!;
 
       prepareHeadings(article, true, '#');
       buildTableOfContents(article, tocNav, 4);
@@ -604,14 +604,14 @@ describe('Supa Maven Skin Frontend Modules', () => {
       expect(h2s[1].id).toBe('1-actions-buttons');
       expect(h2s[1].getAttribute('data-doxia-id')).toBe('a1._Actions_.26_Buttons');
       expect(h2s[2].id).toBe('getting-started-2');
-      expect(h2s[1].querySelector('.furo-headerlink')?.getAttribute('href')).toBe(
+      expect(h2s[1].querySelector('.supa-headerlink')?.getAttribute('href')).toBe(
         '#1-actions-buttons'
       );
 
       const tocLinks = tocNav.querySelectorAll('a.nav-link');
       expect(tocLinks.length).toBe(4);
       expect(tocLinks[0].textContent).toBe('Getting Started');
-      expect(tocLinks[1].classList.contains('furo-toc-level-3')).toBe(true);
+      expect(tocLinks[1].classList.contains('supa-toc-level-3')).toBe(true);
       expect(tocLinks[2].getAttribute('href')).toBe('#1-actions-buttons');
     });
   });
@@ -626,13 +626,13 @@ describe('Supa Maven Skin Frontend Modules', () => {
 
       enhanceCodeBlocks(container, true, true);
 
-      const wrappers = container.querySelectorAll('.furo-code-block');
+      const wrappers = container.querySelectorAll('.supa-code-block');
       expect(wrappers.length).toBe(2);
       expect(wrappers[0].querySelector('code')?.classList.contains('hljs')).toBe(true);
-      expect(wrappers[0].querySelector('.furo-code-lang')?.textContent).toBe('xml');
-      expect(wrappers[0].querySelector('.furo-copy-btn')).not.toBeNull();
+      expect(wrappers[0].querySelector('.supa-code-lang')?.textContent).toBe('xml');
+      expect(wrappers[0].querySelector('.supa-copy-btn')).not.toBeNull();
 
-      expect(wrappers[1].querySelector('.furo-code-lang')?.textContent).toBe('diff');
+      expect(wrappers[1].querySelector('.supa-code-lang')?.textContent).toBe('diff');
       expect(wrappers[1].querySelector('.hljs-deletion')).not.toBeNull();
       expect(wrappers[1].querySelector('.hljs-addition')).not.toBeNull();
     });
@@ -687,13 +687,13 @@ describe('Supa Maven Skin Frontend Modules', () => {
   describe('Client-Side Search Indexing, Filtering & Highlighting', () => {
     it('collects sidebar and heading documents, ranks query matches, and highlights terms', () => {
       document.body.innerHTML = `
-        <nav class="furo-sidebar-tree">
-          <div class="furo-nav-group">
-            <div class="furo-nav-caption">Guide</div>
-            <a class="furo-nav-link" href="config.html">Skin Configuration</a>
+        <nav class="supa-sidebar-tree">
+          <div class="supa-nav-group">
+            <div class="supa-nav-caption">Guide</div>
+            <a class="supa-nav-link" href="config.html">Skin Configuration</a>
           </div>
         </nav>
-        <main id="furo-main-content">
+        <main id="supa-main-content">
           <h2 id="dark-mode">Dark Mode Customization</h2>
           <p>Configure lightCssVariables and darkCssVariables in site.xml.</p>
         </main>
@@ -707,7 +707,7 @@ describe('Supa Maven Skin Frontend Modules', () => {
       expect(results[0].title).toContain('Dark Mode');
 
       const highlighted = highlightQueryTerms('Dark Mode Customization', 'dark');
-      expect(highlighted).toContain('<mark class="furo-search-mark">Dark</mark>');
+      expect(highlighted).toContain('<mark class="supa-search-mark">Dark</mark>');
     });
   });
 });

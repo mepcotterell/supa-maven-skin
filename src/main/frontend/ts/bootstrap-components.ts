@@ -96,7 +96,7 @@ declare global {
 
 /**
  * Top-level Bootstrap 6 component root selectors that should automatically be
- * isolated from `.prose` typography rules when placed inside `.furo-article`.
+ * isolated from `.prose` typography rules when placed inside `.supa-article`.
  */
 const BOOTSTRAP_PROSE_ISOLATION_SELECTORS = [
   '.accordion',
@@ -158,20 +158,20 @@ const CODE_ICON_SVG =
   '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>';
 
 const CHEVRON_ICON_SVG =
-  '<svg class="furo-code-toggle-chevron" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>';
+  '<svg class="supa-code-toggle-chevron" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>';
 
 function isDoxiaShorthandTitleElement(el: HTMLElement): boolean {
   if (
-    el.classList.contains('furo-tabs') ||
-    el.classList.contains('furo-accordion') ||
-    el.classList.contains('furo-stepper')
+    el.classList.contains('supa-tabs') ||
+    el.classList.contains('supa-accordion') ||
+    el.classList.contains('supa-stepper')
   ) {
     return true;
   }
   const parent = el.parentElement;
   if (
     parent &&
-    (parent.classList.contains('furo-tabs') || parent.classList.contains('furo-accordion'))
+    (parent.classList.contains('supa-tabs') || parent.classList.contains('supa-accordion'))
   ) {
     return true;
   }
@@ -179,10 +179,10 @@ function isDoxiaShorthandTitleElement(el: HTMLElement): boolean {
 }
 
 function bindTooltipAutoHideOnInteract(el: HTMLElement): void {
-  if (el.hasAttribute('data-furo-tooltip-bound')) {
+  if (el.hasAttribute('data-supa-tooltip-bound')) {
     return;
   }
-  el.setAttribute('data-furo-tooltip-bound', 'true');
+  el.setAttribute('data-supa-tooltip-bound', 'true');
   const hideTip = () => {
     try {
       Tooltip.getInstance(el)?.hide();
@@ -307,17 +307,17 @@ export function initTooltips(root: ParentNode = document): void {
 }
 
 /**
- * Automatically pairs `.furo-component-preview` showcase cards with an immediately
- * following `.furo-code-block` or `.furo-tabs` syntax block into a unified Bootstrap 6
- * docs-style `.furo-component-example` container with an interactive Show/Hide Code bar.
+ * Automatically pairs `.supa-component-preview` showcase cards with an immediately
+ * following `.supa-code-block` or `.supa-tabs` syntax block into a unified Bootstrap 6
+ * docs-style `.supa-component-example` container with an interactive Show/Hide Code bar.
  */
 export function initComponentExamples(root: ParentNode = document): void {
-  const previews = Array.from(root.querySelectorAll<HTMLElement>('.furo-component-preview'));
+  const previews = Array.from(root.querySelectorAll<HTMLElement>('.supa-component-preview'));
   previews.forEach((previewEl) => {
     if (
-      previewEl.hasAttribute('data-furo-example-bound') ||
-      previewEl.closest('.furo-component-example') ||
-      previewEl.closest('.furo-playground, [data-furo-playground]')
+      previewEl.hasAttribute('data-supa-example-bound') ||
+      previewEl.closest('.supa-component-example') ||
+      previewEl.closest('.supa-playground, [data-supa-playground]')
     ) {
       return;
     }
@@ -325,29 +325,29 @@ export function initComponentExamples(root: ParentNode = document): void {
     const nextEl = previewEl.nextElementSibling as HTMLElement | null;
     if (
       !nextEl ||
-      (!nextEl.classList.contains('furo-code-block') && !nextEl.classList.contains('furo-tabs'))
+      (!nextEl.classList.contains('supa-code-block') && !nextEl.classList.contains('supa-tabs'))
     ) {
       return;
     }
 
-    previewEl.setAttribute('data-furo-example-bound', 'true');
+    previewEl.setAttribute('data-supa-example-bound', 'true');
     const wrapper = document.createElement('div');
-    wrapper.className = 'furo-component-example not-prose';
+    wrapper.className = 'supa-component-example not-prose';
     previewEl.parentNode?.insertBefore(wrapper, previewEl);
     wrapper.appendChild(previewEl);
 
     const createToggleBtn = (onToggle: (collapsed: boolean, btn: HTMLButtonElement) => void) => {
       const toggleBtn = document.createElement('button');
       toggleBtn.type = 'button';
-      toggleBtn.className = 'furo-component-code-toggle';
+      toggleBtn.className = 'supa-component-code-toggle';
       toggleBtn.setAttribute('aria-expanded', 'true');
-      toggleBtn.innerHTML = `<span class="furo-code-toggle-text">Hide code</span>${CHEVRON_ICON_SVG}`;
+      toggleBtn.innerHTML = `<span class="supa-code-toggle-text">Hide code</span>${CHEVRON_ICON_SVG}`;
       setTooltipTitle(toggleBtn, 'Collapse or expand code snippet', 'top');
 
       toggleBtn.addEventListener('click', () => {
         const isCollapsed = wrapper.classList.toggle('is-code-collapsed');
         toggleBtn.setAttribute('aria-expanded', isCollapsed ? 'false' : 'true');
-        const labelSpan = toggleBtn.querySelector('.furo-code-toggle-text');
+        const labelSpan = toggleBtn.querySelector('.supa-code-toggle-text');
         if (labelSpan) {
           labelSpan.textContent = isCollapsed ? 'Show code' : 'Hide code';
         }
@@ -356,7 +356,7 @@ export function initComponentExamples(root: ParentNode = document): void {
       return toggleBtn;
     };
 
-    if (nextEl.classList.contains('furo-code-block')) {
+    if (nextEl.classList.contains('supa-code-block')) {
       const pre = nextEl.querySelector('pre');
       const customSyntax =
         pre?.getAttribute('data-syntax-label') ||
@@ -364,10 +364,10 @@ export function initComponentExamples(root: ParentNode = document): void {
         'Markdown + HTML';
 
       const bar = document.createElement('div');
-      bar.className = 'furo-component-example-bar';
+      bar.className = 'supa-component-example-bar';
 
       const labelEl = document.createElement('span');
-      labelEl.className = 'furo-component-example-label';
+      labelEl.className = 'supa-component-example-label';
       labelEl.innerHTML = `${CODE_ICON_SVG}<span></span>`;
       const textSpan = labelEl.querySelector('span');
       if (textSpan) {
@@ -382,32 +382,32 @@ export function initComponentExamples(root: ParentNode = document): void {
       bar.appendChild(toggleBtn);
       wrapper.appendChild(bar);
       wrapper.appendChild(nextEl);
-    } else if (nextEl.classList.contains('furo-tabs')) {
+    } else if (nextEl.classList.contains('supa-tabs')) {
       wrapper.appendChild(nextEl);
-      if (!nextEl.hasAttribute('data-furo-tabs-ready')) {
+      if (!nextEl.hasAttribute('data-supa-tabs-ready')) {
         initContentTabs(wrapper);
       }
 
-      const tabList = nextEl.querySelector<HTMLElement>('.furo-tab-list');
-      if (tabList && !tabList.querySelector('.furo-component-code-toggle')) {
+      const tabList = nextEl.querySelector<HTMLElement>('.supa-tab-list');
+      if (tabList && !tabList.querySelector('.supa-component-code-toggle')) {
         const toggleBtn = createToggleBtn((collapsed) => {
-          nextEl.querySelectorAll<HTMLElement>('.furo-tab-panel').forEach((panel) => {
+          nextEl.querySelectorAll<HTMLElement>('.supa-tab-panel').forEach((panel) => {
             panel.hidden = collapsed ? true : !panel.classList.contains('active');
           });
         });
         toggleBtn.classList.add('ms-auto');
         tabList.appendChild(toggleBtn);
 
-        tabList.querySelectorAll<HTMLButtonElement>('.furo-tab-btn').forEach((tabBtn) => {
+        tabList.querySelectorAll<HTMLButtonElement>('.supa-tab-btn').forEach((tabBtn) => {
           tabBtn.addEventListener('click', () => {
             if (wrapper.classList.contains('is-code-collapsed')) {
               wrapper.classList.remove('is-code-collapsed');
               toggleBtn.setAttribute('aria-expanded', 'true');
-              const labelSpan = toggleBtn.querySelector('.furo-code-toggle-text');
+              const labelSpan = toggleBtn.querySelector('.supa-code-toggle-text');
               if (labelSpan) {
                 labelSpan.textContent = 'Hide code';
               }
-              nextEl.querySelectorAll<HTMLElement>('.furo-tab-panel').forEach((panel) => {
+              nextEl.querySelectorAll<HTMLElement>('.supa-tab-panel').forEach((panel) => {
                 panel.hidden = !panel.classList.contains('active');
               });
             }
@@ -628,36 +628,36 @@ function renderPlaygroundState(state: PlaygroundState): {
 }
 
 /**
- * Initializes the interactive Bootstrap 6 Component Playground (`[data-furo-playground]`),
+ * Initializes the interactive Bootstrap 6 Component Playground (`[data-supa-playground]`),
  * inspired by https://getbootstrap.com/docs/6.0/components/button/#playground.
  */
 export function initComponentPlayground(root: ParentNode = document): void {
   const playgrounds = Array.from(
-    root.querySelectorAll<HTMLElement>('.furo-playground, [data-furo-playground]')
+    root.querySelectorAll<HTMLElement>('.supa-playground, [data-supa-playground]')
   );
   playgrounds.forEach((pg) => {
-    if (pg.hasAttribute('data-furo-playground-ready')) {
+    if (pg.hasAttribute('data-supa-playground-ready')) {
       return;
     }
-    pg.setAttribute('data-furo-playground-ready', 'true');
+    pg.setAttribute('data-supa-playground-ready', 'true');
 
     const stageEl = pg.querySelector<HTMLElement>(
-      '.furo-playground-stage, [data-playground-stage]'
+      '.supa-playground-stage, [data-playground-stage]'
     );
     const codeEl = pg.querySelector<HTMLElement>(
-      '[data-playground-code], .furo-code-block code, pre code'
+      '[data-playground-code], .supa-code-block code, pre code'
     );
     if (!stageEl || !codeEl) {
       return;
     }
 
     const codeBlockEl =
-      codeEl.closest<HTMLElement>('.furo-code-block') ??
+      codeEl.closest<HTMLElement>('.supa-code-block') ??
       codeEl.closest<HTMLElement>('pre') ??
       codeEl;
 
     const barEl = document.createElement('div');
-    barEl.className = 'furo-tab-list furo-playground-bar';
+    barEl.className = 'supa-tab-list supa-playground-bar';
     barEl.setAttribute('role', 'tablist');
 
     const tabBtnsContainer = document.createElement('div');
@@ -665,15 +665,15 @@ export function initComponentPlayground(root: ParentNode = document): void {
 
     const toggleBtn = document.createElement('button');
     toggleBtn.type = 'button';
-    toggleBtn.className = 'furo-component-code-toggle ms-auto';
+    toggleBtn.className = 'supa-component-code-toggle ms-auto';
     toggleBtn.setAttribute('aria-expanded', 'true');
-    toggleBtn.innerHTML = `<span class="furo-code-toggle-text">Hide code</span>${CHEVRON_ICON_SVG}`;
+    toggleBtn.innerHTML = `<span class="supa-code-toggle-text">Hide code</span>${CHEVRON_ICON_SVG}`;
     setTooltipTitle(toggleBtn, 'Collapse or expand code snippet', 'top');
 
     toggleBtn.addEventListener('click', () => {
       const isCollapsed = pg.classList.toggle('is-code-collapsed');
       toggleBtn.setAttribute('aria-expanded', isCollapsed ? 'false' : 'true');
-      const labelSpan = toggleBtn.querySelector('.furo-code-toggle-text');
+      const labelSpan = toggleBtn.querySelector('.supa-code-toggle-text');
       if (labelSpan) {
         labelSpan.textContent = isCollapsed ? 'Show code' : 'Hide code';
       }
@@ -728,7 +728,7 @@ export function initComponentPlayground(root: ParentNode = document): void {
       tabs.forEach((tab) => {
         const btn = document.createElement('button');
         btn.type = 'button';
-        btn.className = `furo-tab-btn${tab.id === activeTab.id ? ' active' : ''}`;
+        btn.className = `supa-tab-btn${tab.id === activeTab.id ? ' active' : ''}`;
         btn.setAttribute('role', 'tab');
         btn.setAttribute('aria-selected', tab.id === activeTab.id ? 'true' : 'false');
         btn.setAttribute('data-playground-syntax', tab.id);
@@ -738,7 +738,7 @@ export function initComponentPlayground(root: ParentNode = document): void {
           if (pg.classList.contains('is-code-collapsed')) {
             pg.classList.remove('is-code-collapsed');
             toggleBtn.setAttribute('aria-expanded', 'true');
-            const labelSpan = toggleBtn.querySelector('.furo-code-toggle-text');
+            const labelSpan = toggleBtn.querySelector('.supa-code-toggle-text');
             if (labelSpan) {
               labelSpan.textContent = 'Hide code';
             }
@@ -801,7 +801,7 @@ export function initComponentPlayground(root: ParentNode = document): void {
 
 /**
  * Automatically adds `.not-prose` to Bootstrap 6 component root containers inside
- * `.furo-article` so site authors don't have to manually wrap every component.
+ * `.supa-article` so site authors don't have to manually wrap every component.
  */
 export function isolateBootstrapComponentsFromProse(container: ParentNode = document): void {
   const elements = container.querySelectorAll<HTMLElement>(BOOTSTRAP_PROSE_ISOLATION_SELECTORS);
@@ -838,7 +838,7 @@ export function initBootstrapComponents(root: ParentNode = document): void {
     }
   });
 
-  // 3. Toasts & declarative toast triggers ([data-furo-toast-target="#toastId"])
+  // 3. Toasts & declarative toast triggers ([data-supa-toast-target="#toastId"])
   root.querySelectorAll<HTMLElement>('.toast').forEach((el) => {
     try {
       Toast.getOrCreateInstance(el);
@@ -847,13 +847,13 @@ export function initBootstrapComponents(root: ParentNode = document): void {
     }
   });
 
-  root.querySelectorAll<HTMLElement>('[data-furo-toast-target]').forEach((trigger) => {
-    if (trigger.hasAttribute('data-furo-toast-bound')) {
+  root.querySelectorAll<HTMLElement>('[data-supa-toast-target]').forEach((trigger) => {
+    if (trigger.hasAttribute('data-supa-toast-bound')) {
       return;
     }
-    trigger.setAttribute('data-furo-toast-bound', 'true');
+    trigger.setAttribute('data-supa-toast-bound', 'true');
     trigger.addEventListener('click', () => {
-      const selector = trigger.getAttribute('data-furo-toast-target');
+      const selector = trigger.getAttribute('data-supa-toast-target');
       if (!selector) return;
       const toastEl = document.querySelector<HTMLElement>(selector);
       if (toastEl) {

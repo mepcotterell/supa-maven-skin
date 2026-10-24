@@ -23,7 +23,7 @@ export function highlightQueryTerms(text: string, rawQuery: string): string {
     return escapedText;
   }
   const regex = new RegExp(`(${terms.join('|')})`, 'gi');
-  return escapedText.replace(regex, '<mark class="furo-search-mark">$1</mark>');
+  return escapedText.replace(regex, '<mark class="supa-search-mark">$1</mark>');
 }
 
 function normalizeSyntheticReportHref(href: string): string {
@@ -41,7 +41,7 @@ function extractCleanDocumentTitle(doc: Document, fallback: string): string {
       return cleaned;
     }
   }
-  return doc.querySelector('#furo-main-content h1')?.textContent?.trim() || fallback;
+  return doc.querySelector('#supa-main-content h1')?.textContent?.trim() || fallback;
 }
 
 export function collectLocalSearchDocuments(doc: Document = document): SearchDocument[] {
@@ -49,7 +49,7 @@ export function collectLocalSearchDocuments(doc: Document = document): SearchDoc
   const seenHrefs = new Set<string>();
 
   // 1. Collect sidebar navigation links
-  const navLinks = doc.querySelectorAll<HTMLAnchorElement>('.furo-sidebar-tree a.furo-nav-link');
+  const navLinks = doc.querySelectorAll<HTMLAnchorElement>('.supa-sidebar-tree a.supa-nav-link');
   navLinks.forEach((link) => {
     const rawHref = link.getAttribute('href')?.trim();
     const title = link.textContent?.trim();
@@ -62,8 +62,8 @@ export function collectLocalSearchDocuments(doc: Document = document): SearchDoc
     }
     seenHrefs.add(href);
     const groupCaption = link
-      .closest('.furo-nav-group')
-      ?.querySelector('.furo-nav-caption')
+      .closest('.supa-nav-group')
+      ?.querySelector('.supa-nav-caption')
       ?.textContent?.trim();
     results.push({
       title,
@@ -75,13 +75,13 @@ export function collectLocalSearchDocuments(doc: Document = document): SearchDoc
   });
 
   // 2. Collect headings and section snippets from the current article
-  const article = doc.getElementById('furo-main-content');
+  const article = doc.getElementById('supa-main-content');
   if (article) {
     const pageTitle = extractCleanDocumentTitle(doc, 'Current Page');
     const headings = article.querySelectorAll<HTMLHeadingElement>('h1[id], h2[id], h3[id], h4[id]');
     headings.forEach((h) => {
       const clone = h.cloneNode(true) as HTMLElement;
-      clone.querySelectorAll('.furo-headerlink').forEach((el) => el.remove());
+      clone.querySelectorAll('.supa-headerlink').forEach((el) => el.remove());
       const headingTitle = clone.textContent?.trim();
       if (!headingTitle) {
         return;
@@ -239,7 +239,7 @@ async function fetchSiteIndex(
         }
         const html = await res.text();
         const parsedDoc = parser.parseFromString(html, 'text/html');
-        const mainEl = parsedDoc.getElementById('furo-main-content');
+        const mainEl = parsedDoc.getElementById('supa-main-content');
         if (!mainEl) {
           return;
         }
@@ -314,14 +314,14 @@ async function fetchSiteIndex(
 }
 
 export function initSearch(): void {
-  if (document.body.getAttribute('data-furo-search') === 'false') {
+  if (document.body.getAttribute('data-supa-search') === 'false') {
     return;
   }
 
-  const dialogEl = document.getElementById('furoSearchDialog') as HTMLDialogElement | null;
-  const inputEl = document.getElementById('furoSearchInput') as HTMLInputElement | null;
-  const resultsEl = document.getElementById('furoSearchResults');
-  const statusEl = document.getElementById('furoSearchStatus');
+  const dialogEl = document.getElementById('supaSearchDialog') as HTMLDialogElement | null;
+  const inputEl = document.getElementById('supaSearchInput') as HTMLInputElement | null;
+  const resultsEl = document.getElementById('supaSearchResults');
+  const statusEl = document.getElementById('supaSearchStatus');
   if (!dialogEl || !inputEl || !resultsEl || !statusEl) {
     return;
   }
@@ -331,8 +331,8 @@ export function initSearch(): void {
   let activeIndex = -1;
 
   const version =
-    document.documentElement.getAttribute('data-furo-project-version') || '0.1.0';
-  const cacheKey = `furo-search-index-${version}`;
+    document.documentElement.getAttribute('data-supa-project-version') || '0.1.0';
+  const cacheKey = `supa-search-index-${version}`;
 
   const renderResults = (query: string) => {
     resultsEl.innerHTML = '';
@@ -353,20 +353,20 @@ export function initSearch(): void {
 
     matches.forEach((match, idx) => {
       const link = document.createElement('a');
-      link.className = `furo-search-result-item${idx === 0 ? ' is-active' : ''}`;
+      link.className = `supa-search-result-item${idx === 0 ? ' is-active' : ''}`;
       link.href = match.href;
       link.setAttribute('role', 'option');
 
       const topRow = document.createElement('div');
-      topRow.className = 'furo-search-result-top';
+      topRow.className = 'supa-search-result-top';
 
       const titleDiv = document.createElement('div');
-      titleDiv.className = 'furo-search-result-title';
+      titleDiv.className = 'supa-search-result-title';
       const displayTitle = match.section ? `${match.section} › ${match.title}` : match.title;
       titleDiv.innerHTML = highlightQueryTerms(displayTitle, query);
 
       const badgeSpan = document.createElement('span');
-      badgeSpan.className = `furo-search-result-badge is-${match.kind || 'section'}`;
+      badgeSpan.className = `supa-search-result-badge is-${match.kind || 'section'}`;
       badgeSpan.textContent =
         match.kind === 'page' ? 'Page' : match.kind === 'nav' ? 'Nav' : 'Section';
 
@@ -374,7 +374,7 @@ export function initSearch(): void {
       topRow.appendChild(badgeSpan);
 
       const snippetDiv = document.createElement('div');
-      snippetDiv.className = 'furo-search-result-snippet';
+      snippetDiv.className = 'supa-search-result-snippet';
       snippetDiv.innerHTML = highlightQueryTerms(match.content.slice(0, 140), query);
 
       link.appendChild(topRow);
@@ -417,7 +417,7 @@ export function initSearch(): void {
 
   inputEl.addEventListener('keydown', (e) => {
     const items = Array.from(
-      resultsEl.querySelectorAll<HTMLAnchorElement>('.furo-search-result-item')
+      resultsEl.querySelectorAll<HTMLAnchorElement>('.supa-search-result-item')
     );
     if (items.length === 0) {
       return;

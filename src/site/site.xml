@@ -35,18 +35,23 @@
   </custom>
 
   <body>
-    <menu name="Documentation">
+    <menu name="Getting Started">
       <item name="Overview" href="index.html" />
-      <item name="Configuration Reference" href="configuration.html" />
-      <item name="Kitchen Sink Showcase" href="kitchen-sink.html">
-        <item name="Admonitions" href="kitchen-sink.html#furo-admonitions" />
-        <item name="Code Blocks &amp; Tabs" href="kitchen-sink.html#syntax-highlighting-copy-button" />
-        <item name="Responsive Tables" href="kitchen-sink.html#responsive-doxia-tables" />
-        <item name="Bootstrap 6 UI" href="kitchen-sink.html#bootstrap-6-ui-components" />
-        <item name="Diagrams &amp; Math" href="kitchen-sink.html#diagrams-mathematical-notation" />
-        <item name="Typography &amp; Prose" href="kitchen-sink.html#typography-prose-elements" />
+      <item name="Quickstart Tutorial" href="getting-started.html" />
+    </menu>
+    <menu name="How-To Guides">
+      <item name="Authoring Rich Content" href="authoring-guide.html">
+        <item name="Markdown vs. Velocity" href="authoring-guide.html#choosing-markdown-md-vs-velocity-templates-md-vm" />
+        <item name="Admonitions &amp; Alerts" href="authoring-guide.html#writing-admonitions-and-alerts" />
+        <item name="Bootstrap Icons" href="authoring-guide.html#adding-bootstrap-icons" />
+        <item name="Synchronized Content Tabs" href="authoring-guide.html#creating-synchronized-content-tabs" />
+        <item name="Accordions &amp; Steppers" href="authoring-guide.html#building-accordions-and-steppers" />
+        <item name="Diagrams &amp; Math" href="authoring-guide.html#rendering-mermaid-diagrams-and-katex-math" />
       </item>
-      <item name="Bootstrap 6 Components" href="bootstrap-components.html">
+    </menu>
+    <menu name="Reference">
+      <item name="Configuration Reference" href="configuration.html" />
+      <item name="Bootstrap Components" href="bootstrap-components.html">
         <item name="Interactive Playground" href="bootstrap-components.html#interactive-component-playground" />
         <item name="1. Actions &amp; Buttons" href="bootstrap-components.html#1-actions-buttons" />
         <item name="2. Badges, Avatars &amp; Chips" href="bootstrap-components.html#2-badges-avatars-chips-indicators" />
@@ -55,6 +60,17 @@
         <item name="5. Accordions &amp; Cards" href="bootstrap-components.html#5-containers-disclosure-accordions-cards-list-groups-carousel" />
         <item name="6. Forms &amp; Rich Inputs" href="bootstrap-components.html#6-forms-bootstrap-6-rich-input-widgets" />
       </item>
+      <item name="Kitchen Sink Showcase" href="kitchen-sink.html">
+        <item name="Admonitions" href="kitchen-sink.html#furo-admonitions" />
+        <item name="Code Blocks &amp; Tabs" href="kitchen-sink.html#syntax-highlighting-copy-button" />
+        <item name="Responsive Tables" href="kitchen-sink.html#responsive-doxia-tables" />
+        <item name="Bootstrap UI" href="kitchen-sink.html#bootstrap-6-ui-components" />
+        <item name="Diagrams &amp; Math" href="kitchen-sink.html#diagrams-mathematical-notation" />
+        <item name="Typography &amp; Prose" href="kitchen-sink.html#typography-prose-elements" />
+      </item>
+    </menu>
+    <menu name="Explanation">
+      <item name="Architecture &amp; Color System" href="architecture.html" />
     </menu>
     <menu name="Project Management">
       <item name="CI Management" href="ci-management.html" />

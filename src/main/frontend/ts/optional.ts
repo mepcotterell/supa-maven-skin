@@ -1,17 +1,17 @@
 /**
  * Optional lazy-loaded Mermaid diagram & KaTeX math rendering when enabled in
- * `<custom><furoSkin>` or detected in the page DOM.
+ * `<custom><supaSkin>` or detected in the page DOM.
  */
 
 export async function initOptionalLibraries(): Promise<void> {
   const body = document.body;
-  const article = document.getElementById('furo-main-content');
+  const article = document.getElementById('supa-main-content');
   if (!article) {
     return;
   }
 
   // 1. Mermaid Diagrams
-  const mermaidMode = body.getAttribute('data-furo-mermaid') || 'auto';
+  const mermaidMode = body.getAttribute('data-supa-mermaid') || 'auto';
   if (mermaidMode !== 'false') {
     const codeBlocks = article.querySelectorAll<HTMLElement>('pre > code.language-mermaid');
     codeBlocks.forEach((code) => {
@@ -29,14 +29,14 @@ export async function initOptionalLibraries(): Promise<void> {
     const mermaidNodes = article.querySelectorAll<HTMLElement>('.mermaid');
     if (mermaidMode === 'true' || mermaidNodes.length > 0) {
       const mermaidUrl =
-        body.getAttribute('data-furo-mermaid-url') ||
+        body.getAttribute('data-supa-mermaid-url') ||
         'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
       try {
         const mermaidModule = await import(/* @vite-ignore */ mermaidUrl);
         const mermaid = mermaidModule.default ?? mermaidModule;
         const renderMermaid = async () => {
           const resolvedTheme =
-            document.documentElement.getAttribute('data-furo-resolved-theme') === 'dark'
+            document.documentElement.getAttribute('data-supa-resolved-theme') === 'dark'
               ? 'dark'
               : 'default';
           mermaidNodes.forEach((node) => {
@@ -56,7 +56,7 @@ export async function initOptionalLibraries(): Promise<void> {
           });
         };
         await renderMermaid();
-        document.addEventListener('furo:theme-changed', () => {
+        document.addEventListener('supa:theme-changed', () => {
           void renderMermaid();
         });
       } catch {
@@ -66,7 +66,7 @@ export async function initOptionalLibraries(): Promise<void> {
   }
 
   // 2. KaTeX Math Rendering
-  const katexMode = body.getAttribute('data-furo-katex') || 'auto';
+  const katexMode = body.getAttribute('data-supa-katex') || 'auto';
   if (katexMode !== 'false') {
     const hasMathClass = article.querySelector('.math, .katex-math') !== null;
     const hasMathDelimiters =
@@ -75,10 +75,10 @@ export async function initOptionalLibraries(): Promise<void> {
       );
     if (katexMode === 'true' || hasMathClass || hasMathDelimiters) {
       const cssUrl =
-        body.getAttribute('data-furo-katex-css-url') ||
+        body.getAttribute('data-supa-katex-css-url') ||
         'https://cdn.jsdelivr.net/npm/katex@0.16.21/dist/katex.min.css';
       const jsUrl =
-        body.getAttribute('data-furo-katex-js-url') ||
+        body.getAttribute('data-supa-katex-js-url') ||
         'https://cdn.jsdelivr.net/npm/katex@0.16.21/dist/contrib/auto-render.mjs';
 
       if (!document.querySelector(`link[href="${cssUrl}"]`)) {
