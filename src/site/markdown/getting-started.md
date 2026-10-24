@@ -155,7 +155,7 @@ When you name a file with the `.md.vm` extension, Doxia runs **Apache Velocity**
 
 Create `src/site/markdown/install.md.vm`:
 
-```velocity
+````velocity
 #parse( "META-INF/maven/site-macros.vm" )
 # Installation Guide #bsBadge( "success" "subtle" "v${project.version}" )
 
@@ -163,7 +163,7 @@ Create `src/site/markdown/install.md.vm`:
 
 #bsAlert( "info" "Maven Central Coordinates" "Always use the latest release version <code>${project.version}</code>." true )
 
-## Maven Coordinates
+\## Maven Coordinates
 
 ```xml
 <dependency>
@@ -172,7 +172,7 @@ Create `src/site/markdown/install.md.vm`:
   <version>${project.version}</version>
 </dependency>
 ```
-```
+````
 
 > [!IMPORTANT] Headings Inside `.md.vm` Files
 > In Velocity `.md.vm` templates, `##` starts a single-line Velocity comment. For `<h2>`–`<h6>` Markdown headings inside `.md.vm` files, escape the leading hash (`\## Maven Coordinates`) or configure Velocity/Markdown sections accordingly so Velocity does not strip the line as a comment.
@@ -203,6 +203,6 @@ Open `target/site/index.html` (or `http://localhost:8080`) in your browser. You 
 
 ## Next Steps
 
-- Continue to **[Authoring Rich Content](authoring-guide.html)** for practical recipes covering admonitions, Bootstrap Icons (`#bi`), synchronized tabs, accordions, steppers, Mermaid diagrams, and KaTeX math.
+- Continue to **[Authoring Rich Content](authoring-guide.html)** for practical recipes covering admonitions, Bootstrap Icons (`#bi`), synchronized tabs, code block titles and line numbers, accordions, steppers, Mermaid diagrams, and KaTeX math.
 - Browse the **[Configuration Reference](configuration.html)** to customize palettes, logos, drawers, and CSS variables.
 - Explore **[Components](components.html)** for all 28 component families and the interactive component playground.

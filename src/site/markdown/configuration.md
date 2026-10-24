@@ -139,6 +139,15 @@ Click any color scheme card below (or use the palette selector in the top header
     <footerTimestamp>true</footerTimestamp>
     <footerVersion>true</footerVersion>
 
+    <!-- Footer Icon Links -->
+    <navIcons>
+      <icon>
+        <href>https://github.com/mepcotterell/supa-maven-skin</href>
+        <title>GitHub Repository</title>
+        <html><![CDATA[<i class="bi bi-github" aria-hidden="true"></i>]]></html>
+      </icon>
+    </navIcons>
+
     <!-- Interactive Enhancements -->
     <copyCodeButton>true</copyCodeButton>
     <syntaxHighlighting>true</syntaxHighlighting>
@@ -146,7 +155,10 @@ Click any color scheme card below (or use the palette selector in the top header
     <headingPermalinkSymbol>#</headingPermalinkSymbol>
     <search>true</search>
     <mermaid>auto</mermaid>
+    <mermaidCdnUrl>https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs</mermaidCdnUrl>
     <katex>auto</katex>
+    <katexCssCdnUrl>https://cdn.jsdelivr.net/npm/katex@0.16.21/dist/katex.min.css</katexCssCdnUrl>
+    <katexJsCdnUrl>https://cdn.jsdelivr.net/npm/katex@0.16.21/dist/contrib/auto-render.mjs</katexJsCdnUrl>
 
     <!-- Custom Light/Dark CSS Tokens (layered on top of <colorScheme>) -->
     <lightCssVariables>
@@ -184,21 +196,25 @@ Click any color scheme card below (or use the palette selector in the top header
 | `<tocMaxDepth>` | `4` | Maximum heading level (`2`–`6`) included in the right-hand TOC. |
 | `<prevNextButtons>` | `true` | Render Furo-styled Previous / Next page navigation cards at the bottom of articles. |
 | `<sidebarCollapseDepth>` | `1` | Menu nesting depth expanded by default in the left sidebar (`<details open>`). |
-| `<drawerScroll>` | `false` | Default `data-bs-scroll` setting (`true` or `false`) for both `#supaSidebarDrawer` and `#supaTocDrawer` controlling whether `<body>` scrolling is enabled while a drawer is open. |
+| `<drawerScroll>` | `false` | Default `data-bs-scroll` setting (`true` or `false`) for both `#supaSidebarDrawer` and `#supaTocDrawer` controlling whether `<body>` scrolling is enabled while a drawer is open (legacy alias: `<drawerBodyScroll>`). |
 | `<drawerBackdrop>` | `true` | Default `data-bs-backdrop` setting (`true`, `false`, or `static`) for both `#supaSidebarDrawer` and `#supaTocDrawer` controlling whether a backdrop is rendered when a drawer is open. |
-| `<sidebarDrawerScroll>` | `$drawerScroll` | Override `data-bs-scroll` (`true` or `false`) specifically for the left navigation drawer (`#supaSidebarDrawer`). |
+| `<sidebarDrawerScroll>` | `$drawerScroll` | Override `data-bs-scroll` (`true` or `false`) specifically for the left navigation drawer (`#supaSidebarDrawer`; legacy alias: `<sidebarDrawerBodyScroll>`). |
 | `<sidebarDrawerBackdrop>` | `$drawerBackdrop` | Override `data-bs-backdrop` (`true`, `false`, or `static`) specifically for the left navigation drawer (`#supaSidebarDrawer`). |
-| `<tocDrawerScroll>` | `$drawerScroll` | Override `data-bs-scroll` (`true` or `false`) specifically for the right table of contents drawer (`#supaTocDrawer`). |
+| `<tocDrawerScroll>` | `$drawerScroll` | Override `data-bs-scroll` (`true` or `false`) specifically for the right table of contents drawer (`#supaTocDrawer`; legacy alias: `<tocDrawerBodyScroll>`). |
 | `<tocDrawerBackdrop>` | `$drawerBackdrop` | Override `data-bs-backdrop` (`true`, `false`, or `static`) specifically for the right table of contents drawer (`#supaTocDrawer`). |
 | `<footerTimestamp>` | `true` | Display the build/publish date in the page footer. |
 | `<footerVersion>` | `true` | Display the project version badge next to the project title in the sidebar. |
+| `<navIcons>` | *(empty)* | List of `<icon>` elements (`<href>`, `<title>`, `<html>`) rendered as tooltip-enabled icon links in the right side of the page footer (`.supa-footer-icons`). |
 | `<copyCodeButton>` | `true` | Add a Copy-to-Clipboard button to all `<pre>` code blocks. |
 | `<syntaxHighlighting>` | `true` | Highlight `<pre><code>` blocks offline using bundled `highlight.js`. |
 | `<headingPermalinks>` | `true` | Append `#` permalink anchors to article headings (`h2`–`h6`). |
 | `<headingPermalinkSymbol>` | `#` | Symbol rendered inside heading permalink anchors. |
 | `<search>` | `true` | Enable the sidebar search box and `/` (`⌘K` / `Ctrl+K`) search dialog. |
 | `<mermaid>` | `auto` | Lazy-load Mermaid when `.mermaid` or `code.language-mermaid` is present (`auto`, `true`, `false`). |
+| `<mermaidCdnUrl>` | `https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs` | Custom or self-hosted ESM bundle URL for Mermaid when `<mermaid>` is enabled. |
 | `<katex>` | `auto` | Lazy-load KaTeX when math expressions are present (`auto`, `true`, `false`). |
+| `<katexCssCdnUrl>` | `https://cdn.jsdelivr.net/npm/katex@0.16.21/dist/katex.min.css` | Custom or self-hosted stylesheet URL for KaTeX when `<katex>` is enabled. |
+| `<katexJsCdnUrl>` | `https://cdn.jsdelivr.net/npm/katex@0.16.21/dist/contrib/auto-render.mjs` | Custom or self-hosted ESM `auto-render.mjs` URL for KaTeX when `<katex>` is enabled. |
 
 ## Built-In Accessible Color Schemes
 
@@ -235,6 +251,9 @@ Just like Sphinx Furo's `light_css_variables` and `dark_css_variables`, any chil
 | `supa-admonition-warning-accent` | `warning` and `caution` admonition and `.theme-warning` accent color. |
 | `supa-admonition-caution-accent` | `danger`, `attention`, and `error` admonition and `.theme-danger` accent color. |
 | `supa-admonition-todo-accent` | `todo` admonition neutral accent color. |
+| `supa-sidebar-brand-items-align` | Flex cross-axis alignment (`center`, `flex-start`, or `flex-end`) for `.supa-sidebar-brand` children. |
+| `supa-sidebar-brand-justify` | Flex main-axis alignment (`center`, `flex-start`, or `flex-end`) for `.supa-sidebar-brand-text` title and version badge. |
+| `supa-sidebar-brand-text-align` | Text alignment (`center`, `left`, or `right`) inside `.supa-sidebar-brand`. |
 
 ## Velocity Helper Macros Reference (`site-macros.vm`)
 

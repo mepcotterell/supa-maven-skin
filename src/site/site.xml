@@ -46,6 +46,7 @@
         <item name="Markdown vs. Velocity" href="authoring-guide.html#choosing-markdown-md-vs-velocity-templates-md-vm" />
         <item name="Admonitions &amp; Alerts" href="authoring-guide.html#writing-admonitions-and-alerts" />
         <item name="Icons" href="authoring-guide.html#adding-bootstrap-icons" />
+        <item name="Code Blocks" href="authoring-guide.html#styling-code-blocks" />
         <item name="Synchronized Content Tabs" href="authoring-guide.html#creating-synchronized-content-tabs" />
         <item name="Accordions &amp; Steppers" href="authoring-guide.html#building-accordions-and-steppers" />
         <item name="Diagrams &amp; Math" href="authoring-guide.html#rendering-mermaid-diagrams-and-katex-math" />

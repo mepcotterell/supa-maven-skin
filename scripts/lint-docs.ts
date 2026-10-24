@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 /**
- * @fileoverview Documentation, CHANGELOG.md, and version alignment linter for Supa Maven Skin.
- * Ensures that version numbers stated across README.md, CHANGELOG.md, AGENTS.md, and src/site/
- * strictly align with the authoritative sources in pom.xml and package.json, and verifies that
- * CHANGELOG.md follows Keep a Changelog 1.1.0 conventions.
+ * @fileoverview Documentation, CHANGELOG.md, link target, code fence, and version alignment linter
+ * for Supa Maven Skin. Ensures that version numbers stated across README.md, CHANGELOG.md,
+ * AGENTS.md, and src/site/ strictly align with the authoritative sources in pom.xml and
+ * package.json, verifies Keep a Changelog 1.1.0 conventions, and checks internal doc links and
+ * Markdown code fences.
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -18,6 +19,7 @@ const ROOT_DIR: string = process.cwd();
 const POM_PATH: string = path.join(ROOT_DIR, 'pom.xml');
 const PKG_PATH: string = path.join(ROOT_DIR, 'package.json');
 const CHANGELOG_PATH: string = path.join(ROOT_DIR, 'CHANGELOG.md');
+const SITE_MARKDOWN_DIR: string = path.join(ROOT_DIR, 'src/site/markdown');
 
 const VALID_CHANGELOG_CATEGORIES = new Set<string>([
   'Added',
@@ -26,6 +28,18 @@ const VALID_CHANGELOG_CATEGORIES = new Set<string>([
   'Removed',
   'Fixed',
   'Security',
+]);
+
+const MAVEN_REPORT_PAGES = new Set<string>([
+  'project-info.html',
+  'summary.html',
+  'licenses.html',
+  'team.html',
+  'scm.html',
+  'ci-management.html',
+  'plugins.html',
+  // Illustrative page name used inside the Quickstart Tutorial's example site.xml snippet
+  'install.html',
 ]);
 
 const errors: string[] = [];
@@ -40,6 +54,97 @@ const errors: string[] = [];
 function extractXmlTag(xml: string, tagName: string): string | null {
   const match = xml.match(new RegExp(`<${tagName}>([^<]+)</${tagName}>`));
   return match ? match[1].trim() : null;
+}
+
+/**
+ * Validates CommonMark backtick code fences in a Markdown file so that nested 3-backtick fences
+ * cannot prematurely close an outer block and swallow subsequent prose into a bare code block.
+ *
+ * @param relPath - Relative file path for error reporting.
+ * @param content - Full markdown text content of the file.
+ */
+function validateMarkdownCodeFences(relPath: string, content: string): void {
+  const lines = content.split(/\r?\n/);
+  let inFence = false;
+  let fenceLen = 0;
+  let fenceStartLine = 0;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i] ?? '';
+    const match = line.match(/^\s*(`{3,})(.*)$/);
+    if (!match) {
+      continue;
+    }
+    const ticks = match[1] ?? '';
+    const info = (match[2] ?? '').trim();
+
+    if (!inFence) {
+      if (!info) {
+        errors.push(
+          `${relPath}:${i + 1}: Opening code fence "${ticks}" is missing a language identifier (or an earlier nested code block prematurely closed its outer fence; use \`\`\`\` for outer fences wrapping \`\`\` blocks).`
+        );
+      }
+      inFence = true;
+      fenceLen = ticks.length;
+      fenceStartLine = i + 1;
+    } else if (ticks.length >= fenceLen && info === '') {
+      inFence = false;
+      fenceLen = 0;
+      fenceStartLine = 0;
+    }
+  }
+
+  if (inFence) {
+    errors.push(
+      `${relPath}:${fenceStartLine}: Unclosed code fence starting on line ${fenceStartLine}.`
+    );
+  }
+}
+
+/**
+ * Validates internal `.html` and `src/site/markdown/` links in documentation files and `site.xml`.
+ *
+ * @param relPath - Relative file path for error reporting.
+ * @param content - Full text content of the file.
+ * @param validSiteHtmlPages - Set of valid `.html` page basenames generated from `src/site/markdown/`.
+ */
+function validateInternalLinks(
+  relPath: string,
+  content: string,
+  validSiteHtmlPages: Set<string>
+): void {
+  // Check href="page.html#..." and Markdown [label](page.html#...)
+  const htmlLinkRegex =
+    /(?:href=["']|\[[^\]]+\]\()([a-z0-9_-]+\.html)(?:#[a-z0-9_-]+)?(?:["')])/gi;
+  let match: RegExpExecArray | null;
+  while ((match = htmlLinkRegex.exec(content)) !== null) {
+    const targetHtml = (match[1] ?? '').toLowerCase();
+    if (
+      !validSiteHtmlPages.has(targetHtml) &&
+      !MAVEN_REPORT_PAGES.has(targetHtml)
+    ) {
+      errors.push(
+        `${relPath}: Broken internal page link "${targetHtml}" (no matching file in src/site/markdown/ or configured Maven report).`
+      );
+    }
+  }
+
+  // Check relative links to src/site/markdown/*.md
+  const mdPathRegex = /\bsrc\/site\/markdown\/([a-z0-9_.-]+\.md(?:\.vm)?)\b/gi;
+  let mdMatch: RegExpExecArray | null;
+  while ((mdMatch = mdPathRegex.exec(content)) !== null) {
+    const mdFile = mdMatch[1] ?? '';
+    // Skip glob/placeholder examples like *.md or page.md
+    if (mdFile === 'page.md' || mdFile === 'page.md.vm' || mdFile === 'install.md.vm') {
+      continue;
+    }
+    const targetPath = path.join(SITE_MARKDOWN_DIR, mdFile);
+    if (!fs.existsSync(targetPath)) {
+      errors.push(
+        `${relPath}: Referenced documentation file "src/site/markdown/${mdFile}" does not exist.`
+      );
+    }
+  }
 }
 
 /**
@@ -163,15 +268,22 @@ if (!fs.existsSync(CHANGELOG_PATH)) {
   );
 }
 
+const siteMarkdownFiles: string[] = fs
+  .readdirSync(SITE_MARKDOWN_DIR)
+  .filter((f: string) => f.endsWith('.md') || f.endsWith('.md.vm'));
+
+const validSiteHtmlPages = new Set<string>(
+  siteMarkdownFiles.map((f: string) =>
+    f.replace(/\.md(?:\.vm)?$/, '.html').toLowerCase()
+  )
+);
+
 const docFiles: string[] = [
   'README.md',
   'CHANGELOG.md',
   'AGENTS.md',
   'src/site/site.xml',
-  ...fs
-    .readdirSync(path.join(ROOT_DIR, 'src/site/markdown'))
-    .filter((f: string) => f.endsWith('.md') || f.endsWith('.md.vm'))
-    .map((f: string) => path.join('src/site/markdown', f)),
+  ...siteMarkdownFiles.map((f: string) => path.join('src/site/markdown', f)),
 ];
 
 for (const relPath of docFiles) {
@@ -189,7 +301,13 @@ for (const relPath of docFiles) {
     );
   }
 
-  // 1. Disallow wrong Bootstrap major version (e.g. "Bootstrap 5" when package.json is 6.x)
+  // 1. Validate internal page/file links and Markdown code fences
+  validateInternalLinks(relPath, content, validSiteHtmlPages);
+  if (relPath.endsWith('.md') || relPath.endsWith('.md.vm')) {
+    validateMarkdownCodeFences(relPath, content);
+  }
+
+  // 2. Disallow wrong Bootstrap major version (e.g. "Bootstrap 5" when package.json is 6.x)
   const bootstrapMajorRegex = /\bBootstrap\s+(\d+)(?:\.\d+)?\b/g;
   let bsMatch: RegExpExecArray | null;
   while ((bsMatch = bootstrapMajorRegex.exec(content)) !== null) {
@@ -201,7 +319,7 @@ for (const relPath of docFiles) {
     }
   }
 
-  // 2. Verify explicit Bootstrap 6.x.y(-alpha.z) version strings match package.json
+  // 3. Verify explicit Bootstrap 6.x.y(-alpha.z) version strings match package.json
   const bootstrapExactRegex =
     /[Bb]ootstrap(?:\s+6)?[\s(`"']*(6\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?)\b/g;
   let exactMatch: RegExpExecArray | null;
@@ -214,7 +332,7 @@ for (const relPath of docFiles) {
     }
   }
 
-  // 3. Verify <artifactId>supa-maven-skin</artifactId> version snippets match pom.xml <version>
+  // 4. Verify <artifactId>supa-maven-skin</artifactId> version snippets match pom.xml <version>
   const skinBlockRegex =
     /(?:<artifactId>|&lt;artifactId&gt;)supa-maven-skin(?:<\/artifactId>|&lt;\/artifactId&gt;)\s*(?:<version>|&lt;version&gt;)([^<&]+)(?:<\/version>|&lt;\/version&gt;)/g;
   let skinMatch: RegExpExecArray | null;
@@ -227,7 +345,7 @@ for (const relPath of docFiles) {
     }
   }
 
-  // 4. Verify <artifactId>maven-site-plugin</artifactId> version snippets match pom.xml
+  // 5. Verify <artifactId>maven-site-plugin</artifactId> version snippets match pom.xml
   const sitePluginRegex =
     /<artifactId>maven-site-plugin<\/artifactId>\s*<version>([^<]+)<\/version>/g;
   let sitePluginMatch: RegExpExecArray | null;
@@ -240,7 +358,7 @@ for (const relPath of docFiles) {
     }
   }
 
-  // 5. Verify <artifactId>doxia-module-markdown</artifactId> version snippets match pom.xml
+  // 6. Verify <artifactId>doxia-module-markdown</artifactId> version snippets match pom.xml
   const doxiaBlockRegex =
     /<artifactId>doxia-module-markdown<\/artifactId>\s*<version>([^<]+)<\/version>/g;
   let doxiaMatch: RegExpExecArray | null;

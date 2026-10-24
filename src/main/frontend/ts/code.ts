@@ -247,6 +247,7 @@ export function enhanceCodeBlocks(
       pre.getAttribute('data-title') ||
       codeEl?.getAttribute('data-title') ||
       pre.getAttribute('title') ||
+      codeEl?.getAttribute('title') ||
       '';
     pre.removeAttribute('title');
     codeEl?.removeAttribute('title');

@@ -20,7 +20,42 @@ Doxia 2.0 supports two ways to author Markdown pages in `src/site/markdown/`:
 2. **Escaping `##` Headings in `.md.vm`**:
    Because `##` denotes a single-line comment in Apache Velocity, write level-2+ Markdown headings as `\## Section Heading` (or `<h2>Section Heading</h2>`) inside `.md.vm` files.
 3. **Keeping Multi-Line HTML Blocks Contiguous**:
-   In CommonMark (Doxia 2.0), a blank line inside a raw HTML `<div>...</div>` block ends the HTML block early. Keep multi-line HTML component wrappers free of internal empty lines.
+   In CommonMark (Doxia 2.0), a blank line inside a raw HTML `<div>...</div>` block ends the HTML block early. Keep multi-line HTML component wrappers free of internal empty lines (use `&#10;` if you need a blank line inside an HTML `<pre><code>` block).
+
+### Using Velocity Helper Macros (`#bsBadge` & `#bsCard`)
+
+In `.md.vm` pages, `#bsBadge( $theme $variant $text )` and `#bsCard( $title $subtitle $body $footer )` generate isolated `.not-prose` Bootstrap 6 components that can interpolate Maven properties:
+
+<div class="supa-component-preview">
+  <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+    <span class="badge theme-primary not-prose">v0.1.0-SNAPSHOT</span>
+    <span class="badge badge-subtle theme-success not-prose">Stable API</span>
+    <span class="badge badge-outline theme-info not-prose">JDK 21+</span>
+  </div>
+  <div class="card not-prose" style="max-width: 28rem;">
+    <div class="card-body">
+      <h5 class="card-title">Supa Maven Skin</h5>
+      <h6 class="card-subtitle mb-2 text-body-secondary">io.github.mepcotterell:supa-maven-skin</h6>
+      <p class="card-text">Zero-config Sphinx Furo aesthetics powered by Bootstrap 6.</p>
+    </div>
+    <div class="card-footer text-body-secondary">MIT License</div>
+  </div>
+</div>
+
+```velocity
+#parse( "META-INF/maven/site-macros.vm" )
+
+#bsBadge( "primary" "" "v${project.version}" )
+#bsBadge( "success" "subtle" "Stable API" )
+#bsBadge( "info" "outline" "JDK 21+" )
+
+#bsCard(
+  "${project.name}"
+  "${project.groupId}:${project.artifactId}"
+  "Zero-config Sphinx Furo aesthetics powered by Bootstrap 6."
+  "MIT License"
+)
+```
 
 ---
 
@@ -194,6 +229,45 @@ In `.md.vm` pages, use `#bi( $name $extraClasses $ariaLabel )`. All arguments af
 ```html
 <i class="bi bi-rocket-takeoff text-primary fs-5" aria-hidden="true"></i> Launch
 ```
+
+---
+
+## Styling Code Blocks
+
+**Supa Maven Skin** bundles [Highlight.js](https://highlightjs.org/) offline for 18+ JVM, web, and configuration languages (`java`, `kotlin`, `groovy`, `xml`, `html`, `velocity`/`vm`, `typescript`/`ts`, `javascript`/`js`, `json`, `yaml`/`yml`, `properties`, `sql`, `bash`/`sh`/`shell`, `python`/`py`, `css`, `scss`, `markdown`/`md`, `diff`, and `plaintext`/`text`) and attaches a one-click **Copy to clipboard** button to every `<pre>` block.
+
+### File Header Bars & Line Numbers
+
+To add a file-path header bar (`.supa-code-header`) or line numbers (`.has-line-numbers`) to a code block, use an HTML `<pre>` block with `data-title="..."` (or `title="..."`) on `<code>` and `class="line-numbers"` on `<pre>`:
+
+<div class="supa-component-preview">
+  <pre class="line-numbers"><code class="language-java" data-title="src/main/java/io/example/Greeter.java">package io.example;&#10;&#10;public final class Greeter {&#10;  public static String greet(String name) {&#10;    return "Hello, " + name + "!";&#10;  }&#10;}</code></pre>
+</div>
+
+```html
+<pre class="line-numbers"><code class="language-java" data-title="src/main/java/io/example/Greeter.java">package io.example;
+
+public final class Greeter {
+  public static String greet(String name) {
+    return "Hello, " + name + "!";
+  }
+}</code></pre>
+```
+
+### Unified Diffs
+
+Use a standard ```` ```diff ```` fenced code block to highlight additions (`+`) and removals (`-`) with palette-aware semantic colors:
+
+````markdown
+```diff
+ <skin>
+-  <groupId>org.apache.maven.skins</groupId>
+-  <artifactId>maven-fluido-skin</artifactId>
++  <groupId>io.github.mepcotterell</groupId>
++  <artifactId>supa-maven-skin</artifactId>
+ </skin>
+```
+````
 
 ---
 
