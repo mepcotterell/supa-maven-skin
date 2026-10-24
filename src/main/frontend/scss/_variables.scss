@@ -46,7 +46,7 @@
   --color-inline-code-background: light-dark(rgba(175, 184, 193, 0.22), rgba(110, 118, 129, 0.35));
   --color-inline-code-text: var(--color-foreground-primary);
 
-  // Admonition & Semantic Accents (Note/Info, Tip/Success, Important/Accent, Warning, Caution/Danger)
+  // Admonition & Semantic Accents (Note/Seealso, Tip/Hint, Important/Admonition, Warning/Caution, Danger/Attention/Error, Todo)
   --supa-admonition-note-accent: light-dark(#0550ae, #58a6ff);
   --supa-admonition-note-bg: light-dark(#ddf4ff, rgba(56, 139, 253, 0.14));
 
@@ -61,6 +61,9 @@
 
   --supa-admonition-caution-accent: light-dark(#b62324, #ff7b72);
   --supa-admonition-caution-bg: light-dark(#ffebe9, rgba(248, 81, 73, 0.14));
+
+  --supa-admonition-todo-accent: light-dark(#4b5563, #adb5bd);
+  --supa-admonition-todo-bg: light-dark(#f1f3f5, rgba(139, 148, 158, 0.16));
 
   // Accessibility metadata & focus tokens
   --supa-wcag-level: "AA";
@@ -106,6 +109,9 @@
   --supa-admonition-caution-accent: light-dark(#842029, #ea868f);
   --supa-admonition-caution-bg: light-dark(#f8d7da, rgba(220, 53, 69, 0.15));
 
+  --supa-admonition-todo-accent: light-dark(#434952, #adb5bd);
+  --supa-admonition-todo-bg: light-dark(#e9ecef, rgba(173, 181, 189, 0.16));
+
   --supa-wcag-level: "AA";
   --supa-link-decoration: underline;
   --focus-ring-width: 3px;
@@ -150,6 +156,9 @@
 
   --supa-admonition-caution-accent: light-dark(#970000, #ff7f7a);
   --supa-admonition-caution-bg: light-dark(#ffecec, #331111);
+
+  --supa-admonition-todo-accent: light-dark(#505050, #adadad);
+  --supa-admonition-todo-bg: light-dark(#f2f2f2, #1e1e1e);
 
   --supa-wcag-level: "AAA";
   --supa-link-decoration: underline;
@@ -208,6 +217,9 @@
 
   --supa-admonition-caution-accent: light-dark(#8f0000, #ff8782);
   --supa-admonition-caution-bg: light-dark(#f8e4e4, #351822);
+
+  --supa-admonition-todo-accent: light-dark(#4a4845, #b0b8ca);
+  --supa-admonition-todo-bg: light-dark(#efe9dd, #1d2235);
 
   --supa-wcag-level: "AAA";
   --supa-link-decoration: underline;

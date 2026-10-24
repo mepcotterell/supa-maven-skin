@@ -1,8 +1,14 @@
 /**
- * Optional lazy-loaded Mermaid diagram & KaTeX math rendering when enabled in
- * `<custom><supaSkin>` or detected in the page DOM.
+ * @fileoverview Optional lazy-loaded Mermaid diagram and KaTeX math rendering
+ * when enabled in `<custom><supaSkin>` or detected in the page DOM.
  */
 
+/**
+ * Lazily loads and initializes Mermaid diagrams and KaTeX math expressions
+ * inside `#supa-main-content` when configured or detected on the page.
+ *
+ * @returns Promise that resolves once optional libraries have initialized.
+ */
 export async function initOptionalLibraries(): Promise<void> {
   const body = document.body;
   const article = document.getElementById('supa-main-content');

@@ -13,6 +13,8 @@
   <custom>
     <supaSkin>
       <defaultTheme>auto</defaultTheme>
+      <lightLogo>images/logo-light.svg</lightLogo>
+      <darkLogo>images/logo-dark.svg</darkLogo>
       <announcement>Supa Maven Skin — Sphinx Furo aesthetics powered by Bootstrap 6 (Alpha) &amp; Vite.</announcement>
       <sourceRepository>https://github.com/mepcotterell/supa-maven-skin</sourceRepository>
       <sourceBranch>main</sourceBranch>

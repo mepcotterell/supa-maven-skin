@@ -28,7 +28,22 @@ Doxia 2.0 supports two ways to author Markdown pages in `src/site/markdown/`:
 
 ### Furo Admonitions (GFM Blockquote Syntax)
 
-To create a Furo admonition card with a semantic icon, tinted header bar, and colored left accent border, start a Markdown blockquote with `[!NOTE]`, `[!TIP]`, `[!IMPORTANT]`, `[!WARNING]`, or `[!CAUTION]`. Any text after the tag on the first line becomes a custom title:
+**Supa Maven Skin** supports all **12 [Sphinx Furo admonition types](https://pradyunsg.me/furo/reference/admonitions/#supported-types)**, each rendered with a semantic **Bootstrap Icons** glyph (`<i class="bi bi-... supa-admonition-icon" aria-hidden="true"></i>`), tinted header bar, and colored left accent border. Any text after the `[!...]` marker on the first line becomes a custom title, and nested blockquotes (`> > [!WARNING]`) are automatically transformed into nested admonitions:
+
+| Admonition Tag | Default Title | Bootstrap Icon | Semantic Color Group |
+| :--- | :--- | :--- | :--- |
+| `[!ADMONITION]` | `Admonition` | `:bi-card-text:` `bi-card-text` | Important / Accent (`--supa-admonition-important-*`) |
+| `[!ATTENTION]` | `Attention` | `:bi-exclamation-diamond:` `bi-exclamation-diamond` | Danger / Error (`--supa-admonition-caution-*`) |
+| `[!CAUTION]` | `Caution` | `:bi-lightning-charge:` `bi-lightning-charge` | Warning / Caution (`--supa-admonition-warning-*`) |
+| `[!DANGER]` | `Danger` | `:bi-lightning-charge-fill:` `bi-lightning-charge-fill` | Danger / Error (`--supa-admonition-caution-*`) |
+| `[!ERROR]` | `Error` | `:bi-x-octagon:` `bi-x-octagon` | Danger / Error (`--supa-admonition-caution-*`) |
+| `[!HINT]` | `Hint` | `:bi-question-circle:` `bi-question-circle` | Tip / Success (`--supa-admonition-tip-*`) |
+| `[!IMPORTANT]` | `Important` | `:bi-fire:` `bi-fire` | Important / Accent (`--supa-admonition-important-*`) |
+| `[!NOTE]` | `Note` | `:bi-info-circle:` `bi-info-circle` | Note / Info (`--supa-admonition-note-*`) |
+| `[!SEEALSO]` / `[!SEE-ALSO]` | `See also` | `:bi-arrow-up-right-circle:` `bi-arrow-up-right-circle` | Note / Info (`--supa-admonition-note-*`) |
+| `[!TIP]` | `Tip` | `:bi-lightbulb:` `bi-lightbulb` | Tip / Success (`--supa-admonition-tip-*`) |
+| `[!TODO]` | `Todo` | `:bi-check2-square:` `bi-check2-square` | Todo / Neutral (`--supa-admonition-todo-*`) |
+| `[!WARNING]` | `Warning` | `:bi-exclamation-triangle:` `bi-exclamation-triangle` | Warning / Caution (`--supa-admonition-warning-*`) |
 
 <div class="supa-component-preview">
   <blockquote>
@@ -39,6 +54,10 @@ To create a Furo admonition card with a semantic icon, tinted header bar, and co
     <p>[!TIP] Custom Admonition Title
     Provide text immediately after <code>[!TIP]</code> on the first line to override the default heading.</p>
   </blockquote>
+  <blockquote>
+    <p>[!SEEALSO]
+    View the <a href="kitchen-sink.html#furo-admonitions">Kitchen Sink</a> for a live showcase of all 12 Furo admonition types.</p>
+  </blockquote>
 </div>
 
 ```markdown
@@ -48,6 +67,15 @@ To create a Furo admonition card with a semantic icon, tinted header bar, and co
 > [!TIP] Custom Admonition Title
 > Provide text immediately after `[!TIP]` on the first line to override the default heading.
 
+> [!ADMONITION] CustomTitled Admonition
+> Equivalent to Sphinx's generic `.. admonition:: CustomTitled Admonition` directive.
+
+> [!SEEALSO]
+> Cross-reference related documentation sections or external resources.
+
+> [!HINT]
+> Gentle guidance or troubleshooting hints.
+
 > [!IMPORTANT]
 > Highlights essential requirements or prerequisites.
 
@@ -55,7 +83,19 @@ To create a Furo admonition card with a semantic icon, tinted header bar, and co
 > Warns readers about potential configuration pitfalls.
 
 > [!CAUTION]
-> Alerts readers to destructive actions or breaking changes.
+> Advises caution before changing sensitive parameters.
+
+> [!ATTENTION]
+> Demands immediate attention before proceeding.
+
+> [!DANGER]
+> Alerts readers to destructive actions or data loss risks.
+
+> [!ERROR]
+> Documents known error states or failure modes.
+
+> [!TODO]
+> Tracks upcoming documentation or implementation tasks.
 ```
 
 ### Bootstrap 6 Semantic Alerts (`[!ALERT:...]` & `#bsAlert`)
@@ -93,7 +133,7 @@ When you need a Bootstrap 6 `.alert` banner (supporting all 8 `.theme-*` colors 
 
 ## Adding Bootstrap Icons
 
-`supa-maven-skin` bundles **2,000+ [Bootstrap Icons](https://icons.getbootstrap.com/)** offline (`bootstrap-icons.woff2`). You can insert icons using Markdown shortcodes, the `#bi` Velocity macro, or HTML `<i>` tags.
+**Supa Maven Skin** bundles **2,000+ [Bootstrap Icons](https://icons.getbootstrap.com/)** offline (`bootstrap-icons.woff2`). You can insert icons using Markdown shortcodes, the `#bi` Velocity macro, or HTML `<i>` tags.
 
 <div class="supa-component-preview">
   <div class="d-flex flex-wrap align-items-center gap-3">
@@ -239,7 +279,7 @@ Use `<ol class="supa-stepper" title="2">` where `title` specifies the 1-based ac
 
 ## Rendering Mermaid Diagrams and KaTeX Math
 
-When `<mermaid>auto</mermaid>` and `<katex>auto</katex>` are enabled in `site.xml` (the default), `supa-maven-skin` inspects each page at load time and only fetches Mermaid or KaTeX when diagrams or math expressions are present on that page.
+When `<mermaid>auto</mermaid>` and `<katex>auto</katex>` are enabled in `site.xml` (the default), **Supa Maven Skin** inspects each page at load time and only fetches Mermaid or KaTeX when diagrams or math expressions are present on that page.
 
 ### Mermaid Diagrams
 

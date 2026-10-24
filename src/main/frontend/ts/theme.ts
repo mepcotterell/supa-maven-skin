@@ -1,3 +1,8 @@
+/**
+ * @fileoverview Theme polarity (`light`, `dark`, `auto`) and accessible color scheme
+ * (`furo`, `bootstrap`, `modus`, `modus-tinted`, `modus-deuteranopia`, `modus-tritanopia`)
+ * state management, `localStorage` persistence, and UI synchronization.
+ */
 import { setTooltipTitle } from './bootstrap-components';
 
 export type ThemeMode = 'light' | 'dark' | 'auto';
@@ -72,6 +77,11 @@ const PALETTE_SHORT_LABEL_MAP = new Map<SupaPaletteId, string>(
 );
 const THEME_CYCLE: ThemeMode[] = ['light', 'dark', 'auto'];
 
+/**
+ * Safely retrieves `window.localStorage` when available and accessible.
+ *
+ * @returns Browser `localStorage` instance, or null if unavailable.
+ */
 function getStorage(): Storage | null {
   try {
     if (
@@ -87,10 +97,22 @@ function getStorage(): Storage | null {
   return null;
 }
 
+/**
+ * Type guard checking whether a string is one of the 6 supported accessible palette IDs.
+ *
+ * @param value - Candidate palette identifier.
+ * @returns True if `value` is a valid `SupaPaletteId`.
+ */
 export function isValidPaletteId(value: string | null | undefined): value is SupaPaletteId {
   return typeof value === 'string' && VALID_PALETTE_IDS.has(value);
 }
 
+/**
+ * Reads the persisted palette ID from `localStorage`, falling back to `defaultPalette`.
+ *
+ * @param defaultPalette - Fallback palette ID when none is stored.
+ * @returns Resolved palette identifier.
+ */
 export function getStoredPalette(defaultPalette: SupaPaletteId = 'furo'): SupaPaletteId {
   try {
     const raw = getStorage()?.getItem(PALETTE_STORAGE_KEY);
@@ -103,6 +125,14 @@ export function getStoredPalette(defaultPalette: SupaPaletteId = 'furo'): SupaPa
   return defaultPalette;
 }
 
+/**
+ * Applies the selected accessible color scheme to `document.documentElement`,
+ * optionally persists it to `localStorage`, and dispatches `supa:palette-changed`.
+ *
+ * @param palette - Target palette identifier to apply.
+ * @param persist - Whether to persist the selection in `localStorage`.
+ * @returns The resolved palette identifier that was applied.
+ */
 export function applyPalette(palette: SupaPaletteId, persist = true): SupaPaletteId {
   const root = document.documentElement;
   const resolvedPalette: SupaPaletteId = isValidPaletteId(palette) ? palette : 'furo';
@@ -128,6 +158,11 @@ export function applyPalette(palette: SupaPaletteId, persist = true): SupaPalett
   return resolvedPalette;
 }
 
+/**
+ * Synchronizes all palette dropdown items, labels, selects, and preview cards with the active palette.
+ *
+ * @param palette - Active palette identifier.
+ */
 function updatePaletteControls(palette: SupaPaletteId): void {
   const shortLabel = PALETTE_SHORT_LABEL_MAP.get(palette) ?? 'Furo (AA)';
   const labels = document.querySelectorAll<HTMLElement>('[data-supa-palette-label]');
@@ -169,6 +204,11 @@ function updatePaletteControls(palette: SupaPaletteId): void {
   });
 }
 
+/**
+ * Queries the operating system's `prefers-color-scheme: dark` media query.
+ *
+ * @returns `'dark'` if OS dark mode is active, otherwise `'light'`.
+ */
 export function getSystemTheme(): ResolvedTheme {
   if (typeof window !== 'undefined' && typeof window.matchMedia === 'function') {
     return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
@@ -176,6 +216,12 @@ export function getSystemTheme(): ResolvedTheme {
   return 'light';
 }
 
+/**
+ * Resolves a 3-state `ThemeMode` (`light`, `dark`, `auto`) into a concrete `ResolvedTheme`.
+ *
+ * @param mode - Requested theme mode.
+ * @returns Concrete `'light'` or `'dark'` polarity.
+ */
 export function resolveTheme(mode: ThemeMode): ResolvedTheme {
   if (mode === 'light' || mode === 'dark') {
     return mode;
@@ -183,6 +229,12 @@ export function resolveTheme(mode: ThemeMode): ResolvedTheme {
   return getSystemTheme();
 }
 
+/**
+ * Reads the persisted theme mode from `localStorage`, falling back to `defaultMode`.
+ *
+ * @param defaultMode - Fallback theme mode when none is stored.
+ * @returns Stored or default theme mode.
+ */
 export function getStoredThemeMode(defaultMode: ThemeMode = 'auto'): ThemeMode {
   try {
     const storage = getStorage();
@@ -196,6 +248,14 @@ export function getStoredThemeMode(defaultMode: ThemeMode = 'auto'): ThemeMode {
   return defaultMode;
 }
 
+/**
+ * Applies the requested theme mode to `document.documentElement`, updates UI controls,
+ * optionally persists to `localStorage`, and dispatches `supa:theme-changed`.
+ *
+ * @param mode - Target theme mode (`light`, `dark`, or `auto`).
+ * @param persist - Whether to persist the selection in `localStorage`.
+ * @returns Concrete resolved polarity (`'light'` or `'dark'`).
+ */
 export function applyThemeMode(mode: ThemeMode, persist = true): ResolvedTheme {
   const root = document.documentElement;
   const resolved = resolveTheme(mode);
@@ -228,6 +288,12 @@ export function applyThemeMode(mode: ThemeMode, persist = true): ResolvedTheme {
   return resolved;
 }
 
+/**
+ * Advances the active theme mode through the `light -> dark -> auto` cycle.
+ *
+ * @param current - Optional current theme mode override.
+ * @returns Newly activated theme mode.
+ */
 export function cycleThemeMode(current?: ThemeMode): ThemeMode {
   const root = document.documentElement;
   const activeMode =
@@ -239,6 +305,12 @@ export function cycleThemeMode(current?: ThemeMode): ThemeMode {
   return nextMode;
 }
 
+/**
+ * Updates ARIA labels, tooltips, and selected states on all theme toggle triggers and menu options.
+ *
+ * @param mode - Active theme mode (`light`, `dark`, or `auto`).
+ * @param resolved - Concrete resolved polarity (`light` or `dark`).
+ */
 function updateThemeControls(mode: ThemeMode, resolved: ResolvedTheme): void {
   const triggerLabelMap: Record<ThemeMode, string> = {
     light: 'Color theme: Light',
@@ -275,6 +347,9 @@ function updateThemeControls(mode: ThemeMode, resolved: ResolvedTheme): void {
   });
 }
 
+/**
+ * Initializes theme polarity and accessible color scheme state and binds UI event listeners.
+ */
 export function initTheme(): void {
   const root = document.documentElement;
   const defaultAttr = root.getAttribute('data-supa-default-theme');

@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Bootstrap 6.0.0-alpha.1 plugin registration, multi-instance Data map patch,
+ * prose isolation, native-title-to-Tooltip promotion, interactive component examples,
+ * and the interactive Bootstrap 6 Component Playground.
+ */
+
 import Alert from 'bootstrap/js/dist/alert.js';
 import Button from 'bootstrap/js/dist/button.js';
 import Carousel from 'bootstrap/js/dist/carousel.js';
@@ -160,6 +166,13 @@ const CODE_ICON_SVG =
 const CHEVRON_ICON_SVG =
   '<svg class="supa-code-toggle-chevron" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>';
 
+/**
+ * Checks whether an element's `title` attribute is used as Doxia shorthand metadata
+ * for `.supa-tabs`, `.supa-accordion`, or `.supa-stepper` rather than a tooltip.
+ *
+ * @param el - Element to inspect.
+ * @returns True when `el` uses `title` for Doxia component shorthand.
+ */
 function isDoxiaShorthandTitleElement(el: HTMLElement): boolean {
   if (
     el.classList.contains('supa-tabs') ||
@@ -178,11 +191,20 @@ function isDoxiaShorthandTitleElement(el: HTMLElement): boolean {
   return false;
 }
 
+/**
+ * Binds `click` and `show.bs.menu` listeners on `el` so its Bootstrap `Tooltip`
+ * automatically hides when the user activates the control.
+ *
+ * @param el - Target element with a bound Tooltip.
+ */
 function bindTooltipAutoHideOnInteract(el: HTMLElement): void {
   if (el.hasAttribute('data-supa-tooltip-bound')) {
     return;
   }
   el.setAttribute('data-supa-tooltip-bound', 'true');
+  /**
+   * Hides any active Bootstrap Tooltip instance attached to `el`.
+   */
   const hideTip = () => {
     try {
       Tooltip.getInstance(el)?.hide();
@@ -197,6 +219,10 @@ function bindTooltipAutoHideOnInteract(el: HTMLElement): void {
 /**
  * Sets or updates a Bootstrap 6 Tooltip on an element while removing any native
  * `title` attribute so the browser never displays a built-in tooltip.
+ *
+ * @param el - Element to configure with a Bootstrap 6 Tooltip.
+ * @param title - Tooltip text content.
+ * @param placement - Optional tooltip placement (`top`, `bottom`, `left`, `right`).
  */
 export function setTooltipTitle(el: HTMLElement, title: string, placement?: string): void {
   const trimmed = title.trim();
@@ -259,6 +285,8 @@ export function setTooltipTitle(el: HTMLElement, title: string, placement?: stri
  * Upgrades all `[data-bs-toggle="tooltip"]`, `[data-bs-title]`, and native `[title]`
  * elements within `root` to Bootstrap 6 `Tooltip` instances and strips native `title`
  * attributes so built-in browser tooltips are suppressed.
+ *
+ * @param root - Root node to scan for tooltip targets (defaults to `document`).
  */
 export function initTooltips(root: ParentNode = document): void {
   const selector = [
@@ -310,6 +338,8 @@ export function initTooltips(root: ParentNode = document): void {
  * Automatically pairs `.supa-component-preview` showcase cards with an immediately
  * following `.supa-code-block` or `.supa-tabs` syntax block into a unified Bootstrap 6
  * docs-style `.supa-component-example` container with an interactive Show/Hide Code bar.
+ *
+ * @param root - Root node to scan for `.supa-component-preview` blocks.
  */
 export function initComponentExamples(root: ParentNode = document): void {
   const previews = Array.from(root.querySelectorAll<HTMLElement>('.supa-component-preview'));
@@ -336,6 +366,12 @@ export function initComponentExamples(root: ParentNode = document): void {
     previewEl.parentNode?.insertBefore(wrapper, previewEl);
     wrapper.appendChild(previewEl);
 
+    /**
+     * Creates a Show/Hide code toggle button for a `.supa-component-example` wrapper.
+     *
+     * @param onToggle - Callback invoked when toggled.
+     * @returns Configured toggle button element.
+     */
     const createToggleBtn = (onToggle: (collapsed: boolean, btn: HTMLButtonElement) => void) => {
       const toggleBtn = document.createElement('button');
       toggleBtn.type = 'button';
@@ -452,10 +488,22 @@ const ARROW_RIGHT_SVG =
 const PLUS_ICON_SVG =
   '<svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M8 2a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 2"/></svg>';
 
+/**
+ * Capitalizes the first character of `word`.
+ *
+ * @param word - String to capitalize.
+ * @returns Capitalized string.
+ */
 function capitalize(word: string): string {
   return word.charAt(0).toUpperCase() + word.slice(1);
 }
 
+/**
+ * Renders the live HTML preview and syntax code tabs for the given `PlaygroundState`.
+ *
+ * @param state - Current interactive playground state.
+ * @returns Rendered HTML preview and code tabs.
+ */
 function renderPlaygroundState(state: PlaygroundState): {
   html: string;
   tabs: PlaygroundSyntaxTab[];
@@ -630,6 +678,8 @@ function renderPlaygroundState(state: PlaygroundState): {
 /**
  * Initializes the interactive Bootstrap 6 Component Playground (`[data-supa-playground]`),
  * inspired by https://getbootstrap.com/docs/6.0/components/button/#playground.
+ *
+ * @param root - Root node to scan for `.supa-playground` blocks.
  */
 export function initComponentPlayground(root: ParentNode = document): void {
   const playgrounds = Array.from(
@@ -692,6 +742,10 @@ export function initComponentPlayground(root: ParentNode = document): void {
       syntaxTab: ''
     };
 
+    /**
+     * Synchronizes the playground control buttons, stage HTML preview, and syntax code block
+     * with the current `state`.
+     */
     const updateUI = () => {
       pg.querySelectorAll<HTMLButtonElement>('[data-playground-component]').forEach((btn) => {
         const active = btn.getAttribute('data-playground-component') === state.component;
@@ -802,6 +856,8 @@ export function initComponentPlayground(root: ParentNode = document): void {
 /**
  * Automatically adds `.not-prose` to Bootstrap 6 component root containers inside
  * `.supa-article` so site authors don't have to manually wrap every component.
+ *
+ * @param container - Root container to scan for Bootstrap 6 component roots.
  */
 export function isolateBootstrapComponentsFromProse(container: ParentNode = document): void {
   const elements = container.querySelectorAll<HTMLElement>(BOOTSTRAP_PROSE_ISOLATION_SELECTORS);
@@ -816,6 +872,8 @@ export function isolateBootstrapComponentsFromProse(container: ParentNode = docu
  * Attaches all 20 Bootstrap 6 JS plugins to `window.bootstrap` and auto-initializes
  * opt-in interactive widgets (`Tooltip`, `Popover`, `Toast`, `Combobox`, `Datepicker`,
  * `Chips`, `OtpInput`, `Range`, `Strength`, `NavOverflow`, `Carousel`).
+ *
+ * @param root - Root node to initialize (defaults to `document`).
  */
 export function initBootstrapComponents(root: ParentNode = document): void {
   if (typeof window !== 'undefined') {
@@ -854,7 +912,9 @@ export function initBootstrapComponents(root: ParentNode = document): void {
     trigger.setAttribute('data-supa-toast-bound', 'true');
     trigger.addEventListener('click', () => {
       const selector = trigger.getAttribute('data-supa-toast-target');
-      if (!selector) return;
+      if (!selector) {
+        return;
+      }
       const toastEl = document.querySelector<HTMLElement>(selector);
       if (toastEl) {
         try {

@@ -11,6 +11,14 @@
 #set( $colorScheme = $site.getCustomValue( "${skinCfg}.colorScheme", 'furo' ) )
 #set( $colorSchemeSelector = $convert.toBoolean( $site.getCustomValue( "${skinCfg}.colorSchemeSelector", 'true' ) ) )
 #set( $sidebarHideName = $convert.toBoolean( $site.getCustomValue( "${skinCfg}.sidebarHideName", 'false' ) ) )
+#set( $sidebarBrandAlignRaw = $site.getCustomValue( "${skinCfg}.sidebarBrandAlign", 'center' ).toLowerCase() )
+#if( $sidebarBrandAlignRaw == 'left' || $sidebarBrandAlignRaw == 'start' )
+#set( $sidebarBrandAlign = 'left' )
+#elseif( $sidebarBrandAlignRaw == 'right' || $sidebarBrandAlignRaw == 'end' )
+#set( $sidebarBrandAlign = 'right' )
+#else
+#set( $sidebarBrandAlign = 'center' )
+#end
 #set( $lightLogo = $site.getCustomValue( "${skinCfg}.lightLogo", '' ) )
 #set( $darkLogo = $site.getCustomValue( "${skinCfg}.darkLogo", '' ) )
 #set( $announcement = $site.getCustomValue( "${skinCfg}.announcement", '' ) )
@@ -263,7 +271,7 @@
 #supaResolveHref( $site.bannerLeft.href )
 #set( $brandHref = $resolvedHref )
 #end
-            <a class="supa-sidebar-brand" href="$brandHref">
+            <a class="supa-sidebar-brand" data-supa-brand-align="$esc.html( $sidebarBrandAlign )" href="$brandHref">
 #if( $lightLogo != "" && $darkLogo != "" )
 #supaResolveHref( $lightLogo )
 #set( $lightLogoUrl = $resolvedHref )

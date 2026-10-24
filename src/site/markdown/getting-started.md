@@ -1,6 +1,6 @@
 # Quickstart Tutorial
 
-This tutorial walks you step-by-step through setting up **Supa Maven Skin** (`supa-maven-skin`) in a Maven project, creating a site descriptor (`src/site/site.xml`), and authoring your first Markdown (`.md`) and Velocity-processed Markdown (`.md.vm`) pages with admonitions, Bootstrap Icons, and synchronized content tabs.
+This tutorial walks you step-by-step through setting up **Supa Maven Skin** in a Maven project, creating a site descriptor (`src/site/site.xml`), and authoring your first Markdown (`.md`) and Velocity-processed Markdown (`.md.vm`) pages with admonitions, Bootstrap Icons, and synchronized content tabs.
 
 > [!NOTE] What You Will Build
 > By the end of this 5-minute tutorial, you will have a responsive 3-column documentation site with Light/Dark/Auto theme switching, 6 WCAG 2.2 AA/AAA accessible color schemes, offline syntax highlighting, client-side search, and Maven Project Info Reports.
@@ -72,7 +72,7 @@ Add `maven-site-plugin` (with `doxia-module-markdown`) under `<build><plugins>` 
 
 ## Step 2: Create `src/site/site.xml`
 
-Create the file `src/site/site.xml` to declare `supa-maven-skin`, configure theme and repository settings under `<custom><supaSkin>`, and define your left-sidebar navigation menus:
+Create the file `src/site/site.xml` to declare **Supa Maven Skin**, configure theme and repository settings under `<custom><supaSkin>`, and define your left-sidebar navigation menus:
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
@@ -151,7 +151,7 @@ Select your build tool below:
 
 ## Step 4: Write a Velocity-Enhanced Page (`src/site/markdown/install.md.vm`)
 
-When you name a file with the `.md.vm` extension, Doxia runs **Apache Velocity** before parsing the Markdown. This lets you interpolate Maven properties (such as `${project.groupId}`, `${project.artifactId}`, and `${project.version}`) and invoke `supa-maven-skin`'s built-in Velocity macros (`#bi`, `#bsAlert`, `#bsBadge`, `#bsCard`) by adding `#parse( "META-INF/maven/site-macros.vm" )` at the top of the file.
+When you name a file with the `.md.vm` extension, Doxia runs **Apache Velocity** before parsing the Markdown. This lets you interpolate Maven properties (such as `${project.groupId}`, `${project.artifactId}`, and `${project.version}`) and invoke **Supa Maven Skin**'s built-in Velocity macros (`#bi`, `#bsAlert`, `#bsBadge`, `#bsCard`) by adding `#parse( "META-INF/maven/site-macros.vm" )` at the top of the file.
 
 Create `src/site/markdown/install.md.vm`:
 

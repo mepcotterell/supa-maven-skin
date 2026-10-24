@@ -1,3 +1,8 @@
+/**
+ * @fileoverview Client-side search dialog, local DOM indexing, and cross-page
+ * HTML crawler for Supa Maven Skin.
+ */
+
 import Dialog from 'bootstrap/js/dist/dialog.js';
 import { slugifyHeading } from './toc';
 
@@ -9,6 +14,14 @@ export interface SearchDocument {
   content: string;
 }
 
+/**
+ * Escapes HTML special characters in `text` and wraps matching search query terms
+ * (2+ characters) in `<mark class="supa-search-mark">` elements.
+ *
+ * @param text - Raw text to highlight.
+ * @param rawQuery - Raw search query entered by the user.
+ * @returns HTML-escaped string with `<mark>` tags around matching terms.
+ */
 export function highlightQueryTerms(text: string, rawQuery: string): string {
   const escapedText = text
     .replace(/&/g, '&amp;')
@@ -26,6 +39,13 @@ export function highlightQueryTerms(text: string, rawQuery: string): string {
   return escapedText.replace(regex, '<mark class="supa-search-mark">$1</mark>');
 }
 
+/**
+ * Normalizes Doxia's synthetic root-relative report paths (`/project-info.html`
+ * and `/project-reports.html`) into relative links.
+ *
+ * @param href - Raw link href attribute.
+ * @returns Normalized relative href.
+ */
 function normalizeSyntheticReportHref(href: string): string {
   if (href === '/project-info.html' || href === '/project-reports.html') {
     return href.slice(1);
@@ -33,10 +53,17 @@ function normalizeSyntheticReportHref(href: string): string {
   return href;
 }
 
+/**
+ * Extracts a clean human-readable page title from a document's `<title>` or primary `<h1>`.
+ *
+ * @param doc - Document to inspect.
+ * @param fallback - Fallback title when neither `<title>` nor `<h1>` is present.
+ * @returns Extracted page title.
+ */
 function extractCleanDocumentTitle(doc: Document, fallback: string): string {
   const rawTitle = doc.title?.trim() || '';
   if (rawTitle) {
-    const cleaned = rawTitle.split(/\s+[–—-]\s+/)[0]?.trim();
+    const cleaned = rawTitle.split(/\s+[\u2013\u2014-]\s+/)[0]?.trim();
     if (cleaned) {
       return cleaned;
     }
@@ -44,6 +71,12 @@ function extractCleanDocumentTitle(doc: Document, fallback: string): string {
   return doc.querySelector('#supa-main-content h1')?.textContent?.trim() || fallback;
 }
 
+/**
+ * Collects searchable navigation links and current-page heading sections from a DOM document.
+ *
+ * @param doc - Document to index (defaults to the global `document`).
+ * @returns Indexed local search documents.
+ */
 export function collectLocalSearchDocuments(doc: Document = document): SearchDocument[] {
   const results: SearchDocument[] = [];
   const seenHrefs = new Set<string>();
@@ -107,6 +140,14 @@ export function collectLocalSearchDocuments(doc: Document = document): SearchDoc
   return results;
 }
 
+/**
+ * Filters and ranks search documents against a whitespace-tokenized search query.
+ *
+ * @param docs - Candidate search documents.
+ * @param rawQuery - Raw search query string.
+ * @param limit - Maximum number of results to return (defaults to 20).
+ * @returns Ranked matching search documents.
+ */
 export function filterSearchDocuments(
   docs: SearchDocument[],
   rawQuery: string,
@@ -158,6 +199,14 @@ export function filterSearchDocuments(
   return scored.slice(0, limit).map((s) => s.doc);
 }
 
+/**
+ * Merges local current-page search documents with remotely fetched site search documents,
+ * deduplicating links and current-page section hashes.
+ *
+ * @param localDocs - Local search documents from the active DOM.
+ * @param remoteDocs - Remote search documents crawled from sibling pages.
+ * @returns Deduplicated combined search documents.
+ */
 function mergeSearchDocuments(
   localDocs: SearchDocument[],
   remoteDocs: SearchDocument[]
@@ -187,6 +236,14 @@ function mergeSearchDocuments(
   return merged;
 }
 
+/**
+ * Crawls sibling `.html` pages linked from the sidebar navigation (with `sessionStorage`
+ * caching) and merges their content and headings into the search index.
+ *
+ * @param localDocs - Local search documents from the active DOM.
+ * @param cacheKey - `sessionStorage` key scoped to the project version.
+ * @returns Promise resolving to the merged site search index.
+ */
 async function fetchSiteIndex(
   localDocs: SearchDocument[],
   cacheKey: string
@@ -313,6 +370,10 @@ async function fetchSiteIndex(
   return mergeSearchDocuments(localDocs, remoteDocs);
 }
 
+/**
+ * Initializes the client-side search modal dialog (`#supaSearchDialog`), input listeners,
+ * and global keyboard shortcuts (`/` and `Cmd/Ctrl + K`).
+ */
 export function initSearch(): void {
   if (document.body.getAttribute('data-supa-search') === 'false') {
     return;
@@ -334,6 +395,11 @@ export function initSearch(): void {
     document.documentElement.getAttribute('data-supa-project-version') || '0.1.0';
   const cacheKey = `supa-search-index-${version}`;
 
+  /**
+   * Renders matching search results for `query` into `#supaSearchResults`.
+   *
+   * @param query - Current search input value.
+   */
   const renderResults = (query: string) => {
     resultsEl.innerHTML = '';
     activeIndex = -1;
@@ -362,7 +428,7 @@ export function initSearch(): void {
 
       const titleDiv = document.createElement('div');
       titleDiv.className = 'supa-search-result-title';
-      const displayTitle = match.section ? `${match.section} › ${match.title}` : match.title;
+      const displayTitle = match.section ? `${match.section} \u203a ${match.title}` : match.title;
       titleDiv.innerHTML = highlightQueryTerms(displayTitle, query);
 
       const badgeSpan = document.createElement('span');
@@ -394,6 +460,11 @@ export function initSearch(): void {
   };
 
   let indexPromise: Promise<void> | null = null;
+  /**
+   * Lazily triggers full-site indexing on first search modal activation.
+   *
+   * @returns Promise resolving once the site index is populated.
+   */
   const ensureSiteIndex = (): Promise<void> => {
     if (fullSiteIndexed) {
       return Promise.resolve();

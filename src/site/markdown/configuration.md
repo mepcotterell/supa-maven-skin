@@ -1,6 +1,6 @@
 # Configuration Reference
 
-`supa-maven-skin` is configured inside the `<custom><supaSkin>...</supaSkin></custom>` element of your `src/site/site.xml` descriptor (legacy `<furoSkin>` is also supported). All settings are optional and have sensible defaults matching Sphinx Furo.
+**Supa Maven Skin** is configured inside the `<custom><supaSkin>...</supaSkin></custom>` element of your `src/site/site.xml` descriptor (legacy `<furoSkin>` is also supported). All settings are optional and have sensible defaults matching Sphinx Furo.
 
 > [!TIP] Accessible Color Schemes & Custom Brand Colors
 > Choose from 6 built-in **WCAG 2.2 AA & AAA** accessible color schemes via `<colorScheme>`, and layer custom brand tokens on top of any scheme using `<lightCssVariables>` and `<darkCssVariables>`.
@@ -111,6 +111,7 @@ Click any color scheme card below (or use the palette selector in the top header
     <colorScheme>furo</colorScheme>
     <colorSchemeSelector>true</colorSchemeSelector>
     <sidebarHideName>false</sidebarHideName>
+    <sidebarBrandAlign>center</sidebarBrandAlign>
     <lightLogo>images/logo-light.svg</lightLogo>
     <darkLogo>images/logo-dark.svg</darkLogo>
     <announcement>Version 1.0 is now available!</announcement>
@@ -169,6 +170,7 @@ Click any color scheme card below (or use the palette selector in the top header
 | `<colorSchemeSelector>` | `true` | Render the accessible color scheme selector menu in the top header utility bar. |
 | `<announcement>` | *(empty)* | Top announcement banner HTML rendered above the page header. |
 | `<sidebarHideName>` | `false` | Hide the project name text under the logo in the left sidebar. |
+| `<sidebarBrandAlign>` | `center` | Horizontal alignment of the sidebar brand logo, project title, and version badge (`center`, `left` / `start`, or `right` / `end`). |
 | `<lightLogo>` | *(empty)* | Relative path or URL to logo shown when the resolved theme is light. |
 | `<darkLogo>` | *(empty)* | Relative path or URL to logo shown when the resolved theme is dark. |
 | `<sourceRepository>` | *(empty)* | GitHub/GitLab/Gitea repository URL for "View source" and "Edit this page" buttons. |
@@ -200,7 +202,7 @@ Click any color scheme card below (or use the palette selector in the top header
 
 ## Built-In Accessible Color Schemes
 
-Every built-in color scheme is verified at build time by `scripts/lint-scss.mjs` against **WCAG 2.2** relative luminance and contrast rules across both Light and Dark polarities and against both primary (`--color-background-primary`) and secondary (`--color-background-secondary`) surfaces:
+Every built-in color scheme is verified at build time by `scripts/lint-scss.ts` against **WCAG 2.2** relative luminance and contrast rules across both Light and Dark polarities and against both primary (`--color-background-primary`) and secondary (`--color-background-secondary`) surfaces:
 
 | Scheme ID | Inspiration | Contrast | Notes |
 | :--- | :--- | :--- | :--- |
@@ -227,11 +229,12 @@ Just like Sphinx Furo's `light_css_variables` and `dark_css_variables`, any chil
 | `color-foreground-secondary` | Secondary metadata, caption, and inactive TOC link color (`--fg-2`). |
 | `color-foreground-muted` | Muted text, permalink `#` indicators, and subtle labels (`--fg-3`). |
 | `color-foreground-border` | Interactive control border color (WCAG 1.4.11 non-text contrast &ge; 3:1). |
-| `supa-admonition-note-accent` | Note / Info admonition and `.theme-info` accent color. |
-| `supa-admonition-tip-accent` | Tip / Success admonition and `.theme-success` accent color. |
-| `supa-admonition-important-accent` | Important / Accent admonition and `.theme-accent` accent color. |
-| `supa-admonition-warning-accent` | Warning admonition and `.theme-warning` accent color. |
-| `supa-admonition-caution-accent` | Caution / Danger admonition and `.theme-danger` accent color. |
+| `supa-admonition-note-accent` | `note` and `seealso` admonition and `.theme-info` accent color. |
+| `supa-admonition-tip-accent` | `tip` and `hint` admonition and `.theme-success` accent color. |
+| `supa-admonition-important-accent` | `important` and `admonition` callout and `.theme-accent` accent color. |
+| `supa-admonition-warning-accent` | `warning` and `caution` admonition and `.theme-warning` accent color. |
+| `supa-admonition-caution-accent` | `danger`, `attention`, and `error` admonition and `.theme-danger` accent color. |
+| `supa-admonition-todo-accent` | `todo` admonition neutral accent color. |
 
 ## Velocity Helper Macros Reference (`site-macros.vm`)
 

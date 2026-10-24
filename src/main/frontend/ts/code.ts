@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Syntax highlighting via Highlight.js, code block wrappers,
+ * language badge pills, line numbering, and one-click Copy to Clipboard buttons.
+ */
 import hljs from 'highlight.js/lib/core';
 import bash from 'highlight.js/lib/languages/bash';
 import css from 'highlight.js/lib/languages/css';
@@ -23,10 +27,19 @@ let languagesRegistered = false;
 
 type LanguageFn = Parameters<typeof hljs.registerLanguage>[1];
 
+/**
+ * Wraps a Highlight.js grammar factory so aliases get a fresh language definition object.
+ *
+ * @param fn - Original Highlight.js language grammar factory.
+ * @returns Cloned Highlight.js language grammar factory.
+ */
 function cloneLanguage(fn: LanguageFn): LanguageFn {
   return (hljsInstance) => ({ ...fn(hljsInstance) });
 }
 
+/**
+ * Registers all bundled Highlight.js languages and common Maven/Doxia aliases once.
+ */
 export function registerHighlightLanguages(): void {
   if (languagesRegistered) {
     return;
@@ -95,6 +108,13 @@ const LANGUAGE_LABELS: Record<string, string> = {
   yml: 'yaml'
 };
 
+/**
+ * Highlights a single `<code>` or `<pre>` element using Highlight.js while
+ * skipping blocks that contain interactive child elements.
+ *
+ * @param codeEl - Target code or pre element to highlight.
+ * @param lang - Optional explicit language identifier.
+ */
 export function highlightCodeElement(codeEl: HTMLElement, lang?: string): void {
   registerHighlightLanguages();
   codeEl.removeAttribute('data-highlighted');
@@ -128,6 +148,13 @@ const COPY_ICON_SVG =
 const CHECK_ICON_SVG =
   '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>';
 
+/**
+ * Extracts a normalized display label for a `<pre>`/`<code>` block's language class.
+ *
+ * @param pre - Outer `<pre>` element.
+ * @param codeEl - Inner `<code>` element if present.
+ * @returns Normalized short language label, or null if none is set.
+ */
 function detectLanguageLabel(pre: HTMLElement, codeEl: HTMLElement | null): string | null {
   const classes = [
     ...(codeEl ? Array.from(codeEl.classList) : []),
@@ -143,6 +170,13 @@ function detectLanguageLabel(pre: HTMLElement, codeEl: HTMLElement | null): stri
   return null;
 }
 
+/**
+ * Checks whether a `<pre>` block is inside a Maven Project Licenses report section.
+ *
+ * @param pre - Candidate `<pre>` element.
+ * @param container - Enclosing content container.
+ * @returns True if the `<pre>` block represents license text.
+ */
 function isLicenseBlock(pre: HTMLElement, container: HTMLElement): boolean {
   if (
     typeof window !== 'undefined' &&
@@ -164,6 +198,15 @@ function isLicenseBlock(pre: HTMLElement, container: HTMLElement): boolean {
   return false;
 }
 
+/**
+ * Wraps `<pre>` blocks in `.supa-code-block`, applies Highlight.js syntax highlighting,
+ * renders optional title headers / language pills / line numbers, and adds Copy buttons.
+ *
+ * @param container - Root element containing `<pre>` blocks to enhance.
+ * @param enableHighlight - Whether to run Highlight.js syntax highlighting.
+ * @param enableCopyButton - Whether to attach Copy to Clipboard buttons.
+ * @param enableLineNumbers - Whether to render line number spans by default.
+ */
 export function enhanceCodeBlocks(
   container: HTMLElement,
   enableHighlight = true,
@@ -295,6 +338,10 @@ export function enhanceCodeBlocks(
   });
 }
 
+/**
+ * Reads `data-supa-syntax-highlight` and `data-supa-copy-code` attributes on `document.body`
+ * and enhances all code blocks inside `#supa-main-content`.
+ */
 export function initCodeBlocks(): void {
   const article = document.getElementById('supa-main-content');
   if (!article) {

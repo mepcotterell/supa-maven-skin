@@ -1,3 +1,8 @@
+/**
+ * @fileoverview Main frontend entrypoint for Supa Maven Skin.
+ * Coordinates theme initialization, Doxia DOM normalization, sticky ScrollSpy TOC,
+ * syntax highlighting, client-side search, responsive drawers, and Bootstrap 6 components.
+ */
 import '../scss/main.scss';
 
 import {
@@ -33,6 +38,10 @@ import { initSearch } from './search';
 import { initTheme } from './theme';
 import { initTocAndScrollSpy } from './toc';
 
+/**
+ * Initializes the responsive left sidebar (`#supaSidebarDrawer`) and right TOC
+ * (`#supaTocDrawer`) Bootstrap 6 `<dialog>` drawers and binds auto-close behavior.
+ */
 export function initDrawers(): void {
   const sidebarDrawer = document.getElementById('supaSidebarDrawer') as HTMLDialogElement | null;
   const tocDrawer = document.getElementById('supaTocDrawer') as HTMLDialogElement | null;
@@ -102,6 +111,9 @@ export function initDrawers(): void {
   }
 }
 
+/**
+ * Creates and mounts the floating "Back to top" button and binds scroll visibility.
+ */
 export function initBackToTop(): void {
   if (typeof document === 'undefined' || document.querySelector('.supa-back-to-top')) {
     return;
@@ -132,6 +144,9 @@ export function initBackToTop(): void {
   }
 }
 
+/**
+ * Boots all Supa Maven Skin frontend modules in deterministic order.
+ */
 export function initSupaSkin(): void {
   initTheme();
   initDoxiaEnhancements();

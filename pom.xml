@@ -140,6 +140,15 @@
         </excludes>
         <filtering>false</filtering>
       </resource>
+      <!-- Bundle project LICENSE under META-INF/ so it is packaged inside the JAR without polluting consumer target/site/ -->
+      <resource>
+        <directory>${project.basedir}</directory>
+        <targetPath>META-INF</targetPath>
+        <includes>
+          <include>LICENSE</include>
+        </includes>
+        <filtering>false</filtering>
+      </resource>
     </resources>
 
     <pluginManagement>
@@ -377,7 +386,7 @@
             </executions>
           </plugin>
 
-          <!-- Publish to Maven Central via Sonatype Central Portal -->
+          <!-- Publish to Maven Central Portal via central-publishing-maven-plugin -->
           <plugin>
             <groupId>org.sonatype.central</groupId>
             <artifactId>central-publishing-maven-plugin</artifactId>
@@ -398,6 +407,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-project-info-reports-plugin</artifactId>
+        <version>${maven-project-info-reports-plugin.version}</version>
         <reportSets>
           <reportSet>
             <reports>

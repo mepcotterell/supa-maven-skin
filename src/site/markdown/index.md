@@ -1,9 +1,9 @@
 # Supa Maven Skin
 
-**Supa Maven Skin** (`supa-maven-skin`) is a modern [Apache Maven Site](https://maven.apache.org/plugins/maven-site-plugin/) skin inspired by Pradyun Gedam's [Furo](https://pradyunsg.me/furo/) Sphinx documentation theme and built on **Bootstrap 6 (`6.0.0-alpha.1`)**, **Bootstrap Icons**, **Vite**, **Dart Sass (SCSS)**, and **TypeScript**.
+**Supa Maven Skin** is a modern [Apache Maven Site](https://maven.apache.org/plugins/maven-site-plugin/) skin inspired by Pradyun Gedam's [Furo](https://pradyunsg.me/furo/) Sphinx documentation theme and built on **Bootstrap 6 (`6.0.0-alpha.1`)**, **Bootstrap Icons**, **Vite**, **Dart Sass (SCSS)**, and **TypeScript**.
 
 > [!NOTE]
-> This documentation site is rendered using `supa-maven-skin` itself! Try toggling between **Light**, **Dark**, and **Auto** themes or switching accessible color schemes in the top utility bar, or pressing `/` (<kbd>⌘K</kbd> / <kbd>Ctrl+K</kbd>) to open the search dialog.
+> This documentation site is rendered using **Supa Maven Skin** itself! Try toggling between **Light**, **Dark**, and **Auto** themes or switching accessible color schemes in the top utility bar, or pressing `/` (<kbd>⌘K</kbd> / <kbd>Ctrl+K</kbd>) to open the search dialog.
 
 ---
 
@@ -66,7 +66,7 @@ Explore the documentation by goal:
 
 ### Rich Authoring in Markdown (`.md`) & Velocity (`.md.vm`)
 
-- **Furo Admonitions & Bootstrap 6 Alerts**: Write GitHub-Flavored Markdown blockquote alerts (`> [!NOTE]`, `> [!TIP]`, `> [!IMPORTANT]`, `> [!WARNING]`, `> [!CAUTION]`) or Bootstrap 6 alerts (`> [!ALERT:primary dismissible]`, `#bsAlert`).
+- **All 12 Sphinx Furo Admonition Types & Bootstrap 6 Alerts**: Write GitHub-Flavored Markdown blockquote alerts for any of the 12 Furo admonition types (`> [!ADMONITION]`, `> [!ATTENTION]`, `> [!CAUTION]`, `> [!DANGER]`, `> [!ERROR]`, `> [!HINT]`, `> [!IMPORTANT]`, `> [!NOTE]`, `> [!SEEALSO]`, `> [!TIP]`, `> [!TODO]`, `> [!WARNING]`) with Bootstrap Icons and nested callout support, or Bootstrap 6 alerts (`> [!ALERT:primary dismissible]`, `#bsAlert`).
 - **2,000+ Bundled Bootstrap Icons**: Author icons offline via Markdown shortcodes (`:bi-rocket-takeoff text-primary:`), the `#bi` Velocity macro (`#bi( "rocket-takeoff" "text-primary" )`), or HTML `<i class="bi bi-..."></i>`.
 - **Synchronized Content Tabs**: Group multi-language or multi-tool code blocks with `<div class="supa-tabs" title="group-key">` persisted automatically in `localStorage`.
 - **Offline Syntax Highlighting & Copy Button**: Bundles `highlight.js` for 14+ JVM and web languages plus a one-click copy-to-clipboard button.
@@ -76,7 +76,7 @@ Explore the documentation by goal:
 
 ## Minimal Quickstart
 
-Add `supa-maven-skin` to your project's `src/site/site.xml`:
+Add **Supa Maven Skin** to your project's `src/site/site.xml`:
 
 ```xml
 <skin>

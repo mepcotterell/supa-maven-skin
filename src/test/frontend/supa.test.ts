@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Unit test suite for Supa Maven Skin frontend TypeScript modules.
+ */
+
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   BootstrapPlugins,
@@ -11,6 +15,8 @@ import {
 } from '../../main/frontend/ts/bootstrap-components';
 import { enhanceCodeBlocks } from '../../main/frontend/ts/code';
 import {
+  ADMONITION_META,
+  type AdmonitionType,
   initBootstrapAccordions,
   initBootstrapSteppers,
   initContentTabs,
@@ -205,34 +211,88 @@ describe('Supa Maven Skin Frontend Modules', () => {
       expect(configTds[2].classList.contains('supa-table-col-prose')).toBe(true);
     });
 
-    it('transforms GFM blockquote alerts into Furo admonition cards and Bootstrap 6 alerts', () => {
+    it('transforms all 12 Furo admonition types with Bootstrap Icons, custom titles, nested admonitions, and Bootstrap 6 alerts', () => {
+      const expectedTypes: AdmonitionType[] = [
+        'admonition',
+        'attention',
+        'caution',
+        'danger',
+        'error',
+        'hint',
+        'important',
+        'note',
+        'seealso',
+        'tip',
+        'todo',
+        'warning'
+      ];
+      expect(Object.keys(ADMONITION_META).sort()).toEqual([...expectedTypes].sort());
+
       const container = document.createElement('div');
-      container.innerHTML = `
-        <blockquote>
-          <p>[!NOTE]\nFuro uses Bootstrap 6 Alpha under the hood.</p>
-        </blockquote>
-        <blockquote>
+      container.innerHTML = [
+        ...expectedTypes.map(
+          (type) => `
+          <blockquote>
+            <p>[!${type.toUpperCase()}]\nBody for ${type}.</p>
+          </blockquote>`
+        ),
+        `<blockquote>
           <p>[!TIP] Custom Performance Tip\nUse frontend-maven-plugin with Vite.</p>
-        </blockquote>
-        <blockquote>
+        </blockquote>`,
+        `<blockquote>
+          <p>[!SEE-ALSO]\nHyphenated see-also alias.</p>
+        </blockquote>`,
+        `<blockquote>
+          <p>[!NOTE]\nOuter note admonition.</p>
+          <blockquote>
+            <p>[!WARNING]\nNested warning admonition.</p>
+          </blockquote>
+        </blockquote>`,
+        `<blockquote>
           <p>[!ALERT:primary dismissible] Release Ready\nBootstrap 6 support is active.</p>
-        </blockquote>
-      `;
+        </blockquote>`
+      ].join('\n');
 
       transformGfmAdmonitions(container);
 
       const admonitions = container.querySelectorAll('.supa-admonition');
-      expect(admonitions.length).toBe(2);
-      expect(admonitions[0].classList.contains('admonition-note')).toBe(true);
-      expect(admonitions[0].querySelector('.supa-admonition-title')?.textContent).toBe('Note');
-      expect(admonitions[0].querySelector('.supa-admonition-body')?.textContent?.trim()).toBe(
-        'Furo uses Bootstrap 6 Alpha under the hood.'
-      );
+      expect(admonitions.length).toBe(16);
 
-      expect(admonitions[1].classList.contains('admonition-tip')).toBe(true);
-      expect(admonitions[1].querySelector('.supa-admonition-title')?.textContent).toBe(
+      expectedTypes.forEach((type, idx) => {
+        const meta = ADMONITION_META[type];
+        const el = admonitions[idx];
+        expect(el.classList.contains(`admonition-${type}`)).toBe(true);
+        expect(el.querySelector('.supa-admonition-title span')?.textContent).toBe(
+          meta.defaultTitle
+        );
+        const iconEl = el.querySelector<HTMLElement>('.supa-admonition-title i.bi')!;
+        expect(iconEl).not.toBeNull();
+        expect(iconEl.classList.contains(meta.iconClass)).toBe(true);
+        expect(iconEl.classList.contains('supa-admonition-icon')).toBe(true);
+        expect(iconEl.getAttribute('aria-hidden')).toBe('true');
+        expect(el.querySelector('.supa-admonition-body')?.textContent?.trim()).toBe(
+          `Body for ${type}.`
+        );
+      });
+
+      // Custom title on [!TIP]
+      expect(admonitions[12].classList.contains('admonition-tip')).toBe(true);
+      expect(admonitions[12].querySelector('.supa-admonition-title span')?.textContent).toBe(
         'Custom Performance Tip'
       );
+
+      // [!SEE-ALSO] alias maps to .admonition-seealso
+      expect(admonitions[13].classList.contains('admonition-seealso')).toBe(true);
+      expect(admonitions[13].querySelector('.supa-admonition-title span')?.textContent).toBe(
+        'See also'
+      );
+
+      // Nested admonition inside outer note
+      const outerNote = admonitions[14];
+      expect(outerNote.classList.contains('admonition-note')).toBe(true);
+      const nestedWarning = outerNote.querySelector('.supa-admonition.admonition-warning');
+      expect(nestedWarning).not.toBeNull();
+      expect(nestedWarning?.querySelector('.supa-admonition-title i.bi')?.classList.contains('bi-exclamation-triangle')).toBe(true);
 
       const bsAlert = container.querySelector('.alert.theme-primary');
       expect(bsAlert).not.toBeNull();

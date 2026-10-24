@@ -1,21 +1,21 @@
-Supa Maven Skin (`io.github.mepcotterell:supa-maven-skin`) is a modern, responsive, accessible three-column documentation skin for **Apache Maven Site Plugin 3.21.0+** and **Maven Doxia 2.0.0**, built with **Bootstrap 5.3**, **Bootstrap Icons**, **TypeScript**, and **Vite**.
+Supa Maven Skin (`io.github.mepcotterell:supa-maven-skin`) is a modern, responsive, accessible three-column documentation skin for **Apache Maven Site Plugin 3.21.0+** and **Maven Doxia 2.0+ (`2.2.0`)**, built with **Bootstrap 6 (`6.0.0-alpha.1`)**, **Bootstrap Icons**, **TypeScript**, and **Vite**.
 
 Here are the four pillars we never compromise on:
 
 ### 1. Accessibility without compromise (WCAG 2.2 AA/AAA)
-Supa ships with 6 color-blind-safe schemes (`furo`, `tol-bright`, `tol-muted`, `ibm-carbon`, `viridis`, and `solarized-high`) across both `light` and `dark` polarities (12 theme variants). Every semantic color token (`--supa-*`) is audited automatically at build time by `scripts/lint-scss.mjs` against WCAG 2.2 AA (4.5:1) and AAA (7.0:1 for `solarized-high`). Changes that regress contrast or keyboard/screen-reader navigation do not ship.
+Supa ships with 6 built-in accessible color schemes (`furo`, `bootstrap`, `modus`, `modus-tinted`, `modus-deuteranopia`, and `modus-tritanopia`) across both `light` and `dark` polarities (12 theme variants). Every semantic color token is audited automatically at build time by `scripts/lint-scss.ts` against WCAG 2.2 AA (4.5:1 for `furo` and `bootstrap`) and AAA (7.0:1 for the four `modus*` schemes). Changes that regress contrast or keyboard/screen-reader navigation do not ship.
 
 ### 2. Zero-config Doxia 2.0 compatibility
 Standard Maven documentation (`.md`, `.apt`, `.xdoc`, `.fml`) and `maven-project-info-reports-plugin` reports must render cleanly out of the box without requiring custom HTML. Progressive enhancements—GitHub-style markdown alerts (`> [!NOTE]`), `#bi` Velocity icon macros, synchronized tab groups, and opt-in libraries (KaTeX, Mermaid, Chart.js, Vanilla Calendar Pro)—layer onto Doxia's output without breaking standard Maven sites.
 
 ### 3. Self-contained skin artifact
-The entire skin packages into a single JAR containing `META-INF/maven/site.vm`, `META-INF/maven/site-macros.vm`, `META-INF/maven/skin.xml`, and Vite-bundled assets (`css/supa-maven-skin.min.css`, `js/supa-maven-skin.min.js`, and `css/fonts/bootstrap-icons.woff2`). Consumer projects never need Node.js or a frontend build step to generate their Maven site.
+The entire skin packages into a single JAR containing `META-INF/maven/site.vm`, `META-INF/maven/site-macros.vm`, `META-INF/maven/skin.xml`, `META-INF/LICENSE`, `META-INF/THIRD-PARTY-LICENSES.txt`, `META-INF/licenses/LICENSE-*.txt`, and Vite-bundled assets (`css/supa-maven-skin.min.css`, `js/supa-maven-skin.min.js`, and `css/fonts/bootstrap-icons.woff2`). Consumer projects never need Node.js or a frontend build step to generate their Maven site.
 
 ### 4. Fast, deterministic verification
 Frontend changes verify in seconds via `npm run lint`, `npm test`, and `npm run build`, backed by an end-to-end Maven Invoker integration test (`src/it/sample-site`) that builds a real multi-page site with the packaged skin JAR and asserts the rendered HTML via `verify.bsh`.
 
 ## A note on design philosophy
-Prefer simple, direct solutions that work with Doxia 2.0 and Bootstrap 5.3 rather than fighting them. Keep Velocity templates declarative, SCSS token-driven, and TypeScript enhancements resilient to missing DOM nodes. Fight scope creep and honor the maintainer's intent in a minimal, realistic fashion.
+Prefer simple, direct solutions that work with Doxia 2.0 and Bootstrap 6 (`6.0.0-alpha.1`) rather than fighting them. Keep Velocity templates declarative, SCSS token-driven, and TypeScript enhancements resilient to missing DOM nodes. Fight scope creep and honor the maintainer's intent in a minimal, realistic fashion.
 
 Think of these instructions as strong defaults. Explicit instructions from the maintainer override anything here.
 
@@ -28,65 +28,70 @@ Use this shared vocabulary when communicating and navigating the repo:
 - **self-site** means this repository's own documentation site under `src/site/`, rendered into `target/site/`.
 - **sample-site** means the Maven Invoker integration test project in `src/it/sample-site/`, verified by `src/it/sample-site/verify.bsh`.
 - **polarity (`theme`)** means the light/dark mode (`light`, `dark`, or `auto`), stored on `html[data-bs-theme]` and persisted in `localStorage['supa-theme']`.
-- **color scheme (`palette`)** means one of the 6 accessible palettes (`furo`, `tol-bright`, `tol-muted`, `ibm-carbon`, `viridis`, `solarized-high`), stored on `html[data-supa-palette]` and persisted in `localStorage['supa-palette']`.
-- **synthetic href** means a root-relative report link emitted by Doxia (such as `/project-info.html` or `/summary.html`) that must be relativized by `#supaResolveHref` in Velocity and `normalizeRelativeDocHref()` in `search.ts`.
+- **color scheme (`palette`)** means one of the 6 accessible palettes (`furo`, `bootstrap`, `modus`, `modus-tinted`, `modus-deuteranopia`, `modus-tritanopia`), stored on `html[data-supa-palette]` and persisted in `localStorage['supa-palette']`.
+- **synthetic href** means a root-relative report link emitted by Doxia (such as `/project-info.html` or `/summary.html`) that must be relativized by `#supaResolveHref` in Velocity and `normalizeSyntheticReportHref()` in `search.ts`.
 
-## The four ways to hurt yourself
+## The five ways to hurt yourself
 1. **Editing `target/classes/` or `target/site/` directly.** Vite writes compiled assets to `target/classes/css/` and `target/classes/js/`, and `maven-site-plugin` renders HTML into `target/site/`. Any manual edits in `target/` are overwritten on the next build. Always edit sources under `src/` and rebuild.
-2. **Renaming the `'furo'` palette ID.** The skin's CSS classes (`.supa-*`), CSS custom properties (`--supa-*`), data attributes (`data-supa-*`), and DOM IDs (`#supa*`) use the `supa` prefix, **but the default Okabe-Ito color scheme ID is `'furo'`** (`[data-supa-palette="furo"]`, `<colorScheme>furo</colorScheme>`). Never rename the `'furo'` scheme ID to `'supa'`.
-3. **Breaking Velocity directive balance or Doxia `<pre>` blocks.** Velocity parses `#if`/`#else`/`#end` tokens strictly (even inside certain comment forms). Run `npm run lint:vm` after editing `.vm` files. In TypeScript (`code.ts`), always skip Highlight.js when a `<pre>` block contains child elements (such as `<pre><a class="externalLink">` generated by Doxia's `verbatimLink`), or Highlight.js will log unescaped HTML warnings and clobber the link.
-4. **Killing processes by pattern.** Never run `pkill -f`, `pgrep | kill`, or kill a PID matched by worktree path. If you start a local HTTP server to preview `target/site/`, record the exact PID you spawned and stop only that PID.
+2. **Renaming the `'furo'` palette ID.** The skin's CSS classes (`.supa-*`), CSS custom properties (`--supa-*`), data attributes (`data-supa-*`), and DOM IDs (`#supa*`) use the `supa` prefix, **but the default Sphinx Furo color scheme ID is `'furo'`** (`[data-supa-palette="furo"]`, `<colorScheme>furo</colorScheme>`). Never rename the `'furo'` scheme ID to `'supa'`.
+3. **Guessing dependency or artifact versions instead of reading `pom.xml` and `package.json`, or leaving `CHANGELOG.md` stale.** This project targets **Bootstrap 6 (`6.0.0-alpha.1`)**. Always treat `pom.xml` and `package.json` as the single sources of truth for version information, update `CHANGELOG.md` under `## [Unreleased]`, and run `npm run lint:docs` (`scripts/lint-docs.ts`) to verify version alignment and changelog compliance across `README.md`, `AGENTS.md`, `CHANGELOG.md`, and `src/site/`.
+4. **Breaking Velocity directive balance or Doxia `<pre>` blocks.** Velocity parses `#if`/`#else`/`#end` tokens strictly (even inside certain comment forms). Run `npm run lint:vm` after editing `.vm` files. In TypeScript (`code.ts`), always skip Highlight.js when a `<pre>` block contains child elements (such as `<pre><a class="externalLink">` generated by Doxia's `verbatimLink`), or Highlight.js will log unescaped HTML warnings and clobber the link.
+5. **Killing processes by pattern.** Never run `pkill -f`, `pgrep | kill`, or kill a PID matched by worktree path. If you start a local HTTP server to preview `target/site/`, record the exact PID you spawned and stop only that PID.
 
 ## Hit every surface
 A change that only updates one layer often leaves Velocity, SCSS, TypeScript, tests, or documentation out of sync. Before calling a task done, walk this list:
 
 - **Velocity templates (`src/main/resources/META-INF/maven/`)** — `site.vm` and `site-macros.vm` own the HTML skeleton, `<head>` anti-FOUC inline script, `#bi` and `#supa*` macros, and `<custom><supaSkin>` configuration reading (with `<custom><furoSkin>` retained as a legacy fallback).
-- **SCSS (`src/main/frontend/scss/`)** — `_variables.scss` defines `--supa-*` tokens for all 6 palettes × 2 polarities; `_bootstrap-supa.scss` bridges them to Bootstrap `--bs-*` variables; `_layout.scss`, `_sidebar.scss`, `_toc.scss`, and `_content.scss` style the 3-column layout and Doxia output.
+- **SCSS (`src/main/frontend/scss/`)** — `_variables.scss` defines color tokens for all 6 palettes × 2 polarities; `_bootstrap-supa.scss` bridges them to Bootstrap 6 `--bs-*` and `light-dark()` tokens; `_layout.scss`, `_sidebar.scss`, `_toc.scss`, and `_content.scss` style the 3-column layout and Doxia output.
 - **TypeScript (`src/main/frontend/ts/`)** — `index.ts` boots modular enhancers (`theme.ts`, `doxia.ts`, `code.ts`, `toc.ts`, `search.ts`, `bootstrap-components.ts`, `optional.ts`). Every enhancer must safely no-op when its target elements are absent.
 - **Tests (`src/test/frontend/supa.test.ts` & `src/it/sample-site/verify.bsh`)** — Unit tests run in Vitest + JSDOM; integration assertions in `verify.bsh` inspect the real HTML rendered by `maven-site-plugin`.
-- **Documentation (`README.md` & `src/site/`)** — **Mandatory:** `README.md` and `src/site/` (`src/site/site.xml` and `src/site/markdown/*.md`) must always stay up-to-date with the codebase. Whenever you add, rename, or modify configuration options, Velocity macros, CSS tokens, classes, or features, update both `README.md` and the corresponding pages in `src/site/markdown/` in the same change.
+- **Documentation, Changelog & Version Alignment (`README.md`, `CHANGELOG.md`, `AGENTS.md`, & `src/site/`)** — **Mandatory:** `README.md`, `CHANGELOG.md`, and `src/site/` (`src/site/site.xml` and `src/site/markdown/*.md`) must always stay up-to-date with the codebase, and every version number stated in `README.md`, `CHANGELOG.md`, `AGENTS.md`, or `src/site/` must align with `pom.xml` and `package.json`.
 
 ## Documentation
-`README.md` and `src/site/` are first-class deliverables of this repository—`src/site/` is rendered with the skin itself as both user documentation and the live visual showcase.
+`README.md`, `CHANGELOG.md`, and `src/site/` are first-class deliverables of this repository—`src/site/` is rendered with the skin itself as both user documentation and the live visual showcase, and `.github/workflows/release.yml` extracts release notes directly from `CHANGELOG.md`.
 
-- **Keep `README.md` and `src/site/` synchronized.** Any change to `<custom><supaSkin>` options, color schemes, Velocity macros (`#bi`, `#supa*`), CSS custom properties (`--supa-*`), `.supa-*` component classes, or build commands must be reflected in `README.md` and `src/site/markdown/` before the task is complete.
+- **Refer to the project as "Supa Maven Skin" in documentation prose.** Reserve the artifact slug strictly for XML `<artifactId>supa-maven-skin</artifactId>` tags, Maven coordinates (`io.github.mepcotterell:supa-maven-skin`), repository URLs, and asset filenames (`supa-maven-skin.min.css`, `supa-maven-skin.min.js`, `supa-maven-skin.jar`).
+- **Keep `CHANGELOG.md` updated.** Every user-facing, authoring, configuration, accessibility, or build/toolchain change must record an appropriate entry under `## [Unreleased]` in `CHANGELOG.md` using [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/) categories (`### Added`, `### Changed`, `### Deprecated`, `### Removed`, `### Fixed`, `### Security`).
+- **Keep `README.md` and `src/site/` synchronized.** Any change to `<custom><supaSkin>` options, color schemes, Velocity macros (`#bi`, `#bs*`, `#supa*`), CSS custom properties, `.supa-*` component classes, or build commands must be reflected in `README.md` and `src/site/markdown/` before the task is complete.
+- **Keep version numbers aligned with `pom.xml` and `package.json`.** Whenever dependency, plugin, or artifact versions are stated in `README.md`, `CHANGELOG.md`, `AGENTS.md`, or `src/site/` (or bumped in `pom.xml` / `package.json`), verify that all documentation references match `pom.xml` (`<version>`, `<maven-site-plugin.version>`, `<doxia.version>`, `<maven-project-info-reports-plugin.version>`) and `package.json` (`version`, `bootstrap`, `bootstrap-icons`, `highlight.js`, `vite`, `vitest`). `scripts/lint-docs.ts` enforces this automatically during `npm run lint`.
 - **Preserve the Diátaxis structure in `src/site/markdown/`:**
   - **Overview:** `index.md` — landing page, feature highlights, and quick navigation.
   - **Tutorial:** `getting-started.md` — step-by-step guide to configuring a new Maven site from scratch.
   - **How-To Guide:** `authoring-guide.md` — task-oriented recipes for alerts, `#bi` icons, synced tabs, code blocks, KaTeX, Mermaid, charts, and calendars.
-  - **Reference:** `configuration.md` (`<supaSkin>` options, palettes, `--supa-*` tokens, Velocity macros), `bootstrap-components.md` (interactive Bootstrap 5.3 showcase), and `kitchen-sink.md` (Doxia stress test).
+  - **Reference:** `configuration.md` (`<supaSkin>` options, palettes, CSS variables, Velocity macros), `bootstrap-components.md` (interactive Bootstrap 6 showcase), and `kitchen-sink.md` (Doxia stress test).
   - **Explanation:** `architecture.md` — build pipeline, anti-FOUC theme engine, WCAG 2.2 contrast enforcement, and Doxia normalization design.
 
 ## Dev, testing, and verification loops
 - **Fast inner loop (~3s):**
-  - `npm run lint` — runs ESLint (`lint:ts`), the WCAG 2.2 AA/AAA SCSS token & contrast linter (`lint:scss`), and the Velocity template linter (`lint:vm`).
+  - `npm run lint` — runs ESLint (`lint:ts`), the WCAG 2.2 AA/AAA SCSS token & contrast linter (`lint:scss`), the Velocity template linter (`lint:vm`), and the documentation & changelog linter (`lint:docs`).
   - `npm test` — runs Vitest unit tests (`src/test/frontend/supa.test.ts`) in JSDOM.
   - `npm run build` — runs `tsc --noEmit` and bundles CSS/JS/fonts via Vite into `target/classes/`.
 - **Full Maven verification & site build (~20–30s):**
-  - `mvn -B -ntp clean verify site` — executes the Vite build, Checkstyle, all three linters, Vitest unit tests, packages the skin JAR, runs `maven-invoker-plugin` against `src/it/sample-site` (`verify.bsh`), and generates the project's own documentation site in `target/site/`.
+  - `mvn -B -ntp clean verify site` — executes the Vite build, Checkstyle, all four linters, Vitest unit tests, packages the skin JAR, runs `maven-invoker-plugin` against `src/it/sample-site` (`verify.bsh`), and generates the project's own documentation site in `target/site/`.
   - Run `mvn -B -ntp clean verify site` before finishing any change that touches Velocity templates, build configuration, or site documentation.
 - **Proof for bug fixes:**
   - Logic, DOM transformation, search indexing, and theme/palette bugs get a focused unit test in `src/test/frontend/supa.test.ts` (or an assertion in `src/it/sample-site/verify.bsh` for Velocity template bugs) alongside the fix.
 
 ## How it works
-During `mvn site`, `maven-site-plugin` parses the project's `pom.xml`, `src/site/site.xml`, and Doxia documents (`.md`, `.apt`, `.xdoc`, `.fml`), then evaluates `META-INF/maven/site.vm` and `site-macros.vm`. An inline script in `<head>` immediately resolves the active polarity (`data-bs-theme`) and color scheme (`data-supa-palette`) before first paint to prevent FOUC. Once the DOM loads, `initSupaSkin()` in `src/main/frontend/ts/index.ts` normalizes Doxia tables/anchors/alerts (`doxia.ts`), highlights code blocks and adds copy buttons (`code.ts`), initializes sticky ScrollSpy TOC (`toc.ts`), indexes pages for client-side Ctrl/Cmd+K search (`search.ts`), wires interactive Bootstrap 5.3 widgets and synced tabs (`bootstrap-components.ts`), and lazily initializes opt-in libraries (`optional.ts`).
+During `mvn site`, `maven-site-plugin` (`3.21.0+`) parses the project's `pom.xml`, `src/site/site.xml`, and Doxia documents (`.md`, `.apt`, `.xdoc`, `.fml`), then evaluates `META-INF/maven/site.vm` and `site-macros.vm`. An inline script in `<head>` immediately resolves the active polarity (`data-bs-theme`) and color scheme (`data-supa-palette`) before first paint to prevent FOUC. Once the DOM loads, `initSupaSkin()` in `src/main/frontend/ts/index.ts` normalizes Doxia tables/anchors/alerts (`doxia.ts`), highlights code blocks and adds copy buttons (`code.ts`), initializes sticky ScrollSpy TOC (`toc.ts`), indexes pages for client-side Ctrl/Cmd+K search (`search.ts`), wires interactive Bootstrap 6 widgets and synced tabs (`bootstrap-components.ts`), and lazily initializes opt-in libraries (`optional.ts`).
 
 Full pipeline details and design rationale: [`src/site/markdown/architecture.md`](src/site/markdown/architecture.md). Configuration and token reference: [`src/site/markdown/configuration.md`](src/site/markdown/configuration.md).
 
 ## Where code lives
 - `README.md` — repository overview, feature summary, quick-start `site.xml` snippet, and build commands.
-- `src/main/resources/META-INF/maven/` — `site.vm` (main layout template), `site-macros.vm` (reusable Velocity macros `#bi` and `#supa*`), and `skin.xml`.
+- `CHANGELOG.md` — Keep a Changelog 1.1.0 release history and `## [Unreleased]` change tracking, parsed by `.github/workflows/release.yml` when publishing GitHub Releases.
+- `src/main/resources/META-INF/maven/` — `site.vm` (main layout template), `site-macros.vm` (reusable Velocity macros `#bi`, `#bs*`, and `#supa*`), and `skin.xml`.
 - `src/main/frontend/scss/` — `_variables.scss` (6 palettes × 2 polarities), `_bootstrap-supa.scss`, `_layout.scss`, `_sidebar.scss`, `_toc.scss`, `_content.scss`, and `main.scss`.
 - `src/main/frontend/ts/` — TypeScript modules (`index.ts`, `theme.ts`, `doxia.ts`, `code.ts`, `toc.ts`, `search.ts`, `bootstrap-components.ts`, `optional.ts`).
-- `src/main/frontend/vite.config.ts` — Vite bundler and Vitest configuration.
-- `scripts/` — `lint-scss.mjs` (SCSS syntax + WCAG 2.2 AA/AAA contrast verifier) and `lint-velocity.mjs` (Velocity directive/macro linter).
+- `src/main/frontend/vite.config.ts` — Vite bundler, `META-INF/` license bundler plugin, and Vitest configuration.
+- `scripts/` — `lint-scss.ts` (SCSS syntax + WCAG 2.2 AA/AAA contrast verifier), `lint-velocity.ts` (Velocity directive/macro linter), and `lint-docs.ts` (documentation version-alignment & `CHANGELOG.md` verifier).
 - `src/test/frontend/supa.test.ts` — Vitest + JSDOM unit test suite.
 - `src/it/sample-site/` — Maven Invoker integration test fixture and `verify.bsh` verifier script.
-- `src/site/` — Self-site documentation (`site.xml` and Markdown pages in `src/site/markdown/`).
+- `src/site/` — Self-site documentation (`site.xml`, self-site-only logos in `src/site/resources/images/`, and Markdown pages in `src/site/markdown/`).
 
 ## Taste
-- **Semantic tokens over hardcoded colors.** Use `var(--supa-*)` custom properties in SCSS and components so every element automatically adapts across all 12 palette × polarity combinations.
-- **Strict TypeScript.** No `any`. Prefer inferred types and narrow DOM element guards (`instanceof HTMLElement`).
+- **Semantic tokens over hardcoded colors.** Use `var(--supa-*)` and `--color-*` custom properties in SCSS and components so every element automatically adapts across all 12 palette × polarity combinations.
+- **Google TypeScript Style Guide & Google-style TSDoc across `src/**/*.{ts,tsx}` and `scripts/**/*.{ts,tsx}`.** All `.ts` and `.tsx` files under `src/` and `scripts/` must adhere to the Google TypeScript Style Guide (no `any`, `import type` for type-only imports, `T[]` for simple array types, `curly: 'all'`, `eqeqeq: 'always'`, `prefer-const`, `no-var`, `no-namespace`) and include a top-level `/** @fileoverview ... */` docstring plus full Google-style TSDoc (`@param name - description` and `@returns description`, **without** redundant `{type}` annotations) on every function, enforced by `supa/google-tsdoc` in `eslint.config.mjs`.
 - **Single Velocity icon macro.** Use `#bi( "icon-name" "extra-classes" "aria-label" )` in Velocity templates and `.md.vm` pages.
 - **Comments explain why.** Document external quirks (such as Doxia's synthetic `/project-info.html` hrefs or `verbatimLink` `<pre><a>` markup) and invariants the code cannot express on its own.
 

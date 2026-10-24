@@ -9,19 +9,6 @@
     Authors: Michael E. Cotterell, Bradley J. Barnes
  -->
 
-<!--
-    2026-08-23 Modernized configuration for modern Java (JDK 21+ and JDK 25+) and Checkstyle 10+:
-               Configured modern naming checks (RecordComponentName, PatternVariableName, LambdaParameterName)
-               to support Java 22+/25 unnamed variables and patterns ('_'), Javadoc tag validation & ordering,
-               and spacing conventions.
-    2026-08-16 Fixed EmptyBlock/EmptyCatchBlock conflict, WhitespaceAround error message,
-               removed obsolete JavadocMethod property, added missing naming & structural checks.
-    2022-12-09 Added more comments to this configuration file.
-    2022-12-09 Removed 'xml' from 'fileExtensions' property.
-    2020-04-03 Updated for Checkstyle 8.31.
-    2019-09-30 Updated default severity to 'error' to avoid confusion.
- -->
-
 <module name="Checker">
 
   <!-- General configuration options.                     -->

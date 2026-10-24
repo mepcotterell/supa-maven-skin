@@ -1,6 +1,16 @@
+/**
+ * @fileoverview Heading slug generation, Doxia `<a id="...">` anchor reconciliation,
+ * permalink copy buttons, and sticky "On this page" ScrollSpy Table of Contents.
+ */
 import ScrollSpy from 'bootstrap/js/dist/scrollspy.js';
 import { setTooltipTitle } from './bootstrap-components';
 
+/**
+ * Converts a heading text string into a URL-safe lowercase hyphenated slug.
+ *
+ * @param text - Raw heading text content.
+ * @returns URL-safe lowercase slug (defaults to `'section'` if empty).
+ */
 export function slugifyHeading(text: string): string {
   return (
     text
@@ -16,6 +26,11 @@ export function slugifyHeading(text: string): string {
  * Ensures every heading in the article has a deterministic clean slug `id`
  * (e.g. `#1-actions-buttons`) while preserving any preceding Doxia `<a id="...">`
  * anchor for backward compatibility, and attaches the optional Furo `#` permalink.
+ *
+ * @param article - Root article container (`#supa-main-content`).
+ * @param enablePermalinks - Whether to append `.supa-headerlink` permalink anchors.
+ * @param permalinkSymbol - Symbol text displayed inside each permalink anchor.
+ * @returns Array of processed prose heading elements.
  */
 export function prepareHeadings(
   article: HTMLElement,
@@ -107,6 +122,10 @@ export function prepareHeadings(
  * Builds the right-hand "On this page" table of contents (`#supaTocNav`) and
  * maintains a single active section indicator synced with both the right TOC
  * and any hash sub-links in the left navigation sidebar.
+ *
+ * @param article - Root article container (`#supa-main-content`).
+ * @param tocNav - Target `<nav id="supaTocNav">` element.
+ * @param maxDepth - Maximum heading depth (`2`–`6`) to include in the TOC.
  */
 export function buildTableOfContents(
   article: HTMLElement,
@@ -173,11 +192,17 @@ export function buildTableOfContents(
   ).filter((link) => {
     const href = link.getAttribute('href') || '';
     const hashIdx = href.indexOf('#');
-    if (hashIdx < 0) return false;
+    if (hashIdx < 0) {
+      return false;
+    }
     const pagePart = href.slice(0, hashIdx).split('/').pop() || '';
     const hashPart = href.slice(hashIdx + 1);
-    if (!pagePart) return true;
-    if (currentPageName && pagePart === currentPageName) return true;
+    if (!pagePart) {
+      return true;
+    }
+    if (currentPageName && pagePart === currentPageName) {
+      return true;
+    }
     return aliasToHeadingId.has(hashPart);
   });
 
@@ -300,6 +325,9 @@ export function buildTableOfContents(
   }
 }
 
+/**
+ * Prepares article headings, handles initial hash scrolling, and builds the sticky ScrollSpy TOC.
+ */
 export function initTocAndScrollSpy(): void {
   const article = document.getElementById('supa-main-content');
   if (!article) {

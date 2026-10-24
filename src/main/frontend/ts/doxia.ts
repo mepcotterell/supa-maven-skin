@@ -1,4 +1,22 @@
-export type AdmonitionType = 'note' | 'tip' | 'important' | 'warning' | 'caution';
+/**
+ * @fileoverview Doxia 2.0 HTML normalization, GitHub-Flavored Markdown admonition transforms,
+ * synchronized content tabs, declarative accordions/steppers, and Bootstrap Icon shortcodes.
+ */
+
+export type AdmonitionType =
+  | 'admonition'
+  | 'attention'
+  | 'caution'
+  | 'danger'
+  | 'error'
+  | 'hint'
+  | 'important'
+  | 'note'
+  | 'seealso'
+  | 'tip'
+  | 'todo'
+  | 'warning';
+
 export type BootstrapThemeName =
   | 'primary'
   | 'secondary'
@@ -12,43 +30,74 @@ export type BootstrapThemeName =
 interface AdmonitionMeta {
   type: AdmonitionType;
   defaultTitle: string;
-  iconSvg: string;
+  iconClass: string;
 }
 
-const ADMONITION_META: Record<AdmonitionType, AdmonitionMeta> = {
-  note: {
-    type: 'note',
-    defaultTitle: 'Note',
-    iconSvg:
-      '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>'
+export const ADMONITION_META: Record<AdmonitionType, AdmonitionMeta> = {
+  admonition: {
+    type: 'admonition',
+    defaultTitle: 'Admonition',
+    iconClass: 'bi-card-text'
   },
-  tip: {
-    type: 'tip',
-    defaultTitle: 'Tip',
-    iconSvg:
-      '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18h6"></path><path d="M10 22h4"></path><path d="M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2z"></path></svg>'
-  },
-  important: {
-    type: 'important',
-    defaultTitle: 'Important',
-    iconSvg:
-      '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path><line x1="12" y1="7" x2="12" y2="11"></line><line x1="12" y1="14" x2="12.01" y2="14"></line></svg>'
-  },
-  warning: {
-    type: 'warning',
-    defaultTitle: 'Warning',
-    iconSvg:
-      '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>'
+  attention: {
+    type: 'attention',
+    defaultTitle: 'Attention',
+    iconClass: 'bi-exclamation-diamond'
   },
   caution: {
     type: 'caution',
     defaultTitle: 'Caution',
-    iconSvg:
-      '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"></polygon><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>'
+    iconClass: 'bi-lightning-charge'
+  },
+  danger: {
+    type: 'danger',
+    defaultTitle: 'Danger',
+    iconClass: 'bi-lightning-charge-fill'
+  },
+  error: {
+    type: 'error',
+    defaultTitle: 'Error',
+    iconClass: 'bi-x-octagon'
+  },
+  hint: {
+    type: 'hint',
+    defaultTitle: 'Hint',
+    iconClass: 'bi-question-circle'
+  },
+  important: {
+    type: 'important',
+    defaultTitle: 'Important',
+    iconClass: 'bi-fire'
+  },
+  note: {
+    type: 'note',
+    defaultTitle: 'Note',
+    iconClass: 'bi-info-circle'
+  },
+  seealso: {
+    type: 'seealso',
+    defaultTitle: 'See also',
+    iconClass: 'bi-arrow-up-right-circle'
+  },
+  tip: {
+    type: 'tip',
+    defaultTitle: 'Tip',
+    iconClass: 'bi-lightbulb'
+  },
+  todo: {
+    type: 'todo',
+    defaultTitle: 'Todo',
+    iconClass: 'bi-check2-square'
+  },
+  warning: {
+    type: 'warning',
+    defaultTitle: 'Warning',
+    iconClass: 'bi-exclamation-triangle'
   }
 };
 
-const GFM_ALERT_REGEX = /^\s*\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\](?:[ \t]+([^\n]*))?(?:\n|$)/i;
+const GFM_ALERT_REGEX =
+  /^\s*\[!(ADMONITION|ATTENTION|CAUTION|DANGER|ERROR|HINT|IMPORTANT|NOTE|SEE-?ALSO|TIP|TODO|WARNING)\](?:[ \t]+([^\n]*))?(?:\n|$)/i;
 const GFM_BS_ALERT_REGEX =
   /^\s*\[!ALERT:(primary|secondary|success|info|warning|danger|light|dark)(?:[ \t]+(dismissible))?\](?:[ \t]+([^\n]*))?(?:\n|$)/i;
 
@@ -58,6 +107,8 @@ export const TAB_SYNC_STORAGE_KEY = 'supa-tab-sync';
  * Classifies table columns into `.supa-table-col-compact` (single-line identifier/value
  * columns) and `.supa-table-col-prose` (multi-sentence description columns) so tables
  * maintain balanced proportions without breaking inline `<code>` identifiers mid-word.
+ *
+ * @param table - Table element to inspect and classify.
  */
 function classifyTableColumns(table: HTMLTableElement): void {
   const bodyRows = Array.from(table.querySelectorAll<HTMLTableRowElement>('tbody tr'));
@@ -162,6 +213,8 @@ function classifyTableColumns(table: HTMLTableElement): void {
 /**
  * Normalizes Doxia tables (`table.bodyTable` and article tables) into responsive
  * Bootstrap 6 tables, and cleans up Doxia inline list-style attributes on Bootstrap lists.
+ *
+ * @param container - Root container element to normalize.
  */
 export function normalizeDoxiaTables(container: HTMLElement): void {
   const tables = container.querySelectorAll<HTMLTableElement>('table');
@@ -191,13 +244,18 @@ export function normalizeDoxiaTables(container: HTMLElement): void {
 
 /**
  * Transforms GitHub-Flavored Markdown blockquote alerts (`> [!NOTE]`, `> [!TIP]`,
- * `> [!IMPORTANT]`, `> [!WARNING]`, `> [!CAUTION]`) into Furo admonition cards,
- * and `> [!ALERT:primary dismissible] Title` into native Bootstrap 6 `.alert` components.
+ * `> [!IMPORTANT]`, `> [!WARNING]`, `> [!CAUTION]`, `> [!ADMONITION]`, `> [!ATTENTION]`,
+ * `> [!DANGER]`, `> [!ERROR]`, `> [!HINT]`, `> [!SEEALSO]`, `> [!TODO]`) into Furo
+ * admonition cards with Bootstrap Icons, and `> [!ALERT:primary dismissible] Title`
+ * into native Bootstrap 6 `.alert` components.
+ *
+ * @param container - Root container element to scan for blockquote alerts.
  */
 export function transformGfmAdmonitions(container: HTMLElement): void {
-  const blockquotes = container.querySelectorAll<HTMLQuoteElement>('blockquote');
+  // Process from innermost blockquotes to outermost so nested admonitions transform cleanly
+  const blockquotes = Array.from(container.querySelectorAll<HTMLQuoteElement>('blockquote')).reverse();
   blockquotes.forEach((blockquote) => {
-    const firstParagraph = blockquote.querySelector<HTMLParagraphElement>('p:first-child');
+    const firstParagraph = blockquote.querySelector<HTMLParagraphElement>(':scope > p:first-child');
     const targetEl = firstParagraph ?? blockquote;
     const rawText = targetEl.innerHTML;
 
@@ -249,13 +307,13 @@ export function transformGfmAdmonitions(container: HTMLElement): void {
       return;
     }
 
-    // 2. Check for Furo Admonition: > [!NOTE] Title
+    // 2. Check for Furo Admonition (all 12 supported types)
     const match = rawText.match(GFM_ALERT_REGEX);
     if (!match) {
       return;
     }
 
-    const rawKind = match[1].toLowerCase() as AdmonitionType;
+    const rawKind = match[1].toLowerCase().replace('-', '') as AdmonitionType;
     const customTitle = match[2]?.trim();
     const meta = ADMONITION_META[rawKind] ?? ADMONITION_META.note;
     const titleText = customTitle && customTitle.length > 0 ? customTitle : meta.defaultTitle;
@@ -277,11 +335,16 @@ export function transformGfmAdmonitions(container: HTMLElement): void {
 
     const titleEl = document.createElement('p');
     titleEl.className = 'supa-admonition-title';
-    titleEl.innerHTML = `${meta.iconSvg}<span></span>`;
-    const span = titleEl.querySelector('span');
-    if (span) {
-      span.textContent = titleText;
-    }
+
+    const iconEl = document.createElement('i');
+    iconEl.className = `bi ${meta.iconClass} supa-admonition-icon`;
+    iconEl.setAttribute('aria-hidden', 'true');
+
+    const spanEl = document.createElement('span');
+    spanEl.textContent = titleText;
+
+    titleEl.appendChild(iconEl);
+    titleEl.appendChild(spanEl);
 
     const bodyEl = document.createElement('div');
     bodyEl.className = 'supa-admonition-body';
@@ -295,6 +358,14 @@ export function transformGfmAdmonitions(container: HTMLElement): void {
   });
 }
 
+/**
+ * Infers a human-readable tab button label for a `.supa-tabs` child panel from its
+ * `data-tab` / `title` attribute or embedded code fence language class.
+ *
+ * @param panel - Tab panel element.
+ * @param index - Zero-based panel index used as fallback.
+ * @returns Resolved tab button label.
+ */
 function inferPanelTabLabel(panel: HTMLElement, index: number): string {
   const explicit = (panel.getAttribute('data-tab') || panel.getAttribute('title'))?.trim();
   if (explicit) {
@@ -320,6 +391,8 @@ function inferPanelTabLabel(panel: HTMLElement, index: number): string {
  * Enhances `.supa-tabs` containers with `<div data-tab="Label">` or `<div title="Label">`
  * panels into accessible ARIA tablists (`sphinx-inline-tabs` equivalent) that synchronize
  * active tab selection across the entire site via `localStorage`.
+ *
+ * @param container - Root container element to scan for `.supa-tabs` blocks.
  */
 export function initContentTabs(container: HTMLElement): void {
   const tabContainers = Array.from(container.querySelectorAll<HTMLElement>('.supa-tabs'));
@@ -378,6 +451,13 @@ export function initContentTabs(container: HTMLElement): void {
     const buttons: HTMLButtonElement[] = [];
     const panels: HTMLElement[] = [];
 
+    /**
+     * Activates the tab matching `targetLabel` and optionally synchronizes the selection
+     * across sibling tab groups sharing `groupKey`.
+     *
+     * @param targetLabel - Label of the tab to activate.
+     * @param persist - Whether to persist and broadcast the selection.
+     */
     const activateLabel = (targetLabel: string, persist = false) => {
       const normalized = targetLabel.trim().toLowerCase();
       const matchIdx = buttons.findIndex(
@@ -477,6 +557,8 @@ export function initContentTabs(container: HTMLElement): void {
 /**
  * Transforms declarative `.supa-accordion` containers (`<div data-accordion="Title">` or `<div title="Title">`)
  * into native Bootstrap 6 `<details class="accordion-item">` + `<summary class="accordion-header">` accordions.
+ *
+ * @param container - Root container element to scan for `.supa-accordion` blocks.
  */
 export function initBootstrapAccordions(container: HTMLElement): void {
   const accordions = Array.from(container.querySelectorAll<HTMLElement>('.supa-accordion'));
@@ -557,6 +639,8 @@ export function initBootstrapAccordions(container: HTMLElement): void {
 /**
  * Transforms declarative `<ol class="supa-stepper" data-active-step="2">` (or `title="2"` / `<li class="active">`)
  * lists into Bootstrap 6 `.stepper.stepper-horizontal` components.
+ *
+ * @param container - Root container element to scan for `.supa-stepper` lists.
  */
 export function initBootstrapSteppers(container: HTMLElement): void {
   const steppers = Array.from(container.querySelectorAll<HTMLElement>('.supa-stepper'));
@@ -597,6 +681,8 @@ const BI_SHORTCODE_REGEX = /:bi-([a-z0-9-]+)(?:\s+([a-zA-Z0-9_:\s-]+?))?:/g;
  * Transforms Markdown Bootstrap Icon shortcodes (`:bi-<icon-name>:` or
  * `:bi-<icon-name> <extra-classes>:`) in text nodes into `<i class="bi bi-..." aria-hidden="true"></i>`,
  * skipping code blocks and inline `<code>` elements.
+ *
+ * @param container - Root container element to scan for `:bi-...:` shortcodes.
  */
 export function transformBootstrapIcons(container: HTMLElement): void {
   const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
@@ -649,6 +735,11 @@ export function transformBootstrapIcons(container: HTMLElement): void {
   });
 }
 
+/**
+ * Runs all Doxia 2.0 HTML normalizations and declarative component transforms on `root`.
+ *
+ * @param root - Root article element (defaults to `#supa-main-content`).
+ */
 export function initDoxiaEnhancements(
   root: HTMLElement | null = document.getElementById('supa-main-content')
 ): void {

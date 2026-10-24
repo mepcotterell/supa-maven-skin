@@ -4,9 +4,12 @@
     "useDefineForClassFields": true,
     "module": "ESNext",
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "types": ["node"],
     "skipLibCheck": true,
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
+    "erasableSyntaxOnly": true,
+    "noUncheckedSideEffectImports": false,
     "isolatedModules": true,
     "moduleDetection": "force",
     "noEmit": true,
@@ -17,6 +20,7 @@
   },
   "include": [
     "src/main/frontend/ts/**/*.ts",
-    "src/test/frontend/**/*.ts"
+    "src/test/frontend/**/*.ts",
+    "scripts/**/*.ts"
   ]
 }

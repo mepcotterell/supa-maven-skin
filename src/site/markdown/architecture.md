@@ -10,12 +10,14 @@ When a Maven project runs `mvn site`, `maven-site-plugin` (`3.21.0+`) and `doxia
 
 ```mermaid
 flowchart TD
-    subgraph SkinBuild["1. Skin Build (supa-maven-skin)"]
+    subgraph SkinBuild["1. Skin Build (Supa Maven Skin)"]
       TS["TypeScript Modules (src/main/frontend/ts)"] --> Vite["Vite + Dart Sass Build"]
       SCSS["SCSS + Bootstrap 6 + Bootstrap Icons"] --> Vite
       Vite --> Assets["css/supa-maven-skin.min.css & js/supa-maven-skin.min.js"]
+      Vite --> Licenses["META-INF/LICENSE & META-INF/THIRD-PARTY-LICENSES.txt"]
       VM["Velocity Templates (site.vm & site-macros.vm)"] --> JAR["supa-maven-skin.jar"]
       Assets --> JAR
+      Licenses --> JAR
     end
     subgraph ConsumerSite["2. Project Site Generation (mvn site)"]
       MD["src/site/markdown/*.md & *.md.vm"] --> Doxia["Doxia 2.0 Site Renderer"]
@@ -25,11 +27,20 @@ flowchart TD
     end
 ```
 
+### Packaged JAR Layout & `META-INF/` License Isolation
+
+Because `doxia-site-renderer` extracts all non-`META-INF/` files from a skin JAR directly into a consumer project's `target/site/` directory, `supa-maven-skin.jar` keeps only runtime web assets (`css/supa-maven-skin.min.css`, `css/fonts/bootstrap-icons.woff2`, `css/fonts/bootstrap-icons.woff`, and `js/supa-maven-skin.min.js`) at the JAR root. All Velocity templates, Maven descriptors, and license files are packaged under `META-INF/`:
+
+- `META-INF/maven/site.vm`, `META-INF/maven/site-macros.vm`, `META-INF/maven/skin.xml` — Velocity layout, macros, and skin descriptor.
+- `META-INF/LICENSE` — The project's own MIT License.
+- `META-INF/THIRD-PARTY-LICENSES.txt` & `META-INF/licenses/LICENSE-*.txt` — Bundled upstream license notices for `bootstrap` (MIT), `bootstrap-icons` (MIT), and `highlight.js` (BSD-3-Clause).
+- `/*! ... */` **Bundle Legal Banners** — Both `css/supa-maven-skin.min.css` and `js/supa-maven-skin.min.js` begin with a `/*! ... */` copyright and license attribution header referencing `META-INF/LICENSE` and `META-INF/THIRD-PARTY-LICENSES.txt`.
+
 ---
 
 ## Responsive 3-Column Furo Layout
 
-Inspired by Pradyun Gedam's [Furo](https://pradyunsg.me/furo/) theme for Sphinx, `supa-maven-skin` organizes technical documentation into three distinct spatial zones that adapt across viewports using native HTML5 `<dialog>` drawers:
+Inspired by Pradyun Gedam's [Furo](https://pradyunsg.me/furo/) theme for Sphinx, **Supa Maven Skin** organizes technical documentation into three distinct spatial zones that adapt across viewports using native HTML5 `<dialog>` drawers:
 
 1. **Left Navigation Sidebar (`280px` on `lg+` / `1024px+`)**:
    - Displays the project brand, dual-theme logo (`<lightLogo>` / `<darkLogo>`), version badge, search trigger (`⌘K` / `/`), and hierarchical `<details>` / `<summary>` navigation menus.
@@ -44,7 +55,7 @@ Inspired by Pradyun Gedam's [Furo](https://pradyunsg.me/furo/) theme for Sphinx,
 
 ## Doxia 2.0 Normalization & `.prose` Isolation
 
-Maven reports (such as `dependencies.html`, `ci-management.html`, `team.html`, and `plugin-info.html`) emit legacy Doxia HTML patterns (`<table class="bodyTable">`, `<a id="Section_Name"></a><h2>Section Name</h2>`, `<pre><a class="externalLink">`). At page load, `supa-maven-skin` normalizes these patterns so reports look indistinguishable from hand-authored Markdown pages:
+Maven reports (such as `dependencies.html`, `ci-management.html`, `team.html`, and `plugin-info.html`) emit legacy Doxia HTML patterns (`<table class="bodyTable">`, `<a id="Section_Name"></a><h2>Section Name</h2>`, `<pre><a class="externalLink">`). At page load, **Supa Maven Skin** normalizes these patterns so reports look indistinguishable from hand-authored Markdown pages:
 
 - **Doxia Heading Anchor Reconciliation (`toc.ts`)**:
   - Doxia places `<a id="a1._Actions_.26_Buttons"></a>` immediately before or inside headings without setting an `id` on the `<h2>` element itself.
@@ -58,7 +69,7 @@ Maven reports (such as `dependencies.html`, `ci-management.html`, `team.html`, a
 
 ## WCAG 2.2 AA & AAA Accessible Color System
 
-`supa-maven-skin` ships with 6 color schemes across Light and Dark polarities (12 total theme surfaces), verified at build time by `scripts/lint-scss.mjs`:
+**Supa Maven Skin** ships with 6 color schemes across Light and Dark polarities (12 total theme surfaces), verified at build time by `scripts/lint-scss.ts`:
 
 | Tier | Palettes | Minimum Contrast Guarantees |
 | :--- | :--- | :--- |

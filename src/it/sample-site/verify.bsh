@@ -1,20 +1,68 @@
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.charset.StandardCharsets;
+import java.util.jar.JarFile;
 
 File siteDir = new File( basedir, "target/site" );
 if ( !siteDir.isDirectory() ) {
     throw new IllegalStateException( "target/site directory was not generated" );
 }
 
+// Inspect the packaged skin JAR directly to verify META-INF/ license entries and root cleanliness
+File targetDir = new File( basedir, "../.." );
+File[] jarCandidates = targetDir.listFiles();
+File skinJar = null;
+if ( jarCandidates != null ) {
+    for ( int i = 0; i < jarCandidates.length; i++ ) {
+        String name = jarCandidates[i].getName();
+        if ( name.startsWith( "supa-maven-skin-" ) && name.endsWith( ".jar" )
+             && !name.endsWith( "-sources.jar" ) && !name.endsWith( "-javadoc.jar" ) ) {
+            skinJar = jarCandidates[i];
+            break;
+        }
+    }
+}
+if ( skinJar == null || !skinJar.isFile() ) {
+    throw new IllegalStateException( "Could not locate packaged supa-maven-skin-*.jar in target/" );
+}
+
+JarFile jarFile = new JarFile( skinJar );
+try {
+    String[] requiredEntries = new String[] {
+        "META-INF/LICENSE",
+        "META-INF/THIRD-PARTY-LICENSES.txt",
+        "META-INF/licenses/LICENSE-bootstrap.txt",
+        "META-INF/licenses/LICENSE-bootstrap-icons.txt",
+        "META-INF/licenses/LICENSE-highlight.js.txt"
+    };
+    for ( int i = 0; i < requiredEntries.length; i++ ) {
+        if ( jarFile.getEntry( requiredEntries[i] ) == null ) {
+            throw new IllegalStateException( "Missing required JAR entry: " + requiredEntries[i] );
+        }
+    }
+    if ( jarFile.getEntry( "LICENSE" ) != null || jarFile.getEntry( "THIRD-PARTY-LICENSES.txt" ) != null ) {
+        throw new IllegalStateException( "License files must be under META-INF/, not at the root of the skin JAR" );
+    }
+} finally {
+    jarFile.close();
+}
+
 File cssFile = new File( siteDir, "css/supa-maven-skin.min.css" );
 if ( !cssFile.isFile() || cssFile.length() < 1000 ) {
     throw new IllegalStateException( "Bundled CSS asset missing or empty" );
+}
+String cssHead = Files.readString( cssFile.toPath(), StandardCharsets.UTF_8 );
+if ( !cssHead.startsWith( "/*!" ) || !cssHead.contains( "META-INF/THIRD-PARTY-LICENSES.txt" ) ) {
+    throw new IllegalStateException( "Bundled CSS asset is missing /*! ... */ license attribution header" );
 }
 
 File jsFile = new File( siteDir, "js/supa-maven-skin.min.js" );
 if ( !jsFile.isFile() || jsFile.length() < 1000 ) {
     throw new IllegalStateException( "Bundled JS asset missing or empty" );
+}
+String jsHead = Files.readString( jsFile.toPath(), StandardCharsets.UTF_8 );
+if ( !jsHead.startsWith( "/*!" ) || !jsHead.contains( "META-INF/THIRD-PARTY-LICENSES.txt" ) ) {
+    throw new IllegalStateException( "Bundled JS asset is missing /*! ... */ license attribution header" );
 }
 
 File indexHtml = new File( siteDir, "index.html" );
@@ -28,6 +76,9 @@ if ( !html.contains( "class=\"supa-page\"" ) ) {
 }
 if ( !html.contains( "id=\"supaSidebarDrawer\"" ) || !html.contains( "lg:drawer drawer-start supa-sidebar-drawer" ) ) {
     throw new IllegalStateException( "Missing Bootstrap 6 left sidebar drawer" );
+}
+if ( !html.contains( "class=\"supa-sidebar-brand\" data-supa-brand-align=\"center\"" ) ) {
+    throw new IllegalStateException( "Missing center-aligned default data-supa-brand-align on .supa-sidebar-brand" );
 }
 if ( !html.contains( "id=\"supaTocDrawer\"" ) || !html.contains( "xl:drawer drawer-end supa-toc-drawer" ) ) {
     throw new IllegalStateException( "Missing Bootstrap 6 right TOC drawer" );

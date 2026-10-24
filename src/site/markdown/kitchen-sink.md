@@ -4,22 +4,46 @@ This page demonstrates all typography, Furo admonitions, syntax-highlighted code
 
 ## Furo Admonitions
 
-GitHub-Flavored Markdown blockquote alerts are automatically transformed into Furo admonition cards with semantic icons, tinted headers, and colored left borders:
+All 12 [Sphinx Furo admonition types](https://pradyunsg.me/furo/reference/admonitions/#supported-types) are supported via GitHub-Flavored Markdown blockquote alerts (`> [!TYPE]`) and automatically transformed into `.supa-admonition` cards with **Bootstrap Icons**, tinted headers, colored left borders, custom title support, and nested callout support:
 
-> [!NOTE]
-> Useful information that users should know, even when skimming content. Furo admonitions adapt automatically between Light and Dark themes using CSS `light-dark()`.
+> [!ADMONITION] Custom Admonition Title
+> Generic titled admonition (`[!ADMONITION]`) styled with `bi-card-text` and the `--supa-admonition-important-*` semantic group, matching Sphinx's `.. admonition::` directive.
 
-> [!TIP] Pro Tip: Instant Keyboard Search
-> Press <kbd>/</kbd> or <kbd>⌘K</kbd> (<kbd>Ctrl+K</kbd>) anywhere on the page to open the native `<dialog class="dialog">` search modal.
-
-> [!IMPORTANT]
-> Key information users need to know to achieve their goal, such as requiring `maven-site-plugin` `3.21.0+` (Doxia 2.0 / Doxia Sitetools 2.0).
-
-> [!WARNING]
-> Urgent information that needs immediate user attention to avoid subtle configuration issues.
+> [!ATTENTION]
+> Demands immediate reader attention (`[!ATTENTION]`, `bi-exclamation-diamond`).
 
 > [!CAUTION]
-> Advises about risks or negative outcomes of destructive operations.
+> Advises caution regarding subtle behavioral nuances or configuration side effects (`[!CAUTION]`, `bi-lightning-charge`).
+
+> [!DANGER]
+> Highlights high-risk operations that may cause data loss or production downtime (`[!DANGER]`, `bi-lightning-charge-fill`).
+
+> [!ERROR]
+> Documents failure modes, fatal exceptions, or invalid states (`[!ERROR]`, `bi-x-octagon`).
+
+> [!HINT]
+> Provides a helpful hint or troubleshooting pointer (`[!HINT]`, `bi-question-circle`).
+
+> [!IMPORTANT]
+> Key information users need to know to achieve their goal, such as requiring `maven-site-plugin` `3.21.0+` (`[!IMPORTANT]`, `bi-fire`).
+
+> [!NOTE]
+> Useful information that users should know, even when skimming content (`[!NOTE]`, `bi-info-circle`).
+>
+> > [!WARNING] Nested Admonition Support
+> > Admonitions can also be nested inside other admonitions using nested Markdown blockquotes (`> > [!WARNING]`).
+
+> [!SEEALSO]
+> Cross-references related documentation pages or external specifications (`[!SEEALSO]` or `[!SEE-ALSO]`, `bi-arrow-up-right-circle`).
+
+> [!TIP] Pro Tip: Instant Keyboard Search
+> Press <kbd>/</kbd> or <kbd>⌘K</kbd> (<kbd>Ctrl+K</kbd>) anywhere on the page to open the native `<dialog class="dialog">` search modal (`[!TIP]`, `bi-lightbulb`).
+
+> [!TODO]
+> Tracks planned documentation expansions or upcoming roadmap items (`[!TODO]`, `bi-check2-square`).
+
+> [!WARNING]
+> Urgent information that needs user attention to avoid configuration pitfalls (`[!WARNING]`, `bi-exclamation-triangle`).
 
 ## Syntax Highlighting & Copy Button
 
@@ -94,7 +118,7 @@ Standard Markdown and Doxia `table.bodyTable` elements are automatically normali
 
 ## Bootstrap 6 UI Components
 
-Because `supa-maven-skin` bundles **all 28 Bootstrap `6.0.0-alpha.1` component families, 20 interactive JS plugins, and 2,000+ Bootstrap Icons**, you can use Bootstrap 6 buttons, badges, avatars, chips, accordions, steppers, menus, dialogs, drawers, comboboxes, datepickers, cards, and icons directly in documentation pages:
+Because **Supa Maven Skin** bundles **all 28 Bootstrap `6.0.0-alpha.1` component families, 20 interactive JS plugins, and 2,000+ Bootstrap Icons**, you can use Bootstrap 6 buttons, badges, avatars, chips, accordions, steppers, menus, dialogs, drawers, comboboxes, datepickers, cards, and icons directly in documentation pages:
 
 <div class="not-prose my-4">
   <div class="d-flex flex-wrap gap-2 mb-3">
@@ -118,7 +142,7 @@ Because `supa-maven-skin` bundles **all 28 Bootstrap `6.0.0-alpha.1` component f
 
 ### Bootstrap Icons (Markdown Shortcodes, HTML & Velocity Macro)
 
-All [Bootstrap Icons](https://icons.getbootstrap.com/) are bundled offline in `supa-maven-skin` (`bootstrap-icons.woff2`) and can be authored using **Markdown shortcodes** (`:bi-<name>:` or `:bi-<name> <classes>:`), **Markdown + HTML** (`<i class="bi bi-..."></i>`), or the **Velocity macro** (`#bi` in `.md.vm` templates):
+All [Bootstrap Icons](https://icons.getbootstrap.com/) are bundled offline in **Supa Maven Skin** (`bootstrap-icons.woff2`) and can be authored using **Markdown shortcodes** (`:bi-<name>:` or `:bi-<name> <classes>:`), **Markdown + HTML** (`<i class="bi bi-..."></i>`), or the **Velocity macro** (`#bi` in `.md.vm` templates):
 
 <div class="supa-component-preview">
   <div class="d-flex flex-wrap align-items-center gap-3">
@@ -163,7 +187,7 @@ All [Bootstrap Icons](https://icons.getbootstrap.com/) are bundled offline in `s
 
 ### Mermaid Architecture Diagram
 
-When a page contains a `mermaid` code block, `supa-maven-skin` lazily loads Mermaid from CDN and renders it with matching Light/Dark theme variables:
+When a page contains a `mermaid` code block, **Supa Maven Skin** lazily loads Mermaid from CDN and renders it with matching Light/Dark theme variables:
 
 ```mermaid
 flowchart TD

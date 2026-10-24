@@ -12,15 +12,35 @@
   scrollbar-width: thin;
 }
 
-// Brand & Dual-Theme Logo
+// Brand & Dual-Theme Logo (center-aligned by default; configurable via <sidebarBrandAlign>)
 .supa-sidebar-brand {
+  --supa-sidebar-brand-items-align: center;
+  --supa-sidebar-brand-justify: center;
+  --supa-sidebar-brand-text-align: center;
+
   display: flex;
   flex-direction: column;
+  align-items: var(--supa-sidebar-brand-items-align);
+  text-align: var(--supa-sidebar-brand-text-align);
   gap: 0.625rem;
   padding: 0.125rem 0.5rem 1.125rem;
   margin-bottom: 0.25rem;
   text-decoration: none;
   color: var(--color-foreground-primary);
+
+  &[data-supa-brand-align="left"],
+  &[data-supa-brand-align="start"] {
+    --supa-sidebar-brand-items-align: flex-start;
+    --supa-sidebar-brand-justify: flex-start;
+    --supa-sidebar-brand-text-align: left;
+  }
+
+  &[data-supa-brand-align="right"],
+  &[data-supa-brand-align="end"] {
+    --supa-sidebar-brand-items-align: flex-end;
+    --supa-sidebar-brand-justify: flex-end;
+    --supa-sidebar-brand-text-align: right;
+  }
 
   &:hover .supa-brand-text {
     color: var(--color-brand-primary);
@@ -31,6 +51,8 @@
 .supa-brand-logos {
   display: flex;
   align-items: center;
+  justify-content: var(--supa-sidebar-brand-justify, center);
+  width: 100%;
 
   .supa-sidebar-logo,
   .supa-logo {
@@ -57,10 +79,11 @@ html:not([data-supa-resolved-theme]) .supa-logo-dark {
 
 .supa-brand-meta {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-  flex-wrap: wrap;
+  flex-direction: column;
+  align-items: var(--supa-sidebar-brand-items-align, center);
+  justify-content: var(--supa-sidebar-brand-justify, center);
+  gap: 0.375rem;
+  width: 100%;
 }
 
 .supa-brand-text {
