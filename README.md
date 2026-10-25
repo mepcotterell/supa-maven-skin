@@ -56,6 +56,7 @@ Requires `maven-site-plugin` `3.21.0+` (Doxia `2.2.0` / Doxia Sitetools `2.0`).
       <sourceEditButton>true</sourceEditButton>
       <sourceViewButton>true</sourceViewButton>
       <tocSidebar>true</tocSidebar>
+      <stickyContentHeader>false</stickyContentHeader>
       <prevNextButtons>true</prevNextButtons>
       <copyCodeButton>true</copyCodeButton>
       <syntaxHighlighting>true</syntaxHighlighting>

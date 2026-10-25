@@ -23,6 +23,30 @@ export function slugifyHeading(text: string): string {
 }
 
 /**
+ * Measures the pinned `.supa-content-header` when `<stickyContentHeader>` is
+ * enabled, so ScrollSpy and the active-heading threshold do not treat headings
+ * hidden beneath the bar as visible. Returns 0 when the option is off or the
+ * header is not currently `position: sticky` (below `lg`).
+ *
+ * @param doc - Document to inspect.
+ * @returns Pixel height of the sticky content header, or 0.
+ */
+export function getStickyContentHeaderOffset(doc: Document = document): number {
+  if (!doc.body?.classList.contains('supa-sticky-content-header')) {
+    return 0;
+  }
+  const header = doc.querySelector<HTMLElement>('.supa-content-header');
+  if (!header) {
+    return 0;
+  }
+  const view = doc.defaultView;
+  if (view && view.getComputedStyle(header).position !== 'sticky') {
+    return 0;
+  }
+  return Math.ceil(header.getBoundingClientRect().height);
+}
+
+/**
  * Ensures every heading in the article has a deterministic clean slug `id`
  * (e.g. `#1-actions-buttons`) while preserving any preceding Doxia `<a id="...">`
  * anchor for backward compatibility, and attaches the optional Furo `#` permalink.
@@ -281,7 +305,7 @@ export function buildTableOfContents(
   try {
     new ScrollSpy(document.body, {
       target: '#supaTocNav',
-      rootMargin: '0px 0px -70%',
+      rootMargin: `-${getStickyContentHeaderOffset()}px 0px -70%`,
       smoothScroll: true
     });
   } catch {
@@ -290,7 +314,7 @@ export function buildTableOfContents(
 
   // Enforce single active heading (accounts for heading scroll-margin-top ~144px)
   const syncActiveOnScroll = () => {
-    const threshold = 160;
+    const threshold = Math.max(160, getStickyContentHeaderOffset() + 96);
     let currentId = headings[0]?.id || '';
     for (const h of headings) {
       const top = h.getBoundingClientRect().top;

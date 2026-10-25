@@ -125,6 +125,7 @@ Click any color scheme card below (or use the palette selector in the top header
 
     <!-- Layout, Drawers & Navigation -->
     <breadcrumb>true</breadcrumb>
+    <stickyContentHeader>false</stickyContentHeader>
     <tocSidebar>true</tocSidebar>
     <tocTitle>On this page</tocTitle>
     <tocMaxDepth>4</tocMaxDepth>
@@ -211,6 +212,7 @@ Configures the top announcement banner, breadcrumbs, left sidebar menu tree, rig
 | :--- | :--- | :--- |
 | `<announcement>` | *(empty)* | Top announcement banner HTML rendered above the page header. |
 | `<breadcrumb>` | `true` | Render the breadcrumb navigation trail in the top content utility bar. |
+| `<stickyContentHeader>` | `false` | Pin the top content utility bar (breadcrumbs, source links, palette picker, theme toggle) to the top of the viewport on `lg+` (`1024px`) screens. Adds `.supa-sticky-content-header` to `<body>`; heading anchors and ScrollSpy offset by `--supa-content-header-height`. Below `lg`, the mobile header is already sticky. |
 | `<sidebarCollapseDepth>` | `1` | Menu nesting depth expanded by default in the left sidebar (`<details open>`). |
 | `<tocSidebar>` | `true` | Enable the right-hand "On this page" table of contents column and right drawer (`#supaTocDrawer`). |
 | `<tocTitle>` | `On this page` | Heading label for the right-hand table of contents. |

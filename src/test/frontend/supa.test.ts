@@ -41,7 +41,12 @@ import {
   PALETTE_STORAGE_KEY,
   THEME_STORAGE_KEY
 } from '../../main/frontend/ts/theme';
-import { buildTableOfContents, prepareHeadings, slugifyHeading } from '../../main/frontend/ts/toc';
+import {
+  buildTableOfContents,
+  getStickyContentHeaderOffset,
+  prepareHeadings,
+  slugifyHeading
+} from '../../main/frontend/ts/toc';
 
 describe('Supa Maven Skin Frontend Modules', () => {
   beforeEach(() => {
@@ -647,6 +652,26 @@ describe('Supa Maven Skin Frontend Modules', () => {
   });
 
   describe('Headings, Permalinks, and Table of Contents', () => {
+    it('measures the sticky content header offset only when <stickyContentHeader> is enabled and pinned', () => {
+      document.body.className = 'supa-body';
+      document.body.innerHTML = '<div class="supa-content-header not-prose"></div>';
+      const header = document.querySelector<HTMLElement>('.supa-content-header')!;
+      vi.spyOn(header, 'getBoundingClientRect').mockReturnValue({ height: 56.4 } as DOMRect);
+
+      expect(getStickyContentHeaderOffset()).toBe(0);
+
+      document.body.classList.add('supa-sticky-content-header');
+      header.style.position = 'static';
+      expect(getStickyContentHeaderOffset()).toBe(0);
+
+      header.style.position = 'sticky';
+      expect(getStickyContentHeaderOffset()).toBe(57);
+
+      header.remove();
+      expect(getStickyContentHeaderOffset()).toBe(0);
+      document.body.className = '';
+    });
+
     it('slugifies headings, adds permalink anchors, and builds TOC nav links', () => {
       expect(slugifyHeading('Getting Started with Furo!')).toBe('getting-started-with-furo');
 

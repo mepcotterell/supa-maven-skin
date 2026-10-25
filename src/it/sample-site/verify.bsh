@@ -97,6 +97,9 @@ if ( !html.contains( "bi-sun supa-theme-icon supa-theme-icon-light" )
      || !html.contains( "bi-circle-half supa-theme-icon supa-theme-icon-auto" ) ) {
     throw new IllegalStateException( "Missing Bootstrap Icons on theme toggle button" );
 }
+if ( !html.contains( "class=\"supa-body supa-sticky-content-header\"" ) ) {
+    throw new IllegalStateException( "Missing supa-sticky-content-header body class for <stickyContentHeader>true</stickyContentHeader>" );
+}
 if ( !html.contains( "Integration Test Announcement" ) ) {
     throw new IllegalStateException( "Missing custom announcement banner" );
 }

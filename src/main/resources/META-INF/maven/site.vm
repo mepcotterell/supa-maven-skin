@@ -28,6 +28,7 @@
 #set( $sourceEditBtn = $convert.toBoolean( $site.getCustomValue( "${skinCfg}.sourceEditButton", 'true' ) ) )
 #set( $sourceViewBtn = $convert.toBoolean( $site.getCustomValue( "${skinCfg}.sourceViewButton", 'true' ) ) )
 #set( $showBreadcrumb = $convert.toBoolean( $site.getCustomValue( "${skinCfg}.breadcrumb", 'true' ) ) )
+#set( $stickyContentHeader = $convert.toBoolean( $site.getCustomValue( "${skinCfg}.stickyContentHeader", 'false' ) ) )
 #set( $tocSidebar = $convert.toBoolean( $site.getCustomValue( "${skinCfg}.tocSidebar", 'true' ) ) )
 #set( $tocTitle = $site.getCustomValue( "${skinCfg}.tocTitle", 'On this page' ) )
 #set( $tocMaxDepth = $convert.toNumber( $site.getCustomValue( "${skinCfg}.tocMaxDepth", '4' ) ) )
@@ -162,7 +163,7 @@
     $headContent
 #end
   </head>
-  <body class="supa-body"
+  <body class="supa-body#if( $stickyContentHeader ) supa-sticky-content-header#end"
         data-supa-toc="$tocSidebar"
         data-supa-toc-max-depth="$tocMaxDepth"
         data-supa-copy-code="$copyCodeBtn"

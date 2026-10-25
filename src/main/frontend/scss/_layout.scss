@@ -496,6 +496,28 @@ dialog[data-bs-backdrop="false"]::backdrop {
   }
 }
 
+// Opt-in sticky content header (<stickyContentHeader>true</stickyContentHeader>).
+// Only on lg+ because below lg the .supa-mobile-header is already pinned at top: 0.
+// Negative inline margins bleed the translucent background across the article
+// gutter so scrolled prose never peeks out beside the bar.
+.supa-sticky-content-header .supa-content-header {
+  @media (width >= 1024px) {
+    position: sticky;
+    top: 0;
+    z-index: 1010; // Below back-to-top (1015) and mobile header (1020); drawers/dialogs use the top layer
+    min-height: var(--supa-content-header-height);
+    margin-inline: -2.5rem;
+    padding-inline: 2.5rem;
+    background-color: color-mix(in srgb, var(--color-background-primary) 92%, transparent);
+    backdrop-filter: blur(10px);
+  }
+
+  @media (width >= 1280px) {
+    margin-inline: -3rem;
+    padding-inline: 3rem;
+  }
+}
+
 .supa-header-left {
   min-width: 0;
   flex: 1 1 auto;

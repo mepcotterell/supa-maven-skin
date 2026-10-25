@@ -22,6 +22,7 @@
       <sourceEditButton>true</sourceEditButton>
       <sourceViewButton>true</sourceViewButton>
       <breadcrumb>true</breadcrumb>
+      <stickyContentHeader>true</stickyContentHeader>
       <tocSidebar>true</tocSidebar>
       <tocTitle>On this page</tocTitle>
       <tocMaxDepth>4</tocMaxDepth>

@@ -27,6 +27,13 @@
     scroll-margin-top: calc(var(--supa-header-height) + 1.25rem);
     position: relative;
 
+    // Clear the pinned content header when <stickyContentHeader> is enabled (lg+)
+    .supa-sticky-content-header & {
+      @media (width >= 1024px) {
+        scroll-margin-top: calc(var(--supa-content-header-height) + 1.25rem);
+      }
+    }
+
     .supa-headerlink {
       display: inline-block;
       margin-left: 0.4rem;

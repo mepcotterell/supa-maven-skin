@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- **Opt-in Sticky Content Header (`<stickyContentHeader>`)**: Setting `<stickyContentHeader>true</stickyContentHeader>` in `<supaSkin>` pins the breadcrumb and source/theme utility bar (`.supa-content-header`) to the top of the viewport on `lg+` screens with a translucent blurred background, adds `.supa-sticky-content-header` to `<body>`, and offsets heading `scroll-margin-top` and the TOC ScrollSpy by the new `--supa-content-header-height` token (default `false`).
 - **Canonical 3-Column Furo Layout**:
   - Sticky left navigation sidebar (`256px` on `lg+`) with dual-theme brand logos (`<lightLogo>` / `<darkLogo>`), version badge, quick search trigger (`/` or `⌘K`), and collapsible `<details>` / `<summary>` menu hierarchy.
   - Center-aligned `.supa-sidebar-brand` content (logo, project title, and version badge) by default to match Sphinx Furo's canonical brand header, configurable via `<sidebarBrandAlign>` (`center`, `left` / `start`, or `right` / `end`) in `site.xml` and `--supa-sidebar-brand-*` CSS custom properties.

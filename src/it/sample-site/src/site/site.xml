@@ -17,6 +17,7 @@
       <sourceRepository>https://github.com/mepcotterell/supa-maven-skin</sourceRepository>
       <sourceBranch>main</sourceBranch>
       <sourceDirectory>src/site</sourceDirectory>
+      <stickyContentHeader>true</stickyContentHeader>
       <lightCssVariables>
         <color-brand-primary>#0055ff</color-brand-primary>
       </lightCssVariables>
