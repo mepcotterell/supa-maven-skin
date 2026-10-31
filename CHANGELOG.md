@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Changed
+
+- **CI / Release Workflows**: Switched `actions/setup-java` from the deprecated `server-username` / `server-password` inputs to `server-username-env-var` / `server-password-env-var` in `.github/workflows/ci.yml` and `release.yml`.
+
 ## [0.1.0] - 2026-10-31
 
 ### Added
