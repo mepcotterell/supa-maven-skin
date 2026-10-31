@@ -1,6 +1,6 @@
 {
   "name": "supa-maven-skin",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "A clean, customizable Maven Site Skin inspired by Sphinx Furo, built with Bootstrap 6 (Alpha), Vite, SCSS, and TypeScript.",
   "license": "MIT",
   "private": true,
