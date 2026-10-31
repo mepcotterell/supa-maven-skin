@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-10-31
+
 ### Added
 
 - **Opt-in Sticky Content Header (`<stickyContentHeader>`)**: Setting `<stickyContentHeader>true</stickyContentHeader>` in `<supaSkin>` pins the breadcrumb and source/theme utility bar (`.supa-content-header`) to the top of the viewport on `lg+` screens with a translucent blurred background, adds `.supa-sticky-content-header` to `<body>`, and offsets heading `scroll-margin-top` and the TOC ScrollSpy by the new `--supa-content-header-height` token (default `false`).
@@ -43,4 +45,5 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   - Organized `src/site/markdown/` around the Diátaxis framework (`index.md.vm`, `getting-started.md`, `authoring-guide.md`, `configuration.md`, `components.md`, `kitchen-sink.md`, `architecture.md`) with custom dual-theme `rocket-takeoff` logos (`src/site/resources/images/logo-light.svg` and `logo-dark.svg`).
   - Added automated TypeScript linters for SCSS WCAG 2.2 AA/AAA contrast (`scripts/lint-scss.ts`), Velocity directive balance (`scripts/lint-velocity.ts`), and documentation version alignment + Keep a Changelog 1.1.0 compliance (`scripts/lint-docs.ts`), enforced alongside the Google TypeScript Style Guide and Google-style TSDoc (`supa/google-tsdoc`).
 
-[Unreleased]: https://github.com/mepcotterell/supa-maven-skin/commits/main
+[Unreleased]: https://github.com/mepcotterell/supa-maven-skin/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/mepcotterell/supa-maven-skin/releases/tag/v0.1.0

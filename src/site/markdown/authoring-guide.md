@@ -28,7 +28,7 @@ In `.md.vm` pages, `#bsBadge( $theme $variant $text )`, `#bsCard( $title $subtit
 
 <div class="supa-component-preview">
   <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
-    <span class="badge theme-primary not-prose">v0.1.0-SNAPSHOT</span>
+    <span class="badge theme-primary not-prose">v0.1.0</span>
     <span class="badge badge-subtle theme-success not-prose">Stable API</span>
     <span class="badge badge-outline theme-info not-prose">JDK 21+</span>
   </div>
@@ -282,14 +282,14 @@ Wrap child `<div title="Tab Label">` panels inside `<div class="supa-tabs" title
     <pre><code class="language-xml">&lt;dependency&gt;
   &lt;groupId&gt;io.github.mepcotterell&lt;/groupId&gt;
   &lt;artifactId&gt;supa-maven-skin&lt;/artifactId&gt;
-  &lt;version&gt;0.1.0-SNAPSHOT&lt;/version&gt;
+  &lt;version&gt;0.1.0&lt;/version&gt;
 &lt;/dependency&gt;</code></pre>
   </div>
   <div title="Site Descriptor (site.xml)">
     <pre><code class="language-xml">&lt;skin&gt;
   &lt;groupId&gt;io.github.mepcotterell&lt;/groupId&gt;
   &lt;artifactId&gt;supa-maven-skin&lt;/artifactId&gt;
-  &lt;version&gt;0.1.0-SNAPSHOT&lt;/version&gt;
+  &lt;version&gt;0.1.0&lt;/version&gt;
 &lt;/skin&gt;</code></pre>
   </div>
 </div>
@@ -300,14 +300,14 @@ Wrap child `<div title="Tab Label">` panels inside `<div class="supa-tabs" title
     <pre><code class="language-xml">&lt;dependency&gt;
   &lt;groupId&gt;io.github.mepcotterell&lt;/groupId&gt;
   &lt;artifactId&gt;supa-maven-skin&lt;/artifactId&gt;
-  &lt;version&gt;0.1.0-SNAPSHOT&lt;/version&gt;
+  &lt;version&gt;0.1.0&lt;/version&gt;
 &lt;/dependency&gt;</code></pre>
   </div>
   <div title="Site Descriptor (site.xml)">
     <pre><code class="language-xml">&lt;skin&gt;
   &lt;groupId&gt;io.github.mepcotterell&lt;/groupId&gt;
   &lt;artifactId&gt;supa-maven-skin&lt;/artifactId&gt;
-  &lt;version&gt;0.1.0-SNAPSHOT&lt;/version&gt;
+  &lt;version&gt;0.1.0&lt;/version&gt;
 &lt;/skin&gt;</code></pre>
   </div>
 </div>
