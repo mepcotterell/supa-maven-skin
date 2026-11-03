@@ -367,7 +367,7 @@ Use `<ol class="supa-stepper" title="2">` where `title` specifies the 1-based ac
 
 ## Rendering Mermaid Diagrams and KaTeX Math
 
-When `<mermaid>auto</mermaid>` and `<katex>auto</katex>` are enabled in `site.xml` (the default), **Supa Maven Skin** inspects each page at load time and only fetches Mermaid or KaTeX when diagrams or math expressions are present on that page. The default builds come from jsDelivr, pinned to exact versions and verified with Subresource Integrity; to serve them from your own site instead, follow [Self-Hosting Mermaid & KaTeX](configuration.html#self-hosting-mermaid-katex).
+When `<mermaid>auto</mermaid>` and `<katex>auto</katex>` are enabled in `site.xml` (the default), **Supa Maven Skin** inspects each page at load time and only fetches Mermaid or KaTeX when diagrams or math expressions are present on that page. The default builds come from jsDelivr, pinned to exact versions and verified with Subresource Integrity; to serve them from your own site instead, follow [Self-Hosting Mermaid & KaTeX](#self-hosting-mermaid-katex).
 
 ### Mermaid Diagrams
 
@@ -393,3 +393,35 @@ $$
 \hat{y} = \sigma\left( \sum_{i=1}^{d} w_i x_i + b \right)
 $$
 ```
+
+### Self-Hosting Mermaid & KaTeX
+
+Serve both libraries from your own site when you cannot depend on jsDelivr, for example on an intranet or under a strict Content Security Policy.
+
+1. Copy the classic builds into `src/site/resources/vendor/`, keeping KaTeX's `dist/` layout so the stylesheet finds `fonts/` and the loader finds `../katex.min.js`:
+
+    ```bash
+    mkdir -p src/site/resources/vendor/mermaid src/site/resources/vendor/katex
+    curl -fsSL -o src/site/resources/vendor/mermaid/mermaid.min.js \
+      https://cdn.jsdelivr.net/npm/mermaid@11.17.2/dist/mermaid.min.js
+    npm pack katex@0.16.47 --pack-destination /tmp && tar -xzf /tmp/katex-0.16.47.tgz -C /tmp
+    cp -R /tmp/package/dist/katex.min.js /tmp/package/dist/katex.min.css \
+      /tmp/package/dist/fonts /tmp/package/dist/contrib src/site/resources/vendor/katex/
+    ```
+
+2. Point the overrides at **root-relative** paths (or absolute `https://` URLs):
+
+    ```xml
+    <supaSkin>
+      <mermaidCdnUrl>/my-project/vendor/mermaid/mermaid.min.js</mermaidCdnUrl>
+      <katexCssCdnUrl>/my-project/vendor/katex/katex.min.css</katexCssCdnUrl>
+      <katexJsCdnUrl>/my-project/vendor/katex/contrib/auto-render.min.js</katexJsCdnUrl>
+    </supaSkin>
+    ```
+
+    Replace `/my-project/` with the path your site is deployed under (`/` for a site at the domain root).
+
+> [!WARNING]
+> Avoid document-relative values such as `vendor/mermaid/mermaid.min.js`. Classic `<script src>` and `<link href>` URLs resolve against the current page, so they break on pages in subdirectories (for example, pages from `src/site/markdown/guides/*.md`). `.mjs` URLs loaded with `import()` resolve against `js/supa-maven-skin.min.js` instead and must start with `./`, `../`, or `/`. Root-relative and absolute URLs resolve the same way in all three cases.
+
+Self-hosted URLs load without Subresource Integrity, because the skin only knows the hashes of its pinned defaults. The [Configuration Reference](configuration.html#code-search-diagrams-math) lists every loading option, and [Content Security Policy](configuration.html#content-security-policy) lists the origins to allow when you keep the jsDelivr defaults.

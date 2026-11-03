@@ -85,12 +85,11 @@ Replace the Fluido `<skin>` element in `src/site/site.xml`:
 <skin>
   <groupId>io.github.mepcotterell</groupId>
   <artifactId>supa-maven-skin</artifactId>
-  <!-- Use the latest release from Maven Central -->
-  <version>X.Y.Z</version>
+  <version>0.1.0</version>
 </skin>
 ```
 
-Take the version number from the latest release of [`io.github.mepcotterell:supa-maven-skin` on Maven Central](https://central.sonatype.com/artifact/io.github.mepcotterell/supa-maven-skin); the [Quickstart Tutorial](getting-started.html#step-2-create-srcsitesitexml) shows the complete `site.xml`. **Supa Maven Skin** packages its CSS, JavaScript, and icon fonts inside the skin JAR, so consumer projects do not need Node.js or any extra build plugin.
+Check for a newer release of [`io.github.mepcotterell:supa-maven-skin` on Maven Central](https://central.sonatype.com/artifact/io.github.mepcotterell/supa-maven-skin); the [Quickstart Tutorial](getting-started.html#step-2-create-srcsitesitexml) shows the complete `site.xml`. **Supa Maven Skin** packages its CSS, JavaScript, and icon fonts inside the skin JAR, so consumer projects do not need Node.js or any extra build plugin.
 
 ---
 
@@ -257,7 +256,7 @@ Hand-written HTML in `.md`, `.xhtml`, or `.xdoc` pages is a different story. Flu
 
 ## Verification Checklist
 
-After `mvn site` succeeds, open `target/site/index.html` (or run `mvn site:run`) and check:
+After `mvn site` succeeds, preview the site over HTTP with `mvn site:run` (or `python3 -m http.server 8000 --directory target/site`) and check the following. Pages opened from `file://` skip the skin's JavaScript, so search, the theme and color scheme controls, the "On this page" table of contents, and other enhancements would look broken; see [Previewing Your Site](troubleshooting.html#previewing-your-site).
 
 - [ ] The build log shows no errors from parsing `site.xml`, and the generator comment at the top of each page reads "Rendered using Supa Maven Skin".
 - [ ] The sidebar brand shows the right name and logo, and every menu, including `ref="reports"` and `ref="modules"`, appears in the left sidebar.
@@ -266,7 +265,7 @@ After `mvn site` succeeds, open `target/site/index.html` (or run `mvn site:run`)
 - [ ] "View page source" and "Edit this page" open the right files, if you configured `<sourceRepository>`.
 - [ ] Hand-written alerts, wells, labels, buttons, and icons render with Bootstrap 6 classes, and no image request points at Fluido's `images/` or `img/` folders.
 - [ ] Analytics or other scripts moved to `<body><head>` load once per page.
-- [ ] Search finds your pages. It fetches up to 30 sidebar-linked pages in the browser, so test it over HTTP (`mvn site:run`) rather than from `file://`.
+- [ ] Search finds your pages. It fetches up to 30 sidebar-linked pages in the browser.
 - [ ] Pages read well in Light and Dark mode and in at least one high-contrast color scheme (`modus`).
 
 Next, tune colors and layout in the [Configuration Reference](configuration.html), or browse [Authoring Rich Content](authoring-guide.html) for the components that replace Fluido-era markup.

@@ -158,7 +158,8 @@ Click any color scheme card below (or use the palette selector in the top header
     <mermaid>auto</mermaid>
     <katex>auto</katex>
     <!-- Leave <mermaidCdnUrl>, <katexCssCdnUrl>, and <katexJsCdnUrl> unset to use the
-         pinned, SRI-verified jsDelivr defaults (see "Self-Hosting Mermaid & KaTeX"). -->
+         pinned, SRI-verified jsDelivr defaults (see "Self-Hosting Mermaid & KaTeX"
+         in the Authoring Guide). -->
 
     <!-- Custom Light/Dark CSS Tokens (layered on top of <colorScheme>) -->
     <lightCssVariables>
@@ -262,35 +263,11 @@ Integrity hashes apply only to the built-in defaults (or to an override that rep
 
 If a custom URL is an ES module under another name (for example a self-hosted `mermaid.esm.js`), the skin first runs it as a classic `<script>`, sees that no `window.mermaid` or `window.renderMathInElement` appeared, and then loads it again with `import()`. Rendering still works, but the browser logs a `SyntaxError` from the first attempt; rename the file to `.mjs` to load it as a module directly. The built-in defaults never take this fallback, so they only ever run with SRI.
 
-### Self-Hosting Mermaid & KaTeX
+Once the Mermaid and KaTeX loaders have settled, whether or not they succeeded, the skin sets `data-supa-ready="true"` on `<html>`. Scripts that post-process diagrams or math can wait for it; see [Running Scripts After the Skin Initializes](customizing.html#running-scripts-after-the-skin-initializes).
 
-Serve both libraries from your own site when you cannot depend on jsDelivr, for example on an intranet or under a strict Content Security Policy.
+### Self-Hosted URLs
 
-1. Copy the classic builds into `src/site/resources/vendor/`, keeping KaTeX's `dist/` layout so the stylesheet finds `fonts/` and the loader finds `../katex.min.js`:
-
-    ```bash
-    mkdir -p src/site/resources/vendor/mermaid src/site/resources/vendor/katex
-    curl -fsSL -o src/site/resources/vendor/mermaid/mermaid.min.js \
-      https://cdn.jsdelivr.net/npm/mermaid@11.17.2/dist/mermaid.min.js
-    npm pack katex@0.16.47 --pack-destination /tmp && tar -xzf /tmp/katex-0.16.47.tgz -C /tmp
-    cp -R /tmp/package/dist/katex.min.js /tmp/package/dist/katex.min.css \
-      /tmp/package/dist/fonts /tmp/package/dist/contrib src/site/resources/vendor/katex/
-    ```
-
-2. Point the overrides at **root-relative** paths (or absolute `https://` URLs):
-
-    ```xml
-    <supaSkin>
-      <mermaidCdnUrl>/my-project/vendor/mermaid/mermaid.min.js</mermaidCdnUrl>
-      <katexCssCdnUrl>/my-project/vendor/katex/katex.min.css</katexCssCdnUrl>
-      <katexJsCdnUrl>/my-project/vendor/katex/contrib/auto-render.min.js</katexJsCdnUrl>
-    </supaSkin>
-    ```
-
-    Replace `/my-project/` with the path your site is deployed under (`/` for a site at the domain root).
-
-> [!WARNING]
-> Avoid document-relative values such as `vendor/mermaid/mermaid.min.js`. Classic `<script src>` and `<link href>` URLs resolve against the current page, so they break on pages in subdirectories (for example, pages from `src/site/markdown/guides/*.md`). `.mjs` URLs loaded with `import()` resolve against `js/supa-maven-skin.min.js` instead and must start with `./`, `../`, or `/`. Root-relative and absolute URLs resolve the same way in all three cases.
+To serve Mermaid and KaTeX from your own site, follow [Self-Hosting Mermaid & KaTeX](authoring-guide.html#self-hosting-mermaid-katex) in the Authoring Guide. Give every override a **root-relative** path (such as `/my-project/vendor/mermaid/mermaid.min.js`) or an absolute `https://` URL. Classic `<script src>` and `<link href>` URLs resolve against the current page, and `.mjs` URLs loaded with `import()` resolve against `js/supa-maven-skin.min.js`, so a document-relative value such as `vendor/mermaid/mermaid.min.js` breaks on pages in subdirectories. A self-hosted classic `contrib/auto-render.min.js` also loads `../katex.min.js`, so keep KaTeX's `dist/` layout.
 
 ### Content Security Policy
 

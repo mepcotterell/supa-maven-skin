@@ -235,10 +235,10 @@ Your site uses the default `furo` color scheme, but a reader sees the black-and-
 **Cause:** One of the following:
 
 - `<mermaid>false</mermaid>` is set, so the fenced block stays a plain `<pre>` block without the usual code-block header, copy button, or highlighting.
-- The Mermaid library could not be loaded. Supa Maven Skin imports it at runtime from the URL in `<mermaidCdnUrl>` (by default a jsDelivr URL). With no network access, a blocked CDN, or a `Content-Security-Policy` that does not allow that host in `script-src`, the import fails quietly and the diagram source is left on the page as plain text.
+- The Mermaid library could not be loaded. By default Supa Maven Skin loads a version-pinned `mermaid.min.js` from `cdn.jsdelivr.net` with Subresource Integrity (SRI); `<mermaidCdnUrl>` only overrides that URL. With no network access, a blocked CDN, a `Content-Security-Policy` whose `script-src` does not allow that host (or your override's host), or an integrity mismatch (for example from a proxy that rewrites the file), loading fails quietly and the diagram source is left on the page as plain text. An integrity mismatch shows up in the browser console as an integrity error, not a 404.
 - The block is not marked as Mermaid. Only fenced blocks with the `mermaid` language, or elements with the `mermaid` class, are rendered.
 
-**Fix:** Use a ```` ```mermaid ```` fence, keep `<mermaid>` at `auto` or `true`, and make sure readers' browsers can reach the configured URL. For offline or locked-down sites, host Mermaid yourself: copy the package's `dist/mermaid.esm.min.mjs` file **together with** its `dist/chunks/mermaid.esm.min/` folder (or the whole `dist/` folder), keeping the same layout, and point `<mermaidCdnUrl>` at the absolute URL of your `mermaid.esm.min.mjs`. The entry file imports dozens of chunk files by relative path, so copying it alone fails with "404" errors in the console. See **[Rendering Mermaid Diagrams and KaTeX Math](authoring-guide.html#rendering-mermaid-diagrams-and-katex-math)**.
+**Fix:** Use a ```` ```mermaid ```` fence, keep `<mermaid>` at `auto` or `true`, and make sure readers' browsers can reach `cdn.jsdelivr.net` (or your override). For offline or locked-down sites, follow **[Self-Hosting Mermaid & KaTeX](authoring-guide.html#self-hosting-mermaid-katex)**: copy the single `mermaid.min.js` file into your site and point `<mermaidCdnUrl>` at its root-relative or absolute URL. An `.mjs` override still loads with `import()`, but the ES module build imports chunk files by relative path, so its `chunks/` folder must be copied next to it. If diagrams render but look unstyled, your `style-src` lacks `'unsafe-inline'`; see [Content Security Policy](configuration.html#content-security-policy).
 
 ### Dollar Amounts Render as Italic Math
 
@@ -264,9 +264,9 @@ The plan costs <span>$</span>5 per seat and <span>$</span>10 per admin.
 - **Markdown removed a backslash.** In CommonMark, `\(` and `\[` are escapes for `(` and `[`, so `\(a+b\)` reaches the browser as `(a+b)`.
 - **Markdown added emphasis.** Asterisks inside math, as in `$a*b*c$`, are turned into `<em>` tags before KaTeX runs.
 - **The page was not detected as containing math.** In `auto` mode, inline math needs a non-space character straight after the opening `$`. A page whose only formula is `$ x $` never loads KaTeX.
-- **KaTeX could not be loaded.** `<katex>false</katex>` is set, the CDN is unreachable, or a `Content-Security-Policy` blocks the URLs in `<katexJsCdnUrl>` (script) or `<katexCssCdnUrl>` (stylesheet and fonts).
+- **KaTeX could not be loaded.** `<katex>false</katex>` is set, the CDN is unreachable, a `Content-Security-Policy` blocks the jsDelivr defaults (or your `<katexJsCdnUrl>` / `<katexCssCdnUrl>` overrides) in `script-src`, `style-src`, or `font-src`, or a file fails its integrity check. When you self-host a classic `contrib/auto-render.min.js`, the skin first loads `katex.min.js` from the folder above it (`../katex.min.js`), so copying only `contrib/` leaves a 404 in the console.
 
-**Fix:** Double the backslashes (`\\(a+b\\)`, `\\[ ... \\]`), escape asterisks inside math (`\*`), write inline math without a space after the opening `$` (`$x$`), or set `<katex>true</katex>` to always load KaTeX. Prefer `$$ ... $$` for display math.
+**Fix:** Double the backslashes (`\\(a+b\\)`, `\\[ ... \\]`), escape asterisks inside math (`\*`), write inline math without a space after the opening `$` (`$x$`), or set `<katex>true</katex>` to always load KaTeX. Prefer `$$ ... $$` for display math. To serve KaTeX yourself, keep its `dist/` layout as described in [Self-Hosting Mermaid & KaTeX](authoring-guide.html#self-hosting-mermaid-katex), and allow the origins listed under [Content Security Policy](configuration.html#content-security-policy).
 
 ---
 

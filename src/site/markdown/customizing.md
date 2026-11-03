@@ -110,7 +110,28 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 ```
 
-Mermaid diagrams and KaTeX math load asynchronously afterwards, so they may not be rendered yet when `DOMContentLoaded` fires.
+Mermaid diagrams and KaTeX math load asynchronously afterwards, so they may not be rendered yet when `DOMContentLoaded` fires. Once every enhancement, including the Mermaid and KaTeX loaders, has settled, the skin sets `data-supa-ready="true"` on `<html>`. It does so even when a library fails to load, so "settled" does not guarantee that diagrams or math rendered. The skin dispatches no event at that point, and the attribute is usually set after `DOMContentLoaded`, so check it first and then watch for it:
+
+```javascript
+// src/site/resources/js/custom.js
+function whenSupaReady(callback) {
+  const html = document.documentElement;
+  if (html.dataset.supaReady === 'true') {
+    callback();
+    return;
+  }
+  new MutationObserver((records, observer) => {
+    if (html.dataset.supaReady === 'true') {
+      observer.disconnect();
+      callback();
+    }
+  }).observe(html, { attributes: true, attributeFilter: ['data-supa-ready'] });
+}
+
+whenSupaReady(() => {
+  console.log(`${document.querySelectorAll('.mermaid svg').length} Mermaid diagrams rendered.`);
+});
+```
 
 To react when a reader changes the theme or color scheme, listen for the events the skin dispatches on `document`:
 
@@ -187,7 +208,7 @@ Pick one of two approaches for different light and dark values:
    The skin sets `data-supa-resolved-theme` to `light` or `dark` before first paint and updates it when the operating system theme changes in `auto` mode.
 
 > [!WARNING] Do Not Rely on the Bootstrap Theme Attribute Alone
-> The skin sets `data-bs-theme` only when a reader explicitly picks Light or Dark. In `auto` mode the attribute is removed, so a rule on `[data-bs-theme="dark"]` never matches readers whose operating system is in dark mode. Use `data-supa-resolved-theme` instead.
+> The skin sets `data-bs-theme` only when the active mode is Light or Dark, whether the reader picked it or `<defaultTheme>` set it. In `auto` mode the attribute is removed, so a rule on `[data-bs-theme="dark"]` never matches readers whose operating system is in dark mode. Use `data-supa-resolved-theme` instead.
 
 ### Overriding Tokens per Color Scheme
 
@@ -291,6 +312,7 @@ The announcement example reuses token pairs the skin already checks: the build v
 | Prefer | Examples |
 | :--- | :--- |
 | Theme state on `<html>` | `data-supa-palette`, `data-supa-resolved-theme` (`light` / `dark`), `data-supa-theme-mode` (`light` / `dark` / `auto`) |
+| Page state on `<html>` | `data-supa-ready` (`true` once every enhancement, including the Mermaid and KaTeX loaders, has settled) |
 | Documented tokens | `--color-*`, `--supa-admonition-*`, `--supa-sidebar-width`, `--supa-toc-width`, `--supa-content-max-width`, `--font-stack` |
 | Page regions and IDs | `#supa-main-content` (main article and skip-link target), `#supaSidebarDrawer`, `#supaTocDrawer`, `.supa-sidebar-brand`, `.supa-footer`, `.supa-footer-icons`, `body.supa-sticky-content-header` |
 | Authoring classes | `.supa-tabs`, `.supa-accordion`, `ol.supa-stepper`, `.not-prose` (see [Authoring Rich Content](authoring-guide.html)) |

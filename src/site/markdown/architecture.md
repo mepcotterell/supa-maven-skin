@@ -119,4 +119,4 @@ Mermaid and KaTeX never ship inside the skin JAR. `optional.ts` loads them from 
 When `<search>true</search>` is active, pressing `/` or `⌘K` (`Ctrl+K`) opens `#supaSearchDialog`:
 
 1. **Immediate Local Index**: On open, `collectLocalSearchDocuments()` immediately indexes all sidebar navigation links and the current page's `h1`–`h4` sections.
-2. **Cross-Page & Report Indexing**: `fetchSiteIndex()` fetches sibling pages and Maven reports linked in the sidebar, extracts their page titles, `h1`–`h4` section anchors, and prose snippets, and caches the resulting index in `sessionStorage` (`supa-site-search-index-v2:<root>`) for instant subsequent queries during the browsing session.
+2. **Cross-Page & Report Indexing**: `fetchSiteIndex()` fetches sibling pages and Maven reports linked in the sidebar, extracts their page titles, `h1`–`h4` section anchors, and prose snippets, and caches the resulting index in `sessionStorage` under `supa-search-index-<project version>` (the version comes from `html[data-supa-project-version]`, so each new version of the documented project starts with a fresh index) for instant subsequent queries during the browsing session.
