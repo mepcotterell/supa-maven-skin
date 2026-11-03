@@ -30,9 +30,11 @@ const KIB = 1024;
 /**
  * Gzip size budgets: the single source of truth for bundle size limits.
  *
- * Each budget is the gzip size measured for 0.1.1-SNAPSHOT under the Node version Maven pins in
- * `pom.xml` (v22.14.0: CSS 77,468 B; JS 100,916 B), plus about 5% headroom, rounded up to a
- * whole KiB. Gzip output differs slightly between the zlib builds of different Node versions
+ * Each budget was set from the gzip size measured for 0.1.1-SNAPSHOT under the Node version Maven
+ * pins in `pom.xml`, before the accessibility fixes and the SRI Mermaid/KaTeX loader merged
+ * (v22.14.0: CSS 77,468 B; JS 100,916 B), plus about 5% headroom, rounded up to a whole KiB.
+ * Measured at the integration merge that added those changes, the bundles are CSS ~77,654 B and
+ * JS ~102,125 B, leaving about 5.2% (CSS) and 4.1% (JS) headroom. Gzip output differs slightly between the zlib builds of different Node versions
  * (newer Node measured ~0.3% smaller), so Maven's pinned Node is the reference. The headroom
  * absorbs small fixes; it is not meant to absorb a new feature or dependency.
  *
