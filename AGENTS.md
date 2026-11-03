@@ -84,7 +84,7 @@ Full pipeline details and design rationale: [`src/site/markdown/architecture.md`
 - `src/main/frontend/scss/` — `_variables.scss` (6 palettes × 2 polarities), `_bootstrap-supa.scss`, `_layout.scss`, `_sidebar.scss`, `_toc.scss`, `_content.scss`, and `main.scss`.
 - `src/main/frontend/ts/` — TypeScript modules (`index.ts`, `theme.ts`, `doxia.ts`, `code.ts`, `toc.ts`, `search.ts`, `bootstrap-components.ts`, `optional.ts`).
 - `src/main/frontend/vite.config.ts` — Vite bundler, `META-INF/` license bundler plugin, and Vitest configuration.
-- `package.json` — `@floating-ui/dom` and `vanilla-calendar-pro` have no imports under `src/` but are required: they are Bootstrap 6 peer dependencies imported by the bundled `Tooltip`/`Popover`/`Menu` and `Datepicker` plugins, and the build fails to resolve them if they are not declared and installed.
+- `package.json` — `@floating-ui/dom` and `vanilla-calendar-pro` have no imports under `src/` but are required: they are Bootstrap 6 peer dependencies imported by the bundled `Tooltip`/`Popover`/`Menu` and `Datepicker` plugins. Keep them declared so the build does not depend on npm auto-installing peers; with `--legacy-peer-deps`, or whenever they are not installed, Vite fails to resolve their imports.
 - `scripts/` — `lint-scss.ts` (SCSS syntax + WCAG 2.2 AA/AAA contrast verifier), `lint-velocity.ts` (Velocity directive/macro linter), and `lint-docs.ts` (documentation version-alignment & `CHANGELOG.md` verifier).
 - `src/test/frontend/supa.test.ts` — Vitest + JSDOM unit test suite.
 - `src/it/sample-site/` — Maven Invoker integration test fixture and `verify.bsh` verifier script.
