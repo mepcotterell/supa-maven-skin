@@ -906,7 +906,7 @@ dialog[data-bs-backdrop="false"]::backdrop {
   }
 
   // Inline footer links sit in muted secondary text where the brand hue alone is < 3:1 against
-  // the surrounding text, so they need a non-colour cue (WCAG 1.4.1, axe link-in-text-block).
+  // the surrounding text, so they need a non-color cue (WCAG 1.4.1, axe link-in-text-block).
   .supa-copyright a,
   .supa-custom-footer a,
   .supa-built-with a {
