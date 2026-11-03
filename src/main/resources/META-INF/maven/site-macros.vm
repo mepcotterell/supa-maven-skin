@@ -61,12 +61,18 @@ Apache Maven Doxia Site Renderer#if( $doxiaSiteRendererVersion ) $doxiaSiteRende
 #set( $isBranchActive = $hasActive )
 #if( $item.items && $item.items.size() > 0 )
 #set( $shouldOpen = ( $isCurrent || $isBranchActive || !$item.collapse || $depth <= $collapseDepth ) )
-      <li class="supa-nav-item supa-nav-has-children#if( $isCurrent ) is-current#end#if( $isBranchActive ) is-active-branch#end" data-depth="$depth">
-        <details class="supa-nav-details"#if( $shouldOpen ) open="open"#end>
-          <summary class="supa-nav-summary">
+      <li class="supa-nav-item supa-nav-has-children#if( $currentItemHref ) has-link#end#if( $isCurrent ) is-current#end#if( $isBranchActive ) is-active-branch#end" data-depth="$depth">
+## A linked parent renders its <a> before <details>: a link inside <summary> is a focusable
+## element nested in another interactive control (axe nested-interactive, WCAG 4.1.2), so the
+## summary carries only the chevron toggle and is overlaid on the link row by CSS.
 #if( $currentItemHref )
-            <a class="supa-nav-link#if( $isCurrent ) active#end" href="$currentItemHref"#if( $isCurrent ) aria-current="page"#end>$esc.html( $item.name )</a>
+        <a class="supa-nav-link#if( $isCurrent ) active#end" href="$currentItemHref"#if( $isCurrent ) aria-current="page"#end>$esc.html( $item.name )</a>
+#end
+        <details class="supa-nav-details"#if( $shouldOpen ) open="open"#end>
+#if( $currentItemHref )
+          <summary class="supa-nav-summary" aria-label="$esc.html( $item.name ) section">
 #else
+          <summary class="supa-nav-summary">
             <span class="supa-nav-link supa-nav-label">$esc.html( $item.name )</span>
 #end
             <span class="supa-nav-chevron" aria-hidden="true">

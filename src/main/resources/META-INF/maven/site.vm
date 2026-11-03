@@ -67,7 +67,14 @@
 
  | Rendered using Supa Maven Skin @project.version@ (Bootstrap 6.0.0-alpha.1)
 -->
-<html lang="$locale.language"
+## maven-site-plugin renders the default locale as Locale.ROOT, whose language is "" (an
+## empty lang fails WCAG 3.1.1). Its bundled skin messages are English, so fall back to "en".
+#if( $locale && "$!locale.language" != "" )
+#set( $supaHtmlLang = $locale.toLanguageTag() )
+#else
+#set( $supaHtmlLang = 'en' )
+#end
+<html lang="$esc.html( $supaHtmlLang )"
       data-supa-default-theme="$esc.html( $defaultTheme )"
       data-supa-default-palette="$esc.html( $colorScheme )"
       data-supa-palette="$esc.html( $colorScheme )"
@@ -328,13 +335,16 @@
                       class="supa-search-trigger"
                       data-bs-toggle="dialog"
                       data-bs-target="#supaSearchDialog"
-                      aria-label="Search documentation (Press / or Command+K)">
+                      aria-label="Search documentation"
+                      aria-keyshortcuts="/ Meta+K Control+K">
                 <svg class="supa-search-trigger-icon" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                   <circle cx="11" cy="11" r="8"></circle>
                   <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                 </svg>
                 <span class="supa-search-trigger-placeholder">Search</span>
-                <kbd class="supa-search-kbd" aria-hidden="true">&#x2318;K</kbd>
+                ## The shortcut hint is drawn from data-supa-kbd via CSS so it is not part of the
+                ## visible label text; WCAG 2.5.3 (Label in Name) then sees "Search" inside the name.
+                <kbd class="supa-search-kbd" data-supa-kbd="&#x2318;K" aria-hidden="true"></kbd>
               </button>
             </div>
 #end

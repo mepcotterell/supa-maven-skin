@@ -3,7 +3,7 @@ Supa Maven Skin (`io.github.mepcotterell:supa-maven-skin`) is a modern, responsi
 Here are the four pillars we never compromise on:
 
 ### 1. Accessibility without compromise (WCAG 2.2 AA/AAA)
-Supa ships with 6 built-in accessible color schemes (`furo`, `bootstrap`, `modus`, `modus-tinted`, `modus-deuteranopia`, and `modus-tritanopia`) across both `light` and `dark` polarities (12 theme variants). Every semantic color token is audited automatically at build time by `scripts/lint-scss.ts` against WCAG 2.2 AA (4.5:1 for `furo` and `bootstrap`) and AAA (7.0:1 for the four `modus*` schemes). Changes that regress contrast or keyboard/screen-reader navigation do not ship.
+Supa ships with 6 built-in accessible color schemes (`furo`, `bootstrap`, `modus`, `modus-tinted`, `modus-deuteranopia`, and `modus-tritanopia`) across both `light` and `dark` polarities (12 theme variants). Every semantic color token is audited automatically at build time by `scripts/lint-scss.ts` against WCAG 2.2 AA (4.5:1 for `furo` and `bootstrap`) and AAA (7.0:1 for the four `modus*` schemes), and the rendered self-site is scanned with axe-core by `npm run test:a11y`. Changes that regress contrast or keyboard/screen-reader navigation do not ship.
 
 ### 2. Zero-config Doxia 2.0 compatibility
 Standard Maven documentation (`.md`, `.apt`, `.xdoc`, `.fml`) and `maven-project-info-reports-plugin` reports must render cleanly out of the box without requiring custom HTML. Progressive enhancements—GitHub-style markdown alerts (`> [!NOTE]`), `#bi` Velocity icon macros, synchronized tab groups, and opt-in KaTeX math and Mermaid diagrams—layer onto Doxia's output without breaking standard Maven sites.
@@ -69,6 +69,8 @@ A change that only updates one layer often leaves Velocity, SCSS, TypeScript, te
 - **Full Maven verification & site build (~20–30s):**
   - `mvn -B -ntp clean verify site` — executes the Vite build, Checkstyle, all four linters, Vitest unit tests, packages the skin JAR, runs `maven-invoker-plugin` against `src/it/sample-site` (`verify.bsh`), and generates the project's own documentation site in `target/site/`.
   - Run `mvn -B -ntp clean verify site` before finishing any change that touches Velocity templates, build configuration, or site documentation.
+- **Rendered-page accessibility (~15s, needs Chromium):**
+  - `npm run test:a11y` — serves the already-built `target/site/` in-process and runs axe-core (WCAG 2.0/2.1/2.2 A & AA tags) in Playwright Chromium on every top-level page (`furo` light/dark), `index.html` in all 12 palette × polarity variants, and `index.html` at a 390×844 viewport. Build the site first and run `npx playwright install chromium` once. It is intentionally outside `npm test` and the Maven build (CI runs it on the JDK 21 leg); run it after any change to Velocity markup, SCSS, or TypeScript enhancers. Fix violations in the skin rather than excluding rules.
 - **Proof for bug fixes:**
   - Logic, DOM transformation, search indexing, and theme/palette bugs get a focused unit test in `src/test/frontend/supa.test.ts` (or an assertion in `src/it/sample-site/verify.bsh` for Velocity template bugs) alongside the fix.
 
@@ -85,7 +87,7 @@ Full pipeline details and design rationale: [`src/site/markdown/architecture.md`
 - `src/main/frontend/ts/` — TypeScript modules (`index.ts`, `theme.ts`, `doxia.ts`, `code.ts`, `toc.ts`, `search.ts`, `bootstrap-components.ts`, `optional.ts`).
 - `src/main/frontend/vite.config.ts` — Vite bundler, `META-INF/` license bundler plugin, and Vitest configuration.
 - `package.json` — `@floating-ui/dom` and `vanilla-calendar-pro` have no imports under `src/` but are required: they are Bootstrap 6 peer dependencies imported by the bundled `Tooltip`/`Popover`/`Menu` and `Datepicker` plugins. Keep them declared so the build does not depend on npm auto-installing peers; with `--legacy-peer-deps`, or whenever they are not installed, Vite fails to resolve their imports.
-- `scripts/` — `lint-scss.ts` (SCSS syntax + WCAG 2.2 AA/AAA contrast verifier), `lint-velocity.ts` (Velocity directive/macro linter), `lint-docs.ts` (documentation version-alignment & `CHANGELOG.md` verifier), and `check-bundle-size.ts` (CSS/JS gzip size budget check).
+- `scripts/` — `lint-scss.ts` (SCSS syntax + WCAG 2.2 AA/AAA contrast verifier), `lint-velocity.ts` (Velocity directive/macro linter), `lint-docs.ts` (documentation version-alignment & `CHANGELOG.md` verifier), `check-bundle-size.ts` (CSS/JS gzip size budget check), and `a11y-check.ts` (Playwright + axe-core rendered-page WCAG checks behind `npm run test:a11y`).
 - `src/test/frontend/supa.test.ts` — Vitest + JSDOM unit test suite.
 - `src/it/sample-site/` — Maven Invoker integration test fixture and `verify.bsh` verifier script.
 - `src/site/` — Self-site documentation (`site.xml`, self-site-only logos in `src/site/resources/images/`, and Markdown pages in `src/site/markdown/`).

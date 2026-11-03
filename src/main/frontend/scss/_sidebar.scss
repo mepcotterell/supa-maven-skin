@@ -150,6 +150,12 @@ html:not([data-supa-resolved-theme]) .supa-logo-dark {
   background-color: var(--color-background-secondary);
   border: 1px solid var(--color-background-border);
   color: var(--color-foreground-secondary);
+
+  // Generated content keeps the decorative shortcut hint out of the button's visible label
+  // text (WCAG 2.5.3 Label in Name); the shortcut itself is exposed via aria-keyshortcuts.
+  &::before {
+    content: attr(data-supa-kbd);
+  }
 }
 
 // Navigation Tree Groups & Captions
@@ -222,6 +228,30 @@ html:not([data-supa-resolved-theme]) .supa-logo-dark {
 
   &[open] > summary .supa-nav-chevron svg {
     transform: rotate(90deg);
+  }
+}
+
+// Linked parent items render `<a>` before `<details>` (a link nested inside `<summary>` is an
+// interactive control inside another one). Overlay the chevron-only summary on the link row's
+// right edge, centred on its first line so it stays put when a long label wraps.
+.supa-nav-has-children.has-link {
+  position: relative;
+
+  & > .supa-nav-link {
+    padding-right: 2.25rem;
+  }
+
+  & > .supa-nav-details > summary {
+    position: absolute;
+    top: 0.28rem;
+    right: 0.375rem;
+    padding-right: 0;
+    border-radius: 0.375rem;
+
+    &:focus-visible {
+      outline: 2px solid var(--color-brand-primary);
+      outline-offset: 1px;
+    }
   }
 }
 

@@ -375,6 +375,14 @@
     border-bottom: 1px solid var(--color-background-border);
   }
 
+  // Inner tablist used when the bar also hosts a non-tab control (component example toggle).
+  .supa-tab-list-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    align-self: flex-end;
+  }
+
   .supa-tab-btn {
     appearance: none;
     border: none;
@@ -640,6 +648,14 @@
 
 .hljs-strong {
   font-weight: 700;
+}
+
+// Overflowing scroll containers get `tabindex="0"` from `initScrollRegions()` so keyboard
+// users can scroll them; give that focus a visible ring (WCAG 2.4.7).
+.supa-code-block > pre[data-supa-scroll-focus]:focus-visible,
+.supa-table-responsive[data-supa-scroll-focus]:focus-visible {
+  outline: 2px solid var(--color-brand-primary);
+  outline-offset: -2px;
 }
 
 // ============================================================================

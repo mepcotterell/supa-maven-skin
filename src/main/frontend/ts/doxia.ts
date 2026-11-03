@@ -736,6 +736,74 @@ export function transformBootstrapIcons(container: HTMLElement): void {
 }
 
 /**
+ * Marks Gravatar avatars emitted without `alt` as decorative (`alt=""`).
+ *
+ * maven-project-info-reports-plugin's Team report renders `<figure><img src="…gravatar…">`
+ * with no `alt` attribute (WCAG 1.1.1), next to a cell that already names the member, so the
+ * avatar is decorative. Only `<img>` elements that lack `alt` entirely are touched.
+ *
+ * @param container - Root container element to scan.
+ */
+export function labelReportAvatars(container: HTMLElement): void {
+  container
+    .querySelectorAll<HTMLImageElement>('img:not([alt])[src*="gravatar.com/avatar"]')
+    .forEach((img) => {
+      img.alt = '';
+    });
+}
+
+/** Horizontally scrollable code and table wrappers created by the skin. */
+const SCROLL_REGION_SELECTOR = '.supa-code-block > pre, .supa-table-responsive';
+
+/**
+ * Makes a scroll container keyboard-focusable while (and only while) it overflows.
+ *
+ * Keyboard users cannot scroll a region that has no focusable content (WCAG 2.1.1, axe
+ * `scrollable-region-focusable`), but a permanent `tabindex` would add a useless tab stop to
+ * every short code block. A `tabindex` the skin did not add is never removed.
+ *
+ * @param region - Scroll container (`pre` or `.supa-table-responsive`).
+ * @returns True if the region currently overflows.
+ */
+export function syncScrollRegionFocus(region: HTMLElement): boolean {
+  const overflows =
+    region.scrollWidth > region.clientWidth || region.scrollHeight > region.clientHeight;
+  const managed = region.getAttribute('data-supa-scroll-focus') === 'true';
+  if (overflows && !region.hasAttribute('tabindex')) {
+    region.tabIndex = 0;
+    region.setAttribute('data-supa-scroll-focus', 'true');
+  } else if (!overflows && managed) {
+    region.removeAttribute('tabindex');
+    region.removeAttribute('data-supa-scroll-focus');
+  }
+  return overflows;
+}
+
+/**
+ * Applies `syncScrollRegionFocus` to every skin scroll container under `root` and re-checks
+ * whenever one resizes (viewport changes, tab panels being revealed, playground re-renders).
+ *
+ * @param root - Root node to scan.
+ */
+export function initScrollRegions(root: ParentNode = document): void {
+  const regions = Array.from(root.querySelectorAll<HTMLElement>(SCROLL_REGION_SELECTOR));
+  regions.forEach((region) => {
+    syncScrollRegionFocus(region);
+  });
+  if (regions.length === 0 || typeof ResizeObserver === 'undefined') {
+    return;
+  }
+  const observer = new ResizeObserver((entries) => {
+    entries.forEach((entry) => {
+      syncScrollRegionFocus(entry.target as HTMLElement);
+    });
+  });
+  regions.forEach((region) => {
+    observer.observe(region);
+  });
+}
+
+/**
  * Runs all Doxia 2.0 HTML normalizations and declarative component transforms on `root`.
  *
  * @param root - Root article element (defaults to `#supa-main-content`).
@@ -747,6 +815,7 @@ export function initDoxiaEnhancements(
     return;
   }
   normalizeDoxiaTables(root);
+  labelReportAvatars(root);
   transformGfmAdmonitions(root);
   initContentTabs(root);
   initBootstrapAccordions(root);

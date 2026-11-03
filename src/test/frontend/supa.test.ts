@@ -20,12 +20,20 @@ import {
   initBootstrapAccordions,
   initBootstrapSteppers,
   initContentTabs,
+  initScrollRegions,
+  labelReportAvatars,
   normalizeDoxiaTables,
+  syncScrollRegionFocus,
   TAB_SYNC_STORAGE_KEY,
   transformBootstrapIcons,
   transformGfmAdmonitions
 } from '../../main/frontend/ts/doxia';
-import { Drawer, initDrawers } from '../../main/frontend/ts/index';
+import {
+  Drawer,
+  initDrawers,
+  initSupaSkin,
+  SUPA_READY_ATTRIBUTE
+} from '../../main/frontend/ts/index';
 import { initOptionalLibraries, isModuleUrl, PINNED_ASSETS, pinnedIntegrity } from '../../main/frontend/ts/optional';
 import {
   collectLocalSearchDocuments,
@@ -349,6 +357,51 @@ describe('Supa Maven Skin Frontend Modules', () => {
       expect(window.localStorage.getItem(TAB_SYNC_STORAGE_KEY)).toContain('Kotlin');
     });
 
+    it('marks Team report Gravatar avatars without alt as decorative and leaves authored alt text alone', () => {
+      const container = document.createElement('div');
+      container.innerHTML = `
+        <figure><img id="avatar" src="https://www.gravatar.com/avatar/abc.jpg?d=blank&amp;s=60" /></figure>
+        <img id="authored" src="https://www.gravatar.com/avatar/def.jpg" alt="Jane Doe" />
+        <img id="content" src="images/diagram.png" />
+      `;
+      labelReportAvatars(container);
+      expect(container.querySelector('#avatar')?.getAttribute('alt')).toBe('');
+      expect(container.querySelector('#authored')?.getAttribute('alt')).toBe('Jane Doe');
+      expect(container.querySelector('#content')?.hasAttribute('alt')).toBe(false);
+    });
+
+    it('makes overflowing code and table scroll regions keyboard-focusable only while they overflow', () => {
+      document.body.innerHTML = `
+        <div class="supa-code-block"><pre id="wide"><code>x</code></pre></div>
+        <div class="supa-code-block"><pre id="short"><code>y</code></pre></div>
+        <div class="supa-table-responsive" id="authored" tabindex="-1"><table></table></div>
+      `;
+      const setSize = (el: HTMLElement, scrollWidth: number, clientWidth: number) => {
+        Object.defineProperty(el, 'scrollWidth', { configurable: true, value: scrollWidth });
+        Object.defineProperty(el, 'clientWidth', { configurable: true, value: clientWidth });
+      };
+      const wide = document.getElementById('wide')!;
+      const short = document.getElementById('short')!;
+      const authored = document.getElementById('authored')!;
+      setSize(wide, 900, 400);
+      setSize(short, 400, 400);
+      setSize(authored, 900, 400);
+
+      initScrollRegions(document);
+      expect(wide.getAttribute('tabindex')).toBe('0');
+      expect(wide.getAttribute('data-supa-scroll-focus')).toBe('true');
+      expect(short.hasAttribute('tabindex')).toBe(false);
+      // An author-supplied tabindex is never overwritten or removed.
+      expect(authored.getAttribute('tabindex')).toBe('-1');
+
+      setSize(wide, 400, 400);
+      expect(syncScrollRegionFocus(wide)).toBe(false);
+      expect(wide.hasAttribute('tabindex')).toBe(false);
+      setSize(authored, 400, 400);
+      syncScrollRegionFocus(authored);
+      expect(authored.getAttribute('tabindex')).toBe('-1');
+    });
+
     it('transforms .supa-accordion and .supa-stepper shorthands into Bootstrap 6 components', () => {
       const container = document.createElement('div');
       container.innerHTML = `
@@ -544,6 +597,19 @@ describe('Supa Maven Skin Frontend Modules', () => {
       expect(pgVmTab).not.toBeNull();
       pgVmTab.click();
       expect(pgCode.textContent).toContain('#bsAlert("success"');
+
+      // Every role="tablist" owns only tabs (axe aria-required-children): the "Hide code"
+      // toggles sit beside the tablists, never inside them.
+      const tablists = container.querySelectorAll<HTMLElement>('[role="tablist"]');
+      expect(tablists.length).toBe(2);
+      tablists.forEach((list) => {
+        expect(list.children.length).toBeGreaterThan(0);
+        Array.from(list.children).forEach((child) => {
+          expect(child.getAttribute('role')).toBe('tab');
+        });
+      });
+      expect(tabbedToggleBtn.closest('[role="tablist"]')).toBeNull();
+      expect(container.querySelector('.supa-playground-bar')?.hasAttribute('role')).toBe(false);
     });
 
     it('prefers Bootstrap 6 Tooltips over built-in browser title attributes across controls and content', () => {
@@ -601,6 +667,16 @@ describe('Supa Maven Skin Frontend Modules', () => {
       expect(ghLink.getAttribute('data-bs-toggle')).toBe('tooltip');
       expect(ghLink.getAttribute('data-bs-title')).toBe('GitHub Repository');
       expect(Tooltip.getInstance(ghLink)).not.toBeNull();
+    });
+
+    it('sets html[data-supa-ready] only after every enhancer, including optional libraries, has settled', async () => {
+      document.body.innerHTML = '<main id="supa-main-content"><p>Plain page</p></main>';
+      document.documentElement.removeAttribute(SUPA_READY_ATTRIBUTE);
+      const ready = initSupaSkin();
+      // Optional libraries load asynchronously, so the flag must not be set synchronously.
+      expect(document.documentElement.hasAttribute(SUPA_READY_ATTRIBUTE)).toBe(false);
+      await ready;
+      expect(document.documentElement.getAttribute(SUPA_READY_ATTRIBUTE)).toBe('true');
     });
 
     it('configures left #supaSidebarDrawer (.drawer-start) and right #supaTocDrawer (.drawer-end) with body scrolling and backdrop options', () => {

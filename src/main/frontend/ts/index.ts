@@ -32,7 +32,7 @@ import {
   Tooltip
 } from './bootstrap-components';
 import { initCodeBlocks } from './code';
-import { initDoxiaEnhancements } from './doxia';
+import { initDoxiaEnhancements, initScrollRegions } from './doxia';
 import { initOptionalLibraries } from './optional';
 import { initSearch } from './search';
 import { initTheme } from './theme';
@@ -145,9 +145,19 @@ export function initBackToTop(): void {
 }
 
 /**
- * Boots all Supa Maven Skin frontend modules in deterministic order.
+ * Attribute set on `<html>` once every enhancer (including the asynchronous
+ * Mermaid/KaTeX loaders) has settled. Rendered-page checks such as
+ * `npm run test:a11y` wait for it so they never scan a half-enhanced DOM.
  */
-export function initSupaSkin(): void {
+export const SUPA_READY_ATTRIBUTE = 'data-supa-ready';
+
+/**
+ * Boots all Supa Maven Skin frontend modules in deterministic order.
+ *
+ * @returns Promise that resolves once optional libraries have settled and
+ *     `data-supa-ready` has been set on `<html>`.
+ */
+export function initSupaSkin(): Promise<void> {
   initTheme();
   initDoxiaEnhancements();
   initTocAndScrollSpy();
@@ -156,14 +166,21 @@ export function initSupaSkin(): void {
   initDrawers();
   initBackToTop();
   initBootstrapComponents(document);
-  void initOptionalLibraries();
+  // After code blocks, tables, and the playground exist so every scroll wrapper is seen.
+  initScrollRegions(document);
+  // `finally` (not `then`) so a failed CDN import still marks the page ready.
+  return initOptionalLibraries().finally(() => {
+    document.documentElement.setAttribute(SUPA_READY_ATTRIBUTE, 'true');
+  });
 }
 
 if (typeof document !== 'undefined') {
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => initSupaSkin());
+    document.addEventListener('DOMContentLoaded', () => {
+      void initSupaSkin();
+    });
   } else {
-    initSupaSkin();
+    void initSupaSkin();
   }
 }
 

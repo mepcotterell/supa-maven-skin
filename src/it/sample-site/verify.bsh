@@ -137,4 +137,18 @@ if ( html.contains( "${currentYear}" ) || html.contains( "$currentDate" ) ) {
     throw new IllegalStateException( "Uninterpolated Velocity date variable found in footer" );
 }
 
+// Rendered-page accessibility invariants (also checked with axe-core by `npm run test:a11y`)
+if ( html.contains( "<html lang=\"\"" ) || !html.contains( "<html lang=\"en\"" ) ) {
+    throw new IllegalStateException( "<html lang> must fall back to \"en\" for Maven's default (ROOT) locale (WCAG 3.1.1)" );
+}
+if ( !html.contains( "supa-nav-has-children has-link" ) ) {
+    throw new IllegalStateException( "Missing linked parent sidebar item for the Project Information reports menu" );
+}
+if ( java.util.regex.Pattern.compile( "<summary[^>]*>\\s*<a\\s" ).matcher( html ).find() ) {
+    throw new IllegalStateException( "Sidebar <summary> must not contain a link (axe nested-interactive, WCAG 4.1.2)" );
+}
+if ( !html.contains( "aria-keyshortcuts=\"/ Meta+K Control+K\"" ) || html.contains( "Search documentation (Press" ) ) {
+    throw new IllegalStateException( "Search trigger must expose its shortcut via aria-keyshortcuts with a label-in-name accessible name (WCAG 2.5.3)" );
+}
+
 return true;

@@ -51,6 +51,28 @@ jobs:
       - name: Build, lint, test, verify ITs, and generate site
         run: mvn -B -ntp clean install site
 
+      # Rendered-page WCAG checks need a real browser, so they run here instead of inside
+      # `mvn verify` (consumer sites never need Chromium). They scan the target/site/ built above.
+      - name: Set up Node.js for accessibility checks
+        if: matrix.java == '21'
+        uses: actions/setup-node@v7
+        with:
+          # Keep in sync with <node.version> in pom.xml (frontend-maven-plugin).
+          node-version: '22.14.0'
+          cache: npm
+
+      - name: Install npm dependencies
+        if: matrix.java == '21'
+        run: npm ci
+
+      - name: Install Playwright Chromium
+        if: matrix.java == '21'
+        run: npx playwright install --with-deps chromium
+
+      - name: Check rendered site accessibility (axe-core)
+        if: matrix.java == '21'
+        run: npm run test:a11y
+
       - name: Publish SNAPSHOT to Maven Central
         if: matrix.java == '21' && github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
         env:

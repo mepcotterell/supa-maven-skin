@@ -16,6 +16,7 @@
     "lint:docs": "node --no-warnings=ExperimentalWarning --experimental-strip-types scripts/lint-docs.ts",
     "test": "vitest run --config src/main/frontend/vite.config.ts",
     "test:watch": "vitest --config src/main/frontend/vite.config.ts",
+    "test:a11y": "node --no-warnings=ExperimentalWarning --experimental-strip-types scripts/a11y-check.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -26,10 +27,12 @@
     "vanilla-calendar-pro": "^3.4.0"
   },
   "devDependencies": {
+    "@axe-core/playwright": "4.14.0",
     "@eslint/js": "^10.0.1",
     "@types/node": "^22.14.0",
     "eslint": "^10.13.0",
     "happy-dom": "^21.0.4",
+    "playwright": "1.64.1",
     "postcss": "^8.5.31",
     "postcss-scss": "^4.0.9",
     "sass-embedded": "^1.105.2",

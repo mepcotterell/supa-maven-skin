@@ -432,6 +432,16 @@ export function initComponentExamples(root: ParentNode = document): void {
           });
         });
         toggleBtn.classList.add('ms-auto');
+        // A `role="tablist"` may only own tabs (axe aria-required-children), so move the tabs
+        // into an inner tablist and keep the outer `.supa-tab-list` as a plain styled bar.
+        const tabs = document.createElement('div');
+        tabs.className = 'supa-tab-list-tabs';
+        tabs.setAttribute('role', 'tablist');
+        tabList.querySelectorAll<HTMLElement>(':scope > [role="tab"]').forEach((tab) => {
+          tabs.appendChild(tab);
+        });
+        tabList.removeAttribute('role');
+        tabList.appendChild(tabs);
         tabList.appendChild(toggleBtn);
 
         tabList.querySelectorAll<HTMLButtonElement>('.supa-tab-btn').forEach((tabBtn) => {
@@ -708,10 +718,13 @@ export function initComponentPlayground(root: ParentNode = document): void {
 
     const barEl = document.createElement('div');
     barEl.className = 'supa-tab-list supa-playground-bar';
-    barEl.setAttribute('role', 'tablist');
 
+    // Only the syntax tabs live in the tablist; the sibling "Hide code" toggle is not a tab
+    // (axe aria-required-children).
     const tabBtnsContainer = document.createElement('div');
-    tabBtnsContainer.className = 'd-flex flex-wrap gap-1 align-items-center';
+    tabBtnsContainer.className = 'supa-tab-list-tabs d-flex flex-wrap gap-1 align-items-center';
+    tabBtnsContainer.setAttribute('role', 'tablist');
+    tabBtnsContainer.setAttribute('aria-label', 'Code syntax');
 
     const toggleBtn = document.createElement('button');
     toggleBtn.type = 'button';
