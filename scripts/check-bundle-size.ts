@@ -71,6 +71,9 @@ function measure(absolutePath: string): BundleMeasurement {
 }
 
 const failures: string[] = [];
+// Tracked apart from `failures` so the raise-the-budget hint appears only for a real size
+// regression, not when a bundle is missing because the Vite build did not run.
+let overBudget = false;
 
 for (const budget of BUDGETS) {
   const absolutePath: string = join(ROOT_DIR, budget.path);
@@ -86,6 +89,7 @@ for (const budget of BUDGETS) {
       `(${usedPercent}% of ${formatKib(budget.maxGzipBytes)} budget)`
   );
   if (gzipBytes > budget.maxGzipBytes) {
+    overBudget = true;
     failures.push(
       `${relPath}: gzip size ${formatKib(gzipBytes)} (${gzipBytes} B) exceeds its budget of ` +
         `${formatKib(budget.maxGzipBytes)} (${budget.maxGzipBytes} B) by ` +
@@ -99,10 +103,12 @@ if (failures.length > 0) {
   for (const failure of failures) {
     console.error(`  - ${failure}`);
   }
-  console.error(
-    'Shrink the bundle, or raise the budget deliberately in scripts/check-bundle-size.ts ' +
-      '(see the comment above BUDGETS).'
-  );
+  if (overBudget) {
+    console.error(
+      'Shrink the bundle, or raise the budget deliberately in scripts/check-bundle-size.ts ' +
+        '(see the comment above BUDGETS).'
+    );
+  }
   process.exit(1);
 } else {
   console.log(`Bundle Size Check passed for ${BUDGETS.length} bundle(s).`);
