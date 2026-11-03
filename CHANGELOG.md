@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-11-03
+
 ### Added
 
 - **Rendered-Page Accessibility Checks**: `npm run test:a11y` runs axe-core (WCAG 2.0/2.1/2.2 A & AA) in Playwright Chromium against the built self-site: every page in `furo` light/dark, `index.html` in all 12 palette × polarity variants and at a 390×844 phone viewport. It uses the new exact-pinned `playwright` and `@axe-core/playwright` devDependencies and runs in CI on the JDK 21 leg before snapshot publishing. It is not part of `npm test` or `mvn verify`, so neither consumer sites nor `mvn verify` need a browser.
@@ -34,7 +36,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - **Search Trigger Label in Name**: The sidebar search button is named "Search documentation", exposes its shortcuts via `aria-keyshortcuts`, and draws the `⌘K` hint with CSS so the visible label matches the accessible name (WCAG 2.5.3).
 - **Tablist Roles**: The "Hide code" toggle in component examples and the playground now sits beside the tablist instead of inside it, so tablists contain only tabs (WCAG 4.1.2).
 - **Team Report Avatars**: Gravatar images that `maven-project-info-reports-plugin` emits without `alt` are marked decorative (`alt=""`) (WCAG 1.1.1).
-- **Install Snippets Show the Released Version**: Install snippets, badges and example copy in `README.md` and `src/site/` now show the latest release on Maven Central (`0.1.0`). Before, they showed the development `-SNAPSHOT`, which consumer builds cannot resolve. The landing-page Quickstart (`index.md.vm`) reads the version from the new `<latest-release.version>` POM property.
+- **Install Snippets Show the Released Version**: Install snippets, badges and example copy in `README.md` and `src/site/` now show the latest release on Maven Central. Before, they showed the development `-SNAPSHOT`, which consumer builds cannot resolve. The landing-page Quickstart (`index.md.vm`) reads the version from the new `<latest-release.version>` POM property.
 - **Self-Site Menu Anchors**: The "Markdown vs. Velocity", "Full site.xml Example", and "Velocity Macros" menu links now use the heading ids the skin actually generates (the slugifier drops `.`), so they land on their sections.
 
 ### Security
@@ -80,5 +82,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   - Organized `src/site/markdown/` around the Diátaxis framework (`index.md.vm`, `getting-started.md`, `authoring-guide.md`, `configuration.md`, `components.md`, `kitchen-sink.md`, `architecture.md`) with custom dual-theme `rocket-takeoff` logos (`src/site/resources/images/logo-light.svg` and `logo-dark.svg`).
   - Added automated TypeScript linters for SCSS WCAG 2.2 AA/AAA contrast (`scripts/lint-scss.ts`), Velocity directive balance (`scripts/lint-velocity.ts`), and documentation version alignment + Keep a Changelog 1.1.0 compliance (`scripts/lint-docs.ts`), enforced alongside the Google TypeScript Style Guide and Google-style TSDoc (`supa/google-tsdoc`).
 
-[Unreleased]: https://github.com/mepcotterell/supa-maven-skin/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/mepcotterell/supa-maven-skin/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/mepcotterell/supa-maven-skin/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/mepcotterell/supa-maven-skin/releases/tag/v0.1.0
