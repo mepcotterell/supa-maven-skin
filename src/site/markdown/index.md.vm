@@ -26,7 +26,7 @@ Add **Supa Maven Skin** to your project's `src/site/site.xml`:
 <skin>
   <groupId>${project.groupId}</groupId>
   <artifactId>${project.artifactId}</artifactId>
-  <version>${project.version}</version>
+  <version>${project.properties.getProperty("latest-release.version")}</version>
 </skin>
 ```
 

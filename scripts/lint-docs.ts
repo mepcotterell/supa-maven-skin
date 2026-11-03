@@ -4,7 +4,9 @@
  * for Supa Maven Skin. Ensures that version numbers stated across README.md, CHANGELOG.md,
  * AGENTS.md, and src/site/ strictly align with the authoritative sources in pom.xml and
  * package.json, verifies Keep a Changelog 1.1.0 conventions, and checks internal doc links and
- * Markdown code fences.
+ * Markdown code fences. Skin install snippets must show the latest *released* version (the newest
+ * dated release heading in CHANGELOG.md), because the development `-SNAPSHOT` on main only exists
+ * in the Central snapshot repository that consumer builds do not have configured.
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -20,6 +22,11 @@ const POM_PATH: string = path.join(ROOT_DIR, 'pom.xml');
 const PKG_PATH: string = path.join(ROOT_DIR, 'package.json');
 const CHANGELOG_PATH: string = path.join(ROOT_DIR, 'CHANGELOG.md');
 const SITE_MARKDOWN_DIR: string = path.join(ROOT_DIR, 'src/site/markdown');
+
+/** POM property holding the latest released skin version, read by `index.md.vm`. */
+const RELEASE_VERSION_PROPERTY = 'latest-release.version';
+/** Velocity expression `.md.vm` pages use to interpolate {@link RELEASE_VERSION_PROPERTY}. */
+const RELEASE_VERSION_VELOCITY_EXPR = `\${project.properties.getProperty("${RELEASE_VERSION_PROPERTY}")}`;
 
 const VALID_CHANGELOG_CATEGORIES = new Set<string>([
   'Added',
@@ -161,6 +168,63 @@ function validateInternalLinks(
 }
 
 /**
+ * Finds the newest release in CHANGELOG.md: the first dated `## [x.y.z] - YYYY-MM-DD` heading.
+ * Keep a Changelog lists releases newest first, and `[x.y.z]: https://...` link reference lines
+ * are not headings, so they never match. A `## [x.y.z]` heading without a valid date is reported
+ * because it would otherwise be skipped silently and leave install snippets on an older release.
+ *
+ * @param content - Full markdown text content of CHANGELOG.md.
+ * @returns The newest released version, or null when no release heading exists yet.
+ */
+function findLatestChangelogRelease(content: string): string | null {
+  const headingRegex = /^## \[([^\]]+)\](.*)$/gm;
+  let match: RegExpExecArray | null;
+  while ((match = headingRegex.exec(content)) !== null) {
+    const label = match[1] ?? '';
+    if (label === 'Unreleased') {
+      continue;
+    }
+    const suffix = match[2] ?? '';
+    if (
+      !/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/.test(label) ||
+      !/^ - \d{4}-\d{2}-\d{2}\s*$/.test(suffix)
+    ) {
+      errors.push(
+        `CHANGELOG.md: Malformed release heading "## [${label}]${suffix}"; expected "## [x.y.z] - YYYY-MM-DD".`
+      );
+      continue;
+    }
+    return label;
+  }
+  return null;
+}
+
+/**
+ * Compares the numeric `major.minor.patch` parts of two versions, ignoring qualifiers such as
+ * `-SNAPSHOT` or `-alpha.1`.
+ *
+ * @param a - First version string.
+ * @param b - Second version string.
+ * @returns A negative number if a < b, zero if equal, or a positive number if a > b.
+ */
+function compareVersionCores(a: string, b: string): number {
+  const parse = (v: string): number[] =>
+    v
+      .replace(/-.*$/, '')
+      .split('.')
+      .map((part: string) => Number.parseInt(part, 10) || 0);
+  const pa = parse(a);
+  const pb = parse(b);
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    const diff = (pa[i] ?? 0) - (pb[i] ?? 0);
+    if (diff !== 0) {
+      return diff;
+    }
+  }
+  return 0;
+}
+
+/**
  * Validates that CHANGELOG.md adheres to Keep a Changelog 1.1.0 structure and uses current supa prefixes.
  *
  * @param content - Full markdown text content of CHANGELOG.md.
@@ -281,13 +345,44 @@ if (pomBootstrapVersion && pomBootstrapVersion !== bootstrapVersion) {
   );
 }
 
+let changelogRelease: string | null = null;
 if (!fs.existsSync(CHANGELOG_PATH)) {
   errors.push('CHANGELOG.md: File does not exist.');
 } else {
-  validateChangelog(
-    fs.readFileSync(CHANGELOG_PATH, 'utf8'),
-    pomVersion,
-    pomBaseVersion
+  const changelogContent: string = fs.readFileSync(CHANGELOG_PATH, 'utf8');
+  validateChangelog(changelogContent, pomVersion, pomBaseVersion);
+  changelogRelease = findLatestChangelogRelease(changelogContent);
+}
+
+// The latest released version is the single source of truth for install snippets. Before the
+// first release there is nothing on Maven Central yet, so fall back to the pom version.
+const latestReleaseVersion: string = changelogRelease ?? pomVersion ?? '';
+const latestReleaseSource: string = changelogRelease
+  ? `newest CHANGELOG.md release heading "## [${changelogRelease}]"`
+  : `pom.xml <version>${pomVersion}</version>; no release heading in CHANGELOG.md`;
+
+if (
+  changelogRelease &&
+  pomBaseVersion &&
+  compareVersionCores(changelogRelease, pomBaseVersion) > 0
+) {
+  errors.push(
+    `CHANGELOG.md: Newest release heading "## [${changelogRelease}]" is newer than pom.xml <version>${pomVersion}</version>.`
+  );
+}
+
+// index.md.vm interpolates this property, so it must track the newest release too.
+const pomReleaseProperty: string | null = extractXmlTag(
+  pomXml,
+  RELEASE_VERSION_PROPERTY
+);
+if (!pomReleaseProperty) {
+  errors.push(
+    `pom.xml: Missing <${RELEASE_VERSION_PROPERTY}> property; set it to the latest released version (${latestReleaseVersion}).`
+  );
+} else if (pomReleaseProperty !== latestReleaseVersion) {
+  errors.push(
+    `pom.xml: <${RELEASE_VERSION_PROPERTY}>${pomReleaseProperty}</${RELEASE_VERSION_PROPERTY}> does not match the latest released version ${latestReleaseVersion} (${latestReleaseSource}); bump it when cutting a release.`
   );
 }
 
@@ -355,17 +450,52 @@ for (const relPath of docFiles) {
     }
   }
 
-  // 4. Verify <artifactId>supa-maven-skin</artifactId> version snippets match pom.xml <version>
+  // 4. Verify skin <version> snippets (raw, HTML-escaped, or "+" diff lines) in README.md and
+  // src/site/ show the latest released version that consumers can actually resolve.
+  const isUserFacingDoc: boolean =
+    relPath === 'README.md' || relPath.startsWith('src/site/');
+  const isVelocityPage: boolean = relPath.endsWith('.md.vm');
   const skinBlockRegex =
-    /(?:<artifactId>|&lt;artifactId&gt;)supa-maven-skin(?:<\/artifactId>|&lt;\/artifactId&gt;)\s*(?:<version>|&lt;version&gt;)([^<&]+)(?:<\/version>|&lt;\/version&gt;)/g;
+    /(?:<artifactId>|&lt;artifactId&gt;)(supa-maven-skin|\$\{project\.artifactId\})(?:<\/artifactId>|&lt;\/artifactId&gt;)\s*\+?\s*(?:<version>|&lt;version&gt;)([^<&]+)(?:<\/version>|&lt;\/version&gt;)/g;
   let skinMatch: RegExpExecArray | null;
-  while ((skinMatch = skinBlockRegex.exec(content)) !== null) {
-    const statedSkinVer: string = (skinMatch[1] ?? '').trim();
-    if (statedSkinVer !== pomVersion && statedSkinVer !== '${project.version}') {
+  while (isUserFacingDoc && (skinMatch = skinBlockRegex.exec(content)) !== null) {
+    // ${project.artifactId} only names this skin on our own .md.vm pages; in plain .md tutorials
+    // it is a literal placeholder for the reader's own project.
+    if (skinMatch[1] !== 'supa-maven-skin' && !isVelocityPage) {
+      continue;
+    }
+    const statedSkinVer: string = (skinMatch[2] ?? '').trim();
+    // The self-site must render with the skin built in this same reactor, so ${project.version}
+    // is correct only in src/site/site.xml.
+    const isSelfSiteSkin: boolean =
+      relPath === 'src/site/site.xml' && statedSkinVer === '${project.version}';
+    const isReleaseProperty: boolean =
+      isVelocityPage && statedSkinVer === RELEASE_VERSION_VELOCITY_EXPR;
+    if (
+      statedSkinVer !== latestReleaseVersion &&
+      !isSelfSiteSkin &&
+      !isReleaseProperty
+    ) {
+      const hint: string = isVelocityPage
+        ? ` or ${RELEASE_VERSION_VELOCITY_EXPR}`
+        : '';
       errors.push(
-        `${relPath}: supa-maven-skin <version>${statedSkinVer}</version> does not match pom.xml <version>${pomVersion}</version>.`
+        `${relPath}: supa-maven-skin <version>${statedSkinVer}</version> must be the latest released version ${latestReleaseVersion}${hint} (${latestReleaseSource}).`
       );
     }
+  }
+
+  // 4b. The development -SNAPSHOT is not resolvable by consumer builds, so it must not appear in
+  // user-facing badges, alerts, or example copy either.
+  if (
+    isUserFacingDoc &&
+    pomVersion &&
+    pomVersion.endsWith('-SNAPSHOT') &&
+    content.includes(pomVersion)
+  ) {
+    errors.push(
+      `${relPath}: Found development version "${pomVersion}"; user-facing docs must show the latest released version ${latestReleaseVersion} (${latestReleaseSource}).`
+    );
   }
 
   // 5. Verify <artifactId>maven-site-plugin</artifactId> version snippets match pom.xml
@@ -407,5 +537,5 @@ if (errors.length > 0) {
 }
 
 console.log(
-  `Docs Version Linter checked ${docFiles.length} documentation file(s) against pom.xml (${pomVersion}) and package.json (bootstrap ${bootstrapVersion}) with 0 violations.`
+  `Docs Version Linter checked ${docFiles.length} documentation file(s) against pom.xml (${pomVersion}, latest release ${latestReleaseVersion}) and package.json (bootstrap ${bootstrapVersion}) with 0 violations.`
 );
