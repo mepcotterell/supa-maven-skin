@@ -232,9 +232,9 @@ Put logo files in `src/site/resources/images/` and reference them from `<supaSki
 - **Paths:** relative paths are resolved against each page's location, so nested pages load the same file. Values starting with `http://`, `https://`, or `/` are used unchanged.
 - **One or two logos:** with both options set, the skin shows `<lightLogo>` in light mode and `<darkLogo>` in dark mode. With only `<lightLogo>`, that image is used in both.
 - **Fallback:** without `<lightLogo>`, the skin uses the `<bannerLeft><image src="..."/></bannerLeft>` image from `site.xml`. A `<bannerLeft href="...">` also sets where the sidebar brand links to.
-- **Size:** logos are limited to `2.75rem` tall. Adjust it in `site.css` with `.supa-sidebar-logo { max-height: 3.5rem; }`.
+- **Size:** logos are limited to `2.75rem` tall. The skin's rule uses two classes, so match them in `site.css`: `.supa-sidebar-logo-container .supa-sidebar-logo { max-height: 3.5rem; }`. A single-class `.supa-sidebar-logo` rule has no effect.
 
-The `<lightLogo>` and `<darkLogo>` images carry generic alternative text ("Light Logo", "Dark Logo"), so keep the project name visible next to the logo (the default; see `<sidebarHideName>` in [Theme & Branding](configuration.html#theme-branding)) to give the sidebar brand link a meaningful accessible name.
+The `<lightLogo>` and `<darkLogo>` images carry generic alternative text ("Light Logo" and "Dark Logo", or "Logo" when only `<lightLogo>` is set), so keep the project name visible next to the logo (the default; see `<sidebarHideName>` in [Theme & Branding](configuration.html#theme-branding)) to give the sidebar brand link a meaningful accessible name.
 
 The skin has no favicon option. Add one with a `<link rel="icon">` in `<body><head>`, as shown in [Injecting Extra `<head>` Content](#injecting-extra-head-content).
 
@@ -258,7 +258,7 @@ Prefer a `<supaSkin>` option when one exists, because it removes the markup inst
 | Copyright line | Replace it with `<body><footer><![CDATA[ ... ]]></footer></body>` in `site.xml`. |
 | "Back to top" button | No option; hide it in `site.css` (see below). |
 
-See [Layout & Navigation](configuration.html#layout-navigation) and [Footer & Links](configuration.html#footer-links) for every option and its default.
+See [Configuration Options](configuration.html#configuration-options) for every option and its default: most of these are under [Layout & Navigation](configuration.html#layout-navigation) and [Footer & Links](configuration.html#footer-links), the color scheme picker is under [Theme & Branding](configuration.html#theme-branding), the source buttons are under [Source Repository](configuration.html#source-repository), and search is under [Code, Search, Diagrams & Math](configuration.html#code-search-diagrams-math).
 
 For elements without an option, or to restyle one, use `site.css`:
 
