@@ -313,7 +313,21 @@ async function main(): Promise<number> {
   // Optional positional page names (`npm run test:a11y -- team.html`) narrow
   // the matrix while iterating on a fix; CI always runs the full matrix.
   const only = new Set(process.argv.slice(2));
+  // A mistyped name would otherwise scan nothing and report success, which
+  // reads like a clean result; reject unknown names before starting a browser.
+  const unknown = [...only].filter((name) => !pages.includes(name));
+  if (unknown.length > 0) {
+    console.error(
+      `a11y: no such page in ${SITE_DIR}: ${unknown.join(', ')}\n` +
+        `a11y: available pages: ${pages.join(', ')}`
+    );
+    return 1;
+  }
   const jobs = buildJobs(pages).filter((job) => only.size === 0 || only.has(job.page));
+  if (jobs.length === 0) {
+    console.error('a11y: nothing to scan (no HTML pages matched).');
+    return 1;
+  }
   const { server, baseUrl } = await startServer(SITE_DIR);
   let browser: Browser | null = null;
   try {
