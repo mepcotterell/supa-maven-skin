@@ -669,7 +669,7 @@ describe('Supa Maven Skin Frontend Modules', () => {
       expect(Tooltip.getInstance(ghLink)).not.toBeNull();
     });
 
-    it('sets html[data-supa-ready] only after every enhancer, including optional libraries, has settled', async () => {
+    it('sets html[data-supa-ready] asynchronously once initSupaSkin settles (see the optional-libraries suite for pending and failed loads)', async () => {
       document.body.innerHTML = '<main id="supa-main-content"><p>Plain page</p></main>';
       document.documentElement.removeAttribute(SUPA_READY_ATTRIBUTE);
       const ready = initSupaSkin();
@@ -900,6 +900,7 @@ describe('Supa Maven Skin Frontend Modules', () => {
     let appended: Element[] = [];
     let onExecute: (src: string) => void = () => undefined;
     let failingSrcs = new Set<string>();
+    let heldSrcs = new Set<string>();
 
     /**
      * Returns the global object as an indexable record for installing fakes.
@@ -929,6 +930,16 @@ describe('Supa Maven Skin Frontend Modules', () => {
      */
     function simulateScriptFailure(...srcs: string[]): void {
       failingSrcs = new Set(srcs);
+    }
+
+    /**
+     * Keeps the listed script URLs pending: neither `load` nor `error` fires
+     * until the test dispatches one on the intercepted element.
+     *
+     * @param srcs - Script `src` values that should stay pending.
+     */
+    function simulateScriptPending(...srcs: string[]): void {
+      heldSrcs = new Set(srcs);
     }
 
     /**
@@ -962,6 +973,7 @@ describe('Supa Maven Skin Frontend Modules', () => {
       appended = [];
       onExecute = () => undefined;
       failingSrcs = new Set<string>();
+      heldSrcs = new Set<string>();
       optionalBodyAttrs.forEach((name) => document.body.removeAttribute(name));
       optionalGlobals.forEach((name) => delete globals()[name]);
       vi.spyOn(document.head, 'appendChild').mockImplementation(<T extends Node>(node: T): T => {
@@ -972,6 +984,9 @@ describe('Supa Maven Skin Frontend Modules', () => {
           const script = node;
           queueMicrotask(() => {
             const src = script.getAttribute('src') ?? '';
+            if (heldSrcs.has(src)) {
+              return;
+            }
             if (failingSrcs.has(src)) {
               script.dispatchEvent(new Event('error'));
               return;
@@ -1190,6 +1205,32 @@ describe('Supa Maven Skin Frontend Modules', () => {
       expect(importModule).not.toHaveBeenCalled();
       expect(mermaid.run).not.toHaveBeenCalled();
       expect(renderMathInElement).not.toHaveBeenCalled();
+    });
+
+    it('keeps html[data-supa-ready] unset while a loader is pending and sets it after a failed load', async () => {
+      simulateScriptPending(PINNED_ASSETS.mermaid.url);
+      document.documentElement.removeAttribute(SUPA_READY_ATTRIBUTE);
+      document.body.innerHTML =
+        '<main id="supa-main-content"><div class="mermaid">flowchart LR\n  A --> B</div></main>';
+
+      let settled = false;
+      const ready = initSupaSkin().then(() => {
+        settled = true;
+      });
+      for (let i = 0; i < 10; i++) {
+        await Promise.resolve();
+      }
+
+      const mermaidScript = headScripts().find((s) => s.getAttribute('src') === PINNED_ASSETS.mermaid.url);
+      expect(mermaidScript).toBeDefined();
+      expect(settled).toBe(false);
+      expect(document.documentElement.hasAttribute(SUPA_READY_ATTRIBUTE)).toBe(false);
+
+      // Browsers report network failures and SRI mismatches as `error`.
+      mermaidScript?.dispatchEvent(new Event('error'));
+
+      await expect(ready).resolves.toBeUndefined();
+      expect(document.documentElement.getAttribute(SUPA_READY_ATTRIBUTE)).toBe('true');
     });
 
     it('skips the KaTeX core only when window.katex is the real KaTeX API', async () => {
