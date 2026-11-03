@@ -494,16 +494,31 @@ for (const relPath of docFiles) {
     }
   }
 
-  // 4b. -SNAPSHOT builds are not resolvable by consumer builds, so no SNAPSHOT version (current or
-  // stale) may appear in user-facing docs. The one exception is the pre-release fallback, where the
-  // pom SNAPSHOT *is* the expected version because nothing has been released yet.
+  // 4b. -SNAPSHOT builds of the skin are not resolvable by consumer builds, so no SNAPSHOT of the
+  // skin's own version line (current or stale) may appear in user-facing docs. Other projects'
+  // SNAPSHOTs (an upstream skin's development branch, a reader's own `1.0.0-SNAPSHOT`) are
+  // legitimate prose, so a SNAPSHOT only counts as the skin's when it is the pom version, shares its
+  // base with the latest release or the pom, or sits on a line that names the skin. The one
+  // exception is the pre-release fallback, where the pom SNAPSHOT *is* the expected version.
   if (isUserFacingDoc) {
-    const snapshotRegex = /\b\d+\.\d+\.\d+-SNAPSHOT\b/g;
-    for (const snapshot of new Set<string>(content.match(snapshotRegex) ?? [])) {
-      if (snapshot !== latestReleaseVersion) {
-        errors.push(
-          `${relPath}: Found development version "${snapshot}"; user-facing docs must show the latest released version ${latestReleaseVersion} (${latestReleaseSource}).`
-        );
+    const snapshotRegex = /\b(\d+\.\d+\.\d+)-SNAPSHOT\b/g;
+    const reported = new Set<string>();
+    for (const line of content.split('\n')) {
+      const namesSkin: boolean = /supa-maven-skin|Supa Maven Skin/.test(line);
+      for (const match of line.matchAll(snapshotRegex)) {
+        const snapshot: string = match[0];
+        const base: string = match[1] ?? '';
+        const isSkinSnapshot: boolean =
+          snapshot === pomVersion ||
+          base === latestReleaseVersion ||
+          base === pomBaseVersion ||
+          namesSkin;
+        if (isSkinSnapshot && snapshot !== latestReleaseVersion && !reported.has(snapshot)) {
+          reported.add(snapshot);
+          errors.push(
+            `${relPath}: Found development version "${snapshot}"; user-facing docs must show the latest released version ${latestReleaseVersion} (${latestReleaseSource}).`
+          );
+        }
       }
     }
   }
