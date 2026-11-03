@@ -465,12 +465,14 @@ for (const relPath of docFiles) {
   }
 
   // 4. Verify skin <version> snippets (raw, HTML-escaped, or "+" diff lines) in README.md and
-  // src/site/ show the latest released version that consumers can actually resolve.
+  // src/site/ show the latest released version that consumers can actually resolve. Whitespace,
+  // "+" diff markers, and XML comments between </artifactId> and <version> are skipped so that a
+  // comment such as <!-- Use the latest release --> cannot hide a snippet from this check.
   const isUserFacingDoc: boolean =
     relPath === 'README.md' || relPath.startsWith('src/site/');
   const isVelocityPage: boolean = relPath.endsWith('.md.vm');
   const skinBlockRegex =
-    /(?:<artifactId>|&lt;artifactId&gt;)(supa-maven-skin|\$\{project\.artifactId\})(?:<\/artifactId>|&lt;\/artifactId&gt;)\s*\+?\s*(?:<version>|&lt;version&gt;)([^<&]+)(?:<\/version>|&lt;\/version&gt;)/g;
+    /(?:<artifactId>|&lt;artifactId&gt;)(supa-maven-skin|\$\{project\.artifactId\})(?:<\/artifactId>|&lt;\/artifactId&gt;)(?:\s|\+|<!--(?:(?!-->)[\s\S])*-->|&lt;!--(?:(?!--&gt;)[\s\S])*--&gt;)*(?:<version>|&lt;version&gt;)([^<&]+)(?:<\/version>|&lt;\/version&gt;)/g;
   let skinMatch: RegExpExecArray | null;
   while (isUserFacingDoc && (skinMatch = skinBlockRegex.exec(content)) !== null) {
     // ${project.artifactId} only names this skin as an install instruction on our own .md.vm
