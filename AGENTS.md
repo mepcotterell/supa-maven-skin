@@ -6,7 +6,7 @@ Here are the four pillars we never compromise on:
 Supa ships with 6 built-in accessible color schemes (`furo`, `bootstrap`, `modus`, `modus-tinted`, `modus-deuteranopia`, and `modus-tritanopia`) across both `light` and `dark` polarities (12 theme variants). Every semantic color token is audited automatically at build time by `scripts/lint-scss.ts` against WCAG 2.2 AA (4.5:1 for `furo` and `bootstrap`) and AAA (7.0:1 for the four `modus*` schemes). Changes that regress contrast or keyboard/screen-reader navigation do not ship.
 
 ### 2. Zero-config Doxia 2.0 compatibility
-Standard Maven documentation (`.md`, `.apt`, `.xdoc`, `.fml`) and `maven-project-info-reports-plugin` reports must render cleanly out of the box without requiring custom HTML. Progressive enhancements—GitHub-style markdown alerts (`> [!NOTE]`), `#bi` Velocity icon macros, synchronized tab groups, and opt-in libraries (KaTeX, Mermaid, Chart.js, Vanilla Calendar Pro)—layer onto Doxia's output without breaking standard Maven sites.
+Standard Maven documentation (`.md`, `.apt`, `.xdoc`, `.fml`) and `maven-project-info-reports-plugin` reports must render cleanly out of the box without requiring custom HTML. Progressive enhancements—GitHub-style markdown alerts (`> [!NOTE]`), `#bi` Velocity icon macros, synchronized tab groups, and opt-in KaTeX math and Mermaid diagrams—layer onto Doxia's output without breaking standard Maven sites.
 
 ### 3. Self-contained skin artifact
 The entire skin packages into a single JAR containing `META-INF/maven/site.vm`, `META-INF/maven/site-macros.vm`, `META-INF/maven/skin.xml`, `META-INF/LICENSE`, `META-INF/THIRD-PARTY-LICENSES.txt`, `META-INF/licenses/LICENSE-*.txt`, and Vite-bundled assets (`css/supa-maven-skin.min.css`, `js/supa-maven-skin.min.js`, and `css/fonts/bootstrap-icons.woff2`). Consumer projects never need Node.js or a frontend build step to generate their Maven site.
@@ -57,7 +57,7 @@ A change that only updates one layer often leaves Velocity, SCSS, TypeScript, te
 - **Preserve the Diátaxis structure in `src/site/markdown/`:**
   - **Overview:** `index.md.vm` — landing page, feature highlights, and quick navigation.
   - **Tutorial:** `getting-started.md` — step-by-step guide to configuring a new Maven site from scratch.
-  - **How-To Guide:** `authoring-guide.md` — task-oriented recipes for alerts, `#bi` icons, synced tabs, code blocks, KaTeX, Mermaid, charts, and calendars.
+  - **How-To Guide:** `authoring-guide.md` — task-oriented recipes for alerts, `#bi` icons, code blocks, synced tabs, accordions and steppers, Mermaid, and KaTeX.
   - **Reference:** `configuration.md` (`<supaSkin>` options, palettes, CSS variables, Velocity macros), `components.md` (interactive Bootstrap 6 showcase), and `kitchen-sink.md` (Doxia stress test).
   - **Explanation:** `architecture.md` — build pipeline, anti-FOUC theme engine, WCAG 2.2 contrast enforcement, and Doxia normalization design.
 
@@ -84,6 +84,7 @@ Full pipeline details and design rationale: [`src/site/markdown/architecture.md`
 - `src/main/frontend/scss/` — `_variables.scss` (6 palettes × 2 polarities), `_bootstrap-supa.scss`, `_layout.scss`, `_sidebar.scss`, `_toc.scss`, `_content.scss`, and `main.scss`.
 - `src/main/frontend/ts/` — TypeScript modules (`index.ts`, `theme.ts`, `doxia.ts`, `code.ts`, `toc.ts`, `search.ts`, `bootstrap-components.ts`, `optional.ts`).
 - `src/main/frontend/vite.config.ts` — Vite bundler, `META-INF/` license bundler plugin, and Vitest configuration.
+- `package.json` — `@floating-ui/dom` and `vanilla-calendar-pro` have no imports under `src/` but are required: they are Bootstrap 6 peer dependencies imported by the bundled `Tooltip`/`Popover`/`Menu` and `Datepicker` plugins, and the build fails to resolve them if they are not declared and installed.
 - `scripts/` — `lint-scss.ts` (SCSS syntax + WCAG 2.2 AA/AAA contrast verifier), `lint-velocity.ts` (Velocity directive/macro linter), and `lint-docs.ts` (documentation version-alignment & `CHANGELOG.md` verifier).
 - `src/test/frontend/supa.test.ts` — Vitest + JSDOM unit test suite.
 - `src/it/sample-site/` — Maven Invoker integration test fixture and `verify.bsh` verifier script.
