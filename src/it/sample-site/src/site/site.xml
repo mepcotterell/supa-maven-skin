@@ -18,6 +18,7 @@
       <sourceBranch>main</sourceBranch>
       <sourceDirectory>src/site</sourceDirectory>
       <stickyContentHeader>true</stickyContentHeader>
+      <mermaidCdnUrl>https://example.org/vendor/mermaid/mermaid.min.js</mermaidCdnUrl>
       <lightCssVariables>
         <color-brand-primary>#0055ff</color-brand-primary>
       </lightCssVariables>

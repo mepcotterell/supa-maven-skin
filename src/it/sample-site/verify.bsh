@@ -100,6 +100,17 @@ if ( !html.contains( "bi-sun supa-theme-icon supa-theme-icon-light" )
 if ( !html.contains( "class=\"supa-body supa-sticky-content-header\"" ) ) {
     throw new IllegalStateException( "Missing supa-sticky-content-header body class for <stickyContentHeader>true</stickyContentHeader>" );
 }
+// Pinned Mermaid/KaTeX CDN defaults (and their SRI hashes) live only in optional.ts, so site.vm
+// emits data-supa-*-url attributes solely for consumer overrides.
+if ( !html.contains( "data-supa-mermaid=\"auto\"" ) || !html.contains( "data-supa-katex=\"auto\"" ) ) {
+    throw new IllegalStateException( "Missing data-supa-mermaid / data-supa-katex mode attributes" );
+}
+if ( !html.contains( "data-supa-mermaid-url=\"https://example.org/vendor/mermaid/mermaid.min.js\"" ) ) {
+    throw new IllegalStateException( "Missing <mermaidCdnUrl> override in data-supa-mermaid-url" );
+}
+if ( html.contains( "data-supa-katex-css-url=" ) || html.contains( "data-supa-katex-js-url=" ) || html.contains( "cdn.jsdelivr.net" ) ) {
+    throw new IllegalStateException( "Default KaTeX/Mermaid CDN URLs must not be emitted by site.vm (pinned in optional.ts)" );
+}
 if ( !html.contains( "Integration Test Announcement" ) ) {
     throw new IllegalStateException( "Missing custom announcement banner" );
 }

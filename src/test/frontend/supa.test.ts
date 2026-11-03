@@ -2,7 +2,7 @@
  * @fileoverview Unit test suite for Supa Maven Skin frontend TypeScript modules.
  */
 
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   BootstrapPlugins,
   Combobox,
@@ -26,6 +26,7 @@ import {
   transformGfmAdmonitions
 } from '../../main/frontend/ts/doxia';
 import { Drawer, initDrawers } from '../../main/frontend/ts/index';
+import { initOptionalLibraries, isModuleUrl, PINNED_ASSETS, pinnedIntegrity } from '../../main/frontend/ts/optional';
 import {
   collectLocalSearchDocuments,
   filterSearchDocuments,
@@ -808,6 +809,250 @@ describe('Supa Maven Skin Frontend Modules', () => {
 
       const highlighted = highlightQueryTerms('Dark Mode Customization', 'dark');
       expect(highlighted).toContain('<mark class="supa-search-mark">Dark</mark>');
+    });
+  });
+
+  describe('Optional Mermaid & KaTeX Loading (pinned CDN + SRI)', () => {
+    const optionalGlobals = ['mermaid', 'katex', 'renderMathInElement'];
+    const optionalBodyAttrs = [
+      'data-supa-mermaid',
+      'data-supa-mermaid-url',
+      'data-supa-katex',
+      'data-supa-katex-css-url',
+      'data-supa-katex-js-url'
+    ];
+    let appended: Element[] = [];
+    let onExecute: (src: string) => void = () => undefined;
+
+    /**
+     * Returns the global object as an indexable record for installing fakes.
+     *
+     * @returns The writable global record.
+     */
+    function globals(): Record<string, unknown> {
+      return globalThis as unknown as Record<string, unknown>;
+    }
+
+    /**
+     * Sets how simulated `<script>` executions install globals. The real file
+     * never runs: appends to `<head>` are intercepted so happy-dom performs no
+     * network fetches, and each script's `load` event fires after `execute`.
+     *
+     * @param execute - Called with each script's `src` before `load` fires.
+     */
+    function simulateScriptExecution(execute: (src: string) => void): void {
+      onExecute = execute;
+    }
+
+    /**
+     * Builds a fake Mermaid API whose `run` resolves immediately.
+     *
+     * @returns Fake Mermaid object with spy methods.
+     */
+    function fakeMermaid(): { initialize: ReturnType<typeof vi.fn>; run: ReturnType<typeof vi.fn> } {
+      return { initialize: vi.fn(), run: vi.fn(async () => undefined) };
+    }
+
+    /**
+     * Lists the `<script>` elements the loader tried to append to `<head>`.
+     *
+     * @returns Intercepted script elements in append order.
+     */
+    function headScripts(): HTMLScriptElement[] {
+      return appended.filter((el): el is HTMLScriptElement => el instanceof HTMLScriptElement);
+    }
+
+    /**
+     * Returns the first stylesheet `<link>` the loader tried to append.
+     *
+     * @returns The intercepted link element, or `undefined`.
+     */
+    function headStylesheet(): HTMLLinkElement | undefined {
+      return appended.find((el): el is HTMLLinkElement => el instanceof HTMLLinkElement);
+    }
+
+    beforeEach(() => {
+      appended = [];
+      onExecute = () => undefined;
+      optionalBodyAttrs.forEach((name) => document.body.removeAttribute(name));
+      optionalGlobals.forEach((name) => delete globals()[name]);
+      vi.spyOn(document.head, 'appendChild').mockImplementation(<T extends Node>(node: T): T => {
+        if (node instanceof Element) {
+          appended.push(node);
+        }
+        if (node instanceof HTMLScriptElement) {
+          const script = node;
+          queueMicrotask(() => {
+            onExecute(script.getAttribute('src') ?? '');
+            script.dispatchEvent(new Event('load'));
+          });
+        }
+        return node;
+      });
+    });
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+      optionalGlobals.forEach((name) => delete globals()[name]);
+    });
+
+    it('pins every built-in asset to an exact version with a sha384 SRI hash', () => {
+      Object.values(PINNED_ASSETS).forEach((asset) => {
+        expect(asset.url).toMatch(/^https:\/\/cdn\.jsdelivr\.net\/npm\/[a-z]+@\d+\.\d+\.\d+\/dist\//);
+        expect(asset.url).not.toMatch(/\.mjs$/);
+        expect(asset.integrity).toMatch(/^sha384-[A-Za-z0-9+/]{64}$/);
+        expect(pinnedIntegrity(asset.url)).toBe(asset.integrity);
+      });
+      expect(pinnedIntegrity('https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js')).toBeUndefined();
+      expect(isModuleUrl('https://example.org/mermaid.esm.min.mjs?v=1#x')).toBe(true);
+      expect(isModuleUrl('/vendor/mermaid.min.js')).toBe(false);
+    });
+
+    it('loads the default Mermaid build via <script> with integrity and crossorigin', async () => {
+      const mermaid = fakeMermaid();
+      simulateScriptExecution((src) => {
+        if (src === PINNED_ASSETS.mermaid.url) {
+          globals()['mermaid'] = mermaid;
+        }
+      });
+      document.body.innerHTML =
+        '<main id="supa-main-content"><pre><code class="language-mermaid">flowchart LR\n  A --> B</code></pre></main>';
+      const importModule = vi.fn(async () => ({}));
+
+      await initOptionalLibraries(importModule);
+
+      const scripts = headScripts();
+      expect(scripts).toHaveLength(1);
+      expect(scripts[0].getAttribute('src')).toBe(PINNED_ASSETS.mermaid.url);
+      expect(scripts[0].getAttribute('integrity')).toBe(PINNED_ASSETS.mermaid.integrity);
+      expect(scripts[0].getAttribute('crossorigin')).toBe('anonymous');
+      expect(importModule).not.toHaveBeenCalled();
+      expect(mermaid.initialize).toHaveBeenCalledWith({ startOnLoad: false, theme: 'default' });
+      expect(mermaid.run).toHaveBeenCalledTimes(1);
+      expect(document.querySelector('#supa-main-content .mermaid')?.getAttribute('data-mermaid-src')).toContain(
+        'A --> B'
+      );
+    });
+
+    it('keeps loading a custom .mjs Mermaid override as an ES module', async () => {
+      const mermaid = fakeMermaid();
+      const customUrl = 'https://example.org/vendor/mermaid.esm.min.mjs';
+      document.body.setAttribute('data-supa-mermaid-url', customUrl);
+      document.body.innerHTML = '<main id="supa-main-content"><div class="mermaid">flowchart LR\n  A --> B</div></main>';
+      const importModule = vi.fn(async () => ({ default: mermaid }));
+
+      await initOptionalLibraries(importModule);
+
+      expect(importModule).toHaveBeenCalledWith(customUrl);
+      expect(headScripts()).toHaveLength(0);
+      expect(mermaid.run).toHaveBeenCalledTimes(1);
+    });
+
+    it('loads a custom classic Mermaid override via <script> without integrity', async () => {
+      const mermaid = fakeMermaid();
+      const customUrl = '/vendor/mermaid/mermaid.min.js';
+      simulateScriptExecution(() => {
+        globals()['mermaid'] = mermaid;
+      });
+      document.body.setAttribute('data-supa-mermaid-url', customUrl);
+      document.body.innerHTML = '<main id="supa-main-content"><div class="mermaid">flowchart LR\n  A --> B</div></main>';
+
+      await initOptionalLibraries(vi.fn(async () => ({})));
+
+      const scripts = headScripts();
+      expect(scripts).toHaveLength(1);
+      expect(scripts[0].getAttribute('src')).toBe(customUrl);
+      expect(scripts[0].hasAttribute('integrity')).toBe(false);
+      expect(scripts[0].hasAttribute('crossorigin')).toBe(false);
+      expect(mermaid.run).toHaveBeenCalledTimes(1);
+    });
+
+    it('loads the default KaTeX core, auto-render, and CSS with integrity in order', async () => {
+      const renderMathInElement = vi.fn();
+      simulateScriptExecution((src) => {
+        if (src === PINNED_ASSETS.katexCore.url) {
+          globals()['katex'] = {};
+        } else if (src === PINNED_ASSETS.katexAutoRender.url && globals()['katex']) {
+          globals()['renderMathInElement'] = renderMathInElement;
+        }
+      });
+      document.body.innerHTML = '<main id="supa-main-content"><p>Energy $E = mc^2$ holds.</p></main>';
+
+      await initOptionalLibraries(vi.fn(async () => ({})));
+
+      const scripts = headScripts();
+      expect(scripts.map((s) => s.getAttribute('src'))).toEqual([
+        PINNED_ASSETS.katexCore.url,
+        PINNED_ASSETS.katexAutoRender.url
+      ]);
+      expect(scripts.map((s) => s.getAttribute('integrity'))).toEqual([
+        PINNED_ASSETS.katexCore.integrity,
+        PINNED_ASSETS.katexAutoRender.integrity
+      ]);
+      scripts.forEach((s) => expect(s.getAttribute('crossorigin')).toBe('anonymous'));
+      const link = headStylesheet();
+      expect(link?.getAttribute('href')).toBe(PINNED_ASSETS.katexCss.url);
+      expect(link?.getAttribute('integrity')).toBe(PINNED_ASSETS.katexCss.integrity);
+      expect(link?.getAttribute('crossorigin')).toBe('anonymous');
+      expect(renderMathInElement).toHaveBeenCalledWith(
+        document.getElementById('supa-main-content'),
+        expect.objectContaining({ throwOnError: false })
+      );
+    });
+
+    it('loads custom KaTeX overrides without integrity (classic sibling core, or .mjs module)', async () => {
+      const renderMathInElement = vi.fn();
+      simulateScriptExecution((src) => {
+        if (src.endsWith('/vendor/katex/katex.min.js')) {
+          globals()['katex'] = {};
+        } else if (src.endsWith('/auto-render.min.js') && globals()['katex']) {
+          globals()['renderMathInElement'] = renderMathInElement;
+        }
+      });
+      document.body.setAttribute('data-supa-katex-css-url', 'https://example.org/vendor/katex/katex.min.css');
+      document.body.setAttribute(
+        'data-supa-katex-js-url',
+        'https://example.org/vendor/katex/contrib/auto-render.min.js'
+      );
+      document.body.innerHTML = '<main id="supa-main-content"><p>Energy $E = mc^2$ holds.</p></main>';
+
+      await initOptionalLibraries(vi.fn(async () => ({})));
+
+      const scripts = headScripts();
+      expect(scripts.map((s) => s.getAttribute('src'))).toEqual([
+        'https://example.org/vendor/katex/katex.min.js',
+        'https://example.org/vendor/katex/contrib/auto-render.min.js'
+      ]);
+      scripts.forEach((s) => expect(s.hasAttribute('integrity')).toBe(false));
+      const link = headStylesheet();
+      expect(link?.getAttribute('href')).toBe('https://example.org/vendor/katex/katex.min.css');
+      expect(link?.hasAttribute('integrity')).toBe(false);
+      expect(renderMathInElement).toHaveBeenCalledTimes(1);
+
+      // An ES module override keeps the original import() path.
+      appended = [];
+      const moduleRender = vi.fn();
+      const moduleUrl = 'https://example.org/vendor/katex/contrib/auto-render.mjs';
+      document.body.setAttribute('data-supa-katex-js-url', moduleUrl);
+      document.body.innerHTML = '<main id="supa-main-content"><p>Energy $E = mc^2$ holds.</p></main>';
+      const importModule = vi.fn(async () => ({ default: moduleRender }));
+
+      await initOptionalLibraries(importModule);
+
+      expect(importModule).toHaveBeenCalledWith(moduleUrl);
+      expect(headScripts()).toHaveLength(0);
+      expect(moduleRender).toHaveBeenCalledTimes(1);
+    });
+
+    it('loads nothing when the page has no diagrams or math', async () => {
+      document.body.innerHTML = '<main id="supa-main-content"><p>Plain prose that costs 5 dollars.</p></main>';
+      const importModule = vi.fn(async () => ({}));
+
+      await initOptionalLibraries(importModule);
+
+      expect(headScripts()).toHaveLength(0);
+      expect(headStylesheet()).toBeUndefined();
+      expect(importModule).not.toHaveBeenCalled();
     });
   });
 });

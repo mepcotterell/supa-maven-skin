@@ -156,10 +156,9 @@ Click any color scheme card below (or use the palette selector in the top header
     <headingPermalinkSymbol>#</headingPermalinkSymbol>
     <search>true</search>
     <mermaid>auto</mermaid>
-    <mermaidCdnUrl>https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs</mermaidCdnUrl>
     <katex>auto</katex>
-    <katexCssCdnUrl>https://cdn.jsdelivr.net/npm/katex@0.16.21/dist/katex.min.css</katexCssCdnUrl>
-    <katexJsCdnUrl>https://cdn.jsdelivr.net/npm/katex@0.16.21/dist/contrib/auto-render.mjs</katexJsCdnUrl>
+    <!-- Leave <mermaidCdnUrl>, <katexCssCdnUrl>, and <katexJsCdnUrl> unset to use the
+         pinned, SRI-verified jsDelivr defaults (see "Self-Hosting Mermaid & KaTeX"). -->
 
     <!-- Custom Light/Dark CSS Tokens (layered on top of <colorScheme>) -->
     <lightCssVariables>
@@ -254,10 +253,46 @@ Configures client-side code block enhancements, heading permalinks, offline sear
 | `<headingPermalinkSymbol>` | `#` | Symbol rendered inside heading permalink anchors. |
 | `<search>` | `true` | Enable the sidebar search box and `/` (`⌘K` / `Ctrl+K`) search dialog. |
 | `<mermaid>` | `auto` | Lazy-load Mermaid when `.mermaid` or `code.language-mermaid` is present (`auto`, `true`, or `false`). |
-| `<mermaidCdnUrl>` | *(jsDelivr CDN)* | Custom or self-hosted ESM bundle URL for Mermaid (defaults to `https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs`). |
+| `<mermaidCdnUrl>` | *(pinned jsDelivr + SRI)* | Custom or self-hosted Mermaid URL. Unset, the skin loads `https://cdn.jsdelivr.net/npm/mermaid@11.17.2/dist/mermaid.min.js` via `<script integrity crossorigin="anonymous">`. A URL ending in `.mjs` loads as an ES module with `import()`; any other URL loads as a classic `<script>` that must define `window.mermaid`. |
 | `<katex>` | `auto` | Lazy-load KaTeX when `$...$` or `$$...$$` math expressions are present (`auto`, `true`, or `false`). |
-| `<katexCssCdnUrl>` | *(jsDelivr CDN)* | Custom or self-hosted stylesheet URL for KaTeX (defaults to `https://cdn.jsdelivr.net/npm/katex@0.16.21/dist/katex.min.css`). |
-| `<katexJsCdnUrl>` | *(jsDelivr CDN)* | Custom or self-hosted ESM `auto-render.mjs` URL for KaTeX (defaults to `https://cdn.jsdelivr.net/npm/katex@0.16.21/dist/contrib/auto-render.mjs`). |
+| `<katexCssCdnUrl>` | *(pinned jsDelivr + SRI)* | Custom or self-hosted KaTeX stylesheet URL. Unset, the skin loads `https://cdn.jsdelivr.net/npm/katex@0.16.47/dist/katex.min.css` with `integrity` and `crossorigin="anonymous"`. |
+| `<katexJsCdnUrl>` | *(pinned jsDelivr + SRI)* | Custom or self-hosted KaTeX auto-render URL. Unset, the skin loads `katex.min.js` then `contrib/auto-render.min.js` from `https://cdn.jsdelivr.net/npm/katex@0.16.47/dist/`, each with `integrity`. A URL ending in `.mjs` (such as `auto-render.mjs`) loads with `import()`; a classic `auto-render(.min).js` URL loads `../katex.min.js` from its parent directory first (unless `window.katex` already exists). |
+
+Integrity hashes apply only to the built-in defaults (or to an override that repeats a default URL exactly). Custom URLs load without `integrity` or `crossorigin`, so keeping them trustworthy is the consumer site's responsibility.
+
+### Self-Hosting Mermaid & KaTeX
+
+Serve both libraries from your own site when you cannot depend on jsDelivr, for example on an intranet or under a strict Content Security Policy.
+
+1. Copy the classic builds into `src/site/resources/vendor/`, keeping KaTeX's `dist/` layout so the stylesheet finds `fonts/` and the loader finds `../katex.min.js`:
+
+    ```bash
+    mkdir -p src/site/resources/vendor/mermaid src/site/resources/vendor/katex
+    curl -fsSL -o src/site/resources/vendor/mermaid/mermaid.min.js \
+      https://cdn.jsdelivr.net/npm/mermaid@11.17.2/dist/mermaid.min.js
+    npm pack katex@0.16.47 --pack-destination /tmp && tar -xzf /tmp/katex-0.16.47.tgz -C /tmp
+    cp -R /tmp/package/dist/katex.min.js /tmp/package/dist/katex.min.css \
+      /tmp/package/dist/fonts /tmp/package/dist/contrib src/site/resources/vendor/katex/
+    ```
+
+2. Point the overrides at **root-relative** paths (or absolute `https://` URLs):
+
+    ```xml
+    <supaSkin>
+      <mermaidCdnUrl>/my-project/vendor/mermaid/mermaid.min.js</mermaidCdnUrl>
+      <katexCssCdnUrl>/my-project/vendor/katex/katex.min.css</katexCssCdnUrl>
+      <katexJsCdnUrl>/my-project/vendor/katex/contrib/auto-render.min.js</katexJsCdnUrl>
+    </supaSkin>
+    ```
+
+    Replace `/my-project/` with the path your site is deployed under (`/` for a site at the domain root).
+
+> [!WARNING]
+> Avoid document-relative values such as `vendor/mermaid/mermaid.min.js`. Classic `<script src>` and `<link href>` URLs resolve against the current page, so they break on pages in subdirectories (for example, pages from `src/site/markdown/guides/*.md`). `.mjs` URLs loaded with `import()` resolve against `js/supa-maven-skin.min.js` instead and must start with `./`, `../`, or `/`. Root-relative and absolute URLs resolve the same way in all three cases.
+
+### Content Security Policy
+
+With the default URLs, allow `https://cdn.jsdelivr.net` in `script-src` (Mermaid and KaTeX), `style-src` (`katex.min.css`), and `font-src` (KaTeX fonts, which `katex.min.css` loads relative to itself; fonts are not executable and are not covered by SRI). None of the pinned files fetch further code at runtime, so `connect-src` needs nothing extra. Self-hosting removes the jsDelivr origin entirely. Mermaid's rendered SVGs carry inline `<style>` and `style` attributes, so a `style-src` without `'unsafe-inline'` will leave diagrams unstyled.
 
 ## Built-In Accessible Color Schemes
 

@@ -367,7 +367,7 @@ Use `<ol class="supa-stepper" title="2">` where `title` specifies the 1-based ac
 
 ## Rendering Mermaid Diagrams and KaTeX Math
 
-When `<mermaid>auto</mermaid>` and `<katex>auto</katex>` are enabled in `site.xml` (the default), **Supa Maven Skin** inspects each page at load time and only fetches Mermaid or KaTeX when diagrams or math expressions are present on that page.
+When `<mermaid>auto</mermaid>` and `<katex>auto</katex>` are enabled in `site.xml` (the default), **Supa Maven Skin** inspects each page at load time and only fetches Mermaid or KaTeX when diagrams or math expressions are present on that page. The default builds come from jsDelivr, pinned to exact versions and verified with Subresource Integrity; to serve them from your own site instead, follow [Self-Hosting Mermaid & KaTeX](configuration.html#self-hosting-mermaid-katex).
 
 ### Mermaid Diagrams
 

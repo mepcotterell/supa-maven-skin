@@ -16,7 +16,7 @@ A modern, responsive, accessible three-column [Apache Maven Site Skin](https://m
   - **Synchronized Content Tabs**: `<div class="supa-tabs" data-tab-group="...">` panels (`<div data-tab="Label">`) synchronize active tab selections across the entire site via `localStorage['supa-tab-sync']`.
   - **Code Blocks**: Bundled `highlight.js` syntax highlighting, language badge pill, optional title header (`data-title`), optional line numbers (`data-line-numbers`), and one-click Copy to Clipboard button.
   - **Client-Side Search Modal**: Native `<dialog class="dialog">` search modal (`/` or `⌘K`) with `<mark>` query highlighting, keyboard navigation, and section deep-linking.
-  - **Opt-In Integrations**: Lazy-loaded Mermaid (`<mermaid>auto</mermaid>`) and KaTeX (`<katex>auto</katex>`) when diagrams or math expressions are detected on a page.
+  - **Opt-In Integrations**: Lazy-loaded Mermaid (`<mermaid>auto</mermaid>`) and KaTeX (`<katex>auto</katex>`) when diagrams or math expressions are detected on a page, from version-pinned jsDelivr builds verified with Subresource Integrity (or your own `<mermaidCdnUrl>`, `<katexCssCdnUrl>`, and `<katexJsCdnUrl>`).
 
 ## Documentation (`src/site/`)
 
