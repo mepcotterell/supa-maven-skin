@@ -6,8 +6,10 @@
  * single-file builds with Subresource Integrity. Dynamic `import()` cannot
  * carry an integrity hash, and the ESM entry points of both libraries import
  * further modules from the CDN, so only classic `<script integrity>` loads
- * cover every byte that runs. Consumer-supplied URLs keep working: a URL ending
- * in `.mjs` is still loaded with `import()`, any other URL with `<script>`.
+ * cover every byte that runs. Consumer-supplied URLs keep working: a URL that
+ * is recognizably an ES module (see `isModuleUrl`) is still loaded with
+ * `import()`; any other URL loads with `<script>` and, if it turns out to be an
+ * ES module after all, falls back to `import()`.
  */
 
 /** A remote asset URL plus the SRI hash of the exact bytes served there. */
@@ -80,14 +82,18 @@ export function pinnedIntegrity(url: string): string | undefined {
 
 /**
  * Decides whether a URL must be loaded with `import()` (ES module) instead of a
- * classic `<script>`, based on a `.mjs` path extension (query and fragment
- * ignored). This preserves pre-SRI overrides, which were always ESM.
+ * classic `<script>`. Before the SRI defaults every override was imported as
+ * ESM, so the common ESM URL shapes are recognized up front: a `.mjs` path,
+ * jsDelivr's `/+esm` endpoint, and any `esm.sh` URL (which serves only ESM).
+ * Query and fragment are ignored. Other ESM URLs (for example a self-hosted
+ * module named `.js`) are caught by the fallback in `loadClassicGlobal`.
  *
  * @param url - Asset URL to classify.
- * @returns True for `.mjs` URLs.
+ * @returns True for URLs that are known to be ES modules.
  */
 export function isModuleUrl(url: string): boolean {
-  return /\.mjs$/i.test(url.split(/[?#]/, 1)[0]);
+  const path = url.split(/[?#]/, 1)[0];
+  return /\.mjs$/i.test(path) || /\/\+esm$/i.test(path) || /^(https?:)?\/\/esm\.sh\//i.test(path);
 }
 
 /**
@@ -124,6 +130,43 @@ function loadClassicScript(url: string): Promise<void> {
     script.addEventListener('error', () => reject(new Error(`Failed to load ${url}`)));
     document.head.appendChild(script);
   });
+}
+
+/**
+ * Loads a classic script and returns the global it installs. For a custom URL
+ * whose script loaded but defined no usable global, the file is retried as an ES
+ * module: an ES module run as a classic script throws a `SyntaxError` on its
+ * `import`/`export` statements, yet the `load` event still fires, so without
+ * this fallback an ESM override named `.js` would fail silently. Pinned
+ * defaults never fall back, so they are only ever executed with SRI.
+ *
+ * The global is validated by shape rather than presence because browsers
+ * expose elements with a matching `id` (such as a `## mermaid` heading) as
+ * same-named `window` properties.
+ *
+ * @param url - Script URL.
+ * @param globalName - Global the classic script is expected to define.
+ * @param isUsable - Checks that a value is the expected library API.
+ * @param importModule - ES module importer for the fallback.
+ * @param pickExport - Selects the wanted export from a module namespace.
+ * @returns The global value, the module export, or `undefined`.
+ */
+async function loadClassicGlobal(
+  url: string,
+  globalName: string,
+  isUsable: (value: unknown) => boolean,
+  importModule: ModuleImporter,
+  pickExport: (mod: Record<string, unknown>) => unknown
+): Promise<unknown> {
+  await loadClassicScript(url);
+  const value = readGlobal(globalName);
+  if (isUsable(value) || pinnedIntegrity(url) !== undefined) {
+    return value;
+  }
+  // `import()` resolves relative URLs against this bundle rather than the page,
+  // so resolve against the page first to load the same file the script did.
+  const mod = (await importModule(new URL(url, document.baseURI).href)) as Record<string, unknown> | null;
+  return mod ? pickExport(mod) : undefined;
 }
 
 /**
@@ -176,8 +219,7 @@ async function loadMermaid(url: string, importModule: ModuleImporter): Promise<M
     const mod = (await importModule(url)) as { default?: unknown } | null;
     candidate = mod?.default ?? mod;
   } else {
-    await loadClassicScript(url);
-    candidate = readGlobal('mermaid');
+    candidate = await loadClassicGlobal(url, 'mermaid', isMermaidApi, importModule, (mod) => mod.default ?? mod);
   }
   return isMermaidApi(candidate) ? candidate : undefined;
 }
@@ -189,8 +231,10 @@ async function loadMermaid(url: string, importModule: ModuleImporter): Promise<M
  * The classic `auto-render(.min).js` build reads `window.katex` while it
  * executes, so the core `katex.min.js` from the parent directory (the layout of
  * KaTeX's `dist/` on every CDN and in self-hosted copies) is loaded first
- * unless the page already defines `window.katex`. For the pinned default this
- * resolves to the pinned, SRI-checked core build.
+ * unless `window.katex` is already the KaTeX API. The check looks at the
+ * value's shape, not just its presence, because browsers expose any element
+ * with `id="katex"` (for example a Doxia `## katex` heading) as `window.katex`.
+ * For the pinned default this resolves to the pinned, SRI-checked core build.
  *
  * @param url - Auto-render URL (pinned default or consumer override).
  * @param importModule - ES module importer.
@@ -206,11 +250,17 @@ async function loadRenderMathInElement(
     candidate = mod?.default ?? mod?.renderMathInElement;
   } else {
     const absoluteUrl = new URL(url, document.baseURI).href;
-    if (/\/auto-render(\.min)?\.js$/i.test(absoluteUrl.split(/[?#]/, 1)[0]) && readGlobal('katex') === undefined) {
+    const katex = readGlobal('katex') as { render?: unknown } | null | undefined;
+    if (/\/auto-render(\.min)?\.js$/i.test(absoluteUrl.split(/[?#]/, 1)[0]) && typeof katex?.render !== 'function') {
       await loadClassicScript(new URL('../katex.min.js', absoluteUrl).href);
     }
-    await loadClassicScript(url);
-    candidate = readGlobal('renderMathInElement');
+    candidate = await loadClassicGlobal(
+      url,
+      'renderMathInElement',
+      (value) => typeof value === 'function',
+      importModule,
+      (mod) => mod.default ?? mod.renderMathInElement
+    );
   }
   return typeof candidate === 'function' ? (candidate as RenderMathInElement) : undefined;
 }
@@ -219,7 +269,7 @@ async function loadRenderMathInElement(
  * Lazily loads and initializes Mermaid diagrams and KaTeX math expressions
  * inside `#supa-main-content` when configured or detected on the page.
  *
- * @param importModule - ES module importer used for `.mjs` overrides
+ * @param importModule - ES module importer used for ES module overrides
  *     (defaults to native `import()`; injectable for tests).
  * @returns Promise that resolves once optional libraries have initialized.
  */

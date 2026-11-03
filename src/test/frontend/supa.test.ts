@@ -823,6 +823,7 @@ describe('Supa Maven Skin Frontend Modules', () => {
     ];
     let appended: Element[] = [];
     let onExecute: (src: string) => void = () => undefined;
+    let failingSrcs = new Set<string>();
 
     /**
      * Returns the global object as an indexable record for installing fakes.
@@ -842,6 +843,16 @@ describe('Supa Maven Skin Frontend Modules', () => {
      */
     function simulateScriptExecution(execute: (src: string) => void): void {
       onExecute = execute;
+    }
+
+    /**
+     * Makes the listed script URLs fire `error` instead of `load`, which is how
+     * browsers report network failures and SRI mismatches.
+     *
+     * @param srcs - Script `src` values that should fail.
+     */
+    function simulateScriptFailure(...srcs: string[]): void {
+      failingSrcs = new Set(srcs);
     }
 
     /**
@@ -874,6 +885,7 @@ describe('Supa Maven Skin Frontend Modules', () => {
     beforeEach(() => {
       appended = [];
       onExecute = () => undefined;
+      failingSrcs = new Set<string>();
       optionalBodyAttrs.forEach((name) => document.body.removeAttribute(name));
       optionalGlobals.forEach((name) => delete globals()[name]);
       vi.spyOn(document.head, 'appendChild').mockImplementation(<T extends Node>(node: T): T => {
@@ -883,7 +895,12 @@ describe('Supa Maven Skin Frontend Modules', () => {
         if (node instanceof HTMLScriptElement) {
           const script = node;
           queueMicrotask(() => {
-            onExecute(script.getAttribute('src') ?? '');
+            const src = script.getAttribute('src') ?? '';
+            if (failingSrcs.has(src)) {
+              script.dispatchEvent(new Event('error'));
+              return;
+            }
+            onExecute(src);
             script.dispatchEvent(new Event('load'));
           });
         }
@@ -905,7 +922,10 @@ describe('Supa Maven Skin Frontend Modules', () => {
       });
       expect(pinnedIntegrity('https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js')).toBeUndefined();
       expect(isModuleUrl('https://example.org/mermaid.esm.min.mjs?v=1#x')).toBe(true);
+      expect(isModuleUrl('https://cdn.jsdelivr.net/npm/mermaid@11/+esm')).toBe(true);
+      expect(isModuleUrl('https://esm.sh/mermaid@11')).toBe(true);
       expect(isModuleUrl('/vendor/mermaid.min.js')).toBe(false);
+      expect(isModuleUrl('https://example.org/esm.sh/mermaid.min.js')).toBe(false);
     });
 
     it('loads the default Mermaid build via <script> with integrity and crossorigin', async () => {
@@ -1042,6 +1062,89 @@ describe('Supa Maven Skin Frontend Modules', () => {
       expect(importModule).toHaveBeenCalledWith(moduleUrl);
       expect(headScripts()).toHaveLength(0);
       expect(moduleRender).toHaveBeenCalledTimes(1);
+    });
+
+    it('retries a custom classic URL as an ES module when it defines no global, but never a pinned one', async () => {
+      const mermaid = fakeMermaid();
+      const customUrl = '/vendor/mermaid/mermaid.esm.js';
+      document.body.setAttribute('data-supa-mermaid-url', customUrl);
+      document.body.innerHTML = '<main id="supa-main-content"><div class="mermaid">flowchart LR\n  A --> B</div></main>';
+      const importModule = vi.fn(async () => ({ default: mermaid }));
+
+      await initOptionalLibraries(importModule);
+
+      expect(headScripts().map((s) => s.getAttribute('src'))).toEqual([customUrl]);
+      expect(importModule).toHaveBeenCalledWith(new URL(customUrl, document.baseURI).href);
+      expect(mermaid.run).toHaveBeenCalledTimes(1);
+
+      // The pinned default must only ever run through the SRI-checked <script>.
+      appended = [];
+      document.body.removeAttribute('data-supa-mermaid-url');
+      document.body.innerHTML = '<main id="supa-main-content"><div class="mermaid">flowchart LR\n  A --> B</div></main>';
+      const pinnedImport = vi.fn(async () => ({ default: fakeMermaid() }));
+
+      await initOptionalLibraries(pinnedImport);
+
+      expect(headScripts().map((s) => s.getAttribute('src'))).toEqual([PINNED_ASSETS.mermaid.url]);
+      expect(pinnedImport).not.toHaveBeenCalled();
+    });
+
+    it('swallows script errors (such as SRI mismatches) without rendering', async () => {
+      const mermaid = fakeMermaid();
+      const renderMathInElement = vi.fn();
+      simulateScriptFailure(PINNED_ASSETS.mermaid.url, PINNED_ASSETS.katexCore.url);
+      simulateScriptExecution((src) => {
+        if (src === PINNED_ASSETS.mermaid.url) {
+          globals()['mermaid'] = mermaid;
+        } else if (src === PINNED_ASSETS.katexAutoRender.url) {
+          globals()['renderMathInElement'] = renderMathInElement;
+        }
+      });
+      document.body.innerHTML =
+        '<main id="supa-main-content"><div class="mermaid">flowchart LR\n  A --> B</div><p>Energy $E = mc^2$.</p></main>';
+      const importModule = vi.fn(async () => ({}));
+
+      await expect(initOptionalLibraries(importModule)).resolves.toBeUndefined();
+
+      // The failed core aborts KaTeX before auto-render is even requested.
+      expect(headScripts().map((s) => s.getAttribute('src'))).toEqual([
+        PINNED_ASSETS.mermaid.url,
+        PINNED_ASSETS.katexCore.url
+      ]);
+      expect(importModule).not.toHaveBeenCalled();
+      expect(mermaid.run).not.toHaveBeenCalled();
+      expect(renderMathInElement).not.toHaveBeenCalled();
+    });
+
+    it('skips the KaTeX core only when window.katex is the real KaTeX API', async () => {
+      const renderMathInElement = vi.fn();
+      simulateScriptExecution((src) => {
+        if (src === PINNED_ASSETS.katexCore.url) {
+          globals()['katex'] = { render: vi.fn() };
+        } else if (src === PINNED_ASSETS.katexAutoRender.url) {
+          globals()['renderMathInElement'] = renderMathInElement;
+        }
+      });
+      globals()['katex'] = { render: vi.fn() };
+      document.body.innerHTML = '<main id="supa-main-content"><p>Energy $E = mc^2$ holds.</p></main>';
+
+      await initOptionalLibraries(vi.fn(async () => ({})));
+
+      expect(headScripts().map((s) => s.getAttribute('src'))).toEqual([PINNED_ASSETS.katexAutoRender.url]);
+      expect(renderMathInElement).toHaveBeenCalledTimes(1);
+
+      // Browsers expose `<h2 id="katex">` as `window.katex`; that must not count.
+      appended = [];
+      globals()['katex'] = document.createElement('h2');
+      document.body.innerHTML = '<main id="supa-main-content"><p>Energy $E = mc^2$ holds.</p></main>';
+
+      await initOptionalLibraries(vi.fn(async () => ({})));
+
+      expect(headScripts().map((s) => s.getAttribute('src'))).toEqual([
+        PINNED_ASSETS.katexCore.url,
+        PINNED_ASSETS.katexAutoRender.url
+      ]);
+      expect(renderMathInElement).toHaveBeenCalledTimes(2);
     });
 
     it('loads nothing when the page has no diagrams or math', async () => {

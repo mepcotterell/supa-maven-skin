@@ -253,12 +253,14 @@ Configures client-side code block enhancements, heading permalinks, offline sear
 | `<headingPermalinkSymbol>` | `#` | Symbol rendered inside heading permalink anchors. |
 | `<search>` | `true` | Enable the sidebar search box and `/` (`⌘K` / `Ctrl+K`) search dialog. |
 | `<mermaid>` | `auto` | Lazy-load Mermaid when `.mermaid` or `code.language-mermaid` is present (`auto`, `true`, or `false`). |
-| `<mermaidCdnUrl>` | *(pinned jsDelivr + SRI)* | Custom or self-hosted Mermaid URL. Unset, the skin loads `https://cdn.jsdelivr.net/npm/mermaid@11.17.2/dist/mermaid.min.js` via `<script integrity crossorigin="anonymous">`. A URL ending in `.mjs` loads as an ES module with `import()`; any other URL loads as a classic `<script>` that must define `window.mermaid`. |
+| `<mermaidCdnUrl>` | *(pinned jsDelivr + SRI)* | Custom or self-hosted Mermaid URL. Unset, the skin loads `https://cdn.jsdelivr.net/npm/mermaid@11.17.2/dist/mermaid.min.js` via `<script integrity crossorigin="anonymous">`. An ES module URL (ending in `.mjs` or `/+esm`, or on `esm.sh`) loads with `import()`; any other URL loads as a classic `<script>` that should define `window.mermaid` (see the note below for ES modules with other names). |
 | `<katex>` | `auto` | Lazy-load KaTeX when `$...$` or `$$...$$` math expressions are present (`auto`, `true`, or `false`). |
 | `<katexCssCdnUrl>` | *(pinned jsDelivr + SRI)* | Custom or self-hosted KaTeX stylesheet URL. Unset, the skin loads `https://cdn.jsdelivr.net/npm/katex@0.16.47/dist/katex.min.css` with `integrity` and `crossorigin="anonymous"`. |
-| `<katexJsCdnUrl>` | *(pinned jsDelivr + SRI)* | Custom or self-hosted KaTeX auto-render URL. Unset, the skin loads `katex.min.js` then `contrib/auto-render.min.js` from `https://cdn.jsdelivr.net/npm/katex@0.16.47/dist/`, each with `integrity`. A URL ending in `.mjs` (such as `auto-render.mjs`) loads with `import()`; a classic `auto-render(.min).js` URL loads `../katex.min.js` from its parent directory first (unless `window.katex` already exists). |
+| `<katexJsCdnUrl>` | *(pinned jsDelivr + SRI)* | Custom or self-hosted KaTeX auto-render URL. Unset, the skin loads `katex.min.js` then `contrib/auto-render.min.js` from `https://cdn.jsdelivr.net/npm/katex@0.16.47/dist/`, each with `integrity`. An ES module URL (such as `auto-render.mjs`) loads with `import()`; a classic `auto-render(.min).js` URL loads `../katex.min.js` from its parent directory first (unless `window.katex` is already the KaTeX API). |
 
 Integrity hashes apply only to the built-in defaults (or to an override that repeats a default URL exactly). Custom URLs load without `integrity` or `crossorigin`, so keeping them trustworthy is the consumer site's responsibility.
+
+If a custom URL is an ES module under another name (for example a self-hosted `mermaid.esm.js`), the skin first runs it as a classic `<script>`, sees that no `window.mermaid` or `window.renderMathInElement` appeared, and then loads it again with `import()`. Rendering still works, but the browser logs a `SyntaxError` from the first attempt; rename the file to `.mjs` to load it as a module directly. The built-in defaults never take this fallback, so they only ever run with SRI.
 
 ### Self-Hosting Mermaid & KaTeX
 
