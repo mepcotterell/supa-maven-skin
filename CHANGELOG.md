@@ -6,9 +6,40 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- **Rendered-page accessibility checks**: `npm run test:a11y` runs axe-core (WCAG 2.0/2.1/2.2 A & AA) in Playwright Chromium against the built self-site: every page in `furo` light/dark, `index.html` in all 12 palette × polarity variants and at a 390×844 phone viewport. It uses the new exact-pinned `playwright` and `@axe-core/playwright` devDependencies and runs in CI on the JDK 21 leg before snapshot publishing. It is not part of `npm test` or `mvn verify`, so neither consumer sites nor `mvn verify` need a browser.
+- **`html[data-supa-ready]` signal**: `initSupaSkin()` sets `data-supa-ready="true"` on `<html>` once every enhancer, including the lazy Mermaid/KaTeX loaders, has settled.
+- **Keyboard-scrollable code and tables**: overflowing `.supa-code-block > pre` and `.supa-table-responsive` regions get `tabindex="0"` and a focus ring while they overflow, so keyboard users can scroll them (WCAG 2.1.1). An author's own `tabindex` is never changed.
+- **Bundle size budget**: `npm run build`, and therefore `mvn verify`, now runs `scripts/check-bundle-size.ts`, which reports the raw and gzip size of `supa-maven-skin.min.css` and `supa-maven-skin.min.js` and fails the build when either exceeds its gzip budget (80 KiB CSS, 104 KiB JS).
+- **Self-hosting & CSP guidance**: The Configuration Reference has a new self-hosting recipe for Mermaid and KaTeX that works on pages in subdirectories (use root-relative or absolute URLs). It also lists the Content Security Policy origins to allow.
+- **Customizing guide**: New How-To page (`customizing.md`) on layering consumer CSS (`css/site.css`), `<body><head>` content with `$relativePath`, and design-token overrides (global, per polarity, per color scheme) on top of Supa Maven Skin. Also covers logos and favicons, page furniture, stable selector hooks, and contrast caveats.
+- **Fluido migration guide**: New how-to page `migrating-from-fluido.md` for moving a site from Apache Maven Fluido Skin 1.x/2.x. It covers toolchain prerequisites (including the Site 2.0.0 banner rewrite), a `<fluidoSkin>` → `<supaSkin>` option mapping, how Supa Maven Skin renders each `site.xml` element, pages in subdirectories, Bootstrap v2.3.2 markup replacements, and a verification checklist.
+- **Troubleshooting guide** (`troubleshooting.md`): symptom, cause, and fix entries for site authors. It covers `file://` previews, stale search caches, Velocity pitfalls in `.md.vm` pages (vanishing `##` headings, C preprocessor lines that fail the build), CommonMark HTML blocks, admonition markers, icon shortcodes, syntax highlighting, heading anchors, theme and palette persistence, Mermaid and KaTeX loading and self-hosting, responsive drawers, search coverage, and `css/site.css` placement.
+
 ### Changed
 
 - **CI / Release Workflows**: Switched `actions/setup-java` from the deprecated `server-username` / `server-password` inputs to `server-username-env-var` / `server-password-env-var` in `.github/workflows/ci.yml` and `release.yml`.
+- **Footer links underlined**: inline links in the copyright line, `<customFooter>` content, and "Built with" credit are now underlined so they stand out from muted footer text by more than colour alone (WCAG 1.4.1).
+- **Sidebar parent links**: a linked parent item now renders its `<a>` before a chevron-only `<summary>` (class `has-link`, `aria-label="<name> section"`), and the current page's parent link gets the same active background as leaf links.
+- **`<html lang>` format**: the page language now comes from `Locale.toLanguageTag()`, so regional locales render as BCP 47 tags (for example `pt-BR`).
+- **CDN override loading**: `<mermaidCdnUrl>` and `<katexJsCdnUrl>` values that are ES modules (`.mjs`, jsDelivr `/+esm`, or `esm.sh`) still load with `import()`. Other URLs load as a classic `<script>`, fall back to `import()` if they define no library global, and a classic `auto-render(.min).js` URL loads `../katex.min.js` first. The built-in defaults are defined once in `optional.ts`, so `site.vm` emits `data-supa-*-url` attributes only for overrides.
+- **Getting Started preview step**: recommends previewing over HTTP (`mvn site:run`) instead of opening `target/site/index.html` from disk, which skips the skin's JavaScript.
+- **Docs Version Linter (`scripts/lint-docs.ts`)**: Skin `<version>` snippets (raw, HTML-escaped or `+` diff lines), `vX.Y.Z` badges, "Version X.Y.Z" example copy and `<latest-release.version>` in `pom.xml` must now equal the newest `## [x.y.z] - YYYY-MM-DD` release heading in `CHANGELOG.md`. A release commit (pom version without `-SNAPSHOT`) must add its own dated heading and bump all of these. A `-SNAPSHOT` of the skin (the pom version, or one sharing its base version with the latest release or the pom, or on a line naming the skin) may not appear in `README.md` or `src/site/`, while other projects' SNAPSHOT versions remain allowed in prose, and malformed release headings are reported.
+
+### Fixed
+
+- **Missing page language**: `<html lang>` now falls back to `en` when `maven-site-plugin` renders the default (ROOT) locale, instead of an empty `lang=""` (WCAG 3.1.1).
+- **Nested sidebar controls**: linked parent items in the sidebar no longer put their link inside `<summary>` (WCAG 4.1.2).
+- **Search trigger label in name**: the sidebar search button is named "Search documentation", exposes its shortcuts via `aria-keyshortcuts`, and draws the `⌘K` hint with CSS so the visible label matches the accessible name (WCAG 2.5.3).
+- **Tablist roles**: the "Hide code" toggle in component examples and the playground now sits beside the tablist instead of inside it, so tablists contain only tabs (WCAG 4.1.2).
+- **Team report avatars**: Gravatar images that `maven-project-info-reports-plugin` emits without `alt` are marked decorative (`alt=""`) (WCAG 1.1.1).
+- **Install Snippets Show the Released Version**: Install snippets, badges and example copy in `README.md` and `src/site/` now show the latest release on Maven Central (`0.1.0`). Before, they showed the development `-SNAPSHOT`, which consumer builds cannot resolve. The landing-page Quickstart (`index.md.vm`) reads the version from the new `<latest-release.version>` POM property.
+- **Self-site menu anchors**: the "Markdown vs. Velocity", "Full site.xml Example", and "Velocity Macros" menu links now use the heading ids the skin actually generates (the slugifier drops `.`), so they land on their sections.
+
+### Security
+
+- **Pinned, integrity-checked Mermaid & KaTeX defaults**: Mermaid and KaTeX now load from exact versions on jsDelivr (`mermaid@11.17.2`, `katex@0.16.47`), not the floating `mermaid@11` major. The default builds are classic single-file scripts and a stylesheet with `sha384` Subresource Integrity and `crossorigin="anonymous"`, so every byte that runs is verified.
 
 ## [0.1.0] - 2026-10-31
 

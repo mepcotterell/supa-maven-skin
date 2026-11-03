@@ -24,6 +24,9 @@ The full documentation is organized following the [Diátaxis](https://diataxis.f
 
 - **[Getting Started (Tutorial)](src/site/markdown/getting-started.md)** — Configure a Maven project with Supa Maven Skin from scratch.
 - **[Authoring Guide (How-To)](src/site/markdown/authoring-guide.md)** — Practical recipes for admonitions, `#bi` icons, synced tabs, accordions, steppers, code blocks, Mermaid diagrams, and KaTeX math.
+- **[Customizing the Skin (How-To)](src/site/markdown/customizing.md)** — Layer your own CSS, `<head>` content, and design-token overrides on top of the skin without forking it.
+- **[Migrating from Fluido (How-To)](src/site/markdown/migrating-from-fluido.md)** — Move an existing site from Apache Maven Fluido Skin, with an option-by-option mapping.
+- **[Troubleshooting (How-To)](src/site/markdown/troubleshooting.md)** — Symptom, cause, and fix for the most common authoring and preview problems.
 - **[Configuration & Tokens (Reference)](src/site/markdown/configuration.md)** — Complete lookup tables for `<supaSkin>` options, WCAG 2.2 AA/AAA palettes, CSS variables, and Velocity macros.
 - **[Components (Reference)](src/site/markdown/components.md)** — Live interactive showcase of all 28 Bootstrap 6 (`6.0.0-alpha.1`) component families styled across all 12 palette × polarity themes.
 - **[Kitchen Sink (Reference)](src/site/markdown/kitchen-sink.md)** — End-to-end stress test of Doxia typography, tables, alerts, code blocks, and optional integrations.

@@ -44,7 +44,7 @@
     </menu>
     <menu name="How-To Guides">
       <item name="Authoring Rich Content" href="authoring-guide.html">
-        <item name="Markdown vs. Velocity" href="authoring-guide.html#choosing-markdown-md-vs-velocity-templates-md-vm" />
+        <item name="Markdown vs. Velocity" href="authoring-guide.html#choosing-markdown-md-vs-velocity-templates-mdvm" />
         <item name="Admonitions &amp; Alerts" href="authoring-guide.html#writing-admonitions-and-alerts" />
         <item name="Icons" href="authoring-guide.html#adding-bootstrap-icons" />
         <item name="Code Blocks" href="authoring-guide.html#styling-code-blocks" />
@@ -52,15 +52,48 @@
         <item name="Accordions &amp; Steppers" href="authoring-guide.html#building-accordions-and-steppers" />
         <item name="Diagrams &amp; Math" href="authoring-guide.html#rendering-mermaid-diagrams-and-katex-math" />
       </item>
+      <item name="Customizing the Skin" href="customizing.html">
+        <item name="Choosing a Layer" href="customizing.html#choosing-a-customization-layer" />
+        <item name="Custom Stylesheet" href="customizing.html#adding-a-custom-stylesheet" />
+        <item name="Extra &lt;head&gt; Content" href="customizing.html#injecting-extra-head-content" />
+        <item name="Design Tokens" href="customizing.html#overriding-design-tokens" />
+        <item name="Logos &amp; Favicon" href="customizing.html#adding-logos-and-a-favicon" />
+        <item name="Page Furniture" href="customizing.html#adjusting-page-furniture" />
+        <item name="Stable Selectors" href="customizing.html#choosing-selectors-that-survive-upgrades" />
+        <item name="Caveats" href="customizing.html#caveats" />
+      </item>
+      <item name="Migrating from Fluido" href="migrating-from-fluido.html">
+        <item name="Before You Begin" href="migrating-from-fluido.html#before-you-begin" />
+        <item name="Upgrade the Toolchain" href="migrating-from-fluido.html#step-1-upgrade-the-site-toolchain" />
+        <item name="Replace the Skin" href="migrating-from-fluido.html#step-2-replace-the-skin" />
+        <item name="Rename the Configuration" href="migrating-from-fluido.html#step-3-rename-the-configuration-block" />
+        <item name="Review Custom CSS" href="migrating-from-fluido.html#step-4-review-custom-css-and-resources" />
+        <item name="Option Mapping" href="migrating-from-fluido.html#option-mapping-reference" />
+        <item name="Site Descriptor Elements" href="migrating-from-fluido.html#how-site-descriptor-elements-render" />
+        <item name="Pages in Subdirectories" href="migrating-from-fluido.html#pages-in-subdirectories" />
+        <item name="Hand-Written Markup" href="migrating-from-fluido.html#updating-hand-written-markup" />
+        <item name="Verification Checklist" href="migrating-from-fluido.html#verification-checklist" />
+      </item>
+      <item name="Troubleshooting" href="troubleshooting.html">
+        <item name="Previewing Your Site" href="troubleshooting.html#previewing-your-site" />
+        <item name="Velocity Pages (.md.vm)" href="troubleshooting.html#velocity-pages-mdvm" />
+        <item name="Markdown &amp; Embedded HTML" href="troubleshooting.html#markdown-and-embedded-html" />
+        <item name="Code Blocks" href="troubleshooting.html#code-blocks" />
+        <item name="Links &amp; Anchors" href="troubleshooting.html#links-and-anchors" />
+        <item name="Theme &amp; Color Scheme" href="troubleshooting.html#theme-and-color-scheme" />
+        <item name="Diagrams &amp; Math" href="troubleshooting.html#diagrams-and-math" />
+        <item name="Layout &amp; Navigation" href="troubleshooting.html#layout-and-navigation" />
+        <item name="Custom Styles" href="troubleshooting.html#custom-styles" />
+      </item>
     </menu>
     <menu name="Reference">
       <item name="Configuration Reference" href="configuration.html">
         <item name="Color Scheme Preview" href="configuration.html#interactive-accessible-color-scheme-preview" />
-        <item name="Full site.xml Example" href="configuration.html#full-site-xml-example" />
+        <item name="Full site.xml Example" href="configuration.html#full-sitexml-example" />
         <item name="Configuration Options" href="configuration.html#configuration-options" />
         <item name="Accessible Color Schemes" href="configuration.html#built-in-accessible-color-schemes" />
         <item name="CSS Variables" href="configuration.html#extending-palettes-via-lightcssvariables-darkcssvariables" />
-        <item name="Velocity Macros" href="configuration.html#velocity-helper-macros-reference-site-macros-vm" />
+        <item name="Velocity Macros" href="configuration.html#velocity-helper-macros-reference-site-macrosvm" />
       </item>
       <item name="Components" href="components.html">
         <item name="Interactive Playground" href="components.html#interactive-component-playground" />
