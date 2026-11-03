@@ -376,10 +376,14 @@
   }
 
   // Inner tablist used when the bar also hosts a non-tab control (component example toggle).
+  // A zero flex-basis keeps the outer bar from breaking its line on the tabs' max-content width,
+  // so on narrow screens the tabs wrap inside this group and the toggle keeps sharing their line.
   .supa-tab-list-tabs {
     display: flex;
+    flex: 1 1 0%;
     flex-wrap: wrap;
     gap: 0.25rem;
+    min-width: 0;
     align-self: flex-end;
   }
 
