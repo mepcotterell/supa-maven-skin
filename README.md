@@ -71,7 +71,7 @@ Requires `maven-site-plugin` `3.21.0+` (Doxia `2.2.0` / Doxia Sitetools `2.0`).
 ## Building & Testing
 
 ```bash
-# Fast frontend inner loop (ESLint, SCSS WCAG 2.2 AA/AAA contrast linter, Velocity linter, Docs version linter, Vitest)
+# Fast frontend inner loop (ESLint, SCSS WCAG 2.2 AA/AAA contrast linter, Velocity linter, Docs version linter, Vitest, bundle size budget)
 npm run lint && npm test && npm run build
 
 # Full Maven build + Vitest unit tests + maven-invoker-plugin integration test + self-site render

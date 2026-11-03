@@ -65,7 +65,7 @@ A change that only updates one layer often leaves Velocity, SCSS, TypeScript, te
 - **Fast inner loop (~3s):**
   - `npm run lint` — runs ESLint (`lint:ts`), the WCAG 2.2 AA/AAA SCSS token & contrast linter (`lint:scss`), the Velocity template linter (`lint:vm`), and the documentation & changelog linter (`lint:docs`).
   - `npm test` — runs Vitest unit tests (`src/test/frontend/supa.test.ts`) in JSDOM.
-  - `npm run build` — runs `tsc --noEmit` and bundles CSS/JS/fonts via Vite into `target/classes/`.
+  - `npm run build` — runs `tsc --noEmit`, bundles CSS/JS/fonts via Vite into `target/classes/`, then runs the gzip size budget check (`check:size`, `scripts/check-bundle-size.ts`), so `mvn verify` fails on a bundle size regression. Raise a budget only deliberately, in the `BUDGETS` constant of that script.
 - **Full Maven verification & site build (~20–30s):**
   - `mvn -B -ntp clean verify site` — executes the Vite build, Checkstyle, all four linters, Vitest unit tests, packages the skin JAR, runs `maven-invoker-plugin` against `src/it/sample-site` (`verify.bsh`), and generates the project's own documentation site in `target/site/`.
   - Run `mvn -B -ntp clean verify site` before finishing any change that touches Velocity templates, build configuration, or site documentation.
@@ -85,7 +85,7 @@ Full pipeline details and design rationale: [`src/site/markdown/architecture.md`
 - `src/main/frontend/ts/` — TypeScript modules (`index.ts`, `theme.ts`, `doxia.ts`, `code.ts`, `toc.ts`, `search.ts`, `bootstrap-components.ts`, `optional.ts`).
 - `src/main/frontend/vite.config.ts` — Vite bundler, `META-INF/` license bundler plugin, and Vitest configuration.
 - `package.json` — `@floating-ui/dom` and `vanilla-calendar-pro` have no imports under `src/` but are required: they are Bootstrap 6 peer dependencies imported by the bundled `Tooltip`/`Popover`/`Menu` and `Datepicker` plugins. Keep them declared so the build does not depend on npm auto-installing peers; with `--legacy-peer-deps`, or whenever they are not installed, Vite fails to resolve their imports.
-- `scripts/` — `lint-scss.ts` (SCSS syntax + WCAG 2.2 AA/AAA contrast verifier), `lint-velocity.ts` (Velocity directive/macro linter), and `lint-docs.ts` (documentation version-alignment & `CHANGELOG.md` verifier).
+- `scripts/` — `lint-scss.ts` (SCSS syntax + WCAG 2.2 AA/AAA contrast verifier), `lint-velocity.ts` (Velocity directive/macro linter), `lint-docs.ts` (documentation version-alignment & `CHANGELOG.md` verifier), and `check-bundle-size.ts` (CSS/JS gzip size budget check).
 - `src/test/frontend/supa.test.ts` — Vitest + JSDOM unit test suite.
 - `src/it/sample-site/` — Maven Invoker integration test fixture and `verify.bsh` verifier script.
 - `src/site/` — Self-site documentation (`site.xml`, self-site-only logos in `src/site/resources/images/`, and Markdown pages in `src/site/markdown/`).
