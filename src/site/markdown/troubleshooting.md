@@ -13,7 +13,7 @@ This guide collects problems that site authors commonly run into when building d
 
 The page has the skin's colors and layout, but `> [!NOTE]` blocks are plain blockquotes, `.supa-tabs` panels are stacked, headings have no `#` permalink, and the right-hand "On this page" column is empty.
 
-**Cause:** You opened the page straight from disk (a `file://` URL such as `target/site/index.html`). Supa Maven Skin loads its script as a JavaScript module (`<script type="module">`), and browsers apply CORS rules to module scripts. Pages opened from `file://` have no web origin, so the request is blocked. Chrome reports it in the console as `Access to script at '…/js/supa-maven-skin.min.js' from origin 'null' has been blocked by CORS policy`. The stylesheet and the small inline theme script in `<head>` still run, which is why the page looks partly styled.
+**Cause:** You opened the page straight from disk (a `file://` URL such as `target/site/index.html`). Supa Maven Skin loads its script as a JavaScript module (`<script type="module">`), and browsers such as Chrome and Firefox do not run module scripts on pages opened from `file://`. Chrome reports it in the console as `Access to script at '…/js/supa-maven-skin.min.js' from origin 'null' has been blocked by CORS policy`. The stylesheet and the small inline theme script in `<head>` still run, which is why the page looks partly styled.
 
 **Fix:** Preview the site over HTTP instead:
 
@@ -31,7 +31,7 @@ You rebuilt the site, but the search dialog still lists old headings or misses n
 
 **Cause:** The first time you open search, Supa Maven Skin fetches the other pages and caches the index in the tab's `sessionStorage` under the key `supa-search-index-<project version>`. When you rebuild with the same version (for example a `-SNAPSHOT`), the cache key stays the same, so that tab keeps using the old index.
 
-**Fix:** Open the site in a new tab or window (each tab has its own `sessionStorage`), or remove the `supa-search-index-…` entry under *Session Storage* in your browser's developer tools.
+**Fix:** Open the site in a new tab (each tab has its own `sessionStorage`), or remove the `supa-search-index-…` entry under *Session Storage* in your browser's developer tools.
 
 ---
 
@@ -58,7 +58,7 @@ You wanted readers to see a literal Maven placeholder in a code block, but the r
 
 **Cause:** Velocity replaces every reference it can resolve, including references inside fenced code blocks. References it cannot resolve, such as `$HOME`, are left as written. That is why only some dollar signs change.
 
-**Fix:** Wrap the whole fenced block in `#[[ ... ]]#` so Velocity copies it unchanged. For a single reference you can also escape the dollar sign (`\${project.version}` renders as `${project.version}`).
+**Fix:** Wrap the whole fenced block in `#[[ ... ]]#` so Velocity copies it unchanged. For a single reference you can also escape the dollar sign (`\${project.version}` renders as `${project.version}`). Escape only references Velocity would otherwise replace: inside a code block, Velocity keeps the backslash in front of an undefined reference, so `\$HOME` stays `\$HOME`.
 
 ````velocity
 #[[
@@ -68,13 +68,21 @@ You wanted readers to see a literal Maven placeholder in a code block, but the r
 ]]#
 ````
 
-### Text After a `#` Directive Name Vanished
+### The Build Fails With "Error parsing … as a Velocity template"
 
-A C or shell sample such as `#include <stdio.h>` renders as ` <stdio.h>`, losing the `#include` part.
+`mvn site` stops with `BUILD FAILURE` and a message such as `Failed to render site: Error parsing src/site/markdown/page.md.vm as a Velocity template: Encountered "DEBUG"` or `The #define directive requires one argument`.
 
-**Cause:** Velocity treats `#` followed by a directive name (`#include`, `#parse`, `#set`, `#if`, `#foreach`, `#macro`, and others) as a directive, even inside fenced code blocks. For `#include` without parentheses, Velocity drops the directive name and keeps the rest of the line.
+**Cause:** Velocity reads `#` followed by a directive name as a directive, even inside fenced code blocks. C preprocessor lines such as `#if DEBUG`, `#else`, and `#define FOO 1` (and lines starting with `#foreach`, `#macro`, `#parse`, or `#end`) are not valid Velocity syntax, so parsing fails and the whole site build stops. Lines such as `#ifdef` and `#endif` are not Velocity directive names and pass through unchanged.
 
 **Fix:** Wrap the code block in `#[[ ... ]]#` as shown above, or move the page to a plain `.md` file if it does not need any Velocity features.
+
+### Part of a Code Sample or Page Vanished
+
+A C sample such as `#include <stdio.h>` renders as ` <stdio.h>`, losing the `#include` part, or everything after a line starting with `#stop` is missing.
+
+**Cause:** These are also Velocity directives. For `#include` without parentheses, Velocity drops the directive name and keeps the rest of the line. `#stop` ends template processing, so the rest of the page is never rendered.
+
+**Fix:** Wrap the code block in `#[[ ... ]]#`, or use a plain `.md` file.
 
 ### A Macro Call Appears as Literal Text
 
@@ -145,7 +153,7 @@ A fenced code block renders in a single color.
 **Cause:** One of the following:
 
 - The fence has no language. Doxia marks such blocks `nohighlight`, so they are never highlighted.
-- The language is not one of the grammars bundled with Supa Maven Skin. The browser console then shows *"Could not find the language '…'"*, and the block falls back to plain text. The bundled grammars are `bash`/`sh`/`shell`, `css`, `diff`, `groovy`, `java`, `javascript`/`js`, `json`, `kotlin`/`kt`, `markdown`/`md`, `plaintext`/`text`, `properties`, `python`/`py`, `scss`, `sql`, `typescript`/`ts`, `xml`/`html`, `velocity`/`vm`, and `yaml`/`yml`.
+- The language is not one of the grammars bundled with Supa Maven Skin. The browser console then shows *"Could not find the language '…'"*, and the block falls back to plain text. The bundled grammars are Bash (`bash`, `sh`, `zsh`), shell sessions with prompts (`shell`, `console`), `css`, `diff` (`patch`), `groovy`, `java`, JavaScript (`javascript`, `js`, `jsx`, `mjs`, `cjs`), `json`, Kotlin (`kotlin`, `kt`, `kts`), Markdown (`markdown`, `md`), plain text (`plaintext`, `text`, `txt`), `properties`, Python (`python`, `py`), `scss`, `sql`, TypeScript (`typescript`, `ts`, `tsx`), XML and HTML (`xml`, `html`, `svg`, `xsd`, `xsl`), and `yaml` (`yml`). The `velocity` and `vm` names are accepted but use the XML highlighter, so Velocity directives themselves are not colored.
 - The block contains HTML elements, for example a raw `<pre><code>` block with `<b>` tags, or the linked URLs that Maven project reports put inside `<pre>`. Supa Maven Skin deliberately skips highlighting such blocks so that the links and markup stay intact.
 - `<syntaxHighlighting>` is set to `false` in `site.xml`.
 
@@ -226,15 +234,15 @@ Your site uses the default `furo` color scheme, but a reader sees the black-and-
 
 **Cause:** One of the following:
 
-- `<mermaid>false</mermaid>` is set, so the fenced block stays a normal code block.
+- `<mermaid>false</mermaid>` is set, so the fenced block stays a plain `<pre>` block without the usual code-block header, copy button, or highlighting.
 - The Mermaid library could not be loaded. Supa Maven Skin imports it at runtime from the URL in `<mermaidCdnUrl>` (by default a jsDelivr URL). With no network access, a blocked CDN, or a `Content-Security-Policy` that does not allow that host in `script-src`, the import fails quietly and the diagram source is left on the page as plain text.
 - The block is not marked as Mermaid. Only fenced blocks with the `mermaid` language, or elements with the `mermaid` class, are rendered.
 
-**Fix:** Use a ```` ```mermaid ```` fence, keep `<mermaid>` at `auto` or `true`, and make sure readers' browsers can reach the configured URL. For offline or locked-down sites, host Mermaid yourself and point `<mermaidCdnUrl>` at the full `https://` URL of your copy. See **[Rendering Mermaid Diagrams and KaTeX Math](authoring-guide.html#rendering-mermaid-diagrams-and-katex-math)**.
+**Fix:** Use a ```` ```mermaid ```` fence, keep `<mermaid>` at `auto` or `true`, and make sure readers' browsers can reach the configured URL. For offline or locked-down sites, host Mermaid yourself: copy the package's `dist/mermaid.esm.min.mjs` file **together with** its `dist/chunks/mermaid.esm.min/` folder (or the whole `dist/` folder), keeping the same layout, and point `<mermaidCdnUrl>` at the absolute URL of your `mermaid.esm.min.mjs`. The entry file imports dozens of chunk files by relative path, so copying it alone fails with "404" errors in the console. See **[Rendering Mermaid Diagrams and KaTeX Math](authoring-guide.html#rendering-mermaid-diagrams-and-katex-math)**.
 
 ### Dollar Amounts Render as Italic Math
 
-A sentence like the one below shows "5 per seat and" in italic math type:
+A sentence like the one below shows "5perseatand" run together in italic math type, because math mode ignores spaces:
 
 ```text
 The plan costs $5 per seat and $10 per admin.

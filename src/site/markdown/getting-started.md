@@ -195,7 +195,7 @@ To start a local live-preview HTTP server on `http://localhost:8080`:
 mvn site:run
 ```
 
-Open `target/site/index.html` (or `http://localhost:8080`) in your browser. You will see:
+Open `http://localhost:8080` in your browser. Opening `target/site/index.html` straight from disk skips the skin's JavaScript (see **[Previewing Your Site](troubleshooting.html#previewing-your-site)**), so always preview over HTTP. You will see:
 
 1. Your **left navigation sidebar** with your custom pages and Project Info Reports.
 2. Your **center prose article** with rendered `:bi-rocket-takeoff:` icons, Furo admonitions, and synchronized `Maven` / `Gradle` tabs.
