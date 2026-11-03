@@ -371,6 +371,20 @@ if (
   );
 }
 
+// A release commit (non-SNAPSHOT pom) must add its own dated heading. Otherwise every snippet and
+// <latest-release.version> would still pass against the previous release, and release.yml would
+// extract empty release notes for the new tag.
+if (
+  pomVersion &&
+  !pomVersion.endsWith('-SNAPSHOT') &&
+  changelogRelease &&
+  changelogRelease !== pomVersion
+) {
+  errors.push(
+    `CHANGELOG.md: pom.xml <version>${pomVersion}</version> is a release, but the newest release heading is "## [${changelogRelease}]"; move the [Unreleased] entries under "## [${pomVersion}] - YYYY-MM-DD".`
+  );
+}
+
 // index.md.vm interpolates this property, so it must track the newest release too.
 const pomReleaseProperty: string | null = extractXmlTag(
   pomXml,
@@ -459,23 +473,18 @@ for (const relPath of docFiles) {
     /(?:<artifactId>|&lt;artifactId&gt;)(supa-maven-skin|\$\{project\.artifactId\})(?:<\/artifactId>|&lt;\/artifactId&gt;)\s*\+?\s*(?:<version>|&lt;version&gt;)([^<&]+)(?:<\/version>|&lt;\/version&gt;)/g;
   let skinMatch: RegExpExecArray | null;
   while (isUserFacingDoc && (skinMatch = skinBlockRegex.exec(content)) !== null) {
-    // ${project.artifactId} only names this skin on our own .md.vm pages; in plain .md tutorials
-    // it is a literal placeholder for the reader's own project.
+    // ${project.artifactId} only names this skin as an install instruction on our own .md.vm
+    // pages. Elsewhere it is skipped: in plain .md tutorials it is a literal placeholder for the
+    // reader's own project, and src/site/site.xml declares the self-site skin as
+    // ${project.groupId}:${project.artifactId}:${project.version} because the self-site must render
+    // with the skin built in this same reactor, not a released one.
     if (skinMatch[1] !== 'supa-maven-skin' && !isVelocityPage) {
       continue;
     }
     const statedSkinVer: string = (skinMatch[2] ?? '').trim();
-    // The self-site must render with the skin built in this same reactor, so ${project.version}
-    // is correct only in src/site/site.xml.
-    const isSelfSiteSkin: boolean =
-      relPath === 'src/site/site.xml' && statedSkinVer === '${project.version}';
     const isReleaseProperty: boolean =
       isVelocityPage && statedSkinVer === RELEASE_VERSION_VELOCITY_EXPR;
-    if (
-      statedSkinVer !== latestReleaseVersion &&
-      !isSelfSiteSkin &&
-      !isReleaseProperty
-    ) {
+    if (statedSkinVer !== latestReleaseVersion && !isReleaseProperty) {
       const hint: string = isVelocityPage
         ? ` or ${RELEASE_VERSION_VELOCITY_EXPR}`
         : '';
@@ -485,17 +494,34 @@ for (const relPath of docFiles) {
     }
   }
 
-  // 4b. The development -SNAPSHOT is not resolvable by consumer builds, so it must not appear in
-  // user-facing badges, alerts, or example copy either.
-  if (
-    isUserFacingDoc &&
-    pomVersion &&
-    pomVersion.endsWith('-SNAPSHOT') &&
-    content.includes(pomVersion)
-  ) {
-    errors.push(
-      `${relPath}: Found development version "${pomVersion}"; user-facing docs must show the latest released version ${latestReleaseVersion} (${latestReleaseSource}).`
-    );
+  // 4b. -SNAPSHOT builds are not resolvable by consumer builds, so no SNAPSHOT version (current or
+  // stale) may appear in user-facing docs. The one exception is the pre-release fallback, where the
+  // pom SNAPSHOT *is* the expected version because nothing has been released yet.
+  if (isUserFacingDoc) {
+    const snapshotRegex = /\b\d+\.\d+\.\d+-SNAPSHOT\b/g;
+    for (const snapshot of new Set<string>(content.match(snapshotRegex) ?? [])) {
+      if (snapshot !== latestReleaseVersion) {
+        errors.push(
+          `${relPath}: Found development version "${snapshot}"; user-facing docs must show the latest released version ${latestReleaseVersion} (${latestReleaseSource}).`
+        );
+      }
+    }
+  }
+
+  // 4c. Skin version badges (`v1.2.3` inside a `.badge`) and "Version 1.2.3" example copy (raw,
+  // backticked, or <code>, optionally HTML-escaped) must track the latest release too, so they do
+  // not go stale after the next release. The patterns are capitalized and badge-scoped so prose
+  // such as "maven-site-plugin version 3.21.0" is not caught.
+  const versionCopyRegex =
+    /(?:class="(?:[^"]*\s)?badge\b[^"]*"\s*(?:>|&gt;)v|\bVersion\s+(?:`|<code>|&lt;code&gt;)?)(\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?)/g;
+  let copyMatch: RegExpExecArray | null;
+  while (isUserFacingDoc && (copyMatch = versionCopyRegex.exec(content)) !== null) {
+    const statedCopyVer: string = copyMatch[1] ?? '';
+    if (statedCopyVer !== latestReleaseVersion) {
+      errors.push(
+        `${relPath}: Skin version badge or copy "${statedCopyVer}" must show the latest released version ${latestReleaseVersion} (${latestReleaseSource}).`
+      );
+    }
   }
 
   // 5. Verify <artifactId>maven-site-plugin</artifactId> version snippets match pom.xml
