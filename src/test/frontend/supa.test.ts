@@ -2,7 +2,16 @@
  * @fileoverview Unit test suite for Supa Maven Skin frontend TypeScript modules.
  */
 
+import { existsSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+  BUNDLED_LICENSES,
+  findUnlicensedPackages,
+  packageNameFromModuleId,
+  packageNameFromSassSpecifier,
+  sassModuleSpecifiers
+} from '../../../scripts/bundled-licenses';
 import {
   BootstrapPlugins,
   Combobox,
@@ -1273,6 +1282,70 @@ describe('Supa Maven Skin Frontend Modules', () => {
       expect(headScripts()).toHaveLength(0);
       expect(headStylesheet()).toBeUndefined();
       expect(importModule).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('Bundled Third-Party License Coverage', () => {
+    it('attributes bundler module ids to the innermost npm package', () => {
+      expect(packageNameFromModuleId('/repo/node_modules/bootstrap/js/dist/tooltip.js')).toBe('bootstrap');
+      expect(packageNameFromModuleId('/repo/node_modules/@floating-ui/dom/dist/floating-ui.dom.mjs')).toBe(
+        '@floating-ui/dom'
+      );
+      expect(
+        packageNameFromModuleId('/repo/node_modules/@floating-ui/dom/node_modules/@floating-ui/utils/dist/x.mjs')
+      ).toBe('@floating-ui/utils');
+      expect(packageNameFromModuleId('C:\\repo\\node_modules\\vanilla-calendar-pro\\index.mjs')).toBe(
+        'vanilla-calendar-pro'
+      );
+      expect(packageNameFromModuleId('/repo/node_modules/highlight.js/lib/core.js?commonjs-es-import')).toBe(
+        'highlight.js'
+      );
+      expect(packageNameFromModuleId('/repo/src/main/frontend/ts/index.ts')).toBeNull();
+      expect(packageNameFromModuleId('\0vite/preload-helper.js')).toBeNull();
+    });
+
+    it('resolves only installed packages from Sass @use/@forward/@import specifiers', () => {
+      const scss = [
+        '@use "sass:math";',
+        '@use "bootstrap/scss/bootstrap";',
+        "@use 'bootstrap-icons/font/bootstrap-icons.scss' with ($bootstrap-icons-font-dir: 'fonts');",
+        '@forward "variables";',
+        '@import "./layout";',
+        '@use "pkg:@scope/theme/index";'
+      ].join('\n');
+      const specifiers = sassModuleSpecifiers(scss);
+      expect(specifiers).toEqual([
+        'sass:math',
+        'bootstrap/scss/bootstrap',
+        'bootstrap-icons/font/bootstrap-icons.scss',
+        'variables',
+        './layout',
+        'pkg:@scope/theme/index'
+      ]);
+      const installed = new Set(['bootstrap', 'bootstrap-icons', '@scope/theme']);
+      const packages = specifiers.map((s) => packageNameFromSassSpecifier(s, (name) => installed.has(name)));
+      expect(packages).toEqual([null, 'bootstrap', 'bootstrap-icons', null, null, '@scope/theme']);
+    });
+
+    it('reports bundled packages missing from the manifest, sorted and de-duplicated', () => {
+      expect(findUnlicensedPackages(['bootstrap', '@floating-ui/core', 'left-pad', 'left-pad', 'a-pkg'])).toEqual([
+        'a-pkg',
+        'left-pad'
+      ]);
+      expect(findUnlicensedPackages(BUNDLED_LICENSES.map((entry) => entry.name))).toEqual([]);
+    });
+
+    it('lists Bootstrap 6 peer dependencies and points every entry at an installed LICENSE file', () => {
+      const names = BUNDLED_LICENSES.map((entry) => entry.name);
+      for (const peer of ['vanilla-calendar-pro', '@floating-ui/dom', '@floating-ui/core', '@floating-ui/utils']) {
+        expect(names).toContain(peer);
+      }
+      const outputs = BUNDLED_LICENSES.map((entry) => entry.outputFileName);
+      expect(new Set(outputs).size).toBe(outputs.length);
+      for (const entry of BUNDLED_LICENSES) {
+        expect(entry.outputFileName).toMatch(/^LICENSE-[a-z0-9.-]+\.txt$/);
+        expect(existsSync(resolve(process.cwd(), 'node_modules', entry.name, 'LICENSE'))).toBe(true);
+      }
     });
   });
 });

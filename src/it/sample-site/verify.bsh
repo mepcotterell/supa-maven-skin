@@ -33,7 +33,11 @@ try {
         "META-INF/THIRD-PARTY-LICENSES.txt",
         "META-INF/licenses/LICENSE-bootstrap.txt",
         "META-INF/licenses/LICENSE-bootstrap-icons.txt",
-        "META-INF/licenses/LICENSE-highlight.js.txt"
+        "META-INF/licenses/LICENSE-highlight.js.txt",
+        "META-INF/licenses/LICENSE-vanilla-calendar-pro.txt",
+        "META-INF/licenses/LICENSE-floating-ui-dom.txt",
+        "META-INF/licenses/LICENSE-floating-ui-core.txt",
+        "META-INF/licenses/LICENSE-floating-ui-utils.txt"
     };
     for ( int i = 0; i < requiredEntries.length; i++ ) {
         if ( jarFile.getEntry( requiredEntries[i] ) == null ) {
@@ -63,6 +67,15 @@ if ( !jsFile.isFile() || jsFile.length() < 1000 ) {
 String jsHead = Files.readString( jsFile.toPath(), StandardCharsets.UTF_8 );
 if ( !jsHead.startsWith( "/*!" ) || !jsHead.contains( "META-INF/THIRD-PARTY-LICENSES.txt" ) ) {
     throw new IllegalStateException( "Bundled JS asset is missing /*! ... */ license attribution header" );
+}
+// Bootstrap 6's Tooltip/Popover/Menu and Datepicker compile their peer dependencies into the JS
+// bundle; the 0.1.0 banner and notices omitted them.
+String jsBanner = jsHead.substring( 0, jsHead.indexOf( "*/" ) );
+String[] bundledPeers = new String[] { "vanilla-calendar-pro", "@floating-ui/dom", "@floating-ui/core", "@floating-ui/utils" };
+for ( int i = 0; i < bundledPeers.length; i++ ) {
+    if ( !jsBanner.contains( bundledPeers[i] ) ) {
+        throw new IllegalStateException( "JS license banner does not name bundled package " + bundledPeers[i] );
+    }
 }
 
 File indexHtml = new File( siteDir, "index.html" );

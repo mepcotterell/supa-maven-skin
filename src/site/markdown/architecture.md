@@ -37,7 +37,7 @@ Because `doxia-site-renderer` extracts all non-`META-INF/` files from a skin JAR
 
 - `META-INF/maven/site.vm`, `META-INF/maven/site-macros.vm`, `META-INF/maven/skin.xml` — Velocity layout, macros, and skin descriptor.
 - `META-INF/LICENSE` — The project's own MIT License.
-- `META-INF/THIRD-PARTY-LICENSES.txt` & `META-INF/licenses/LICENSE-*.txt` — Bundled upstream license notices for `bootstrap` (MIT), `bootstrap-icons` (MIT), and `highlight.js` (BSD-3-Clause).
+- `META-INF/THIRD-PARTY-LICENSES.txt` & `META-INF/licenses/LICENSE-*.txt` — Bundled upstream license notices for every npm package compiled into the CSS/JS bundles: `bootstrap` (MIT), `bootstrap-icons` (MIT), `highlight.js` (BSD-3-Clause), and Bootstrap 6's peer dependencies `vanilla-calendar-pro`, `@floating-ui/dom`, `@floating-ui/core`, and `@floating-ui/utils` (MIT). The list lives in `scripts/bundled-licenses.ts`, and the build fails when the bundles contain a package it does not list: JS packages are found from the bundler's module graph and Sass packages from the partials' `@use` specifiers, so a new transitive dependency cannot ship without its notice.
 - `/*! ... */` **Bundle Legal Banners** — Both `css/supa-maven-skin.min.css` and `js/supa-maven-skin.min.js` begin with a `/*! ... */` copyright and license attribution header referencing `META-INF/LICENSE` and `META-INF/THIRD-PARTY-LICENSES.txt`.
 
 ---

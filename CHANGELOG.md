@@ -28,6 +28,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Fixed
 
+- **Third-Party License Notices**: `META-INF/THIRD-PARTY-LICENSES.txt`, `META-INF/licenses/`, and the `/*! ... */` bundle banners now cover every npm package compiled into the bundles. The 0.1.0 JAR shipped Bootstrap 6's peer dependencies `vanilla-calendar-pro`, `@floating-ui/dom`, `@floating-ui/core`, and `@floating-ui/utils` (all MIT) inside `js/supa-maven-skin.min.js` without their notices. The build now fails when a bundled package is missing from the license manifest (`scripts/bundled-licenses.ts`), and each notice names the installed version that was compiled in.
 - **Footer Links Underlined**: Inline links in the copyright line, custom `<body><footer>` content from `site.xml`, and the "Built with" credit are now underlined so they stand out from muted footer text by more than color alone (WCAG 1.4.1).
 - **Missing Page Language**: `<html lang>` now falls back to `en` when `maven-site-plugin` renders the default (ROOT) locale, instead of an empty `lang=""` (WCAG 3.1.1).
 - **Search Trigger Label in Name**: The sidebar search button is named "Search documentation", exposes its shortcuts via `aria-keyshortcuts`, and draws the `⌘K` hint with CSS so the visible label matches the accessible name (WCAG 2.5.3).
