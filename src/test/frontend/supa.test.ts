@@ -2318,9 +2318,16 @@ describe('WCAG contrast audit (scripts/contrast-audit.ts)', () => {
     ]);
     tokens.set(
       '--success-bg-muted',
-      'color-mix(in oklch, var(--success-bg-subtle) 50%, var(--color-background-primary))'
+      'color-mix(in srgb, var(--success-bg-subtle) 50%, var(--color-background-primary))'
     );
     expect(auditContrast(tokens, 'modus', 'light', chip)).toEqual({ checked: 1, violations: [] });
+    // Why sRGB: modus light's info fill (#ebf6fa) is near-neutral, so in OKLCH it and white both
+    // lack a hue and the mix turns faintly pink (#fdf8f9, as Playwright Chromium paints it). In
+    // sRGB it stays light blue.
+    const none = new Map<string, string>();
+    expect(toHex(resolveColor('color-mix(in oklch, #ebf6fa 50%, #ffffff)', none, 'light')!)).toBe('#fdf8f9');
+    const blue = resolveColor('color-mix(in srgb, #ebf6fa 50%, #ffffff)', none, 'light')!;
+    expect(blue.b).toBeGreaterThan(blue.r);
   });
 
   it('keeps the resting text of hovered and toggled-on text buttons in dark polarity', () => {

@@ -215,11 +215,12 @@
 // Muted fills (`--<theme>-bg-muted`: hovered chips, nav links, and list-group actions, and half
 // of a hovered subtle button) in the AAA palettes move each theme's subtle fill halfway to the
 // page. The bridge's 22% accent tint over the page left accent text at 5.8-6.9:1 on hovered light
-// chips, and Bootstrap's `secondary` and `inverse` grays fell further; text that meets 7:1 on
-// both the page and the subtle fill keeps it on a color between them.
+// chips, and Bootstrap's `secondary` and `inverse` grays fell further. Mixed in sRGB, every
+// channel, and so the luminance, lies between the two, where text that meets 7:1 on both still
+// does; OKLCH would drop the hue of the near-neutral light fills and tint them pink.
 @mixin modus-muted-fills {
   @each $theme in primary, accent, success, info, warning, danger, secondary, inverse {
-    --#{$theme}-bg-muted: color-mix(in oklch, var(--#{$theme}-bg-subtle) 50%, var(--color-background-primary));
+    --#{$theme}-bg-muted: color-mix(in srgb, var(--#{$theme}-bg-subtle) 50%, var(--color-background-primary));
   }
 }
 
