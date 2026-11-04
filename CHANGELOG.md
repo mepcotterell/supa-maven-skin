@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.1.3] - 2026-11-04
+
 ### Added
 
 - **Interactive-State Accessibility Scan**: `npm run test:a11y` now also scans the skin's interactive chrome in its open state. That covers the search dialog (empty and with an active result), the sidebar drawer at 390×844, the TOC drawer below `xl`, the color-scheme and theme menus in every placement, a copy button's tooltip and its "Copied!" state, a re-expanded sidebar group, and an expanded accordion and switched tab on `components.html`. It runs in `furo` light/dark and `modus` dark. Each scenario checks that it really reached its state, so a broken selector fails the run instead of scanning a closed state. Append page or scenario names (`npm run test:a11y -- palette-menu`) to narrow a run.
@@ -106,7 +108,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   - Organized `src/site/markdown/` around the Diátaxis framework (`index.md.vm`, `getting-started.md`, `authoring-guide.md`, `configuration.md`, `components.md`, `kitchen-sink.md`, `architecture.md`) with custom dual-theme `rocket-takeoff` logos (`src/site/resources/images/logo-light.svg` and `logo-dark.svg`).
   - Added automated TypeScript linters for SCSS WCAG 2.2 AA/AAA contrast (`scripts/lint-scss.ts`), Velocity directive balance (`scripts/lint-velocity.ts`), and documentation version alignment + Keep a Changelog 1.1.0 compliance (`scripts/lint-docs.ts`), enforced alongside the Google TypeScript Style Guide and Google-style TSDoc (`supa/google-tsdoc`).
 
-[Unreleased]: https://github.com/mepcotterell/supa-maven-skin/compare/v0.1.2...HEAD
+[Unreleased]: https://github.com/mepcotterell/supa-maven-skin/compare/v0.1.3...HEAD
+[0.1.3]: https://github.com/mepcotterell/supa-maven-skin/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/mepcotterell/supa-maven-skin/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/mepcotterell/supa-maven-skin/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/mepcotterell/supa-maven-skin/releases/tag/v0.1.0
