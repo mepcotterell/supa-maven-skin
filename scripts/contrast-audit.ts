@@ -130,12 +130,13 @@ const ADMONITION_KINDS: ReadonlyArray<{ accent: string; classes: string }> = [
 ];
 
 /**
- * Bootstrap 6 themes an `.alert` can carry (`[!ALERT:...]`, `#bsAlert`, and the component
- * playground's `accent`). Bootstrap's `_alert.scss` paints `.alert` with
+ * Every theme in Bootstrap 6's `$theme-colors`, since an `.alert` can carry any of them:
+ * `[!ALERT:...]` accepts six, but `#bsAlert` and raw HTML pass any theme name through, and the
+ * component playground offers `accent`. Bootstrap's `_alert.scss` paints `.alert` with
  * `color: var(--theme-fg)` on `background-color: var(--theme-bg-subtle)`, and `.theme-<name>`
  * maps those to `--<name>-fg` and `--<name>-bg-subtle`. `_variables.scss` bridges those to the
- * palette's tokens, except `secondary` outside the `modus*` palettes, which keeps Bootstrap's
- * grays.
+ * palette's tokens, except `inverse` (bridged only on `modus-tritanopia`'s light surface) and,
+ * outside the `modus*` palettes, `secondary`, which keep Bootstrap's grays.
  */
 const ALERT_THEMES: readonly string[] = [
   'primary',
@@ -144,7 +145,8 @@ const ALERT_THEMES: readonly string[] = [
   'info',
   'warning',
   'danger',
-  'secondary'
+  'secondary',
+  'inverse'
 ];
 
 /**

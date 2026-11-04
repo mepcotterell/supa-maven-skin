@@ -288,7 +288,7 @@ Every built-in color scheme is verified at build time by `scripts/lint-scss.ts` 
 
 ## Extending Palettes via `<lightCssVariables>` & `<darkCssVariables>`
 
-Just like Sphinx Furo's `light_css_variables` and `dark_css_variables`, any child element inside `<lightCssVariables>` or `<darkCssVariables>` is emitted as `--<tag-name>: <value>;` and automatically feeds into Bootstrap 6's component tokens (`--primary-*`, `--success-*`, `--warning-*`, `--danger-*`, `--info-*`, `--accent-*`) via `color-mix(in oklch, ...)`. In the four `modus*` schemes, `.theme-secondary` text and subtle surfaces (secondary alerts, outline buttons, and subtle badges) also follow `color-foreground-muted` on `color-background-secondary`, because Bootstrap's own grays fall short of 7:1:
+Just like Sphinx Furo's `light_css_variables` and `dark_css_variables`, any child element inside `<lightCssVariables>` or `<darkCssVariables>` is emitted as `--<tag-name>: <value>;` and automatically feeds into Bootstrap 6's component tokens (`--primary-*`, `--success-*`, `--warning-*`, `--danger-*`, `--info-*`, `--accent-*`) via `color-mix(in oklch, ...)`. In the four `modus*` schemes, `.theme-secondary` text and subtle surfaces (secondary alerts, outline buttons, and subtle badges) also follow `color-foreground-muted` on `color-background-secondary`, because Bootstrap's own grays fall short of 7:1. For the same reason, light `.theme-inverse` subtle surfaces in `modus-tritanopia` use `color-background-item`:
 
 | Variable Name | Purpose |
 | :--- | :--- |

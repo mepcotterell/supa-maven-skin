@@ -298,6 +298,10 @@
   // Caution / Danger uses high-contrast crimson / Modus Vivendi red-faint
   --supa-admonition-caution-accent: light-dark(#970000, #ff9580);
   --supa-admonition-caution-bg: light-dark(#ffecec, #331111);
+
+  // Bootstrap's light `.theme-inverse` surface (gray-100, #e2e5e7) leaves the teal link (#005454)
+  // at 6.9:1, so light inverse alerts and subtle badges use the item surface; dark keeps gray-900.
+  --inverse-bg-subtle: light-dark(var(--color-background-item), var(--gray-900));
 }
 
 // ============================================================================

@@ -95,7 +95,7 @@ What it measures is the `SURFACE_AUDITS` list: each surface's background layers,
 | Secondary surface | `--color-background-secondary` on the page | All 11 semantic text and accent tokens (text) |
 | Admonition title bar (one per kind) | `--supa-admonition-<kind>-bg` on `--color-admonition-background` on the page | Title text `--color-foreground-primary` and title link `--color-brand-content` (text); icon `--supa-admonition-<kind>-accent` (non-text) |
 | Admonition body | `--color-admonition-background` on the page | Body text and link (text) |
-| `.alert.theme-<name>` (`primary`, `accent`, `success`, `info`, `warning`, `danger`, `secondary`) | `--<name>-bg-subtle` on the page | Text `--<name>-fg` and link (text) |
+| `.alert.theme-<name>` (every Bootstrap 6 theme: `primary`, `accent`, `success`, `info`, `warning`, `danger`, `secondary`, `inverse`) | `--<name>-bg-subtle` on the page | Text `--<name>-fg` and link (text) |
 | `.alert` without a Bootstrap theme (`[!ALERT:light]`, `[!ALERT:dark]`) | `--bg-1` on the page | Inherited text and link (text) |
 
 Links are audited on every surface because `.supa-article a` paints them all with `--color-brand-content`, including links inside alerts and inside custom admonition titles, which keep their inline markup. Translucent backgrounds, such as the `rgba()` admonition tints of the `furo` and `bootstrap` dark polarities, are alpha-composited over the layer beneath before measuring. An undefined layer counts as transparent, as it does in CSS, which is why `--color-admonition-background` (defined by no built-in palette) still sits in the title bar's stack: a palette that defines it is measured with it.
