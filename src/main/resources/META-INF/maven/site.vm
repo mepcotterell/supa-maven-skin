@@ -503,7 +503,9 @@
 #set( $iconTitle = $iconNode.getChild( 'title' ).getValue() )
 #set( $iconHtml = $iconNode.getChild( 'html' ).getValue() )
 #if( $iconHref )
-                    <a class="supa-footer-icon-link" href="$iconHref"#if( $iconTitle ) data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="$esc.html( $iconTitle )" aria-label="$esc.html( $iconTitle )"#end target="_blank" rel="noopener noreferrer">
+## Like menu hrefs, a relative icon href is written from the site root: resolve it for this page
+#supaResolveHref( $iconHref )
+                    <a class="supa-footer-icon-link" href="$resolvedHref"#if( $iconTitle ) data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="$esc.html( $iconTitle )" aria-label="$esc.html( $iconTitle )"#end target="_blank" rel="noopener noreferrer">
 #if( $iconHtml )
                       $iconHtml
 #elseif( $iconTitle )

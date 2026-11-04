@@ -19,6 +19,18 @@
       <sourceDirectory>src/site</sourceDirectory>
       <stickyContentHeader>true</stickyContentHeader>
       <lightLogo>images/logo.svg</lightLogo>
+      <navIcons>
+        <icon>
+          <href>guide.html</href>
+          <title>User Guide</title>
+          <html><![CDATA[<i class="bi bi-book" aria-hidden="true"></i>]]></html>
+        </icon>
+        <icon>
+          <href>https://github.com/mepcotterell/supa-maven-skin</href>
+          <title>GitHub Repository</title>
+          <html><![CDATA[<i class="bi bi-github" aria-hidden="true"></i>]]></html>
+        </icon>
+      </navIcons>
       <mermaidCdnUrl>https://example.org/vendor/mermaid/mermaid.min.js</mermaidCdnUrl>
       <lightCssVariables>
         <color-brand-primary>#0055ff</color-brand-primary>

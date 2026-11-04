@@ -170,9 +170,9 @@ if ( !html.contains( "aria-keyshortcuts=\"/ Meta+K Control+K\"" ) || html.contai
 }
 
 // Pages in subdirectories: site.xml hrefs reach the template relative to the site root, so the
-// skin must rewrite menu, breadcrumb, Previous / Next, and logo URLs for the directory of each
-// page (as Fluido does). Up to 0.1.2 they were emitted unchanged, so on guides/install.html the
-// "index.html" menu item pointed at the missing guides/index.html.
+// skin must rewrite menu, breadcrumb, Previous / Next, logo, and footer icon URLs for the
+// directory of each page (as Fluido does). Up to 0.1.2 they were emitted unchanged, so on
+// guides/install.html the "index.html" menu item pointed at the missing guides/index.html.
 String siteRootPath = siteDir.getCanonicalPath() + File.separator;
 java.util.regex.Pattern localUrlPattern = java.util.regex.Pattern.compile( "<(?:a|img)\\b[^>]*?\\s(?:href|src)=\"([^\"]*)\"" );
 String[] linkCheckedPages = new String[] { "index.html", "guide.html", "guides/install.html" };
@@ -208,7 +208,9 @@ String[] installExpected = new String[] {
     "<a href=\"../guide.html\">Docs</a>",
     "<a class=\"supa-prev-page\" href=\"../guide.html\">",
     "<a class=\"supa-next-page\" href=\"../project-info.html\">",
-    "<img class=\"supa-sidebar-logo\" src=\"../images/logo.svg\""
+    "<img class=\"supa-sidebar-logo\" src=\"../images/logo.svg\"",
+    "<a class=\"supa-footer-icon-link\" href=\"../guide.html\"",
+    "<a class=\"supa-footer-icon-link\" href=\"https://github.com/mepcotterell/supa-maven-skin\""
 };
 for ( int i = 0; i < installExpected.length; i++ ) {
     if ( !installText.contains( installExpected[i] ) ) {
@@ -222,7 +224,8 @@ if ( installText.split( "class=\"supa-nav-link active\"", -1 ).length != 2 ) {
 String[] topLevelExpected = new String[] {
     "<a class=\"supa-nav-link\" href=\"guides/install.html\">",
     "<a href=\"guide.html\">Docs</a>",
-    "<img class=\"supa-sidebar-logo\" src=\"images/logo.svg\""
+    "<img class=\"supa-sidebar-logo\" src=\"images/logo.svg\"",
+    "<a class=\"supa-footer-icon-link\" href=\"guide.html\""
 };
 for ( int i = 0; i < topLevelExpected.length; i++ ) {
     if ( !html.contains( topLevelExpected[i] ) ) {

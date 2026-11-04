@@ -240,7 +240,7 @@ Controls metadata and icon links in the page footer (`.supa-footer`) and version
 | :--- | :--- | :--- |
 | `<footerTimestamp>` | `true` | Display the build/publish date (`Last updated on YYYY-MM-DD`) in the page footer. |
 | `<footerVersion>` | `true` | Display the project version badge next to the project title in the sidebar. |
-| `<navIcons>` | *(empty)* | List of `<icon>` elements (`<href>`, `<title>`, `<html>`) rendered as tooltip-enabled icon links on the right side of the page footer (`.supa-footer-icons`). |
+| `<navIcons>` | *(empty)* | List of `<icon>` elements (`<href>`, `<title>`, `<html>`) rendered as tooltip-enabled icon links on the right side of the page footer (`.supa-footer-icons`). Write a relative `<href>` from the site root (`faq.html`); the skin rewrites it for pages in subdirectories. URLs with a scheme and paths starting with `/` are used unchanged. |
 
 ### Code, Search, Diagrams & Math
 
