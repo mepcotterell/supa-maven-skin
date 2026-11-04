@@ -65,7 +65,7 @@ In `.md.vm` pages, `#bsBadge( $theme $variant $text )`, `#bsCard( $title $subtit
 
 ### Admonitions
 
-**Supa Maven Skin** supports all **12 [Sphinx Furo admonition types](https://pradyunsg.me/furo/reference/admonitions/#supported-types)** across 6 semantic categories, each rendered with a **Bootstrap Icons** glyph (`<i class="bi bi-... supa-admonition-icon" aria-hidden="true"></i>`), tinted header bar, and colored left accent border. Any text after the `[!...]` marker on the first line becomes a custom title, and nested blockquotes (`> > [!WARNING]`) are automatically transformed into nested admonitions.
+**Supa Maven Skin** supports all **12 [Sphinx Furo admonition types](https://pradyunsg.me/furo/reference/admonitions/#supported-types)** across 6 semantic categories, each rendered with a **Bootstrap Icons** glyph (`<i class="bi bi-... supa-admonition-icon" aria-hidden="true"></i>`), tinted header bar, and colored left accent border. Any text after the `[!...]` marker on the first line becomes a custom title, and nested blockquotes (`> > [!WARNING]`) are automatically transformed into nested admonitions. Inline Markdown such as code spans and emphasis works in custom titles too.
 
 Select a category below to preview the rendered admonitions and copy their Markdown syntax:
 

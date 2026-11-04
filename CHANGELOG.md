@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - **`<headingPermalinks>false</headingPermalinks>` Had No Effect**: The TOC script read a `<body>` attribute (`data-supa-heading-permalinks`) that `site.vm` never emitted, so headings always got permalink anchors. It now reads `data-supa-permalinks`, and a unit test checks that every `data-supa-*` attribute the enhancers read from `<body>` is emitted by `site.vm`.
 - **Copy Button Reported Copies That Did Not Happen**: When the Clipboard API is missing (pages served over plain HTTP from a host other than `localhost`) or denied, the code-block copy button still showed "Copied!". It now falls back to `document.execCommand('copy')`, shows "Copied!" only when a copy succeeded, and otherwise shows "Copy failed" with a cross icon. The fallback also works in code blocks inside modal dialogs and drawers, and keyboard focus returns to the button.
+- **Double-Escaped Admonition and Alert Titles**: Custom titles on GFM admonitions (`> [!TIP] Colors & Brands`) and `> [!ALERT:...]` headings rendered entities and inline markup as literal text (`&amp;`, `<code>`). They now render as written, including code spans and emphasis. Unlabeled synced tabs now infer their label from the fenced code block only, so inline code in an admonition title or in prose cannot change the label.
 
 ## [0.1.1] - 2026-11-03
 

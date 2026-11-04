@@ -243,6 +243,23 @@ export function normalizeDoxiaTables(container: HTMLElement): void {
 }
 
 /**
+ * Parses an author-written admonition or alert title into DOM nodes.
+ *
+ * The title is sliced from the first paragraph's `innerHTML`, so it is already serialized
+ * HTML (`&amp;`, `<code>…</code>`); assigning it with `textContent` would escape it a second
+ * time. A `<template>` parses it inertly (no script execution or resource loads), and the
+ * markup is the page's own Doxia output, the same source the admonition body is moved from.
+ *
+ * @param html - Serialized HTML of the custom title.
+ * @returns Fragment whose child nodes render the title, inline markup included.
+ */
+function parseTitleHtml(html: string): DocumentFragment {
+  const template = document.createElement('template');
+  template.innerHTML = html;
+  return template.content;
+}
+
+/**
  * Transforms GitHub-Flavored Markdown blockquote alerts (`> [!NOTE]`, `> [!TIP]`,
  * `> [!IMPORTANT]`, `> [!WARNING]`, `> [!CAUTION]`, `> [!ADMONITION]`, `> [!ATTENTION]`,
  * `> [!DANGER]`, `> [!ERROR]`, `> [!HINT]`, `> [!SEEALSO]`, `> [!TODO]`) into Furo
@@ -286,7 +303,7 @@ export function transformGfmAdmonitions(container: HTMLElement): void {
       if (customHeading) {
         const headingEl = document.createElement('div');
         headingEl.className = 'alert-heading fw-semibold mb-1';
-        headingEl.textContent = customHeading;
+        headingEl.appendChild(parseTitleHtml(customHeading));
         contentWrap.appendChild(headingEl);
       }
       while (blockquote.firstChild) {
@@ -316,7 +333,6 @@ export function transformGfmAdmonitions(container: HTMLElement): void {
     const rawKind = match[1].toLowerCase().replace('-', '') as AdmonitionType;
     const customTitle = match[2]?.trim();
     const meta = ADMONITION_META[rawKind] ?? ADMONITION_META.note;
-    const titleText = customTitle && customTitle.length > 0 ? customTitle : meta.defaultTitle;
 
     const remainingHtml = rawText.slice(match[0].length).trim();
     if (firstParagraph) {
@@ -341,7 +357,11 @@ export function transformGfmAdmonitions(container: HTMLElement): void {
     iconEl.setAttribute('aria-hidden', 'true');
 
     const spanEl = document.createElement('span');
-    spanEl.textContent = titleText;
+    if (customTitle) {
+      spanEl.appendChild(parseTitleHtml(customTitle));
+    } else {
+      spanEl.textContent = meta.defaultTitle;
+    }
 
     titleEl.appendChild(iconEl);
     titleEl.appendChild(spanEl);
@@ -371,7 +391,9 @@ function inferPanelTabLabel(panel: HTMLElement, index: number): string {
   if (explicit) {
     return explicit;
   }
-  const codeEl = panel.querySelector('code');
+  // Only fenced blocks carry the language class; inline code in prose or an admonition
+  // title (transformed before tabs) would otherwise come first and hide the fence.
+  const codeEl = panel.querySelector('pre code');
   if (codeEl) {
     const cls = codeEl.className;
     if (/language-(?:markdown|md)\b/i.test(cls)) {

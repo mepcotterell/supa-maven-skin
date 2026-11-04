@@ -461,6 +461,84 @@ describe('Supa Maven Skin Frontend Modules', () => {
       expect(container.querySelector('code')?.textContent).toBe(':bi-rocket-takeoff:');
       expect(container.querySelector('pre')?.textContent).toBe(':bi-github:');
     });
+
+    it('renders custom admonition titles as authored instead of double-escaping their HTML', () => {
+      const container = document.createElement('div');
+      // Mirrors Doxia's Markdown output: the title line is already serialized HTML.
+      container.innerHTML = [
+        '<blockquote><p>[!TIP] Colors &amp; Brands\nPick a palette.</p></blockquote>',
+        '<blockquote><p>[!NOTE] Set <code>&lt;colorScheme&gt;</code> <em>first</em> via ' +
+          '<a href="configuration.html">config</a>\nThe body keeps <strong>its</strong> markup.\n' +
+          'And its <em>second</em> line.</p></blockquote>',
+        '<blockquote><p>[!WARNING]\nDefault title body.</p></blockquote>'
+      ].join('\n');
+
+      transformGfmAdmonitions(container);
+
+      const titles = container.querySelectorAll<HTMLElement>('.supa-admonition-title span');
+      expect(titles.length).toBe(3);
+
+      expect(titles[0].textContent).toBe('Colors & Brands');
+      expect(titles[0].innerHTML).toBe('Colors &amp; Brands');
+
+      // Inline markup stays as elements, and the title still ends at the first line break.
+      expect(titles[1].textContent).toBe('Set <colorScheme> first via config');
+      expect(titles[1].querySelector('code')?.textContent).toBe('<colorScheme>');
+      expect(titles[1].querySelector('em')?.textContent).toBe('first');
+      expect(titles[1].querySelector('a')?.getAttribute('href')).toBe('configuration.html');
+      const body = titles[1].closest('.supa-admonition')?.querySelector('.supa-admonition-body');
+      expect(body?.innerHTML).toBe(
+        '<p>The body keeps <strong>its</strong> markup.\nAnd its <em>second</em> line.</p>'
+      );
+
+      // Default titles stay plain text.
+      expect(titles[2].textContent).toBe('Warning');
+      expect(titles[2].children.length).toBe(0);
+    });
+
+    it('renders custom [!ALERT:...] headings as authored instead of double-escaping their HTML', () => {
+      const container = document.createElement('div');
+      container.innerHTML = [
+        '<blockquote><p>[!ALERT:info] Run <code>mvn site</code> &amp; <em>verify</em>\n' +
+          'Output lands in <code>target/site</code>.</p></blockquote>',
+        '<blockquote><p>[!ALERT:success]\nNo heading here.</p></blockquote>'
+      ].join('\n');
+
+      transformGfmAdmonitions(container);
+
+      const infoAlert = container.querySelector('.alert.theme-info');
+      const heading = infoAlert?.querySelector<HTMLElement>('.alert-heading');
+      expect(heading?.textContent).toBe('Run mvn site & verify');
+      expect(heading?.querySelector('code')?.textContent).toBe('mvn site');
+      expect(heading?.querySelector('em')?.textContent).toBe('verify');
+      expect(infoAlert?.querySelector('.flex-grow-1 > p')?.innerHTML).toBe(
+        'Output lands in <code>target/site</code>.'
+      );
+
+      const successAlert = container.querySelector('.alert.theme-success');
+      expect(successAlert?.querySelector('.alert-heading')).toBeNull();
+      expect(successAlert?.textContent?.trim()).toBe('No heading here.');
+    });
+
+    it('infers unlabeled tab labels from the code fence, not inline code in an admonition title', () => {
+      const container = document.createElement('div');
+      container.innerHTML = `
+        <div class="supa-tabs">
+          <div>
+            <blockquote><p>[!NOTE] Use <code>x</code>\nbody</p></blockquote>
+            <pre><code class="language-markdown">md</code></pre>
+          </div>
+          <div><pre><code class="language-velocity">vm</code></pre></div>
+        </div>
+      `;
+
+      // Same order as initDoxiaEnhancements: titles gain real <code> before tabs are labeled.
+      transformGfmAdmonitions(container);
+      initContentTabs(container);
+
+      const labels = Array.from(container.querySelectorAll('.supa-tab-btn')).map((b) => b.textContent);
+      expect(labels).toEqual(['Markdown Shorthand', 'Velocity Macro (.md.vm)']);
+    });
   });
 
   describe('Bootstrap 6 Plugins, Drawers & .prose Isolation', () => {
