@@ -29,7 +29,7 @@ Use this shared vocabulary when communicating and navigating the repo:
 - **sample-site** means the Maven Invoker integration test project in `src/it/sample-site/`, verified by `src/it/sample-site/verify.bsh`.
 - **polarity (`theme`)** means the light/dark mode (`light`, `dark`, or `auto`), stored on `html[data-bs-theme]` and persisted in `localStorage['supa-theme']`.
 - **color scheme (`palette`)** means one of the 6 accessible palettes (`furo`, `bootstrap`, `modus`, `modus-tinted`, `modus-deuteranopia`, `modus-tritanopia`), stored on `html[data-supa-palette]` and persisted in `localStorage['supa-palette']`.
-- **synthetic href** means a root-relative report link emitted by Doxia (such as `/project-info.html` or `/summary.html`) that must be relativized by `#supaResolveHref` in Velocity and `normalizeSyntheticReportHref()` in `search.ts`.
+- **synthetic href** means a root-relative report link emitted by Doxia (such as `/project-info.html` or `/summary.html`) that must be relativized by `#supaResolveHref` in Velocity and `normalizeSyntheticReportHref()` in `search.ts`. Every other relative `site.xml` href is also relative to the site root, and `#supaResolveHref` rewrites it for the directory of the page being rendered (`$relativePath`).
 
 ## The five ways to hurt yourself
 1. **Editing `target/classes/` or `target/site/` directly.** Vite writes compiled assets to `target/classes/css/` and `target/classes/js/`, and `maven-site-plugin` renders HTML into `target/site/`. Any manual edits in `target/` are overwritten on the next build. Always edit sources under `src/` and rebuild.

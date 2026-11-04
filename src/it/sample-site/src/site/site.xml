@@ -18,6 +18,7 @@
       <sourceBranch>main</sourceBranch>
       <sourceDirectory>src/site</sourceDirectory>
       <stickyContentHeader>true</stickyContentHeader>
+      <lightLogo>images/logo.svg</lightLogo>
       <mermaidCdnUrl>https://example.org/vendor/mermaid/mermaid.min.js</mermaidCdnUrl>
       <lightCssVariables>
         <color-brand-primary>#0055ff</color-brand-primary>
@@ -29,9 +30,14 @@
   </custom>
 
   <body>
+    <breadcrumbs>
+      <item name="Maven" href="https://maven.apache.org/" />
+      <item name="Docs" href="guide.html" />
+    </breadcrumbs>
     <menu name="Documentation">
       <item name="Welcome" href="index.html" />
       <item name="User Guide" href="guide.html" />
+      <item name="Installation" href="guides/install.html" />
     </menu>
     <menu ref="reports" />
   </body>

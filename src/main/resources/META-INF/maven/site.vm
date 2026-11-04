@@ -387,7 +387,8 @@
 #foreach( $crumb in $site.body.breadcrumbs )
                     <li class="breadcrumb-item">
 #if( $crumb.href )
-                      <a href="$crumb.href">$esc.html( $crumb.name )</a>
+#supaResolveHref( $crumb.href )
+                      <a href="$resolvedHref">$esc.html( $crumb.name )</a>
 #else
                       <span>$esc.html( $crumb.name )</span>
 #end

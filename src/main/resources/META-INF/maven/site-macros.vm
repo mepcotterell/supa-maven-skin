@@ -5,45 +5,66 @@
 Apache Maven Doxia Site Renderer#if( $doxiaSiteRendererVersion ) $doxiaSiteRendererVersion#end##
 #end
 ##
-## Resolve a relative or external link against $relativePath
-#macro( supaResolveHref $href )
+## Doxia hands site.xml hrefs (menus, breadcrumbs, <bannerLeft>) to the template relative to the
+## site root, and maven-site-plugin even turns same-site absolute URLs into root-relative ones when
+## pom.xml sets <url>. The reports menu adds the synthetic root-relative /project-info.html and
+## /project-reports.html. A page in a subdirectory (guides/install.html, $relativePath "..") needs
+## them relative to its own directory, which Fluido does with $PathTool.calculateLink(). Unlike
+## PathTool, any other "/path" stays unchanged, as the documented logo options promise.
+##
+## Classify $href: $isSiteHref is true for a link inside the site, and $siteHref is then its
+## site-root-relative form (synthetic "/" and leading "./" removed). URLs with a scheme (https:,
+## mailto:, ...), "/" and "//" paths, and "#fragment" links set $isSiteHref to false.
+#macro( supaSiteHref $href )
+#set( $isSiteHref = false )
+#set( $siteHref = '' )
 #if( $href && ( $href == "/project-info.html" || $href == "/project-reports.html" ) )
-#set( $cleanHref = $href.substring( 1 ) )
-#set( $resolvedHref = "$relativePath/$cleanHref" )
-#set( $resolvedHref = $resolvedHref.replace( './', '' ) )
-#elseif( $href && !$href.startsWith( "http://" ) && !$href.startsWith( "https://" ) && !$href.startsWith( "mailto:" ) && !$href.startsWith( "#" ) && !$href.startsWith( "/" ) )
-#set( $resolvedHref = "$relativePath/$href" )
-#set( $resolvedHref = $resolvedHref.replace( './', '' ) )
+#set( $isSiteHref = true )
+#set( $siteHref = $href.substring( 1 ) )
+#elseif( $href && !$href.startsWith( "/" ) && !$href.startsWith( "#" ) && !$href.matches( '[A-Za-z][A-Za-z0-9+.-]*:.*' ) )
+#set( $isSiteHref = true )
+#set( $siteHref = $href.replaceFirst( '^([.]/)+', '' ) )
+#end
+#end
+##
+## Resolve $href for the page being rendered into $resolvedHref: links inside the site gain the
+## $relativePath prefix (".", "..", "../.."), and every other link is returned unchanged
+#macro( supaResolveHref $href )
+#supaSiteHref( $href )
+#if( $isSiteHref && ( $relativePath != "." || $siteHref == "" ) )
+#set( $resolvedHref = "$relativePath/$siteHref" )
+#elseif( $isSiteHref )
+#set( $resolvedHref = $siteHref )
 #else
 #set( $resolvedHref = $href )
 #end
 #end
 ##
-## Normalize synthetic leading slash on Maven Site's /project-info.html and /project-reports.html
+## Resolve a menu item href into $itemHref and set $itemIsCurrent when it names the page being
+## rendered. The check compares site-root-relative paths: Doxia's $currentFileName (for example
+## guides/install.html) against $siteHref. $alignedFileName is page-relative on pages in
+## subdirectories (../guides/install.html), so it is not used here.
 #macro( supaMenuItemHref $href )
-#if( $href && ( $href == "/project-info.html" || $href == "/project-reports.html" ) )
-#set( $itemHref = "$relativePath/$href.substring( 1 )" )
-#set( $itemHref = $itemHref.replace( './', '' ) )
-#else
-#set( $itemHref = $href )
-#end
+#supaResolveHref( $href )
+#set( $itemHref = $resolvedHref )
+#set( $itemIsCurrent = ( $isSiteHref && $siteHref == $currentFileName ) )
 #end
 ##
 ## Check if a menu item or any of its descendants is the current page
 #macro( supaHasActiveChild $menuItem )
 #set( $hasActive = false )
 #supaMenuItemHref( $menuItem.href )
-#if( $alignedFileName == $itemHref )
+#if( $itemIsCurrent )
 #set( $hasActive = true )
 #elseif( $menuItem.items && $menuItem.items.size() > 0 )
 #foreach( $subItem in $menuItem.items )
 #supaMenuItemHref( $subItem.href )
-#if( $alignedFileName == $itemHref )
+#if( $itemIsCurrent )
 #set( $hasActive = true )
 #elseif( $subItem.items && $subItem.items.size() > 0 )
 #foreach( $deepItem in $subItem.items )
 #supaMenuItemHref( $deepItem.href )
-#if( $alignedFileName == $itemHref )
+#if( $itemIsCurrent )
 #set( $hasActive = true )
 #end
 #end
@@ -56,7 +77,7 @@ Apache Maven Doxia Site Renderer#if( $doxiaSiteRendererVersion ) $doxiaSiteRende
 #macro( supaSidebarMenuItem $item $depth $collapseDepth )
 #supaMenuItemHref( $item.href )
 #set( $currentItemHref = $itemHref )
-#set( $isCurrent = ( $alignedFileName == $currentItemHref ) )
+#set( $isCurrent = $itemIsCurrent )
 #supaHasActiveChild( $item )
 #set( $isBranchActive = $hasActive )
 #if( $item.items && $item.items.size() > 0 )
@@ -115,10 +136,11 @@ Apache Maven Doxia Site Renderer#if( $doxiaSiteRendererVersion ) $doxiaSiteRende
 #end
 #end
 ##
-## Flatten menu items into $flatNavItems to compute Previous / Next page links
+## Flatten menu items into $flatNavItems to compute Previous / Next page links (pages inside the
+## site only: external URLs, "/" paths, and links to a #fragment are skipped)
 #macro( supaCollectNavItem $item $flatList )
-#supaMenuItemHref( $item.href )
-#if( $itemHref && !$itemHref.startsWith( "http://" ) && !$itemHref.startsWith( "https://" ) && !$itemHref.contains( "#" ) )
+#supaSiteHref( $item.href )
+#if( $isSiteHref && !$siteHref.contains( "#" ) )
 #set( $_added = $flatList.add( $item ) )
 #end
 #if( $item.items && $item.items.size() > 0 )
@@ -142,7 +164,7 @@ Apache Maven Doxia Site Renderer#if( $doxiaSiteRendererVersion ) $doxiaSiteRende
 #set( $idx = 0 )
 #foreach( $navItem in $flatNavItems )
 #supaMenuItemHref( $navItem.href )
-#if( $currentIndex == -1 && $alignedFileName == $itemHref )
+#if( $currentIndex == -1 && $itemIsCurrent )
 #set( $currentIndex = $idx )
 #end
 #set( $idx = $idx + 1 )

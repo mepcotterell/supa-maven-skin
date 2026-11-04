@@ -8,11 +8,20 @@ import { slugifyHeading } from './toc';
 
 export interface SearchDocument {
   title: string;
+  /**
+   * Link target: site-root-relative (`guides/install.html#setup`) for pages inside the site,
+   * `#id` for a heading on the current page, or an absolute URL. Site-root-relative values keep
+   * the `sessionStorage` index valid on pages at any directory depth; `toPageHref()` turns them
+   * back into links for the page that renders the results.
+   */
   href: string;
   section?: string;
   kind?: 'page' | 'section' | 'nav';
   content: string;
 }
+
+/** Matches an href that starts with a URL scheme such as `https:` or `mailto:`. */
+const URL_SCHEME_PATTERN = /^[a-z][a-z\d+.-]*:/i;
 
 /**
  * Escapes HTML special characters in `text` and wraps matching search query terms
@@ -41,16 +50,98 @@ export function highlightQueryTerms(text: string, rawQuery: string): string {
 
 /**
  * Normalizes Doxia's synthetic root-relative report paths (`/project-info.html`
- * and `/project-reports.html`) into relative links.
+ * and `/project-reports.html`) into site-root-relative links.
  *
  * @param href - Raw link href attribute.
- * @returns Normalized relative href.
+ * @returns Normalized site-root-relative href.
  */
 function normalizeSyntheticReportHref(href: string): string {
   if (href === '/project-info.html' || href === '/project-reports.html') {
     return href.slice(1);
   }
   return href;
+}
+
+/**
+ * Reads the path from the current page back to the site root, which `site.vm` writes into
+ * `html[data-supa-relative-path]` from Doxia's `$relativePath` (`.`, `..`, `../..`).
+ *
+ * @param doc - Document to inspect (defaults to the global `document`).
+ * @returns Relative path to the site root without a trailing slash (`.` when absent).
+ */
+export function getSiteRelativePath(doc: Document = document): string {
+  const raw = doc.documentElement.getAttribute('data-supa-relative-path')?.trim() || '';
+  return raw.replace(/\/+$/, '') || '.';
+}
+
+/**
+ * Converts an href read from a page into a site-root-relative href. `site.vm` writes sidebar
+ * links relative to the page that renders them (`../faq.html` on `guides/install.html`), so a
+ * search index that stored them verbatim would break when `sessionStorage` hands it to a page
+ * at another directory depth.
+ *
+ * @param href - Raw href attribute as written on the page.
+ * @param pageUrl - Absolute URL of the page the href was read from.
+ * @param relativePath - Path from that page back to the site root (`.`, `..`, ...).
+ * @returns The site-root-relative href (`faq.html`, `guides/install.html#setup`) for a link
+ *     inside the site, `href` unchanged for a `#fragment`, or an absolute URL otherwise.
+ */
+export function toSiteRootHref(href: string, pageUrl: string, relativePath: string): string {
+  const synthetic = normalizeSyntheticReportHref(href);
+  if (synthetic !== href || href.startsWith('#')) {
+    return synthetic;
+  }
+  let target: URL;
+  let siteRoot: URL;
+  try {
+    target = new URL(href, pageUrl);
+    siteRoot = new URL(`${relativePath.replace(/\/+$/, '') || '.'}/`, pageUrl);
+  } catch {
+    // Unparseable page URL (for example about:blank): keep the href as written
+    return href;
+  }
+  if (target.origin !== siteRoot.origin || !target.pathname.startsWith(siteRoot.pathname)) {
+    return target.href;
+  }
+  return `${target.pathname.slice(siteRoot.pathname.length)}${target.search}${target.hash}`;
+}
+
+/**
+ * Turns a site-root-relative href from the search index into a link for the current page,
+ * mirroring `#supaResolveHref` in `site-macros.vm`.
+ *
+ * @param siteHref - Site-root-relative href, `#fragment`, or absolute URL.
+ * @param relativePath - Path from the current page back to the site root (`.`, `..`, ...).
+ * @returns The href prefixed with `relativePath` for a link inside the site, otherwise unchanged.
+ */
+export function toPageHref(siteHref: string, relativePath: string): string {
+  if (
+    !siteHref ||
+    siteHref.startsWith('#') ||
+    siteHref.startsWith('/') ||
+    URL_SCHEME_PATTERN.test(siteHref)
+  ) {
+    return siteHref;
+  }
+  const prefix = relativePath.replace(/\/+$/, '') || '.';
+  return prefix === '.' ? siteHref : `${prefix}/${siteHref}`;
+}
+
+/**
+ * Computes the site-root-relative path of the page currently displayed, so remote index entries
+ * for this page can be matched against its local `#id` headings.
+ *
+ * @param relativePath - Path from the current page back to the site root.
+ * @returns Site-root-relative page path (`guides/install.html`), with a directory URL mapped
+ *     to its `index.html`, or `''` outside a browser.
+ */
+function currentPageSiteHref(relativePath: string): string {
+  if (typeof window === 'undefined') {
+    return '';
+  }
+  const pageUrl = window.location.href.split('#')[0].split('?')[0];
+  const siteHref = toSiteRootHref(pageUrl, pageUrl, relativePath);
+  return siteHref === '' || siteHref.endsWith('/') ? `${siteHref}index.html` : siteHref;
 }
 
 /**
@@ -80,6 +171,7 @@ function extractCleanDocumentTitle(doc: Document, fallback: string): string {
 export function collectLocalSearchDocuments(doc: Document = document): SearchDocument[] {
   const results: SearchDocument[] = [];
   const seenHrefs = new Set<string>();
+  const relativePath = getSiteRelativePath(doc);
 
   // 1. Collect sidebar navigation links
   const navLinks = doc.querySelectorAll<HTMLAnchorElement>('.supa-sidebar-tree a.supa-nav-link');
@@ -89,7 +181,7 @@ export function collectLocalSearchDocuments(doc: Document = document): SearchDoc
     if (!rawHref || !title) {
       return;
     }
-    const href = normalizeSyntheticReportHref(rawHref);
+    const href = toSiteRootHref(rawHref, doc.baseURI, relativePath);
     if (seenHrefs.has(href)) {
       return;
     }
@@ -205,25 +297,24 @@ export function filterSearchDocuments(
  *
  * @param localDocs - Local search documents from the active DOM.
  * @param remoteDocs - Remote search documents crawled from sibling pages.
+ * @param relativePath - Path from the current page back to the site root.
  * @returns Deduplicated combined search documents.
  */
 function mergeSearchDocuments(
   localDocs: SearchDocument[],
-  remoteDocs: SearchDocument[]
+  remoteDocs: SearchDocument[],
+  relativePath: string
 ): SearchDocument[] {
-  const currentPageName =
-    typeof window !== 'undefined'
-      ? window.location.pathname.split('/').pop() || 'index.html'
-      : '';
+  const currentPage = currentPageSiteHref(relativePath);
   const merged: SearchDocument[] = [...localDocs];
   const seenHrefs = new Set<string>(localDocs.map((d) => d.href));
 
   for (const doc of remoteDocs) {
     // Skip remote section entries that duplicate local `#hash` headings on the current page
     if (
-      currentPageName &&
-      doc.href.startsWith(`${currentPageName}#`) &&
-      seenHrefs.has(doc.href.slice(currentPageName.length))
+      currentPage &&
+      doc.href.startsWith(`${currentPage}#`) &&
+      seenHrefs.has(doc.href.slice(currentPage.length))
     ) {
       continue;
     }
@@ -242,11 +333,13 @@ function mergeSearchDocuments(
  *
  * @param localDocs - Local search documents from the active DOM.
  * @param cacheKey - `sessionStorage` key scoped to the project version.
+ * @param relativePath - Path from the current page back to the site root.
  * @returns Promise resolving to the merged site search index.
  */
 async function fetchSiteIndex(
   localDocs: SearchDocument[],
-  cacheKey: string
+  cacheKey: string,
+  relativePath: string
 ): Promise<SearchDocument[]> {
   try {
     if (typeof window !== 'undefined' && window.sessionStorage) {
@@ -254,7 +347,7 @@ async function fetchSiteIndex(
       if (cached) {
         const parsed = JSON.parse(cached) as SearchDocument[];
         if (Array.isArray(parsed) && parsed.length > 0) {
-          return mergeSearchDocuments(localDocs, parsed);
+          return mergeSearchDocuments(localDocs, parsed, relativePath);
         }
       }
     }
@@ -269,6 +362,7 @@ async function fetchSiteIndex(
     }
   }
 
+  // Crawl only pages inside the site: toSiteRootHref() turned every other link into an absolute URL
   const pageHrefs = Array.from(
     new Set(
       localDocs
@@ -276,9 +370,8 @@ async function fetchSiteIndex(
         .filter(
           (href) =>
             href &&
-            !href.startsWith('#') &&
-            !href.startsWith('http://') &&
-            !href.startsWith('https://') &&
+            !href.startsWith('/') &&
+            !URL_SCHEME_PATTERN.test(href) &&
             href.endsWith('.html')
         )
     )
@@ -290,7 +383,7 @@ async function fetchSiteIndex(
   await Promise.all(
     pageHrefs.map(async (href) => {
       try {
-        const res = await fetch(href);
+        const res = await fetch(toPageHref(href, relativePath));
         if (!res.ok) {
           return;
         }
@@ -367,7 +460,7 @@ async function fetchSiteIndex(
     // Ignore storage quota errors
   }
 
-  return mergeSearchDocuments(localDocs, remoteDocs);
+  return mergeSearchDocuments(localDocs, remoteDocs, relativePath);
 }
 
 /**
@@ -394,6 +487,7 @@ export function initSearch(): void {
   const version =
     document.documentElement.getAttribute('data-supa-project-version') || '0.1.0';
   const cacheKey = `supa-search-index-${version}`;
+  const relativePath = getSiteRelativePath(document);
 
   /**
    * Renders matching search results for `query` into `#supaSearchResults`.
@@ -420,7 +514,7 @@ export function initSearch(): void {
     matches.forEach((match, idx) => {
       const link = document.createElement('a');
       link.className = `supa-search-result-item${idx === 0 ? ' is-active' : ''}`;
-      link.href = match.href;
+      link.href = toPageHref(match.href, relativePath);
       link.setAttribute('role', 'option');
 
       const topRow = document.createElement('div');
@@ -471,7 +565,7 @@ export function initSearch(): void {
     }
     if (!indexPromise) {
       indexPromise = (async () => {
-        searchDocs = await fetchSiteIndex(searchDocs, cacheKey);
+        searchDocs = await fetchSiteIndex(searchDocs, cacheKey, relativePath);
         fullSiteIndexed = true;
         if (inputEl.value.trim()) {
           renderResults(inputEl.value);

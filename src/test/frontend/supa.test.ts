@@ -57,7 +57,11 @@ import { initOptionalLibraries, isModuleUrl, PINNED_ASSETS, pinnedIntegrity } fr
 import {
   collectLocalSearchDocuments,
   filterSearchDocuments,
-  highlightQueryTerms
+  getSiteRelativePath,
+  highlightQueryTerms,
+  initSearch,
+  toPageHref,
+  toSiteRootHref
 } from '../../main/frontend/ts/search';
 import {
   applyPalette,
@@ -1348,6 +1352,154 @@ describe('Supa Maven Skin Frontend Modules', () => {
 
       const highlighted = highlightQueryTerms('Dark Mode Customization', 'dark');
       expect(highlighted).toContain('<mark class="supa-search-mark">Dark</mark>');
+    });
+
+    it('converts page-relative links to site-root-relative hrefs and back for any page depth', () => {
+      const nestedPage = 'https://example.org/docs/guides/install.html';
+      expect(toSiteRootHref('../faq.html', nestedPage, '..')).toBe('faq.html');
+      expect(toSiteRootHref('../guides/install.html#setup', nestedPage, '..')).toBe(
+        'guides/install.html#setup'
+      );
+      expect(toSiteRootHref('/project-info.html', nestedPage, '..')).toBe('project-info.html');
+      expect(toSiteRootHref('#requirements', nestedPage, '..')).toBe('#requirements');
+      expect(toSiteRootHref('https://maven.apache.org/', nestedPage, '..')).toBe(
+        'https://maven.apache.org/'
+      );
+      // A parent-project link leaves the site, so it is pinned to an absolute URL
+      expect(toSiteRootHref('../../index.html', nestedPage, '..')).toBe('https://example.org/index.html');
+      expect(toSiteRootHref('faq.html', 'https://example.org/docs/index.html', '.')).toBe('faq.html');
+      expect(toSiteRootHref('faq.html', 'about:blank', '.')).toBe('faq.html');
+
+      expect(toPageHref('faq.html', '.')).toBe('faq.html');
+      expect(toPageHref('guides/install.html#setup', '..')).toBe('../guides/install.html#setup');
+      expect(toPageHref('faq.html', '../../')).toBe('../../faq.html');
+      expect(toPageHref('#requirements', '..')).toBe('#requirements');
+      expect(toPageHref('/server/path.html', '..')).toBe('/server/path.html');
+      expect(toPageHref('https://maven.apache.org/', '..')).toBe('https://maven.apache.org/');
+      expect(toPageHref('mailto:dev@example.org', '..')).toBe('mailto:dev@example.org');
+
+      document.documentElement.setAttribute('data-supa-relative-path', '..');
+      expect(getSiteRelativePath()).toBe('..');
+      document.documentElement.removeAttribute('data-supa-relative-path');
+      expect(getSiteRelativePath()).toBe('.');
+    });
+
+    describe('search index shared through sessionStorage', () => {
+      const happyDOM = (window as unknown as { happyDOM: { setURL: (url: string) => void } })
+        .happyDOM;
+      const originalUrl = window.location.href;
+      const remotePages: Record<string, string> = {
+        'https://example.org/docs/index.html': `
+          <title>Welcome</title>
+          <main id="supa-main-content"><h1>Welcome</h1><h2 id="architecture">Architecture</h2><p>Layers.</p></main>`,
+        'https://example.org/docs/guides/install.html': `
+          <title>Installation</title>
+          <main id="supa-main-content"><h1>Installation</h1><h2 id="requirements">Requirements</h2><p>Java.</p></main>`
+      };
+      const fetchMock = vi.fn(async (input: string) => {
+        // search.ts fetches page-relative URLs, which the browser resolves against the page
+        const html = remotePages[new URL(input, window.location.href).href];
+        return { ok: html !== undefined, text: async () => html ?? '' } as unknown as Response;
+      });
+
+      beforeEach(() => {
+        window.sessionStorage.clear();
+        fetchMock.mockClear();
+        vi.stubGlobal('fetch', fetchMock);
+      });
+
+      afterEach(() => {
+        happyDOM.setURL(originalUrl);
+        vi.unstubAllGlobals();
+        window.sessionStorage.clear();
+        document.documentElement.removeAttribute('data-supa-relative-path');
+        document.documentElement.removeAttribute('data-supa-project-version');
+      });
+
+      /**
+       * Renders a search-enabled page as site.vm would at `pageUrl`, with sidebar links already
+       * relativized for the page, and initializes search on it.
+       *
+       * @param pageUrl - Absolute URL of the page.
+       * @param relativePath - Doxia `$relativePath` of the page.
+       * @param heading - Heading id and text in the page's own article.
+       */
+      const openPage = (pageUrl: string, relativePath: string, heading: string): void => {
+        happyDOM.setURL(pageUrl);
+        const prefix = relativePath === '.' ? '' : `${relativePath}/`;
+        document.documentElement.setAttribute('data-supa-relative-path', relativePath);
+        document.documentElement.setAttribute('data-supa-project-version', '1.0.0');
+        document.body.innerHTML = `
+          <nav class="supa-sidebar-tree">
+            <a class="supa-nav-link" href="${prefix}index.html">Welcome</a>
+            <a class="supa-nav-link" href="${prefix}guides/install.html">Installation</a>
+          </nav>
+          <main id="supa-main-content"><h2 id="${heading}">${heading}</h2></main>
+          <dialog id="supaSearchDialog">
+            <input id="supaSearchInput" />
+            <div id="supaSearchStatus"></div>
+            <div id="supaSearchResults"></div>
+          </dialog>`;
+        initSearch();
+      };
+
+      /**
+       * Types `query` into the search input and waits until the site index has been merged in.
+       *
+       * @param query - Search query.
+       * @param expectedHref - Result href attribute that signals the merged index was rendered.
+       * @returns Href attributes of the rendered results.
+       */
+      const search = async (query: string, expectedHref: string): Promise<string[]> => {
+        const input = document.getElementById('supaSearchInput') as HTMLInputElement;
+        input.value = query;
+        input.dispatchEvent(new Event('input'));
+        const hrefs = (): string[] =>
+          Array.from(document.querySelectorAll('.supa-search-result-item')).map(
+            (link) => link.getAttribute('href') || ''
+          );
+        await vi.waitFor(() => expect(hrefs()).toContain(expectedHref));
+        return hrefs();
+      };
+
+      it('reuses an index built on a top-level page with working links on a nested page', async () => {
+        openPage('https://example.org/docs/index.html', '.', 'architecture');
+        expect(await search('requirements', 'guides/install.html#requirements')).toEqual([
+          'guides/install.html#requirements'
+        ]);
+        expect(fetchMock).toHaveBeenCalledTimes(2);
+        const cached = JSON.parse(
+          window.sessionStorage.getItem('supa-search-index-1.0.0') || '[]'
+        ) as Array<{ href: string }>;
+        expect(cached.map((doc) => doc.href).sort()).toEqual([
+          'guides/install.html',
+          'guides/install.html#requirements',
+          'index.html',
+          'index.html#architecture'
+        ]);
+
+        openPage('https://example.org/docs/guides/install.html', '..', 'requirements');
+        expect(await search('architecture', '../index.html#architecture')).toEqual([
+          '../index.html#architecture'
+        ]);
+        // The cached entry for this page's own heading yields to the local #fragment link
+        expect(await search('requirements', '#requirements')).toEqual(['#requirements']);
+        expect(fetchMock).toHaveBeenCalledTimes(2);
+      });
+
+      it('reuses an index built on a nested page with working links on a top-level page', async () => {
+        openPage('https://example.org/docs/guides/install.html', '..', 'requirements');
+        expect(await search('architecture', '../index.html#architecture')).toEqual([
+          '../index.html#architecture'
+        ]);
+        expect(fetchMock).toHaveBeenCalledTimes(2);
+
+        openPage('https://example.org/docs/index.html', '.', 'architecture');
+        expect(await search('requirements', 'guides/install.html#requirements')).toEqual([
+          'guides/install.html#requirements'
+        ]);
+        expect(fetchMock).toHaveBeenCalledTimes(2);
+      });
     });
   });
 

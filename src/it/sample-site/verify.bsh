@@ -169,4 +169,68 @@ if ( !html.contains( "aria-keyshortcuts=\"/ Meta+K Control+K\"" ) || html.contai
     throw new IllegalStateException( "Search trigger must expose its shortcut via aria-keyshortcuts with a label-in-name accessible name (WCAG 2.5.3)" );
 }
 
+// Pages in subdirectories: site.xml hrefs reach the template relative to the site root, so the
+// skin must rewrite menu, breadcrumb, Previous / Next, and logo URLs for the directory of each
+// page (as Fluido does). Up to 0.1.2 they were emitted unchanged, so on guides/install.html the
+// "index.html" menu item pointed at the missing guides/index.html.
+String siteRootPath = siteDir.getCanonicalPath() + File.separator;
+java.util.regex.Pattern localUrlPattern = java.util.regex.Pattern.compile( "<(?:a|img)\\b[^>]*?\\s(?:href|src)=\"([^\"]*)\"" );
+String[] linkCheckedPages = new String[] { "index.html", "guide.html", "guides/install.html" };
+for ( int p = 0; p < linkCheckedPages.length; p++ ) {
+    File page = new File( siteDir, linkCheckedPages[p] );
+    if ( !page.isFile() ) {
+        throw new IllegalStateException( linkCheckedPages[p] + " was not generated" );
+    }
+    java.util.regex.Matcher urlMatcher = localUrlPattern.matcher( Files.readString( page.toPath(), StandardCharsets.UTF_8 ) );
+    while ( urlMatcher.find() ) {
+        String url = urlMatcher.group( 1 );
+        int hashIndex = url.indexOf( '#' );
+        String urlPath = hashIndex >= 0 ? url.substring( 0, hashIndex ) : url;
+        if ( urlPath.length() == 0 || urlPath.startsWith( "/" ) || urlPath.matches( "[A-Za-z][A-Za-z0-9+.-]*:.*" ) ) {
+            continue;
+        }
+        File target = new File( page.getParentFile(), urlPath ).getCanonicalFile();
+        if ( !target.isFile() || !target.getPath().startsWith( siteRootPath ) ) {
+            throw new IllegalStateException( linkCheckedPages[p] + " links to \"" + url + "\", which does not resolve to a file in target/site" );
+        }
+    }
+}
+
+String installText = Files.readString( new File( siteDir, "guides/install.html" ).toPath(), StandardCharsets.UTF_8 );
+String[] installExpected = new String[] {
+    "data-supa-relative-path=\"..\"",
+    "<a class=\"supa-nav-link\" href=\"../index.html\">",
+    "<a class=\"supa-nav-link\" href=\"../guide.html\">",
+    "<a class=\"supa-nav-link active\" href=\"../guides/install.html\" aria-current=\"page\">",
+    "<a class=\"supa-nav-link\" href=\"../project-info.html\">Project Information</a>",
+    "<a class=\"supa-nav-link\" href=\"../summary.html\">",
+    "<a href=\"https://maven.apache.org/\">Maven</a>",
+    "<a href=\"../guide.html\">Docs</a>",
+    "<a class=\"supa-prev-page\" href=\"../guide.html\">",
+    "<a class=\"supa-next-page\" href=\"../project-info.html\">",
+    "<img class=\"supa-sidebar-logo\" src=\"../images/logo.svg\""
+};
+for ( int i = 0; i < installExpected.length; i++ ) {
+    if ( !installText.contains( installExpected[i] ) ) {
+        throw new IllegalStateException( "guides/install.html is missing " + installExpected[i] );
+    }
+}
+if ( installText.split( "class=\"supa-nav-link active\"", -1 ).length != 2 ) {
+    throw new IllegalStateException( "guides/install.html must mark exactly one sidebar item as the current page" );
+}
+
+String[] topLevelExpected = new String[] {
+    "<a class=\"supa-nav-link\" href=\"guides/install.html\">",
+    "<a href=\"guide.html\">Docs</a>",
+    "<img class=\"supa-sidebar-logo\" src=\"images/logo.svg\""
+};
+for ( int i = 0; i < topLevelExpected.length; i++ ) {
+    if ( !html.contains( topLevelExpected[i] ) ) {
+        throw new IllegalStateException( "index.html is missing " + topLevelExpected[i] );
+    }
+}
+if ( !guideText.contains( "<a class=\"supa-next-page\" href=\"guides/install.html\">" ) ) {
+    throw new IllegalStateException( "guide.html must link its Next page card to guides/install.html" );
+}
+
 return true;

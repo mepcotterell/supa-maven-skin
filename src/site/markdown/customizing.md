@@ -250,7 +250,7 @@ Put logo files in `src/site/resources/images/` and reference them from `<supaSki
 </custom>
 ```
 
-- **Paths:** relative paths are resolved against each page's location, so nested pages load the same file. Values starting with `http://`, `https://`, or `/` are used unchanged.
+- **Paths:** write relative paths from the site root (`images/logo-light.svg`). The skin rewrites them for the directory of each page, so pages in subdirectories load the same file. Values with a URL scheme (such as `https:` or `data:`) or a leading `/` are used unchanged.
 - **One or two logos:** with both options set, the skin shows `<lightLogo>` in light mode and `<darkLogo>` in dark mode. With only `<lightLogo>`, that image is used in both.
 - **Fallback:** without `<lightLogo>`, the skin uses the `<bannerLeft><image src="..."/></bannerLeft>` image from `site.xml`. A `<bannerLeft href="...">` also sets where the sidebar brand links to.
 - **Size:** logos are limited to `2.75rem` tall. The skin's rule uses two classes, so match them in `site.css`: `.supa-sidebar-logo-container .supa-sidebar-logo { max-height: 3.5rem; }`. A single-class `.supa-sidebar-logo` rule has no effect.
