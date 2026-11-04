@@ -6,6 +6,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- **Interactive-State Accessibility Scan**: `npm run test:a11y` now also scans the skin's interactive chrome in its open state. That covers the search dialog (empty and with an active result), the sidebar drawer at 390×844, the TOC drawer below `xl`, the color-scheme and theme menus in every placement, a copy button's tooltip and its "Copied!" state, a re-expanded sidebar group, and an expanded accordion and switched tab on `components.html`. It runs in `furo` light/dark and `modus` dark. Each scenario checks that it really reached its state, so a broken selector fails the run instead of scanning a closed state. Append page or scenario names (`npm run test:a11y -- palette-menu`) to narrow a run.
+
+### Changed
+
+- **Drawer Color-Scheme Picker**: Below 1024px, the color-scheme control in the sidebar drawer's Appearance footer is now a native `<select>`. The menu it replaces opened upward over the navigation tree and left slivers of links tappable under its edges (WCAG 2.5.8). The content-header menus are unchanged.
+
+### Fixed
+
+- **Links on Pages in Subdirectories**: Sidebar, breadcrumb, previous/next, and relative `<navIcons>` links are now resolved for the directory of the page being rendered, as in Fluido. Before, a menu item `faq.html` on `guides/install.html` pointed to the missing `guides/faq.html`, and the current page was not highlighted. Search results now work whichever page built the cached index, and pages outside the site root that the sidebar links to (such as a parent site from `<menu ref="parent">`) are still indexed. The Fluido migration guide no longer lists this as a limitation.
+- **Contrast Linter Checked Nothing**: `scripts/lint-scss.ts` looked for `[data-supa-palette="furo"]`, but Dart Sass writes that selector without quotes, so since 0.1.0 the audit matched no palette and passed every color. It now reads each palette's tokens from the compiled CSS, as the browser applies them, and also checks text, link, and icon colors on admonition title bars, admonition bodies, and `.alert.theme-*` surfaces. Translucent tints are blended over the surface beneath before measuring.
+- **Modus AAA Contrast**: The corrected audit found pairs below 7:1 in all four `modus*` palettes, including links in custom admonition titles and in alerts. In dark mode, the note, tip, and warning title bars are darker with the same hue, the brand color is Modus Vivendi `blue-cooler` (`#00bcff`), and the caution accent is `red-faint` (`#ff9580`). The `modus-deuteranopia` tip accent is now `#82b0ec`, `.theme-secondary` uses the muted text on the secondary surface, and the light `.theme-inverse` surface in `modus-tritanopia` uses the item surface. `furo` and `bootstrap` are unchanged.
+- **Color-Scheme Menu Headers**: The "WCAG 2.2 AA Standard" and "WCAG 2.2 AAA High Contrast" headers inside the color-scheme menu are hidden from assistive technology, because a `role="menu"` may only contain menu items (WCAG 4.1.2). Every option name already states its level.
+- **Back-to-Top Button Under Reduced Motion**: With `prefers-reduced-motion: reduce`, the button appears without its slide and fade, so it is never shown half-faded below the contrast minimum.
+
 ## [0.1.2] - 2026-11-04
 
 ### Fixed
