@@ -23,7 +23,10 @@
 // Bootstrap 6 Ergonomic Enhancements & Overlay Fixes
 // ============================================================================
 
-// Allow both `.btn.btn-solid.theme-*` and shorthand `.btn.theme-*` to render as solid themed buttons
+// Allow both `.btn.btn-solid.theme-*` and shorthand `.btn.theme-*` to render as solid themed buttons.
+// A toggled-on solid button darkens its fill as Bootstrap's toggled-on outline button does
+// (`l * .9`): the deeper `l * .88` it used left black text below 7:1 on the pale fills of the
+// dark modus palettes.
 .btn[class*="theme-"]:not(.btn-outline):not(.btn-subtle):not(.btn-text):not(.btn-link) {
   --btn-bg: var(--theme-bg);
   --btn-color: var(--theme-contrast);
@@ -31,9 +34,48 @@
   --btn-hover-bg: oklch(from var(--theme-bg) calc(l * 0.93) calc(c * 1.08) h);
   --btn-hover-color: var(--theme-contrast);
   --btn-hover-border-color: var(--btn-hover-bg);
-  --btn-active-bg: oklch(from var(--theme-bg) calc(l * 0.88) calc(c * 1.12) h);
+  --btn-active-bg: oklch(from var(--theme-bg) calc(l * 0.9) calc(c * 1.15) h);
   --btn-active-color: var(--theme-contrast);
   --btn-active-border-color: var(--btn-active-bg);
+}
+
+// Bootstrap darkens the text of hovered and toggled-on text and subtle buttons (`l * .95`,
+// `l * .9`). That raises contrast on a light fill but lowers it on a dark one, below 7:1 for most
+// modus accents and below 4.5:1 for secondary text in furo and bootstrap, so dark polarity keeps
+// the text color the button has at rest.
+.btn-text[class*="theme-"] {
+  --btn-hover-color: light-dark(
+    oklch(from var(--theme-fg) calc(l * 0.95) calc(c * 1.1) h),
+    var(--theme-fg)
+  );
+  --btn-active-color: light-dark(
+    oklch(from var(--theme-fg) calc(l * 0.9) calc(c * 1.15) h),
+    var(--theme-fg)
+  );
+}
+
+.btn-subtle[class*="theme-"] {
+  --btn-hover-color: light-dark(
+    oklch(from var(--theme-fg-emphasis) calc(l * 0.95) calc(c * 1.1) h),
+    var(--theme-fg-emphasis)
+  );
+  --btn-active-color: light-dark(
+    oklch(from var(--theme-fg-emphasis) calc(l * 0.9) calc(c * 1.15) h),
+    var(--theme-fg-emphasis)
+  );
+}
+
+// Unthemed buttons and chips fall back to `--bg-3` when hovered, pressed, or toggled on. The
+// palettes set that fill with `--supa-bg-active` here rather than on `:root`, where `--bg-3` also
+// colors switch and range tracks, which keep the border color.
+.btn,
+.chip {
+  --bg-3: var(--supa-bg-active);
+}
+
+// Bootstrap fades a hovered selected chip to 90% opacity; the AAA palettes keep it opaque.
+.chip.active:hover {
+  opacity: var(--supa-chip-selected-hover-opacity);
 }
 
 // Ensure closed <dialog class="dialog"> and <dialog class="drawer"> never take up inline document flow or expand iOS Safari viewport

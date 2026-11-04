@@ -176,8 +176,8 @@ interface ThemePaint {
 
 /**
  * How Bootstrap 6 paints a themed component: the fill and the text drawn on it, written with
- * `--theme-<key>` the way the component rules in `node_modules/bootstrap/scss` (and the solid
- * button override in `_bootstrap-supa.scss`) declare them. A fill of `transparent` sits
+ * `--theme-<key>` the way the component rules in `node_modules/bootstrap/scss`, or the skin's
+ * overrides of them in `_bootstrap-supa.scss`, declare them. A fill of `transparent` sits
  * directly on the page.
  *
  * The first five are what a component shows without a pointer on it, including a toggle button
@@ -231,7 +231,7 @@ const THEME_PAINTS: readonly ThemePaint[] = [
   {
     // Solid `.btn.active` and checked `.btn-check`, from the same override
     variant: 'solid button toggled on',
-    fill: 'oklch(from var(--theme-bg) calc(l * 0.88) calc(c * 1.12) h)',
+    fill: 'oklch(from var(--theme-bg) calc(l * 0.9) calc(c * 1.15) h)',
     text: 'var(--theme-contrast)'
   },
   {
@@ -241,28 +241,29 @@ const THEME_PAINTS: readonly ThemePaint[] = [
     text: 'oklch(from var(--theme-contrast) calc(l * .95) calc(c * 1.1) h)'
   },
   {
-    // `.btn-subtle:hover` mixes the muted and subtle fills under a darkened `fg-emphasis`.
+    // `.btn-subtle:hover` mixes the muted and subtle fills; the skin darkens `fg-emphasis` in
+    // light polarity only, as for the rest of the subtle and text buttons below.
     variant: 'subtle button hovered',
     fill: 'color-mix(in oklch, var(--theme-bg-muted) 50%, var(--theme-bg-subtle))',
-    text: 'oklch(from var(--theme-fg-emphasis) calc(l * .95) calc(c * 1.1) h)'
+    text: 'light-dark(oklch(from var(--theme-fg-emphasis) calc(l * 0.95) calc(c * 1.1) h), var(--theme-fg-emphasis))'
   },
   {
     // `.btn-subtle.active` and a checked subtle `.btn-check`
     variant: 'subtle button toggled on',
     fill: 'var(--theme-bg-subtle)',
-    text: 'oklch(from var(--theme-fg-emphasis) calc(l * .9) calc(c * 1.15) h)'
+    text: 'light-dark(oklch(from var(--theme-fg-emphasis) calc(l * 0.9) calc(c * 1.15) h), var(--theme-fg-emphasis))'
   },
   {
-    // `.btn-text:hover` lays the subtle fill under a darkened `fg`.
+    // `.btn-text:hover` lays the subtle fill under `fg`.
     variant: 'text button hovered',
     fill: 'var(--theme-bg-subtle)',
-    text: 'oklch(from var(--theme-fg) calc(l * .95) calc(c * 1.1) h)'
+    text: 'light-dark(oklch(from var(--theme-fg) calc(l * 0.95) calc(c * 1.1) h), var(--theme-fg))'
   },
   {
     // `.btn-text.active` and a checked text `.btn-check`
     variant: 'text button toggled on',
     fill: 'var(--theme-bg-subtle)',
-    text: 'oklch(from var(--theme-fg) calc(l * .9) calc(c * 1.15) h)'
+    text: 'light-dark(oklch(from var(--theme-fg) calc(l * 0.9) calc(c * 1.15) h), var(--theme-fg))'
   },
   {
     // `.btn-link:hover` and a hovered themed `.navbar-brand`
@@ -283,11 +284,11 @@ const THEME_PAINTS: readonly ThemePaint[] = [
     text: 'var(--theme-fg-emphasis)'
   },
   {
-    // `.chip.active:hover` keeps the solid fill and fades the whole chip to 90% opacity.
+    // `.chip.active:hover` keeps the solid fill and fades the whole chip (to 90% in Bootstrap).
     variant: 'selected chip hovered',
     fill: 'var(--theme-bg)',
     text: 'var(--theme-contrast)',
-    opacity: '.9'
+    opacity: 'var(--supa-chip-selected-hover-opacity)'
   }
 ];
 
@@ -413,8 +414,8 @@ export const SURFACE_AUDITS: readonly SurfaceSpec[] = [
     ({ state, item }): SurfaceSpec => ({
       // `<mark class="supa-search-mark">` in a result's title or snippet
       surface: `search match highlight in ${state}`,
-      layers: [PAGE, item, 'color-mix(in srgb, var(--color-brand-primary) 22%, transparent)'],
-      foregrounds: [{ label: 'match', color: 'var(--color-foreground-primary)', role: 'text' }]
+      layers: [PAGE, item, 'var(--supa-search-mark-bg)'],
+      foregrounds: [{ label: 'match', color: 'var(--supa-search-mark-fg)', role: 'text' }]
     })
   ),
   {
@@ -433,9 +434,10 @@ export const SURFACE_AUDITS: readonly SurfaceSpec[] = [
     foregrounds: [{ label: 'text', color: 'var(--fg-body)', role: 'text' }]
   },
   {
-    // `.btn` (any variant) hovered, pressed, or toggled on, and `.chip:hover`
-    surface: 'unthemed button or chip, hovered or pressed (--bg-3)',
-    layers: [PAGE, 'var(--bg-3)'],
+    // `.btn` (any variant) hovered, pressed, or toggled on, and `.chip:hover`: `_bootstrap-supa.scss`
+    // sets `--bg-3` on `.btn` and `.chip` from `--supa-bg-active`.
+    surface: 'unthemed button or chip, hovered or pressed (--supa-bg-active)',
+    layers: [PAGE, 'var(--supa-bg-active)'],
     foregrounds: [{ label: 'text', color: 'var(--fg-body)', role: 'text' }]
   },
   ...BOOTSTRAP_THEMES.flatMap((theme: string): SurfaceSpec[] =>

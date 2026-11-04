@@ -72,6 +72,19 @@
   --supa-nav-active-fg: var(--color-brand-primary);
   --supa-nav-active-bg: color-mix(in srgb, var(--color-brand-primary) 12%, transparent);
 
+  // Search match highlight (`.supa-search-mark` in _layout.scss). It paints its own text, so a
+  // match in a brand-colored result title is not brand text on a brand tint.
+  --supa-search-mark-fg: var(--color-foreground-primary);
+  --supa-search-mark-bg: color-mix(in srgb, var(--color-brand-primary) 22%, transparent);
+
+  // Fill of a hovered, pressed, or toggled-on button or chip without a Bootstrap theme (Bootstrap's
+  // `--bg-3`, which _bootstrap-supa.scss reads from this token on `.btn` and `.chip` only, so
+  // switch and range tracks keep the border color).
+  --supa-bg-active: var(--color-background-border);
+
+  // Opacity of a hovered selected chip (`.chip.active:hover`); Bootstrap 6 fades it to 90%.
+  --supa-chip-selected-hover-opacity: 0.9;
+
   // Accessibility metadata & focus tokens
   --supa-wcag-level: "AA";
   --supa-link-decoration: none;
@@ -186,10 +199,28 @@
   --supa-nav-hover-fg: var(--color-foreground-primary);
   --supa-nav-active-bg: color-mix(in srgb, var(--color-brand-primary) 12%, var(--color-background-primary));
 
+  // Unthemed buttons and chips hover on Modus Vivendi's bg-active: white text on the border gray
+  // reached only 5.9:1.
+  --supa-bg-active: light-dark(var(--color-background-border), #535353);
+  // A hovered selected chip keeps its solid fill: Bootstrap's 90% fade mixes the white text and
+  // the fill toward the page, which left 6.6-6.8:1 on the light accents.
+  --supa-chip-selected-hover-opacity: 1;
+
   --supa-wcag-level: "AAA";
   --supa-link-decoration: underline;
   --focus-ring-width: 3px;
   --focus-ring-offset: 2px;
+}
+
+// Muted fills (`--<theme>-bg-muted`: hovered chips, nav links, and list-group actions, and half
+// of a hovered subtle button) in the AAA palettes move each theme's subtle fill halfway to the
+// page. The bridge's 22% accent tint over the page left accent text at 5.8-6.9:1 on hovered light
+// chips, and Bootstrap's `secondary` and `inverse` grays fell further; text that meets 7:1 on
+// both the page and the subtle fill keeps it on a color between them.
+@mixin modus-muted-fills {
+  @each $theme in primary, accent, success, info, warning, danger, secondary, inverse {
+    --#{$theme}-bg-muted: color-mix(in oklch, var(--#{$theme}-bg-subtle) 50%, var(--color-background-primary));
+  }
 }
 
 [data-supa-palette="modus"] {
@@ -202,6 +233,7 @@
   :root:not([data-supa-palette]),
   :root[data-supa-palette="furo"]:not([data-supa-palette-locked="true"]) {
     @include modus-high-contrast-tokens;
+    @include modus-muted-fills;
   }
 }
 
@@ -255,9 +287,16 @@
   --secondary-bg-subtle: var(--color-background-secondary);
   --secondary-bg: light-dark(var(--gray-100), #484d67);
 
-  // Navigation states follow the modus mixin
+  // Navigation and control states follow the modus mixin, with Modus Vivendi Tinted's bg-active.
+  // A 12% tint of the dark page matches the sidebar's luminance, so the dark current page keeps
+  // only a 4% tint and reads as a recess in the sidebar.
   --supa-nav-hover-fg: var(--color-foreground-primary);
-  --supa-nav-active-bg: color-mix(in srgb, var(--color-brand-primary) 12%, var(--color-background-primary));
+  --supa-nav-active-bg: light-dark(
+    color-mix(in srgb, var(--color-brand-primary) 12%, var(--color-background-primary)),
+    color-mix(in srgb, var(--color-brand-primary) 4%, var(--color-background-primary))
+  );
+  --supa-bg-active: light-dark(var(--color-background-border), #4a4f69);
+  --supa-chip-selected-hover-opacity: 1;
 
   --supa-wcag-level: "AAA";
   --supa-link-decoration: underline;
@@ -409,6 +448,21 @@
   --danger-bg-muted: color-mix(in oklch, var(--supa-admonition-caution-accent) 22%, var(--color-background-primary));
   --danger-border: color-mix(in oklch, var(--supa-admonition-caution-accent) 45%, var(--color-background-primary));
   --danger-contrast: light-dark(#ffffff, #000000);
+
+  // Bootstrap's dark muted fills for `secondary` (gray-700) and `inverse` (gray-300) are lighter
+  // than the subtle fills their text was chosen for: a hovered chip or nav link fell to 3.1:1 and
+  // 1.3:1. Dark secondary steps toward the page instead, and dark inverse one step up from its
+  // gray-900 subtle fill; light keeps Bootstrap's values.
+  --secondary-bg-muted: light-dark(var(--gray-100), var(--gray-900));
+  --inverse-bg-muted: light-dark(var(--gray-200), var(--gray-800));
+}
+
+// The AAA palettes replace those muted fills after the bridge, which would otherwise win.
+[data-supa-palette="modus"],
+[data-supa-palette="modus-tinted"],
+[data-supa-palette="modus-deuteranopia"],
+[data-supa-palette="modus-tritanopia"] {
+  @include modus-muted-fills;
 }
 
 // Explicit theme overrides when data-bs-theme is set

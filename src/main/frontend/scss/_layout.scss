@@ -766,6 +766,12 @@ dialog[data-bs-backdrop="false"]::backdrop {
   text-decoration: none;
   transition: background-color 0.12s ease, border-color 0.12s ease;
 
+  // The title's color switches at once, so under reduced motion the fill must too: a result
+  // leaving the active state would otherwise show brand text on the fading hover fill.
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
+
   &:hover,
   &.is-active {
     border-color: var(--color-brand-primary);
@@ -821,9 +827,9 @@ dialog[data-bs-backdrop="false"]::backdrop {
 .supa-search-mark {
   padding: 0 0.15rem;
   border-radius: 0.2rem;
-  background-color: color-mix(in srgb, var(--color-brand-primary) 22%, transparent);
+  background-color: var(--supa-search-mark-bg);
   // Not `inherit`: a match in a title would be brand text on a brand tint (3.8:1 in furo dark)
-  color: var(--color-foreground-primary);
+  color: var(--supa-search-mark-fg);
   font-weight: 600;
 }
 

@@ -2277,20 +2277,71 @@ describe('WCAG contrast audit (scripts/contrast-audit.ts)', () => {
     const unthemed = SURFACE_AUDITS.filter((surface: SurfaceSpec) => surface.surface.startsWith('unthemed'));
     expect(unthemed.map((surface: SurfaceSpec) => surface.surface)).toEqual([
       'unthemed button, chip, or badge (--bg-2)',
-      'unthemed button or chip, hovered or pressed (--bg-3)'
+      'unthemed button or chip, hovered or pressed (--supa-bg-active)'
     ]);
     // Modus dark as 0.1.3 shipped it: `--bg-3` is the border gray, under white body text.
     const tokens = new Map([
       ['--supa-wcag-level', '"AAA"'],
       ['--color-background-primary', '#000000'],
       ['--bg-2', '#282828'],
-      ['--bg-3', '#646464'],
+      ['--supa-bg-active', '#646464'],
       ['--fg-body', '#ffffff']
     ]);
     expect(auditContrast(tokens, 'modus', 'dark', unthemed).violations).toEqual([
       "WCAG 2.2 AAA text contrast violation in palette 'modus' (dark): text var(--fg-body) " +
-        '(#ffffff) on unthemed button or chip, hovered or pressed (--bg-3) (#646464) has ' +
-        'contrast 5.92:1 (minimum 7.0:1).'
+        '(#ffffff) on unthemed button or chip, hovered or pressed (--supa-bg-active) (#646464) ' +
+        'has contrast 5.92:1 (minimum 7.0:1).'
     ]);
+    // The modus palettes set `--supa-bg-active` to Modus Vivendi's bg-active.
+    tokens.set('--supa-bg-active', 'light-dark(#9f9f9f, #535353)');
+    expect(auditContrast(tokens, 'modus', 'dark', unthemed).violations).toEqual([]);
+  });
+
+  it('moves modus muted fills toward the page, where accent text keeps 7:1', () => {
+    const chip = SURFACE_AUDITS.filter((surface: SurfaceSpec) => surface.surface === '.theme-success chip hovered');
+    // Modus light's success chip on components.html, hovered.
+    const tokens = new Map([
+      ['--supa-wcag-level', '"AAA"'],
+      ['--color-background-primary', '#ffffff'],
+      ['--supa-admonition-tip-accent', '#005a00'],
+      ['--success-fg', 'var(--supa-admonition-tip-accent)'],
+      ['--success-bg-subtle', '#e8f6e8'],
+      // The bridge's tint, which axe measured at 5.78:1 on the rendered chip
+      [
+        '--success-bg-muted',
+        'color-mix(in oklch, var(--supa-admonition-tip-accent) 22%, var(--color-background-primary))'
+      ]
+    ]);
+    expect(auditContrast(tokens, 'modus', 'light', chip).violations).toEqual([
+      "WCAG 2.2 AAA text contrast violation in palette 'modus' (light): text var(--success-fg) " +
+        '(#005a00) on .theme-success chip hovered (#c9d9c7) has contrast 5.80:1 (minimum 7.0:1).'
+    ]);
+    tokens.set(
+      '--success-bg-muted',
+      'color-mix(in oklch, var(--success-bg-subtle) 50%, var(--color-background-primary))'
+    );
+    expect(auditContrast(tokens, 'modus', 'light', chip)).toEqual({ checked: 1, violations: [] });
+  });
+
+  it('keeps the resting text of hovered and toggled-on text buttons in dark polarity', () => {
+    const [hovered] = SURFACE_AUDITS.filter(
+      (surface: SurfaceSpec) => surface.surface === '.theme-primary text button hovered'
+    );
+    const text: string = hovered?.foregrounds[0]?.color ?? '';
+    // Modus-tinted dark's primary text button on components.html: Bootstrap's `l * .95` text
+    // (#72a3fa) measured 6.51:1 on the subtle fill.
+    const tokens = new Map([
+      ['--supa-wcag-level', '"AAA"'],
+      ['--color-background-primary', '#0d0e1c'],
+      ['--primary-fg', '#82b0ff'],
+      ['--primary-bg-subtle', '#1a1e34']
+    ]);
+    expect(toHex(resolveColor(text, tokens, 'dark')!)).toBe('#82b0ff');
+    expect(auditContrast(tokens, 'modus-tinted', 'dark', [hovered!])).toEqual({ checked: 1, violations: [] });
+    // Light polarity keeps Bootstrap's darkening, which raises contrast on a light fill.
+    tokens.set('--primary-fg', '#0031a9');
+    expect(toHex(resolveColor(text, tokens, 'light')!)).toBe(
+      toHex(resolveColor('oklch(from #0031a9 calc(l * 0.95) calc(c * 1.1) h)', tokens, 'light')!)
+    );
   });
 });
