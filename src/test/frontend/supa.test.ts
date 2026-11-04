@@ -1423,8 +1423,14 @@ describe('Supa Maven Skin Frontend Modules', () => {
        * @param pageUrl - Absolute URL of the page.
        * @param relativePath - Doxia `$relativePath` of the page.
        * @param heading - Heading id and text in the page's own article.
+       * @param extraNavLinks - Additional sidebar link markup, written for this page.
        */
-      const openPage = (pageUrl: string, relativePath: string, heading: string): void => {
+      const openPage = (
+        pageUrl: string,
+        relativePath: string,
+        heading: string,
+        extraNavLinks = ''
+      ): void => {
         happyDOM.setURL(pageUrl);
         const prefix = relativePath === '.' ? '' : `${relativePath}/`;
         document.documentElement.setAttribute('data-supa-relative-path', relativePath);
@@ -1433,6 +1439,7 @@ describe('Supa Maven Skin Frontend Modules', () => {
           <nav class="supa-sidebar-tree">
             <a class="supa-nav-link" href="${prefix}index.html">Welcome</a>
             <a class="supa-nav-link" href="${prefix}guides/install.html">Installation</a>
+            ${extraNavLinks}
           </nav>
           <main id="supa-main-content"><h2 id="${heading}">${heading}</h2></main>
           <dialog id="supaSearchDialog">
@@ -1499,6 +1506,47 @@ describe('Supa Maven Skin Frontend Modules', () => {
           'guides/install.html#requirements'
         ]);
         expect(fetchMock).toHaveBeenCalledTimes(2);
+      });
+
+      it('links a sidebar item for the site root to the site root from any page depth', async () => {
+        // site.vm writes the site root as "./", "../", or "../../": the site-root-relative path
+        // is empty, which must not turn into an empty href that reopens the current page
+        const nestedPage = 'https://example.org/docs/guides/install.html';
+        expect(toSiteRootHref('../', nestedPage, '..')).toBe('./');
+        expect(toSiteRootHref('../#news', nestedPage, '..')).toBe('./#news');
+        expect(toSiteRootHref('./', 'https://example.org/docs/index.html', '.')).toBe('./');
+        expect(toPageHref('./', '.')).toBe('./');
+        expect(toPageHref('./', '..')).toBe('../');
+        expect(toPageHref('./#news', '../..')).toBe('../../#news');
+
+        const homeLink = (href: string): string => `<a class="supa-nav-link" href="${href}">Home</a>`;
+        openPage('https://example.org/docs/index.html', '.', 'architecture', homeLink('./'));
+        expect(await search('home', './')).toEqual(['./']);
+
+        openPage(nestedPage, '..', 'requirements', homeLink('../'));
+        expect(await search('home', '../')).toEqual(['../']);
+
+        // On the directory URL of the site root, the index.html entries in the merged index still
+        // yield to the page's own #fragment headings
+        openPage('https://example.org/docs/', '.', 'architecture');
+        await search('requirements', 'guides/install.html#requirements');
+        expect(await search('architecture', '#architecture')).toEqual(['#architecture']);
+      });
+
+      it('crawls same-origin sidebar pages outside the site root, such as the parent project', async () => {
+        // On a module site, <menu ref="parent"/> links to the parent site one directory up
+        openPage(
+          'https://example.org/docs/module-a/index.html',
+          '.',
+          'overview',
+          `<a class="supa-nav-link" href="../index.html">Parent Project</a>
+           <a class="supa-nav-link" href="https://maven.apache.org/index.html">Maven</a>`
+        );
+        expect(
+          await search('architecture', 'https://example.org/docs/index.html#architecture')
+        ).toEqual(['https://example.org/docs/index.html#architecture']);
+        expect(fetchMock).toHaveBeenCalledWith('https://example.org/docs/index.html');
+        expect(fetchMock).not.toHaveBeenCalledWith('https://maven.apache.org/index.html');
       });
     });
   });

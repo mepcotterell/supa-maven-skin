@@ -83,8 +83,9 @@ export function getSiteRelativePath(doc: Document = document): string {
  * @param href - Raw href attribute as written on the page.
  * @param pageUrl - Absolute URL of the page the href was read from.
  * @param relativePath - Path from that page back to the site root (`.`, `..`, ...).
- * @returns The site-root-relative href (`faq.html`, `guides/install.html#setup`) for a link
- *     inside the site, `href` unchanged for a `#fragment`, or an absolute URL otherwise.
+ * @returns The site-root-relative href (`faq.html`, `guides/install.html#setup`, or `./` for
+ *     the site root itself) for a link inside the site, `href` unchanged for a `#fragment`, or
+ *     an absolute URL otherwise.
  */
 export function toSiteRootHref(href: string, pageUrl: string, relativePath: string): string {
   const synthetic = normalizeSyntheticReportHref(href);
@@ -103,7 +104,10 @@ export function toSiteRootHref(href: string, pageUrl: string, relativePath: stri
   if (target.origin !== siteRoot.origin || !target.pathname.startsWith(siteRoot.pathname)) {
     return target.href;
   }
-  return `${target.pathname.slice(siteRoot.pathname.length)}${target.search}${target.hash}`;
+  // The site root has an empty site-root-relative path. Keep it as "./": an empty href (or a
+  // bare "#hash") would link to the page that renders the search results instead
+  const path = target.pathname.slice(siteRoot.pathname.length) || './';
+  return `${path}${target.search}${target.hash}`;
 }
 
 /**
@@ -124,7 +128,32 @@ export function toPageHref(siteHref: string, relativePath: string): string {
     return siteHref;
   }
   const prefix = relativePath.replace(/\/+$/, '') || '.';
-  return prefix === '.' ? siteHref : `${prefix}/${siteHref}`;
+  if (prefix === '.') {
+    return siteHref;
+  }
+  // The site root "./" becomes "../" rather than ".././"
+  return `${prefix}/${siteHref.replace(/^\.\//, '')}`;
+}
+
+/**
+ * Decides whether the site crawler fetches a page from the search index: a `.html` page inside
+ * the site (stored site-root-relative), or a `.html` page on the current origin outside the site
+ * root, such as the parent project's `index.html` from `<menu ref="parent"/>`, which
+ * `toSiteRootHref()` stored as an absolute URL. Pages on other origins are never fetched.
+ *
+ * @param href - Index href without its `#fragment`.
+ * @param pageOrigin - Origin of the page running the crawler (`''` outside a browser).
+ * @returns Whether to fetch and index the page.
+ */
+function isCrawlableHref(href: string, pageOrigin: string): boolean {
+  if (!href.endsWith('.html')) {
+    return false;
+  }
+  if (!URL_SCHEME_PATTERN.test(href)) {
+    return !href.startsWith('/');
+  }
+  // file: pages report the opaque origin "null", and fetch() cannot read file: URLs anyway
+  return pageOrigin !== '' && pageOrigin !== 'null' && href.startsWith(`${pageOrigin}/`);
 }
 
 /**
@@ -140,7 +169,8 @@ function currentPageSiteHref(relativePath: string): string {
     return '';
   }
   const pageUrl = window.location.href.split('#')[0].split('?')[0];
-  const siteHref = toSiteRootHref(pageUrl, pageUrl, relativePath);
+  // A directory URL for the site root comes back as "./"; drop that so it maps to "index.html"
+  const siteHref = toSiteRootHref(pageUrl, pageUrl, relativePath).replace(/^\.\//, '');
   return siteHref === '' || siteHref.endsWith('/') ? `${siteHref}index.html` : siteHref;
 }
 
@@ -362,18 +392,12 @@ async function fetchSiteIndex(
     }
   }
 
-  // Crawl only pages inside the site: toSiteRootHref() turned every other link into an absolute URL
+  const pageOrigin = typeof window !== 'undefined' ? window.location.origin : '';
   const pageHrefs = Array.from(
     new Set(
       localDocs
         .map((d) => normalizeSyntheticReportHref(d.href.split('#')[0]))
-        .filter(
-          (href) =>
-            href &&
-            !href.startsWith('/') &&
-            !URL_SCHEME_PATTERN.test(href) &&
-            href.endsWith('.html')
-        )
+        .filter((href) => isCrawlableHref(href, pageOrigin))
     )
   ).slice(0, 30);
 
