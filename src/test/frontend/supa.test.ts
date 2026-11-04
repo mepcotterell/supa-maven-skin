@@ -19,6 +19,7 @@ import {
   compositeOver,
   matchRootSelector,
   resolveColor,
+  SURFACE_AUDITS,
   type SurfaceSpec,
   toHex
 } from '../../../scripts/contrast-audit';
@@ -2138,5 +2139,60 @@ describe('WCAG contrast audit (scripts/contrast-audit.ts)', () => {
     tokens.set('--supa-admonition-note-bg', '#0f2537');
     tokens.set('--supa-wcag-level', '"AA"');
     expect(auditContrast(tokens, 'furo', 'dark', surfaces).violations).toEqual([]);
+  });
+
+  it('mixes in sRGB with premultiplied alpha, as the sidebar tint paints', () => {
+    // Expected value is the color axe-core read back from Playwright Chromium for modus dark's
+    // current-page link: the 12% brand tint laid over the sidebar's #1e1e1e.
+    const none = new Map<string, string>();
+    const tint = resolveColor('color-mix(in srgb, #00bcff 12%, transparent)', none, 'dark')!;
+    expect(tint.a).toBeCloseTo(0.12);
+    expect(toHex(compositeOver(tint, resolveColor('#1e1e1e', none, 'dark')!))).toBe('#1a3139');
+    expect(toHex(resolveColor('color-mix(in srgb, #000000, #ffffff)', none, 'light')!)).toBe('#808080');
+  });
+
+  it('resolves relative oklch(from ...) colors as Chromium derives button states', () => {
+    // Expected values are the colors axe-core read back from Playwright Chromium for a toggled
+    // `.btn-outline.theme-secondary.active` in modus dark (Bootstrap's gray-600, darkened).
+    const tokens = new Map([['--gray-600', 'color-mix(in oklch, #000 16%, oklch(60% .02 245))']]);
+    const darken = (color: string): string => `oklch(from ${color} calc(l * .9) calc(c * 1.15) h)`;
+    expect(toHex(resolveColor(darken('var(--gray-600)'), tokens, 'dark')!)).toBe('#4e5861');
+    expect(toHex(resolveColor(darken('#ffffff'), tokens, 'dark')!)).toBe('#dedede');
+    expect(resolveColor(darken('var(--missing)'), tokens, 'dark')).toBeNull();
+    expect(() => resolveColor('oklch(from #fff calc(l * c * 2) c h)', tokens, 'dark')).toThrow(
+      /Unsupported calc\(\)/
+    );
+  });
+
+  it('declares the sidebar, search, and Bootstrap theme surfaces with the target they promise', () => {
+    const named = (prefix: string): SurfaceSpec[] =>
+      SURFACE_AUDITS.filter((surface: SurfaceSpec) => surface.surface.startsWith(prefix));
+    // Modus dark: brand blue on the hover surface and on the current-page tint misses 7:1.
+    const tokens = new Map([
+      ['--supa-wcag-level', '"AAA"'],
+      ['--color-background-primary', '#000000'],
+      ['--color-background-secondary', '#1e1e1e'],
+      ['--color-background-hover', '#2d2d2d'],
+      ['--color-foreground-primary', '#ffffff'],
+      ['--color-brand-primary', '#00bcff']
+    ]);
+    expect(auditContrast(tokens, 'modus', 'dark', named('sidebar')).violations).toEqual([
+      "WCAG 2.2 AAA text contrast violation in palette 'modus' (dark): link var(--color-brand-primary) " +
+        '(#00bcff) on sidebar link, hovered (#2d2d2d) has contrast 6.32:1 (minimum 7.0:1).',
+      "WCAG 2.2 AAA text contrast violation in palette 'modus' (dark): link var(--color-brand-primary) " +
+        '(#00bcff) on sidebar current page (.supa-nav-link.active) (#1a3139) has contrast 6.25:1 ' +
+        '(minimum 7.0:1).'
+    ]);
+    expect(named('search result, active').length).toBe(1);
+    expect(named('search match highlight').length).toBe(2);
+    for (const theme of ['primary', 'accent', 'success', 'info', 'warning', 'danger', 'secondary', 'inverse']) {
+      expect(named(`.theme-${theme} `).map((surface: SurfaceSpec) => surface.surface)).toEqual([
+        `.theme-${theme} solid fill`,
+        `.theme-${theme} outline button toggled on`,
+        `.theme-${theme} outline, text, and link`,
+        `.theme-${theme} subtle fill`,
+        `.theme-${theme} subtle fill, emphasized text`
+      ]);
+    }
   });
 });

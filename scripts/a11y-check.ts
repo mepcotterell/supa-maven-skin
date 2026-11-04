@@ -4,8 +4,10 @@
  * Serves `target/site/` from an in-process Node static file server, opens every
  * top-level page in headless Chromium (Playwright), waits for Supa Maven Skin to
  * finish initialising (`html[data-supa-ready]`), and runs axe-core with the
- * WCAG 2.0/2.1/2.2 A and AA rule tags. The SCSS token linter (`npm run lint:scss`)
- * proves palette pairs meet their contrast targets in isolation; this script
+ * WCAG 2.0/2.1/2.2 A and AA rule tags, plus the AAA `color-contrast-enhanced`
+ * rule (7:1) on the `modus*` palettes that promise AAA. The SCSS token linter
+ * (`npm run lint:scss`) proves palette pairs meet their contrast targets in
+ * isolation; this script
  * proves the rendered combination of Velocity markup, CSS, and TypeScript
  * enhancements does too.
  *
@@ -131,6 +133,20 @@ interface ScanError {
 const ROOT_DIR: string = resolve(import.meta.dirname, '..');
 const SITE_DIR: string = join(ROOT_DIR, 'target', 'site');
 const WCAG_TAGS: string[] = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
+
+/**
+ * Palettes that promise WCAG 2.2 AAA contrast (`--supa-wcag-level: "AAA"` in `_variables.scss`).
+ * Their jobs also run axe's `color-contrast-enhanced` rule (1.4.6, 7:1 for text), the only AAA
+ * rule enabled: the AA tags alone check 4.5:1, so a modus palette could drift below the 7:1 it
+ * advertises with nothing failing.
+ */
+const AAA_PALETTES: ReadonlySet<Palette> = new Set<Palette>([
+  'modus',
+  'modus-tinted',
+  'modus-deuteranopia',
+  'modus-tritanopia'
+]);
+const AAA_CONTRAST_RULE = 'color-contrast-enhanced';
 const DESKTOP: Viewport = { width: 1440, height: 900 };
 const MOBILE: Viewport = { width: 390, height: 844 };
 /**
@@ -376,7 +392,9 @@ const SCENARIOS: readonly InteractionScenario[] = [
         undefined,
         { timeout: STATE_TIMEOUT_MS }
       );
-      await page.keyboard.type('palette');
+      // A query that page titles contain, so the scan sees highlighted matches (`<mark>`) in
+      // result titles as well as snippets, at rest and in the active result.
+      await page.keyboard.type('configuration');
       await expectVisible(
         page.locator('#supaSearchResults > .supa-search-result-item').nth(1),
         'a second search result'
@@ -393,6 +411,10 @@ const SCENARIOS: readonly InteractionScenario[] = [
       await expectVisible(
         page.locator('#supaSearchResults > .supa-search-result-item.is-active:nth-child(2)'),
         'the second search result as the active option'
+      );
+      await expectVisible(
+        page.locator('#supaSearchResults > .is-active .supa-search-result-title mark').first(),
+        'a highlighted match in the active result title'
       );
       await expectFocused(page, page.locator('#supaSearchInput'), 'the search input');
     }
@@ -673,12 +695,24 @@ async function scan(browser: Browser, baseUrl: string, job: ScanJob): Promise<Fi
     });
     const applied = await page.evaluate(() => ({
       theme: document.documentElement.getAttribute('data-bs-theme'),
-      palette: document.documentElement.getAttribute('data-supa-palette')
+      palette: document.documentElement.getAttribute('data-supa-palette'),
+      level: getComputedStyle(document.documentElement)
+        .getPropertyValue('--supa-wcag-level')
+        .replace(/["'\s]/g, '')
     }));
     if (applied.theme !== job.polarity || applied.palette !== job.palette) {
       throw new Error(
         `did not apply the requested variant ` +
           `(got data-bs-theme=${applied.theme}, data-supa-palette=${applied.palette}).`
+      );
+    }
+    // The AAA rule follows AAA_PALETTES, so a palette whose declared level drifted from that
+    // list would be scanned against the wrong target; fail instead.
+    const aaa = AAA_PALETTES.has(job.palette);
+    if (applied.level !== (aaa ? 'AAA' : 'AA')) {
+      throw new Error(
+        `palette ${job.palette} declares --supa-wcag-level ${applied.level || '(unset)'}, ` +
+          `but the scan expects ${aaa ? 'AAA' : 'AA'}.`
       );
     }
     if (scenario) {
@@ -691,7 +725,12 @@ async function scan(browser: Browser, baseUrl: string, job: ScanJob): Promise<Fi
         throw new Error(`scenario state not reached: ${firstLine(error)}`, { cause: error });
       }
     }
-    const builder = new AxeBuilder({ page }).withTags(WCAG_TAGS);
+    // `options()` replaces axe's run options, so it carries the AA tags itself. axe runs a rule
+    // enabled under `rules` even when its tags are outside `runOnly`.
+    const builder = new AxeBuilder({ page }).options({
+      runOnly: { type: 'tag', values: WCAG_TAGS },
+      ...(aaa ? { rules: { [AAA_CONTRAST_RULE]: { enabled: true } } } : {})
+    });
     for (const selector of scenario?.scope ?? []) {
       builder.include(selector);
     }
@@ -827,9 +866,11 @@ async function main(): Promise<number> {
     browser = await chromium.launch();
     const activeBrowser = browser;
     const scenarioJobs = jobs.filter((job) => job.scenario).length;
+    const aaaJobs = jobs.filter((job) => AAA_PALETTES.has(job.palette)).length;
     console.log(
       `a11y: scanning ${jobs.length} page variants (${pages.length} pages, ` +
-        `${scenarioJobs} in interactive states) with axe-core [${WCAG_TAGS.join(', ')}]`
+        `${scenarioJobs} in interactive states) with axe-core [${WCAG_TAGS.join(', ')}], ` +
+        `plus ${AAA_CONTRAST_RULE} on the ${aaaJobs} AAA-palette variants`
     );
     const errors: ScanError[] = [];
     const perJob = await mapLimit(jobs, CONCURRENCY, async (job) => {
@@ -864,7 +905,10 @@ async function main(): Promise<number> {
       );
       return 1;
     }
-    console.log(`a11y: no WCAG A/AA violations across ${jobs.length} page variants.`);
+    console.log(
+      `a11y: no WCAG A/AA violations across ${jobs.length} page variants, ` +
+        `and no AAA contrast violations across the ${aaaJobs} AAA-palette variants.`
+    );
     return 0;
   } finally {
     await browser?.close();

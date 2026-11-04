@@ -4,11 +4,12 @@
  * The audit works on what renders, not on a fixed list of token pairs. For each built-in palette
  * and polarity it collects the custom properties that apply to `<html>` (the same cascade the
  * browser runs: matching selector, specificity, source order), resolves `var()`, `light-dark()`,
- * `rgb()`, `oklch()`, and `color-mix(in oklch, ...)` down to sRGB, alpha-composites translucent
- * backgrounds over the surface underneath them, and checks every foreground declared in
- * `SURFACE_AUDITS` against its WCAG target. Declaring surfaces as the CSS expressions the rules in
- * `_content.scss`, `_layout.scss`, and Bootstrap's `_alert.scss` actually paint keeps the audit
- * honest when the `_variables.scss` bridge changes which token feeds which component.
+ * `rgb()`, `oklch()` (including relative `oklch(from ...)`), and `color-mix()` in OKLCH or sRGB
+ * down to sRGB, alpha-composites translucent backgrounds over the surface underneath them, and
+ * checks every foreground declared in `SURFACE_AUDITS` against its WCAG target. Declaring
+ * surfaces as the CSS expressions the rules in `_content.scss`, `_layout.scss`, `_sidebar.scss`,
+ * `_toc.scss`, and Bootstrap's component styles actually paint keeps the audit honest when the
+ * `_variables.scss` bridge changes which token feeds which component.
  */
 import type { Root } from 'postcss';
 
@@ -130,15 +131,14 @@ const ADMONITION_KINDS: ReadonlyArray<{ accent: string; classes: string }> = [
 ];
 
 /**
- * Every theme in Bootstrap 6's `$theme-colors`, since an `.alert` can carry any of them:
- * `[!ALERT:...]` accepts six, but `#bsAlert` and raw HTML pass any theme name through, and the
- * component playground offers `accent`. Bootstrap's `_alert.scss` paints `.alert` with
- * `color: var(--theme-fg)` on `background-color: var(--theme-bg-subtle)`, and `.theme-<name>`
- * maps those to `--<name>-fg` and `--<name>-bg-subtle`. `_variables.scss` bridges those to the
- * palette's tokens, except `inverse` (bridged only on `modus-tritanopia`'s light surface) and,
- * outside the `modus*` palettes, `secondary`, which keep Bootstrap's grays.
+ * Every theme in Bootstrap 6's `$theme-colors` (`node_modules/bootstrap/scss/_theme.scss`), since
+ * any component can carry any of them: `[!ALERT:...]` accepts six, but `#bsAlert` and raw HTML
+ * pass any theme name through, and the component playground offers `accent`. `.theme-<name>`
+ * maps each `--theme-<key>` to `--<name>-<key>`. `_variables.scss` bridges those to the
+ * palette's tokens, except `inverse` (bridged only on `modus-tritanopia`'s light surface) and
+ * `secondary` (only partly bridged on the `modus*` palettes), which keep Bootstrap's grays.
  */
-const ALERT_THEMES: readonly string[] = [
+const BOOTSTRAP_THEMES: readonly string[] = [
   'primary',
   'accent',
   'success',
@@ -150,9 +150,74 @@ const ALERT_THEMES: readonly string[] = [
 ];
 
 /**
+ * Sidebar column and drawer background (`.supa-sidebar-column` and the drawer's `--drawer-bg`
+ * in `_layout.scss`), under every sidebar navigation link.
+ */
+const SIDEBAR = 'var(--color-background-secondary)';
+
+/**
+ * How Bootstrap 6 paints a themed component: the fill and the text drawn on it, written with
+ * `--theme-<key>` the way the component rules in `node_modules/bootstrap/scss` declare them.
+ * A fill of `transparent` sits directly on the page.
+ *
+ * These are the pairs a component shows without a pointer on it, including a toggle button
+ * left on (`.active`, a checked `.btn-check`), which the component showcase renders at rest.
+ * The hover and press colors that Bootstrap's button, nav, list-group, and chip rules (and the
+ * solid button override in `_bootstrap-supa.scss`) derive with `oklch(from ...)` or the
+ * `bg-muted` fill are not audited yet.
+ */
+const THEME_PAINTS: ReadonlyArray<{ variant: string; fill: string; text: string }> = [
+  {
+    // `.btn` / `.btn-solid`, `.badge`, `.avatar`, `.page-link.active`, `.chip.active`,
+    // `.menu-item.active`, `.nav-pills .nav-link.active`, `.card-header`, `.stepper-item.active`
+    variant: 'solid fill',
+    fill: 'var(--theme-bg)',
+    text: 'var(--theme-contrast)'
+  },
+  {
+    // `.btn-outline.active` (and a checked `.btn-check`) darkens both colors in `_button.scss`.
+    variant: 'outline button toggled on',
+    fill: 'oklch(from var(--theme-bg) calc(l * .9) calc(c * 1.15) h)',
+    text: 'oklch(from var(--theme-contrast) calc(l * .9) calc(c * 1.15) h)'
+  },
+  {
+    // `.btn-outline`, `.btn-text`, `.btn-link`, `.badge-outline`, themed `.page-link` and
+    // `.menu-item` (whose menu is the page color)
+    variant: 'outline, text, and link',
+    fill: 'transparent',
+    text: 'var(--theme-fg)'
+  },
+  {
+    // `.btn-subtle`, `.badge-subtle`, `.avatar-subtle`, `.chip`, `.list-group-item`,
+    // `.nav-link.active`, the open `.accordion-button`, and `.alert` (with links, above)
+    variant: 'subtle fill',
+    fill: 'var(--theme-bg-subtle)',
+    text: 'var(--theme-fg)'
+  },
+  {
+    // `.toast-header`, `.card-subtle` header and footer
+    variant: 'subtle fill, emphasized text',
+    fill: 'var(--theme-bg-subtle)',
+    text: 'var(--theme-fg-emphasis)'
+  }
+];
+
+/**
+ * Replaces each `--theme-<key>` with the root token `.theme-<name>` maps it to.
+ *
+ * @param expr - Expression written with `--theme-<key>`.
+ * @param theme - Bootstrap theme name.
+ * @returns Expression over root tokens.
+ */
+function forTheme(expr: string, theme: string): string {
+  return expr.replace(/--theme-/g, `--${theme}-`);
+}
+
+/**
  * Every surface the audit measures, with the foregrounds that render on it. The first two
  * entries are the original token audit (all semantic foregrounds on both page backgrounds,
- * plus control borders); the rest follow the rules that paint admonitions and alerts.
+ * plus control borders); the rest follow the rules that paint admonitions, alerts, the
+ * sidebar, TOC, and search dialog states, and every Bootstrap 6 themed component.
  */
 export const SURFACE_AUDITS: readonly SurfaceSpec[] = [
   {
@@ -195,7 +260,7 @@ export const SURFACE_AUDITS: readonly SurfaceSpec[] = [
       { label: 'body link', color: LINK, role: 'text' }
     ]
   },
-  ...ALERT_THEMES.map(
+  ...BOOTSTRAP_THEMES.map(
     (theme: string): SurfaceSpec => ({
       surface: `.alert.theme-${theme}`,
       layers: [PAGE, `var(--${theme}-bg-subtle)`],
@@ -214,7 +279,71 @@ export const SURFACE_AUDITS: readonly SurfaceSpec[] = [
       { label: 'text', color: 'var(--color-foreground-primary)', role: 'text' },
       { label: 'link', color: LINK, role: 'text' }
     ]
-  }
+  },
+  // Sidebar navigation (`.supa-nav-link` in `_sidebar.scss`). The hover rule also paints the
+  // `.supa-nav-label` of a hovered group `<summary>`, whose own hover background is the same.
+  {
+    surface: 'sidebar link',
+    layers: [PAGE, SIDEBAR],
+    foregrounds: [{ label: 'link', color: 'var(--color-foreground-primary)', role: 'text' }]
+  },
+  {
+    surface: 'sidebar link, hovered',
+    layers: [PAGE, SIDEBAR, 'var(--color-background-hover)'],
+    foregrounds: [{ label: 'link', color: 'var(--color-brand-primary)', role: 'text' }]
+  },
+  {
+    surface: 'sidebar current page (.supa-nav-link.active)',
+    layers: [PAGE, SIDEBAR, 'color-mix(in srgb, var(--color-brand-primary) 12%, transparent)'],
+    foregrounds: [{ label: 'link', color: 'var(--color-brand-primary)', role: 'text' }]
+  },
+  // "On this page" TOC (`.supa-toc-nav .nav-link` in `_toc.scss`): the inline column is
+  // transparent over the page and the drawer's `--drawer-bg` is the page color. Links at rest
+  // (`--color-foreground-secondary`) and hovered (`--color-foreground-primary`) paint no
+  // background, so the page surface above already measures them.
+  {
+    surface: 'TOC current section (.nav-link.active)',
+    layers: [PAGE, 'color-mix(in srgb, var(--color-brand-primary) 6%, transparent)'],
+    foregrounds: [{ label: 'link', color: 'var(--color-brand-primary)', role: 'text' }]
+  },
+  // Search dialog (`.supa-search-result-*` in `_layout.scss`): the dialog is the page color and
+  // a result at rest sits on `--color-background-secondary`, which the surface above measures.
+  {
+    surface: 'search result, active or hovered',
+    layers: [PAGE, 'var(--color-background-hover)'],
+    foregrounds: [
+      { label: 'title', color: 'var(--color-brand-primary)', role: 'text' },
+      { label: 'snippet', color: 'var(--color-foreground-secondary)', role: 'text' }
+    ]
+  },
+  ...[
+    { state: 'a result', item: 'var(--color-background-secondary)' },
+    { state: 'the active result', item: 'var(--color-background-hover)' }
+  ].map(
+    ({ state, item }): SurfaceSpec => ({
+      // `<mark class="supa-search-mark">` inherits the color of the title or snippet it is in.
+      surface: `search match highlight in ${state}`,
+      layers: [PAGE, item, 'color-mix(in srgb, var(--color-brand-primary) 22%, transparent)'],
+      foregrounds: [
+        { label: 'match in the title', color: 'var(--color-brand-primary)', role: 'text' },
+        { label: 'match in the snippet', color: 'var(--color-foreground-secondary)', role: 'text' }
+      ]
+    })
+  ),
+  {
+    surface: 'item badge (.supa-search-result-badge, .supa-version-badge)',
+    layers: [PAGE, SIDEBAR, 'var(--color-background-item)'],
+    foregrounds: [{ label: 'text', color: 'var(--color-foreground-secondary)', role: 'text' }]
+  },
+  ...BOOTSTRAP_THEMES.flatMap((theme: string): SurfaceSpec[] =>
+    THEME_PAINTS.map(
+      ({ variant, fill, text }): SurfaceSpec => ({
+        surface: `.theme-${theme} ${variant}`,
+        layers: fill === 'transparent' ? [PAGE] : [PAGE, forTheme(fill, theme)],
+        foregrounds: [{ label: 'text', color: forTheme(text, theme), role: 'text' }]
+      })
+    )
+  )
 ];
 
 /**
@@ -413,6 +542,60 @@ function oklchToSrgb(l: number, c: number, h: number, alpha: number): Rgba {
 }
 
 /**
+ * Normalizes `color-mix()` percentages as CSS Color 5 does: an omitted percentage is the
+ * complement of the other (both omitted means 50/50), and a sum below 100% scales the result's
+ * alpha instead of the mix.
+ *
+ * @param firstPercent - First percentage, or undefined when omitted.
+ * @param secondPercent - Second percentage, or undefined when omitted.
+ * @returns Weights that sum to 1, and the alpha multiplier.
+ */
+function mixWeights(
+  firstPercent: number | undefined,
+  secondPercent: number | undefined
+): { p1: number; p2: number; alphaMultiplier: number } {
+  const p1: number = firstPercent ?? (secondPercent === undefined ? 50 : 100 - secondPercent);
+  const p2: number = secondPercent ?? 100 - p1;
+  const sum: number = p1 + p2;
+  if (sum <= 0) {
+    throw new Error('color-mix() percentages must not sum to zero');
+  }
+  return { p1: p1 / sum, p2: p2 / sum, alphaMultiplier: sum < 100 ? sum / 100 : 1 };
+}
+
+/**
+ * Mixes two colors in gamma-encoded sRGB with premultiplied alpha, as CSS Color 5
+ * `color-mix(in srgb, ...)` does. The skin's tints (`color-mix(in srgb, <brand> 12%,
+ * transparent)`) come out as the brand color at 12% alpha, which the caller then composites.
+ *
+ * @param first - First color.
+ * @param firstPercent - First percentage, or undefined when omitted.
+ * @param second - Second color.
+ * @param secondPercent - Second percentage, or undefined when omitted.
+ * @returns Mixed sRGB color.
+ */
+export function mixInSrgb(
+  first: Rgba,
+  firstPercent: number | undefined,
+  second: Rgba,
+  secondPercent: number | undefined
+): Rgba {
+  const { p1, p2, alphaMultiplier } = mixWeights(firstPercent, secondPercent);
+  const alpha: number = first.a * p1 + second.a * p2;
+  if (alpha === 0) {
+    return { r: 0, g: 0, b: 0, a: 0 };
+  }
+  const channel = (c1: number, c2: number): number =>
+    (c1 * first.a * p1 + c2 * second.a * p2) / alpha;
+  return {
+    r: channel(first.r, second.r),
+    g: channel(first.g, second.g),
+    b: channel(first.b, second.b),
+    a: alpha * alphaMultiplier
+  };
+}
+
+/**
  * Mixes two colors in OKLCH as CSS Color 5 `color-mix()` does: normalized percentages,
  * premultiplied alpha, missing achromatic hues, and shorter-arc hue interpolation.
  *
@@ -428,15 +611,7 @@ export function mixInOklch(
   second: Rgba,
   secondPercent: number | undefined
 ): Rgba {
-  let p1: number = firstPercent ?? (secondPercent === undefined ? 50 : 100 - secondPercent);
-  let p2: number = secondPercent ?? 100 - p1;
-  const sum: number = p1 + p2;
-  if (sum <= 0) {
-    throw new Error('color-mix() percentages must not sum to zero');
-  }
-  const alphaMultiplier: number = sum < 100 ? sum / 100 : 1;
-  p1 /= sum;
-  p2 /= sum;
+  const { p1, p2, alphaMultiplier } = mixWeights(firstPercent, secondPercent);
 
   const c1 = srgbToOklch(first);
   const c2 = srgbToOklch(second);
@@ -477,10 +652,94 @@ function splitMixArgument(arg: string): { color: string; percent: number | undef
 }
 
 /**
+ * Evaluates one channel of a relative `oklch(from ...)` color: a channel keyword (`l`, `c`, `h`,
+ * `alpha`), a number, or a `calc()` of two such operands joined by `*`, `/`, `+`, or `-`. That
+ * covers every relative color Bootstrap 6 and the skin derive button states with, such as
+ * `calc(l * .9)`; anything else throws so an unsupported form is reported, not mismeasured.
+ *
+ * @param expr - Channel expression.
+ * @param channels - Origin color's channel values; a missing hue is 0, as CSS Color 5 requires.
+ * @returns Channel value.
+ */
+function evalRelativeChannel(expr: string, channels: Readonly<Record<string, number>>): number {
+  const value: string = expr.trim();
+  const keyword: number | undefined = channels[value];
+  if (keyword !== undefined) {
+    return keyword;
+  }
+  const call = parseFunctionCall(value);
+  if (call?.name === 'calc') {
+    const [left, op, right, ...rest] = splitTopLevel(call.args, ' ');
+    if (left === undefined || op === undefined || right === undefined || rest.length > 0) {
+      throw new Error(`Unsupported calc() in relative color: '${value}'`);
+    }
+    const a: number = evalRelativeChannel(left, channels);
+    const b: number = evalRelativeChannel(right, channels);
+    switch (op) {
+      case '*':
+        return a * b;
+      case '/':
+        return a / b;
+      case '+':
+        return a + b;
+      case '-':
+        return a - b;
+      default:
+        throw new Error(`Unsupported calc() operator '${op}' in '${value}'`);
+    }
+  }
+  if (!/^-?(\d+\.?\d*|\.\d+)$/.test(value)) {
+    throw new Error(`Unsupported relative color channel '${value}'`);
+  }
+  return parseFloat(value);
+}
+
+/**
+ * Resolves a relative color, `oklch(from <origin> <l> <c> <h> [/ <alpha>])`, which Bootstrap 6
+ * uses to darken button fills and text on hover and press.
+ *
+ * @param args - Argument text after `oklch(`, starting with `from`.
+ * @param tokens - Custom property values that apply to `<html>`.
+ * @param polarity - Polarity that selects the `light-dark()` branch.
+ * @param seen - Custom properties already being resolved, to detect cycles.
+ * @returns Resolved color, or null when the origin color is undefined.
+ */
+function resolveRelativeOklch(
+  args: string,
+  tokens: ReadonlyMap<string, string>,
+  polarity: Polarity,
+  seen: ReadonlySet<string>
+): Rgba | null {
+  const parts: string[] = splitTopLevel(args, ' ');
+  const slash: number = parts.indexOf('/');
+  const channelParts: string[] = slash === -1 ? parts.slice(2) : parts.slice(2, slash);
+  const alphaPart: string | undefined = slash === -1 ? undefined : parts[slash + 1];
+  if (parts[0] !== 'from' || parts[1] === undefined || channelParts.length !== 3) {
+    throw new Error(`Unsupported relative oklch() syntax 'oklch(${args})'`);
+  }
+  const origin: Rgba | null = resolveColor(parts[1], tokens, polarity, seen);
+  if (!origin) {
+    return null;
+  }
+  const lch = srgbToOklch(origin);
+  const channels: Record<string, number> = {
+    l: lch.l,
+    c: lch.c,
+    h: Number.isNaN(lch.h) ? 0 : lch.h,
+    alpha: lch.alpha
+  };
+  const [l, c, h] = channelParts.map((part: string) => evalRelativeChannel(part, channels));
+  const alpha: number =
+    alphaPart === undefined ? lch.alpha : evalRelativeChannel(alphaPart, channels);
+  const result: Oklch = { l: l ?? 0, c: Math.max(0, c ?? 0), h: h ?? 0 };
+  return { ...oklchToSrgb(result.l, result.c, result.h, alpha), oklch: result };
+}
+
+/**
  * Resolves a CSS color expression to sRGB against the custom properties on `<html>`.
  *
  * @param expr - CSS color expression (hex, keyword, `var()`, `light-dark()`, `rgb()`,
- *     `oklch()`, or `color-mix(in oklch, ...)`).
+ *     `oklch()` including relative `oklch(from ...)`, or `color-mix(in oklch | srgb, ...)`).
  * @param tokens - Custom property values that apply to `<html>`.
  * @param polarity - Polarity that selects the `light-dark()` branch.
  * @param seen - Custom properties already being resolved, to detect cycles.
@@ -545,6 +804,9 @@ export function resolveColor(
       return { r: r ?? 0, g: g ?? 0, b: b ?? 0, a: alpha === undefined ? 1 : parseNumber(alpha, 1) };
     }
     case 'oklch': {
+      if (/^from\s/.test(call.args.trim())) {
+        return resolveRelativeOklch(call.args.trim(), tokens, polarity, seen);
+      }
       const { channels, alpha } = splitChannels(call.args);
       if (channels.length !== 3) {
         throw new Error(`Unsupported oklch() syntax '${value}'`);
@@ -558,8 +820,9 @@ export function resolveColor(
       return { ...oklchToSrgb(lch.l, lch.c, lch.h, a), oklch: lch };
     }
     case 'color-mix': {
-      if (args.length !== 3 || (args[0] ?? '').replace(/\s+/g, ' ') !== 'in oklch') {
-        throw new Error(`Only color-mix(in oklch, ...) is supported: '${value}'`);
+      const space: string = (args[0] ?? '').replace(/\s+/g, ' ');
+      if (args.length !== 3 || (space !== 'in oklch' && space !== 'in srgb')) {
+        throw new Error(`Only color-mix(in oklch | srgb, ...) is supported: '${value}'`);
       }
       const first = splitMixArgument(args[1] ?? '');
       const second = splitMixArgument(args[2] ?? '');
@@ -568,7 +831,8 @@ export function resolveColor(
       if (!firstColor || !secondColor) {
         return null;
       }
-      return mixInOklch(firstColor, first.percent, secondColor, second.percent);
+      const mix = space === 'in srgb' ? mixInSrgb : mixInOklch;
+      return mix(firstColor, first.percent, secondColor, second.percent);
     }
     default:
       throw new Error(`Unsupported color function '${call.name}()' in '${value}'`);
