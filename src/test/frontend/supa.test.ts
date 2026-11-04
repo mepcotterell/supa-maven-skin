@@ -42,6 +42,7 @@ import {
   initContentTabs,
   initScrollRegions,
   labelReportAvatars,
+  markDisabledPageLinks,
   normalizeDoxiaTables,
   syncScrollRegionFocus,
   TAB_SYNC_STORAGE_KEY,
@@ -2207,5 +2208,27 @@ describe('WCAG contrast audit (scripts/contrast-audit.ts)', () => {
         `.theme-${theme} subtle fill, emphasized text`
       ]);
     }
+  });
+
+  it('marks disabled pagination links as disabled, which Doxia strips from raw HTML', () => {
+    // What Doxia renders for `<li class="page-item disabled"><a class="page-link" href="#"
+    // aria-disabled="true" tabindex="-1">`: the attributes that exempt it from contrast are gone.
+    const root = document.createElement('div');
+    root.innerHTML = `
+      <ul class="pagination">
+        <li class="page-item disabled"><a class="page-link" href="#null">Previous</a></li>
+        <li class="page-item active"><a class="page-link" href="#null">1</a></li>
+        <li class="page-item"><span class="page-link disabled">Next</span></li>
+        <li class="page-item disabled"><a class="page-link" href="#null" tabindex="0">Kept</a></li>
+      </ul>`;
+    markDisabledPageLinks(root);
+    const [previous, current, next, kept] = Array.from(root.querySelectorAll<HTMLElement>('.page-link'));
+    expect(previous?.getAttribute('aria-disabled')).toBe('true');
+    expect(previous?.getAttribute('tabindex')).toBe('-1');
+    expect(current?.hasAttribute('aria-disabled')).toBe(false);
+    expect(current?.hasAttribute('tabindex')).toBe(false);
+    expect(next?.getAttribute('aria-disabled')).toBe('true');
+    expect(next?.hasAttribute('tabindex')).toBe(false);
+    expect(kept?.getAttribute('tabindex')).toBe('0');
   });
 });

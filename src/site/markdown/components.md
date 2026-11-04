@@ -547,7 +547,7 @@ Authors can write a simple `<ol class="supa-stepper" title="3">` ordered list or
     </nav>
     <nav aria-label="Pagination demo">
       <ul class="pagination pagination-sm mb-0">
-        <li class="page-item disabled"><a class="page-link" href="#">Previous</a></li>
+        <li class="page-item disabled"><a class="page-link" href="#" aria-disabled="true" tabindex="-1">Previous</a></li>
         <li class="page-item active" aria-current="page"><a class="page-link" href="#">1</a></li>
         <li class="page-item"><a class="page-link" href="#">2</a></li>
         <li class="page-item"><a class="page-link" href="#">3</a></li>
@@ -572,7 +572,7 @@ Authors can write a simple `<ol class="supa-stepper" title="3">` ordered list or
 <!-- Bootstrap 6 Pagination -->
 <nav aria-label="Pagination">
   <ul class="pagination pagination-sm mb-0">
-    <li class="page-item disabled"><a class="page-link" href="#">Previous</a></li>
+    <li class="page-item disabled"><a class="page-link" href="#" aria-disabled="true" tabindex="-1">Previous</a></li>
     <li class="page-item active" aria-current="page"><a class="page-link" href="#">1</a></li>
     <li class="page-item"><a class="page-link" href="#">2</a></li>
     <li class="page-item"><a class="page-link" href="#">3</a></li>

@@ -774,6 +774,31 @@ export function labelReportAvatars(container: HTMLElement): void {
     });
 }
 
+/**
+ * Restores Bootstrap's disabled-link semantics on pagination: `aria-disabled="true"` and, on a
+ * link, `tabindex="-1"`.
+ *
+ * Doxia's Markdown sink keeps only base attributes (`class`, `href`, `id`, ...) on raw-HTML
+ * `<a>` and `<li>` elements, so `<li class="page-item disabled"><a class="page-link"
+ * aria-disabled="true" tabindex="-1">` renders as a link that only looks disabled: it stays in
+ * the tab order, is announced as an enabled link, and is held to text contrast that WCAG 1.4.3
+ * waives for inactive controls. Attributes an author's markup did keep are left alone.
+ *
+ * @param container - Root container element to scan.
+ */
+export function markDisabledPageLinks(container: HTMLElement): void {
+  container
+    .querySelectorAll<HTMLElement>('.page-item.disabled > .page-link, .page-link.disabled')
+    .forEach((link) => {
+      if (!link.hasAttribute('aria-disabled')) {
+        link.setAttribute('aria-disabled', 'true');
+      }
+      if (link instanceof HTMLAnchorElement && !link.hasAttribute('tabindex')) {
+        link.tabIndex = -1;
+      }
+    });
+}
+
 /** Horizontally scrollable code and table wrappers created by the skin. */
 const SCROLL_REGION_SELECTOR = '.supa-code-block > pre, .supa-table-responsive';
 
@@ -838,6 +863,7 @@ export function initDoxiaEnhancements(
   }
   normalizeDoxiaTables(root);
   labelReportAvatars(root);
+  markDisabledPageLinks(root);
   transformGfmAdmonitions(root);
   initContentTabs(root);
   initBootstrapAccordions(root);
