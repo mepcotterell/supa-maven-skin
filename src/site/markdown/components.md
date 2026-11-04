@@ -313,7 +313,7 @@ In addition to Furo's `> [!NOTE]` admonitions, site authors can use native Boots
   <div class="alert theme-primary not-prose mb-3" role="alert">
     <div class="flex-grow-1">
       <div class="alert-heading fw-semibold mb-1">Maven Central Release Available</div>
-      <p class="mb-0">Version <code>0.1.1</code> is ready for staging with full Doxia 2.0 and Bootstrap 6 component support.</p>
+      <p class="mb-0">Version <code>0.1.2</code> is ready for staging with full Doxia 2.0 and Bootstrap 6 component support.</p>
     </div>
     <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
   </div>
@@ -334,7 +334,7 @@ In addition to Furo's `> [!NOTE]` admonitions, site authors can use native Boots
 
 <div class="supa-tabs" title="syntax-alerts" data-tab-group="syntax-alerts">
   <div title="Markdown Shorthand" data-tab="Markdown Shorthand"><pre><code class="language-markdown">&gt; [!ALERT:primary dismissible] Maven Central Release Available
-&gt; Version `0.1.1` is ready for staging with full Doxia 2.0 and Bootstrap 6 component support.
+&gt; Version `0.1.2` is ready for staging with full Doxia 2.0 and Bootstrap 6 component support.
 &gt;
 &gt; [!ALERT:success] Build Verification Passed
 &gt; All unit tests (`vitest`) and Maven Invoker integration tests (`verify.bsh`) succeeded with zero warnings.
@@ -344,11 +344,11 @@ In addition to Furo's `> [!NOTE]` admonitions, site authors can use native Boots
   <div title="Markdown + HTML" data-tab="Markdown + HTML"><pre><code class="language-html">&lt;div class="alert theme-primary" role="alert"&gt;
   &lt;div class="flex-grow-1"&gt;
     &lt;div class="alert-heading fw-semibold mb-1"&gt;Maven Central Release Available&lt;/div&gt;
-    &lt;p class="mb-0"&gt;Version &lt;code&gt;0.1.1&lt;/code&gt; is ready for staging.&lt;/p&gt;
+    &lt;p class="mb-0"&gt;Version &lt;code&gt;0.1.2&lt;/code&gt; is ready for staging.&lt;/p&gt;
   &lt;/div&gt;
   &lt;button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"&gt;&lt;/button&gt;
 &lt;/div&gt;</code></pre></div>
-  <div title="Velocity Macro (.md.vm)" data-tab="Velocity Macro (.md.vm)"><pre><code class="language-velocity">#bsAlert("primary", "&lt;strong&gt;Maven Central Release Available:&lt;/strong&gt; Version 0.1.1 is ready.")
+  <div title="Velocity Macro (.md.vm)" data-tab="Velocity Macro (.md.vm)"><pre><code class="language-velocity">#bsAlert("primary", "&lt;strong&gt;Maven Central Release Available:&lt;/strong&gt; Version 0.1.2 is ready.")
 #bsAlert("success", "&lt;strong&gt;Build Verification Passed:&lt;/strong&gt; All unit and Invoker tests succeeded.")</code></pre></div>
 </div>
 
@@ -632,7 +632,7 @@ Wrap `<div title="Question Title">` items inside `<div class="supa-accordion">` 
       <div class="card h-100">
         <div class="card-header d-flex justify-content-between align-items-center">
           <span class="fw-semibold">Skin Architecture</span>
-          <span class="badge badge-subtle theme-primary">v0.1.1</span>
+          <span class="badge badge-subtle theme-primary">v0.1.2</span>
         </div>
         <div class="card-body">
           <div class="card-title h5">Three-Column Furo Layout</div>
@@ -675,7 +675,7 @@ Wrap `<div title="Question Title">` items inside `<div class="supa-accordion">` 
 &lt;div class="card"&gt;
   &lt;div class="card-header d-flex justify-content-between align-items-center"&gt;
     &lt;span class="fw-semibold"&gt;Skin Architecture&lt;/span&gt;
-    &lt;span class="badge badge-subtle theme-primary"&gt;v0.1.1&lt;/span&gt;
+    &lt;span class="badge badge-subtle theme-primary"&gt;v0.1.2&lt;/span&gt;
   &lt;/div&gt;
   &lt;div class="card-body"&gt;
     &lt;div class="card-title h5"&gt;Three-Column Furo Layout&lt;/div&gt;

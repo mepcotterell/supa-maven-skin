@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-11-04
+
 ### Fixed
 
 - **`<headingPermalinks>false</headingPermalinks>` Had No Effect**: The TOC script read a `<body>` attribute (`data-supa-heading-permalinks`) that `site.vm` never emitted, so headings always got permalink anchors. It now reads `data-supa-permalinks`, and a unit test checks that every `data-supa-*` attribute the enhancers read from `<body>` is emitted by `site.vm`.
@@ -88,6 +90,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   - Organized `src/site/markdown/` around the Diátaxis framework (`index.md.vm`, `getting-started.md`, `authoring-guide.md`, `configuration.md`, `components.md`, `kitchen-sink.md`, `architecture.md`) with custom dual-theme `rocket-takeoff` logos (`src/site/resources/images/logo-light.svg` and `logo-dark.svg`).
   - Added automated TypeScript linters for SCSS WCAG 2.2 AA/AAA contrast (`scripts/lint-scss.ts`), Velocity directive balance (`scripts/lint-velocity.ts`), and documentation version alignment + Keep a Changelog 1.1.0 compliance (`scripts/lint-docs.ts`), enforced alongside the Google TypeScript Style Guide and Google-style TSDoc (`supa/google-tsdoc`).
 
-[Unreleased]: https://github.com/mepcotterell/supa-maven-skin/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/mepcotterell/supa-maven-skin/compare/v0.1.2...HEAD
+[0.1.2]: https://github.com/mepcotterell/supa-maven-skin/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/mepcotterell/supa-maven-skin/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/mepcotterell/supa-maven-skin/releases/tag/v0.1.0
