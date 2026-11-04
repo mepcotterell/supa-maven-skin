@@ -220,13 +220,13 @@ Fluido and **Supa Maven Skin** both read the standard `site.xml` elements, but *
 
 ### Pages in Subdirectories
 
-Like Fluido, **Supa Maven Skin** rewrites menu, breadcrumb, and `<bannerLeft>` hrefs, as well as `<lightLogo>` and `<darkLogo>`, for the directory of the page being rendered. `maven-site-plugin` hands these hrefs to the skin relative to the site root (when `pom.xml` sets `<url>`, it also turns absolute URLs that point into your own site into relative ones), and the skin prefixes each one with the path from the current page back to the site root. On `target/site/guides/install.html`, a menu item written as `faq.html` therefore links to `../faq.html`, the item for `guides/install.html` is highlighted as the current page, and the Previous / Next cards link to the neighboring menu items. Pages in subdirectories need no extra configuration, and search results opened from them lead to the right pages too.
+Like Fluido, **Supa Maven Skin** rewrites menu, breadcrumb, and `<bannerLeft>` hrefs, as well as `<lightLogo>`, `<darkLogo>`, and `<navIcons>` hrefs, for the directory of the page being rendered. `maven-site-plugin` hands these hrefs to the skin relative to the site root (when `pom.xml` sets `<url>`, it also turns absolute URLs that point into your own site into relative ones), and the skin prefixes each one with the path from the current page back to the site root. On `target/site/guides/install.html`, a menu item written as `faq.html` therefore links to `../faq.html`, the item for `guides/install.html` is highlighted as the current page, and the Previous / Next cards link to the neighboring menu items. Pages in subdirectories need no extra configuration, and search results opened from them lead to the right pages too.
 
 The skin leaves these hrefs unchanged:
 
 - URLs with a scheme, such as `https://maven.apache.org/`, `mailto:dev@example.org`, or a `data:` image.
 - Links to a `#fragment` on the current page.
-- Paths that start with `/`, which the browser resolves against the root of the domain. Fluido treats them as relative to the site root instead, so `/faq.html` becomes `faq.html` or `../faq.html`. Drop the leading slash when you migrate such hrefs. The reports menu's own `/project-info.html` and `/project-reports.html` links are the exception: the skin resolves them like any other link inside the site.
+- Paths that start with `/`, which the browser resolves against the root of the domain. Fluido treats them as relative to the site root instead, so `/faq.html` becomes `faq.html` or `../faq.html`. In menus, breadcrumbs, and `<bannerLeft>`, this difference shows up only when `pom.xml` has no `<url>` or you set `<relativizeSiteLinks>false</relativizeSiteLinks>`: otherwise `maven-site-plugin` removes the leading slash before the skin sees the href, and the skin adjusts it like any other link, as Fluido does. A leading `/` in `<lightLogo>`, `<darkLogo>`, or `<navIcons>` is always kept. Drop the leading slash when you migrate such hrefs, which works in every configuration. The reports menu's own `/project-info.html` and `/project-reports.html` links are the exception: the skin resolves them like any other link inside the site.
 
 ---
 
@@ -262,7 +262,7 @@ After `mvn site` succeeds, preview the site over HTTP with `mvn site:run` (or `p
 - [ ] The build log shows no errors from parsing `site.xml`, and the generator comment at the top of each page reads "Rendered using Supa Maven Skin".
 - [ ] The sidebar brand shows the right name and logo, and every menu, including `ref="reports"` and `ref="modules"`, appears in the left sidebar.
 - [ ] Every link that used to live in `<links>`, `<bannerRight>`, or `<poweredBy>` has a new home in a `<menu>` or `<navIcons>`.
-- [ ] On pages in subdirectories, sidebar, breadcrumb, and Previous / Next links open the right pages, and the sidebar highlights the current page. Menu and breadcrumb hrefs that start with `/` are not adjusted (see [Pages in Subdirectories](#pages-in-subdirectories)).
+- [ ] On pages in subdirectories, sidebar, breadcrumb, footer icon, and Previous / Next links open the right pages, and the sidebar highlights the current page. Hrefs migrated from Fluido no longer start with `/` (see [Pages in Subdirectories](#pages-in-subdirectories)).
 - [ ] "View page source" and "Edit this page" open the right files, if you configured `<sourceRepository>`.
 - [ ] Hand-written alerts, wells, labels, buttons, and icons render with Bootstrap 6 classes, and no image request points at Fluido's `images/` or `img/` folders.
 - [ ] Analytics or other scripts moved to `<body><head>` load once per page.
