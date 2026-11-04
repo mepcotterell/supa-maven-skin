@@ -13,12 +13,13 @@
  * matrix also runs data-driven interaction scenarios (`SCENARIOS`): each drives
  * a page into an open or interacted state with Playwright locators and the
  * keyboard (the search dialog empty and with an active result, the sidebar and
- * TOC drawers, the color-scheme and theme menus, a shown tooltip, a copy button
- * in its "Copied!" state, a re-expanded sidebar group, and an expanded accordion
- * and switched content tab on `components.html`), asserts the state was reached,
- * scans it in `furo` light and dark and `modus` dark (AAA), and asserts the state
- * still held after the scan, so a broken selector fails the run instead of
- * quietly scanning the closed state.
+ * TOC drawers, the color-scheme and theme menus in each header and drawer
+ * placement, a shown tooltip, a copy button and its tooltip in the "Copied!"
+ * state, a re-expanded sidebar group, and an expanded accordion and switched
+ * content tab on `components.html`), asserts the state was reached, scans it in
+ * `furo` light and dark and `modus` dark (AAA) unless the scenario lists its
+ * own variants, and asserts the state still held after the scan, so a broken
+ * selector fails the run instead of quietly scanning the closed state.
  *
  * Run `mvn -B -ntp clean verify site` first, then `npm run test:a11y`; append
  * page or scenario names (`npm run test:a11y -- team.html palette-menu`) to
@@ -78,15 +79,20 @@ interface InteractionScenario {
   page: string;
   /** Viewport the state needs (drawers only exist below their breakpoints). */
   viewport: Viewport;
+  /**
+   * Palette × polarity variants to scan the state in. Defaults to
+   * `SCENARIO_VARIANTS`; list others for a widget that only some palettes tint.
+   */
+  variants?: readonly Variant[];
   /** Browser permissions the setup needs, such as clipboard access for the copy button. */
   permissions?: string[];
   /**
-   * Selector that limits the scan to one region. Only for a state the skin holds
-   * briefly (the copy button resets "Copied!" after 1.8 s), so axe finishes well
-   * inside it; the rest of the page is covered by the load-time scans. Every
-   * other scenario scans the whole page.
+   * Selectors that limit the scan to the regions the state changes. Only for a
+   * state the skin holds briefly (the copy button resets "Copied!" after 1.8 s),
+   * so axe finishes well inside it; the unchanged rest of the page is covered by
+   * the load-time scans. Every other scenario scans the whole page.
    */
-  scope?: string;
+  scope?: readonly string[];
   /** Drives the loaded page into the state with locators and the keyboard. */
   setup: (page: Page) => Promise<void>;
   /**
@@ -137,9 +143,10 @@ const STATE_TIMEOUT_MS = 5_000;
 const CONCURRENCY = 4;
 
 /**
- * Variants every interaction scenario runs in: `furo` (AA) in both polarities
- * and `modus` dark, the strictest AAA palette on the darkest surfaces, where
- * overlay surfaces, shadows, and active-item tints differ most from the page.
+ * Variants an interaction scenario runs in unless it lists its own: `furo` (AA)
+ * in both polarities and `modus` dark, the strictest AAA palette on the darkest
+ * surfaces, where overlay surfaces, shadows, and active-item tints differ most
+ * from the page.
  */
 const SCENARIO_VARIANTS: readonly Variant[] = [
   { palette: 'furo', polarity: 'light' },
@@ -242,11 +249,97 @@ async function expectAttribute(
 }
 
 /**
- * Interactive states scanned on top of the load-time matrix, each in every
- * `SCENARIO_VARIANTS` entry. Selectors target the skin's own markup from
- * `site.vm`, `site-macros.vm`, and the TypeScript enhancers, and each
- * `assertState` pins the exact element its `setup` toggled, so a state left
- * open elsewhere on the page cannot stand in for it.
+ * Opens the sidebar drawer from its mobile-header toggle and waits until it is open.
+ *
+ * @param page - Page under test at a viewport below `lg`.
+ */
+async function openSidebarDrawer(page: Page): Promise<void> {
+  await page.locator('.supa-mobile-header [data-bs-target="#supaSidebarDrawer"]').click();
+  await expectVisible(page.locator('dialog#supaSidebarDrawer[open]'), 'the sidebar drawer');
+}
+
+/** Which picker a menu scenario opens: `#supaPalettePicker` or `#supaThemeToggle`. */
+type MenuKind = 'palette' | 'theme';
+
+/** Where `site.vm` renders a color-scheme or theme menu trigger. */
+interface MenuPlacement {
+  /** Scenario name prefix, such as `drawer-`. */
+  prefix: string;
+  /** Selector of the region that holds this placement's triggers. */
+  region: string;
+  /** Viewport at which the placement is visible. */
+  viewport: Viewport;
+  /** Pickers rendered as a `.menu` here. */
+  kinds: readonly MenuKind[];
+  /** Opens whatever contains the trigger (the sidebar drawer) before the menu. */
+  reveal?: (page: Page) => Promise<void>;
+}
+
+/**
+ * Builds the scenario that opens one color-scheme or theme menu from the keyboard.
+ *
+ * @param placement - Where the trigger lives.
+ * @param kind - Which picker to open.
+ * @returns The scenario.
+ */
+function menuScenario(placement: MenuPlacement, kind: MenuKind): InteractionScenario {
+  const trigger = `${placement.region} ${kind === 'palette' ? '.supa-palette-btn' : '.supa-theme-toggle-btn'}`;
+  const menu = kind === 'palette' ? '.supa-palette-menu' : '.supa-theme-menu';
+  const what = kind === 'palette' ? 'color-scheme' : 'theme';
+  return {
+    name: `${placement.prefix}${kind}-menu`,
+    page: 'index.html',
+    viewport: placement.viewport,
+    setup: async (page) => {
+      await placement.reveal?.(page);
+      await page.locator(trigger).focus();
+      // ArrowDown is the keyboard path: it opens the menu and focuses the first option.
+      await page.keyboard.press('ArrowDown');
+    },
+    assertState: async (page) => {
+      if (placement.reveal) {
+        await expectVisible(page.locator(`${placement.region}[open]`), `the open ${placement.region}`);
+      }
+      await expectAttribute(page.locator(trigger), 'aria-expanded', 'true', `the ${what} trigger`);
+      // Strict locators: exactly one menu of this kind is open, and it is this placement's.
+      await expectVisible(page.locator(`${menu}.show`), `the single open ${what} menu`);
+      await expectVisible(page.locator(`${placement.region} ${menu}.show`), `this placement's ${what} menu`);
+      await expectFocused(page, page.locator(`${placement.region} ${menu}.show .menu-item`), `a ${what} option`);
+    }
+  };
+}
+
+/**
+ * Every place `site.vm` renders a picker as a `.menu`, each with its own
+ * popover placement and surroundings. The mobile header shows its color-scheme
+ * menu only from 768px up, hence the tablet-portrait viewport. The sidebar
+ * drawer's color-scheme control is a native `<select>` (`#supaPaletteSelect`)
+ * whose open list the browser draws outside the page, so axe has nothing to
+ * scan there beyond the closed control in `sidebar-drawer`.
+ */
+const MENU_PLACEMENTS: readonly MenuPlacement[] = [
+  { prefix: '', region: '.supa-content-header', viewport: DESKTOP, kinds: ['palette', 'theme'] },
+  {
+    prefix: 'mobile-header-',
+    region: '.supa-mobile-header',
+    viewport: { width: 820, height: 1180 },
+    kinds: ['palette', 'theme']
+  },
+  {
+    prefix: 'drawer-',
+    region: 'dialog#supaSidebarDrawer',
+    viewport: MOBILE,
+    kinds: ['theme'],
+    reveal: openSidebarDrawer
+  }
+];
+
+/**
+ * Interactive states scanned on top of the load-time matrix, each in its
+ * `variants` (by default every `SCENARIO_VARIANTS` entry). Selectors target the
+ * skin's own markup from `site.vm`, `site-macros.vm`, and the TypeScript
+ * enhancers, and each `assertState` pins the exact element its `setup`
+ * toggled, so a state left open elsewhere on the page cannot stand in for it.
  */
 const SCENARIOS: readonly InteractionScenario[] = [
   {
@@ -273,8 +366,16 @@ const SCENARIOS: readonly InteractionScenario[] = [
       await page.locator('.supa-sidebar-search .supa-search-trigger').click();
       await expectFocused(page, page.locator('#supaSearchInput'), 'the search input');
       // Opening the dialog starts crawling sibling pages; when that finishes it re-renders
-      // the results and resets the active option, so let it settle before typing.
-      await page.waitForLoadState('networkidle');
+      // the results and resets the active option, so wait for the crawl before typing.
+      // fetchSiteIndex caches the crawl in sessionStorage as it finishes, and each scan
+      // starts in a fresh context, so the key appears only once this crawl is done.
+      // (`waitForLoadState('networkidle')` cannot gate this: it returns at once when the
+      // page went idle before the click, with the crawl still in flight.)
+      await page.waitForFunction(
+        () => Object.keys(window.sessionStorage).some((key) => key.startsWith('supa-search-index-')),
+        undefined,
+        { timeout: STATE_TIMEOUT_MS }
+      );
       await page.keyboard.type('palette');
       await expectVisible(
         page.locator('#supaSearchResults > .supa-search-result-item').nth(1),
@@ -300,15 +401,21 @@ const SCENARIOS: readonly InteractionScenario[] = [
     name: 'sidebar-drawer',
     page: 'index.html',
     viewport: MOBILE,
-    setup: async (page) => {
-      await page.locator('.supa-mobile-header [data-bs-target="#supaSidebarDrawer"]').click();
-    },
+    setup: openSidebarDrawer,
     assertState: async (page) => {
       await expectVisible(page.locator('dialog#supaSidebarDrawer[open]'), 'the sidebar drawer');
       await expectVisible(
         page.locator('#supaSidebarDrawer .supa-drawer-header .btn-close'),
         'the sidebar drawer close button'
       );
+      // The drawer footer's native color-scheme select, synced to the seeded palette by theme.ts.
+      const select = page.locator('#supaSidebarDrawer .supa-sidebar-footer select[data-supa-palette-select]');
+      await expectVisible(select, "the drawer's color-scheme select");
+      const palette = await page.locator('html').getAttribute('data-supa-palette');
+      const selected = await select.inputValue();
+      if (selected !== palette) {
+        throw new Error(`expected the drawer's color-scheme select to show ${palette}, got ${selected}`);
+      }
     }
   },
   {
@@ -327,49 +434,7 @@ const SCENARIOS: readonly InteractionScenario[] = [
       await expectVisible(page.locator('#supaTocNav a.nav-link').first(), 'a TOC entry');
     }
   },
-  {
-    name: 'palette-menu',
-    page: 'index.html',
-    viewport: DESKTOP,
-    setup: async (page) => {
-      await page.locator('.supa-content-header .supa-palette-btn').focus();
-      // ArrowDown is the keyboard path: it opens the menu and focuses the first option.
-      await page.keyboard.press('ArrowDown');
-    },
-    assertState: async (page) => {
-      await expectAttribute(
-        page.locator('.supa-content-header .supa-palette-btn'),
-        'aria-expanded',
-        'true',
-        'the color-scheme trigger'
-      );
-      await expectVisible(page.locator('.supa-palette-menu.show'), 'the color-scheme menu');
-      await expectFocused(
-        page,
-        page.locator('.supa-palette-menu.show .menu-item'),
-        'a color-scheme option'
-      );
-    }
-  },
-  {
-    name: 'theme-menu',
-    page: 'index.html',
-    viewport: DESKTOP,
-    setup: async (page) => {
-      await page.locator('.supa-content-header .supa-theme-toggle-btn').focus();
-      await page.keyboard.press('ArrowDown');
-    },
-    assertState: async (page) => {
-      await expectAttribute(
-        page.locator('.supa-content-header .supa-theme-toggle-btn'),
-        'aria-expanded',
-        'true',
-        'the theme trigger'
-      );
-      await expectVisible(page.locator('.supa-theme-menu.show'), 'the theme menu');
-      await expectFocused(page, page.locator('.supa-theme-menu.show .menu-item'), 'a theme option');
-    }
-  },
+  ...MENU_PLACEMENTS.flatMap((placement) => placement.kinds.map((kind) => menuScenario(placement, kind))),
   {
     name: 'copy-button-tooltip',
     page: 'index.html',
@@ -394,7 +459,8 @@ const SCENARIOS: readonly InteractionScenario[] = [
     page: 'index.html',
     viewport: DESKTOP,
     permissions: ['clipboard-read', 'clipboard-write'],
-    scope: '#supa-main-content .supa-code-block',
+    // The code blocks, plus the "Copied!" tooltip that Bootstrap appends to <body>.
+    scope: ['#supa-main-content .supa-code-block', '.tooltip.show'],
     setup: async (page) => {
       await page.locator('#supa-main-content .supa-copy-btn').first().click();
     },
@@ -402,6 +468,10 @@ const SCENARIOS: readonly InteractionScenario[] = [
       const button = page.locator('#supa-main-content .supa-copy-btn').first();
       await expectAttribute(button, 'aria-label', 'Copied!', 'the first copy button');
       await expectVisible(button, 'the first copy button');
+      await expectVisible(
+        page.locator('.tooltip.show[role="tooltip"]:has-text("Copied!")'),
+        'the "Copied!" tooltip'
+      );
     }
   },
   {
@@ -520,7 +590,8 @@ async function startServer(siteDir: string): Promise<{ server: Server; baseUrl: 
  * @param pages - Top-level HTML file names found in `target/site`.
  * @returns Every page in furo light/dark at desktop size, `index.html` in all
  *     12 palette × polarity variants, `index.html` at a mobile viewport, and
- *     every interaction scenario in each `SCENARIO_VARIANTS` entry.
+ *     every interaction scenario in each of its variants (`SCENARIO_VARIANTS`
+ *     unless the scenario lists its own).
  */
 function buildJobs(pages: string[]): ScanJob[] {
   const jobs: ScanJob[] = [];
@@ -541,7 +612,7 @@ function buildJobs(pages: string[]): ScanJob[] {
     jobs.push({ page: 'index.html', palette: 'furo', polarity, ...MOBILE });
   }
   for (const scenario of SCENARIOS) {
-    for (const variant of SCENARIO_VARIANTS) {
+    for (const variant of scenario.variants ?? SCENARIO_VARIANTS) {
       jobs.push({ page: scenario.page, ...variant, ...scenario.viewport, scenario });
     }
   }
@@ -621,8 +692,8 @@ async function scan(browser: Browser, baseUrl: string, job: ScanJob): Promise<Fi
       }
     }
     const builder = new AxeBuilder({ page }).withTags(WCAG_TAGS);
-    if (scenario?.scope) {
-      builder.include(scenario.scope);
+    for (const selector of scenario?.scope ?? []) {
+      builder.include(selector);
     }
     const results = await builder.analyze();
     if (scenario) {
