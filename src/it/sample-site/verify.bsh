@@ -168,6 +168,12 @@ if ( java.util.regex.Pattern.compile( "<summary[^>]*>\\s*<a\\s" ).matcher( html 
 if ( !html.contains( "aria-keyshortcuts=\"/ Meta+K Control+K\"" ) || html.contains( "Search documentation (Press" ) ) {
     throw new IllegalStateException( "Search trigger must expose its shortcut via aria-keyshortcuts with a label-in-name accessible name (WCAG 2.5.3)" );
 }
+// A role="menu" may own only menu items, groups, and separators; the color-scheme menu's visual
+// AA/AAA headers must stay hidden from assistive technology (axe aria-required-children).
+if ( !html.contains( "<h6 class=\"menu-header\" aria-hidden=\"true\">WCAG 2.2 AA Standard</h6>" )
+     || html.contains( "<h6 class=\"menu-header\">" ) ) {
+    throw new IllegalStateException( "Color-scheme menu headers must carry aria-hidden=\"true\" inside role=\"menu\" (axe aria-required-children, WCAG 1.3.1)" );
+}
 
 // Pages in subdirectories: site.xml hrefs reach the template relative to the site root, so the
 // skin must rewrite menu, breadcrumb, Previous / Next, logo, and footer icon URLs for the
