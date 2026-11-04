@@ -45,7 +45,7 @@ Requires `maven-site-plugin` `3.21.0+` (Doxia `2.2.0` / Doxia Sitetools `2.0`).
   <skin>
     <groupId>io.github.mepcotterell</groupId>
     <artifactId>supa-maven-skin</artifactId>
-    <version>0.1.3</version>
+    <version>0.1.4</version>
   </skin>
 
   <custom>

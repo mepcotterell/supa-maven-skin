@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.1.4] - 2026-11-04
+
 ### Added
 
 - **AAA Contrast in the Accessibility Scan**: `npm run test:a11y` now also runs axe's `color-contrast-enhanced` (7:1) rule on every `modus*` page scan and interaction scenario, and fails if a palette's `--supa-wcag-level` disagrees with that list. New scenarios hover sidebar links, search results, and Bootstrap components. Before each check, the scan waits for CSS transitions to finish, so it measures settled colors instead of a frame mid-fade.
@@ -125,7 +127,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   - Organized `src/site/markdown/` around the Diátaxis framework (`index.md.vm`, `getting-started.md`, `authoring-guide.md`, `configuration.md`, `components.md`, `kitchen-sink.md`, `architecture.md`) with custom dual-theme `rocket-takeoff` logos (`src/site/resources/images/logo-light.svg` and `logo-dark.svg`).
   - Added automated TypeScript linters for SCSS WCAG 2.2 AA/AAA contrast (`scripts/lint-scss.ts`), Velocity directive balance (`scripts/lint-velocity.ts`), and documentation version alignment + Keep a Changelog 1.1.0 compliance (`scripts/lint-docs.ts`), enforced alongside the Google TypeScript Style Guide and Google-style TSDoc (`supa/google-tsdoc`).
 
-[Unreleased]: https://github.com/mepcotterell/supa-maven-skin/compare/v0.1.3...HEAD
+[Unreleased]: https://github.com/mepcotterell/supa-maven-skin/compare/v0.1.4...HEAD
+[0.1.4]: https://github.com/mepcotterell/supa-maven-skin/compare/v0.1.3...v0.1.4
 [0.1.3]: https://github.com/mepcotterell/supa-maven-skin/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/mepcotterell/supa-maven-skin/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/mepcotterell/supa-maven-skin/compare/v0.1.0...v0.1.1
