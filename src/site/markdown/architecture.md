@@ -82,7 +82,7 @@ Maven reports (such as `dependencies.html`, `ci-management.html`, `team.html`, a
 
 | Tier | Palettes | Minimum Contrast Guarantees |
 | :--- | :--- | :--- |
-| **WCAG 2.2 AA** | `furo`, `bootstrap` | &ge; `4.5:1` for every text and link color on every audited surface (primary and secondary backgrounds, admonition title bars and bodies, `.alert.theme-*` callouts, sidebar, TOC, and search-result states, and Bootstrap 6 themed fills); &ge; `3.0:1` for interactive UI borders and admonition icons. |
+| **WCAG 2.2 AA** | `furo`, `bootstrap` | &ge; `4.5:1` for every text and link color on every audited surface (primary and secondary backgrounds, admonition title bars and bodies, `.alert.theme-*` callouts, sidebar, TOC, and search-result states, and Bootstrap 6 components with and without a theme, at rest, hovered, and toggled on); &ge; `3.0:1` for interactive UI borders and admonition icons. |
 | **WCAG 2.2 AAA** | `modus`, `modus-tinted`, `modus-deuteranopia`, `modus-tritanopia` | &ge; `7.0:1` for every text and link color on every audited surface; &ge; `4.5:1` for interactive UI borders and admonition icons; colorblind-safe semantic palettes for deuteranopia and tritanopia. |
 
 ### How the Contrast Audit Works
@@ -102,14 +102,23 @@ What it measures is the `SURFACE_AUDITS` list: each surface's background layers,
 | Sidebar link: at rest, hovered, current page | `--color-background-secondary` on the page, under `--color-background-hover` (hovered) or `--supa-nav-active-bg` (current) | `--color-foreground-primary`, `--supa-nav-hover-fg`, `--supa-nav-active-fg` (text) |
 | TOC current section | 6% `color-mix(in srgb, ...)` brand tint on the page | `--color-brand-primary` (text) |
 | Search result, active or hovered | `--color-background-hover` on the page | Title `--supa-nav-hover-fg`, snippet `--color-foreground-secondary` (text) |
-| Search match highlight (`<mark>`), in a result and in the active result | 22% brand tint on the result's surface | `--color-foreground-primary` (text) |
+| Search match highlight (`<mark>`), in a result and in the active result | `--supa-search-mark-bg` (a 22% brand tint) on the result's surface | `--supa-search-mark-fg` (text) |
 | Item badge (`.supa-search-result-badge`, `.supa-version-badge`) | `--color-background-item` on the sidebar | `--color-foreground-secondary` (text) |
 | `.theme-<name>` solid fill (`.btn`, `.badge`, `.avatar`, `.page-link.active`, `.chip.active`, `.card-header`, ...) for every Bootstrap 6 theme | `--<name>-bg` on the page | `--<name>-contrast` (text) |
 | `.theme-<name>` outline button toggled on (`.active`, checked `.btn-check`) | `--<name>-bg` darkened with `oklch(from ... calc(l * .9) calc(c * 1.15) h)` | `--<name>-contrast`, darkened the same way (text) |
 | `.theme-<name>` outline, text, and link variants | The page | `--<name>-fg` (text) |
-| `.theme-<name>` subtle fill (`.btn-subtle`, `.badge-subtle`, `.avatar-subtle`, `.chip`, `.list-group-item`, `.toast-header`, ...) | `--<name>-bg-subtle` on the page | `--<name>-fg` and `--<name>-fg-emphasis` (text) |
+| `.theme-<name>` subtle fill (`.btn-subtle`, `.badge-subtle`, `.avatar-subtle`, `.chip`, `.list-group-item`, `.toast-header`, a hovered `.page-link` or `.menu-item`, ...) | `--<name>-bg-subtle` on the page | `--<name>-fg` and `--<name>-fg-emphasis` (text) |
+| `.theme-<name>` solid button hovered and toggled on | `--<name>-bg` darkened to `l * .93` (hovered) or `l * .9` (toggled on) by the override in `_bootstrap-supa.scss` | `--<name>-contrast` (text) |
+| `.theme-<name>` outline button hovered | `--<name>-bg` darkened to `l * .95` | `--<name>-contrast`, darkened the same way (text) |
+| `.theme-<name>` subtle and text buttons, hovered and toggled on | `--<name>-bg-subtle`, mixed half and half with `--<name>-bg-muted` for a hovered subtle button | `--<name>-fg-emphasis` (subtle) or `--<name>-fg` (text), darkened to `l * .95` or `l * .9` in light polarity only (text) |
+| `.theme-<name>` link hovered | The page | `--<name>-fg-emphasis` (text) |
+| `.theme-<name>` muted fill: hovered `.chip`, `.nav-link`, and `.list-group-item-action` | `--<name>-bg-muted` on the page | `--<name>-fg` (chip) and `--<name>-fg-emphasis` (text) |
+| `.theme-<name>` selected chip hovered (`.chip.active:hover`) | `--<name>-bg` on the page, faded as a whole to `--supa-chip-selected-hover-opacity` | `--<name>-contrast`, faded with it (text) |
+| Unthemed `.btn`, `.chip`, `.badge`, at rest and hovered, pressed, or toggled on (also `theme-light` and `theme-dark`, which Bootstrap 6 does not define) | `--bg-2` at rest, `--supa-bg-active` when hovered, on the page | `--fg-body` (text) |
 
-The `.theme-<name>` rows cover what a component shows without a pointer on it, including a toggle button left on. The hover and press colors that Bootstrap's buttons, nav links, list groups, and chips derive with `oklch(from ...)` or their `--<name>-bg-muted` fill are not audited yet.
+The `.theme-<name>` rows mirror Bootstrap 6's component rules and the skin's overrides of them in `_bootstrap-supa.scss`. A pressed (`:active`) button keeps its hover colors, because Bootstrap applies the toggled-on colors only to `.active`, `.show`, and checked `.btn-check` buttons. An element drawn at reduced `opacity` is composited as a group over the surface beneath it, so its fill and its text both fade, as axe measures them.
+
+Bootstrap derives these states by darkening (`oklch(from ... calc(l * .95) ...)`), which raises text contrast on a light fill and lowers it on a dark one, and from `bg-muted` fills that are darker than the subtle fill in light mode. Three fixes keep every state at its target: in dark polarity, hovered and toggled-on text and subtle buttons keep their resting text color; the `modus*` schemes move each theme's `--<name>-bg-muted` halfway from its subtle fill to the page, where text that meets 7:1 on both still does; and Bootstrap's dark `secondary` and `inverse` muted fills, which were lighter than the text drawn on them, step toward the page in every scheme.
 
 Links are audited on every surface because `.supa-article a` paints them all with `--color-brand-content`, including links inside alerts and inside custom admonition titles, which keep their inline markup. Translucent backgrounds, such as the `rgba()` admonition tints of the `furo` and `bootstrap` dark polarities, are alpha-composited over the layer beneath before measuring. An undefined layer counts as transparent, as it does in CSS, which is why `--color-admonition-background` (defined by no built-in palette) still sits in the title bar's stack: a palette that defines it is measured with it.
 
@@ -126,9 +135,11 @@ Accessibility is verified in two layers that catch different classes of bugs:
 
 `npm run test:a11y` serves `target/site/` from an in-process Node server and opens it in headless Chromium (Playwright). It scans every top-level page (docs and `maven-project-info-reports-plugin` reports) in `furo` light and dark at 1440&times;900, `index.html` in all 12 palette &times; polarity variants (seeded through the same `supa-theme` / `supa-palette` `localStorage` keys the `<head>` script reads), and `index.html` at a 390&times;844 phone viewport. Before scanning it waits for `html[data-supa-ready="true"]`, which `initSupaSkin()` sets once every enhancer, including the asynchronous Mermaid/KaTeX loaders, has settled. Any violation fails the run with the page, variant, rule ID, impact, target selector, and help URL.
 
-The AA tags check text contrast at 4.5:1 only, so every `modus*` job, page scans and interaction scenarios alike, also runs axe's `color-contrast-enhanced` rule (WCAG 1.4.6, 7:1 for text). It is the only AAA rule enabled. Before scanning, the run reads the palette's `--supa-wcag-level` from the page and fails if it disagrees with the AAA palettes the script lists, so a scan never measures a palette against the wrong target. The extra rule does not measurably lengthen the run (about 32 seconds for all 88 variants either way).
+The AA tags check text contrast at 4.5:1 only, so every `modus*` job, page scans and interaction scenarios alike, also runs axe's `color-contrast-enhanced` rule (WCAG 1.4.6, 7:1 for text). It is the only AAA rule enabled. Before scanning, the run reads the palette's `--supa-wcag-level` from the page and fails if it disagrees with the AAA palettes the script lists, so a scan never measures a palette against the wrong target. The extra rule does not measurably lengthen the run (about 36 seconds for all 103 variants, hover scenarios included).
 
-A page scanned right after load shows the skin's chrome closed, so the same run also scans **interaction scenarios**, by default in `furo` light, `furo` dark, and `modus` dark (AAA); a scenario can list its own palette &times; polarity `variants` instead. Each scenario names a page and viewport, drives the page with Playwright locators and the keyboard, and then scans it:
+Before every scan, the run waits for the page's running CSS transitions to finish, so axe measures settled colors rather than a fade: a search result leaving the active state switches its title color at once while its fill fades, and a scan taken mid-fade measured brand text on the hover fill. Animations are not awaited, since a spinner never ends.
+
+A page scanned right after load shows the skin's chrome closed, so the same run also scans **interaction scenarios**, by default in `furo` light, `furo` dark, and `modus` dark (AAA); a scenario can list its own palette &times; polarity `variants` instead. Each scenario names a page and viewport, drives the page with Playwright locators, the keyboard, and the mouse, and then scans it:
 
 | Scenario | Page and viewport | State scanned |
 | :--- | :--- | :--- |
@@ -143,8 +154,9 @@ A page scanned right after load shows the skin's chrome closed, so the same run 
 | `copy-button-copied` | `index.html`, 1440&times;900 | Copy button after a click, in its "Copied!" state with the "Copied!" tooltip shown (clipboard permission granted) |
 | `sidebar-group-expanded` | `index.html`, 1440&times;900 | A sidebar `<details>` group collapsed and re-expanded from the keyboard |
 | `accordion-expanded`, `content-tab-switched` | `components.html`, 1440&times;900 | Second accordion item expanded; second synchronized tab selected with ArrowRight |
+| `chip-hovered`, `unthemed-chip-hovered`, `text-button-hovered` | `components.html`, 1440&times;900 | The `.theme-success` chip, a `.chip-input` chip, and the `.btn-text.theme-primary` button under the mouse, in `furo` light and dark, `modus` light and dark, and `modus-tinted` dark |
 
-Every scenario asserts its state (`dialog[open]`, `aria-expanded="true"`, a visible tooltip, the focused element) after setup and again after the scan, so a broken selector or a state that closed mid-scan fails the run instead of quietly scanning the closed page. The "Copied!" state resets after 1.8 seconds, so that one scenario scans only the code blocks and the "Copied!" tooltip that Bootstrap appends to `<body>`; the unchanged rest of the page is covered by the load-time scans.
+Every scenario asserts its state (`dialog[open]`, `aria-expanded="true"`, a visible tooltip, the focused or hovered element) after setup and again after the scan, so a broken selector or a state that closed mid-scan fails the run instead of quietly scanning the closed page. The "Copied!" state resets after 1.8 seconds, so that one scenario scans only the code blocks and the "Copied!" tooltip that Bootstrap appends to `<body>`, and a hover scenario scans only the hovered component; the unchanged rest of the page is covered by the load-time scans.
 
 The sidebar drawer's color-scheme control is a native `<select>` rather than the menu used in the headers: opened from the bottom of the drawer, the floating menu covered all but slivers of the navigation links above it (axe `target-size`, WCAG 2.5.8), so a tap meant to dismiss it could follow a half-hidden link. The browser draws a native picker outside the page, so there is no open state for axe to scan.
 
