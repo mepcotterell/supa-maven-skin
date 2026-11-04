@@ -259,6 +259,31 @@ Apache Maven Doxia Site Renderer#if( $doxiaSiteRendererVersion ) $doxiaSiteRende
         </div>
 #end
 ##
+## Render Accessible Color Scheme Native Select (sidebar drawer Appearance footer). Opened from the
+## bottom of the drawer, the #supaPalettePicker .menu floats up over the nav tree and leaves slivers
+## of the links under its edges tappable (axe target-size, WCAG 2.5.8), so a tap meant to dismiss it
+## can follow a half-hidden link. The browser draws a native picker outside the page, so nothing is
+## partly covered. theme.ts keeps every [data-supa-palette-select] in sync with the menus.
+#macro( supaPaletteSelect $extraClasses )
+        <div class="supa-palette-picker#if( $extraClasses && $extraClasses != '' ) $extraClasses#end">
+          <select class="supa-palette-select"
+                  data-supa-palette-select="true"
+                  aria-label="Accessible color scheme">
+            <optgroup label="WCAG 2.2 AA Standard">
+              <option value="furo" selected>Furo (AA)</option>
+              <option value="bootstrap">Bootstrap 6 (AA)</option>
+            </optgroup>
+            <optgroup label="WCAG 2.2 AAA High Contrast">
+              <option value="modus">Modus (AAA)</option>
+              <option value="modus-tinted">Modus Tinted (AAA)</option>
+              <option value="modus-deuteranopia">Modus Deuteranopia (AAA)</option>
+              <option value="modus-tritanopia">Modus Tritanopia (AAA)</option>
+            </optgroup>
+          </select>
+          <svg class="supa-palette-picker-chevron" viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="4 6 8 10 12 6"></polyline></svg>
+        </div>
+#end
+##
 ## Render Theme Mode Menu Picker (Bootstrap 6 .menu with mutually exclusive Light / Dark / Auto choices)
 #macro( supaThemeToggle $extraClasses $placement )
         <div class="supa-theme-toggle#if( $extraClasses && $extraClasses != '' ) $extraClasses#end">

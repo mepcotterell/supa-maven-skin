@@ -174,6 +174,19 @@ if ( !html.contains( "<h6 class=\"menu-header\" aria-hidden=\"true\">WCAG 2.2 AA
      || html.contains( "<h6 class=\"menu-header\">" ) ) {
     throw new IllegalStateException( "Color-scheme menu headers must carry aria-hidden=\"true\" inside role=\"menu\" (axe aria-required-children, WCAG 1.3.1)" );
 }
+// Opened from the bottom of the sidebar drawer, the color-scheme .menu covered all but slivers of
+// the nav links above it (axe target-size, WCAG 2.5.8); the drawer footer uses a native <select>.
+int drawerFooterStart = html.indexOf( "<div class=\"supa-sidebar-footer" );
+int drawerFooterEnd = drawerFooterStart < 0 ? -1 : html.indexOf( "</dialog>", drawerFooterStart );
+if ( drawerFooterEnd < 0 ) {
+    throw new IllegalStateException( "Missing sidebar drawer Appearance footer" );
+}
+String drawerFooter = html.substring( drawerFooterStart, drawerFooterEnd );
+if ( !drawerFooter.contains( "<select class=\"supa-palette-select\"" )
+     || !drawerFooter.contains( "data-supa-palette-select=\"true\"" )
+     || drawerFooter.contains( "supa-palette-btn" ) ) {
+    throw new IllegalStateException( "Sidebar drawer footer must render the color-scheme picker as a native <select data-supa-palette-select> (axe target-size, WCAG 2.5.8)" );
+}
 
 // Pages in subdirectories: site.xml hrefs reach the template relative to the site root, so the
 // skin must rewrite menu, breadcrumb, Previous / Next, logo, and footer icon URLs for the

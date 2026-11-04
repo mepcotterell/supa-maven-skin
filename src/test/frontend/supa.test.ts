@@ -229,6 +229,50 @@ describe('Supa Maven Skin Frontend Modules', () => {
       expect(deutCard.classList.contains('is-active')).toBe(true);
       expect(deutCard.getAttribute('aria-pressed')).toBe('true');
     });
+
+    it("keeps the drawer footer's native color-scheme <select> and the header menu in sync both ways", () => {
+      // site-macros.vm #supaPaletteSelect: the sidebar drawer's color-scheme control is a native
+      // <select>, because the floating menu opened from the drawer footer covered the nav links.
+      document.body.innerHTML = `
+        <div class="supa-palette-picker">
+          <button type="button" class="supa-palette-btn" data-bs-toggle="menu">
+            <span data-supa-palette-label="true">Furo (AA)</span>
+          </button>
+          <div class="menu supa-palette-menu">
+            <button type="button" class="menu-item selected" data-supa-palette-option="furo"></button>
+            <button type="button" class="menu-item" data-supa-palette-option="modus-tinted"></button>
+          </div>
+        </div>
+        <div class="supa-sidebar-footer">
+          <div class="supa-palette-picker">
+            <select class="supa-palette-select" data-supa-palette-select="true" aria-label="Accessible color scheme">
+              <optgroup label="WCAG 2.2 AA Standard">
+                <option value="furo" selected>Furo (AA)</option>
+                <option value="bootstrap">Bootstrap 6 (AA)</option>
+              </optgroup>
+              <optgroup label="WCAG 2.2 AAA High Contrast">
+                <option value="modus">Modus (AAA)</option>
+                <option value="modus-tinted">Modus Tinted (AAA)</option>
+              </optgroup>
+            </select>
+          </div>
+        </div>
+      `;
+      window.localStorage.setItem(PALETTE_STORAGE_KEY, 'modus');
+
+      initTheme();
+      const select = document.querySelector<HTMLSelectElement>('[data-supa-palette-select]')!;
+      expect(select.value).toBe('modus');
+
+      select.value = 'bootstrap';
+      select.dispatchEvent(new Event('change'));
+      expect(document.documentElement.getAttribute('data-supa-palette')).toBe('bootstrap');
+      expect(getStoredPalette()).toBe('bootstrap');
+      expect(document.querySelector('[data-supa-palette-label]')!.textContent).toBe('Bootstrap 6 (AA)');
+
+      document.querySelector<HTMLButtonElement>('[data-supa-palette-option="modus-tinted"]')!.click();
+      expect(select.value).toBe('modus-tinted');
+    });
   });
 
   describe('Doxia HTML Normalization, GFM Admonitions & Synchronized Content Tabs', () => {
