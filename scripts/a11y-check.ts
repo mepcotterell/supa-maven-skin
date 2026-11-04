@@ -9,10 +9,23 @@
  * proves the rendered combination of Velocity markup, CSS, and TypeScript
  * enhancements does too.
  *
- * Run `mvn -B -ntp clean verify site` first, then `npm run test:a11y`.
- * Requires a Chromium build (`npx playwright install chromium`). It is
- * deliberately not part of `npm test` or the Maven build so consumer sites and
- * `mvn verify` never need a browser.
+ * A page scanned right after load only shows the skin's chrome closed, so the
+ * matrix also runs data-driven interaction scenarios (`SCENARIOS`): each drives
+ * a page into an open or interacted state with Playwright locators and the
+ * keyboard (the search dialog empty and with an active result, the sidebar and
+ * TOC drawers, the color-scheme and theme menus, a shown tooltip, a copy button
+ * in its "Copied!" state, a re-expanded sidebar group, and an expanded accordion
+ * and switched content tab on `components.html`), asserts the state was reached,
+ * scans it in `furo` light and dark and `modus` dark (AAA), and asserts the state
+ * still held after the scan, so a broken selector fails the run instead of
+ * quietly scanning the closed state.
+ *
+ * Run `mvn -B -ntp clean verify site` first, then `npm run test:a11y`; append
+ * page or scenario names (`npm run test:a11y -- team.html palette-menu`) to
+ * narrow the matrix while iterating. Requires a Chromium build
+ * (`npx playwright install chromium`). It is deliberately not part of
+ * `npm test` or the Maven build so consumer sites and `mvn verify` never need
+ * a browser.
  */
 import { AxeBuilder } from '@axe-core/playwright';
 import { existsSync, readdirSync, statSync } from 'node:fs';
@@ -22,7 +35,7 @@ import type { IncomingMessage, Server, ServerResponse } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { extname, join, normalize, resolve, sep } from 'node:path';
 import { chromium } from 'playwright';
-import type { Browser } from 'playwright';
+import type { Browser, Locator, Page } from 'playwright';
 
 /** Polarity stored in `localStorage['supa-theme']` (see `theme.ts`). */
 type Polarity = 'light' | 'dark';
@@ -39,13 +52,55 @@ const PALETTES = [
 
 type Palette = (typeof PALETTES)[number];
 
-/** One page × theme × viewport combination to scan. */
-interface ScanJob {
-  page: string;
-  palette: Palette;
-  polarity: Polarity;
+/** Browser viewport in CSS pixels. */
+interface Viewport {
   width: number;
   height: number;
+}
+
+/** One palette × polarity combination. */
+interface Variant {
+  palette: Palette;
+  polarity: Polarity;
+}
+
+/**
+ * An interactive state of the skin's chrome that a load-time scan never sees.
+ *
+ * The page is loaded exactly as for a plain scan (variant seeded, skin ready,
+ * fonts loaded), then `setup` drives it into the state and `assertState`
+ * proves it got there before axe runs.
+ */
+interface InteractionScenario {
+  /** Short kebab-case name shown in the report and accepted as a CLI filter. */
+  name: string;
+  /** Top-level HTML file the scenario opens. */
+  page: string;
+  /** Viewport the state needs (drawers only exist below their breakpoints). */
+  viewport: Viewport;
+  /** Browser permissions the setup needs, such as clipboard access for the copy button. */
+  permissions?: string[];
+  /**
+   * Selector that limits the scan to one region. Only for a state the skin holds
+   * briefly (the copy button resets "Copied!" after 1.8 s), so axe finishes well
+   * inside it; the rest of the page is covered by the load-time scans. Every
+   * other scenario scans the whole page.
+   */
+  scope?: string;
+  /** Drives the loaded page into the state with locators and the keyboard. */
+  setup: (page: Page) => Promise<void>;
+  /**
+   * Throws unless the page is in the state. Runs after `setup` and again after
+   * the scan, so a broken selector, or a state that closed mid-scan, fails the
+   * run instead of scanning the closed state.
+   */
+  assertState: (page: Page) => Promise<void>;
+}
+
+/** One page × theme × viewport combination to scan, optionally in an interactive state. */
+interface ScanJob extends Variant, Viewport {
+  page: string;
+  scenario?: InteractionScenario;
 }
 
 /** One axe violation node flattened for reporting. */
@@ -60,13 +115,37 @@ interface Finding {
   helpUrl: string;
 }
 
+/** A job that could not be scanned (variant not applied or scenario state not reached). */
+interface ScanError {
+  page: string;
+  variant: string;
+  message: string;
+}
+
 const ROOT_DIR: string = resolve(import.meta.dirname, '..');
 const SITE_DIR: string = join(ROOT_DIR, 'target', 'site');
 const WCAG_TAGS: string[] = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
-const DESKTOP = { width: 1440, height: 900 } as const;
-const MOBILE = { width: 390, height: 844 } as const;
+const DESKTOP: Viewport = { width: 1440, height: 900 };
+const MOBILE: Viewport = { width: 390, height: 844 };
+/**
+ * At least `lg` (1024px), so the sidebar is inline and the content header shows
+ * the TOC trigger, but below `xl` (1280px), where the TOC is still a drawer.
+ */
+const TABLET: Viewport = { width: 1100, height: 900 };
 const READY_TIMEOUT_MS = 30_000;
+const STATE_TIMEOUT_MS = 5_000;
 const CONCURRENCY = 4;
+
+/**
+ * Variants every interaction scenario runs in: `furo` (AA) in both polarities
+ * and `modus` dark, the strictest AAA palette on the darkest surfaces, where
+ * overlay surfaces, shadows, and active-item tints differ most from the page.
+ */
+const SCENARIO_VARIANTS: readonly Variant[] = [
+  { palette: 'furo', polarity: 'light' },
+  { palette: 'furo', polarity: 'dark' },
+  { palette: 'modus', polarity: 'dark' }
+];
 
 const MIME_TYPES: Readonly<Record<string, string>> = {
   '.html': 'text/html; charset=utf-8',
@@ -85,6 +164,299 @@ const MIME_TYPES: Readonly<Record<string, string>> = {
   '.woff2': 'font/woff2',
   '.txt': 'text/plain; charset=utf-8'
 };
+
+/**
+ * Returns the first line of an error's message, dropping Playwright's call logs.
+ *
+ * @param error - Thrown value.
+ * @returns First message line.
+ */
+function firstLine(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error);
+  return message.split('\n', 1)[0] ?? message;
+}
+
+/**
+ * Waits until exactly one element matches `locator` and is visible.
+ *
+ * Playwright locators are strict, so two matches (two open menus, say) fail
+ * as loudly as none.
+ *
+ * @param locator - Element that proves the state.
+ * @param what - Human-readable description for the error message.
+ */
+async function expectVisible(locator: Locator, what: string): Promise<void> {
+  try {
+    await locator.waitFor({ state: 'visible', timeout: STATE_TIMEOUT_MS });
+  } catch (error: unknown) {
+    throw new Error(`expected ${what} to be visible [${String(locator)}]: ${firstLine(error)}`, {
+      cause: error
+    });
+  }
+}
+
+/**
+ * Waits until the element matched by `locator` has keyboard focus.
+ *
+ * @param page - Page under test.
+ * @param locator - Element that should be focused.
+ * @param what - Human-readable description for the error message.
+ */
+async function expectFocused(page: Page, locator: Locator, what: string): Promise<void> {
+  try {
+    await locator.and(page.locator(':focus')).waitFor({ state: 'attached', timeout: STATE_TIMEOUT_MS });
+  } catch {
+    const actual = await page.evaluate(() => {
+      const el = document.activeElement;
+      return el ? `<${el.tagName.toLowerCase()} class="${el.className}">` : 'nothing';
+    });
+    throw new Error(`expected focus on ${what} [${String(locator)}], but focus is on ${actual}`);
+  }
+}
+
+/**
+ * Waits until an element's attribute has the expected value.
+ *
+ * @param locator - Element to inspect.
+ * @param name - Attribute name.
+ * @param value - Expected attribute value, or null when the attribute must be absent.
+ * @param what - Human-readable description for the error message.
+ */
+async function expectAttribute(
+  locator: Locator,
+  name: string,
+  value: string | null,
+  what: string
+): Promise<void> {
+  const deadline = Date.now() + STATE_TIMEOUT_MS;
+  let actual: string | null = null;
+  while (Date.now() < deadline) {
+    actual = await locator.getAttribute(name, { timeout: STATE_TIMEOUT_MS });
+    if (actual === value) {
+      return;
+    }
+    await new Promise((resolveWait) => setTimeout(resolveWait, 50));
+  }
+  const expected = value === null ? `no ${name}` : `${name}="${value}"`;
+  throw new Error(`expected ${what} to have ${expected} [${String(locator)}], got ${actual}`);
+}
+
+/**
+ * Interactive states scanned on top of the load-time matrix, each in every
+ * `SCENARIO_VARIANTS` entry. Selectors target the skin's own markup from
+ * `site.vm`, `site-macros.vm`, and the TypeScript enhancers, and each
+ * `assertState` pins the exact element its `setup` toggled, so a state left
+ * open elsewhere on the page cannot stand in for it.
+ */
+const SCENARIOS: readonly InteractionScenario[] = [
+  {
+    name: 'search-dialog-empty',
+    page: 'index.html',
+    viewport: DESKTOP,
+    setup: async (page) => {
+      await page.keyboard.press('ControlOrMeta+k');
+    },
+    assertState: async (page) => {
+      await expectVisible(page.locator('dialog#supaSearchDialog[open]'), 'the search dialog');
+      await expectFocused(page, page.locator('#supaSearchInput'), 'the search input');
+      await expectVisible(
+        page.locator('#supaSearchStatus:has-text("Type to search")'),
+        'the empty-query search status'
+      );
+    }
+  },
+  {
+    name: 'search-dialog-results',
+    page: 'index.html',
+    viewport: DESKTOP,
+    setup: async (page) => {
+      await page.locator('.supa-sidebar-search .supa-search-trigger').click();
+      await expectFocused(page, page.locator('#supaSearchInput'), 'the search input');
+      // Opening the dialog starts crawling sibling pages; when that finishes it re-renders
+      // the results and resets the active option, so let it settle before typing.
+      await page.waitForLoadState('networkidle');
+      await page.keyboard.type('palette');
+      await expectVisible(
+        page.locator('#supaSearchResults > .supa-search-result-item').nth(1),
+        'a second search result'
+      );
+      await page.keyboard.press('ArrowDown');
+    },
+    assertState: async (page) => {
+      await expectVisible(page.locator('dialog#supaSearchDialog[open]'), 'the search dialog');
+      // Strict locators: exactly one active option, and it is the second result.
+      await expectVisible(
+        page.locator('#supaSearchResults > .supa-search-result-item.is-active'),
+        'the single active search option'
+      );
+      await expectVisible(
+        page.locator('#supaSearchResults > .supa-search-result-item.is-active:nth-child(2)'),
+        'the second search result as the active option'
+      );
+      await expectFocused(page, page.locator('#supaSearchInput'), 'the search input');
+    }
+  },
+  {
+    name: 'sidebar-drawer',
+    page: 'index.html',
+    viewport: MOBILE,
+    setup: async (page) => {
+      await page.locator('.supa-mobile-header [data-bs-target="#supaSidebarDrawer"]').click();
+    },
+    assertState: async (page) => {
+      await expectVisible(page.locator('dialog#supaSidebarDrawer[open]'), 'the sidebar drawer');
+      await expectVisible(
+        page.locator('#supaSidebarDrawer .supa-drawer-header .btn-close'),
+        'the sidebar drawer close button'
+      );
+    }
+  },
+  {
+    name: 'toc-drawer',
+    page: 'getting-started.html',
+    viewport: TABLET,
+    setup: async (page) => {
+      await page.locator('.supa-content-header .supa-toc-drawer-trigger').click();
+    },
+    assertState: async (page) => {
+      await expectVisible(page.locator('dialog#supaTocDrawer[open]'), 'the TOC drawer');
+      await expectVisible(
+        page.locator('#supaTocDrawer .supa-drawer-header .btn-close'),
+        'the TOC drawer close button'
+      );
+      await expectVisible(page.locator('#supaTocNav a.nav-link').first(), 'a TOC entry');
+    }
+  },
+  {
+    name: 'palette-menu',
+    page: 'index.html',
+    viewport: DESKTOP,
+    setup: async (page) => {
+      await page.locator('.supa-content-header .supa-palette-btn').focus();
+      // ArrowDown is the keyboard path: it opens the menu and focuses the first option.
+      await page.keyboard.press('ArrowDown');
+    },
+    assertState: async (page) => {
+      await expectAttribute(
+        page.locator('.supa-content-header .supa-palette-btn'),
+        'aria-expanded',
+        'true',
+        'the color-scheme trigger'
+      );
+      await expectVisible(page.locator('.supa-palette-menu.show'), 'the color-scheme menu');
+      await expectFocused(
+        page,
+        page.locator('.supa-palette-menu.show .menu-item'),
+        'a color-scheme option'
+      );
+    }
+  },
+  {
+    name: 'theme-menu',
+    page: 'index.html',
+    viewport: DESKTOP,
+    setup: async (page) => {
+      await page.locator('.supa-content-header .supa-theme-toggle-btn').focus();
+      await page.keyboard.press('ArrowDown');
+    },
+    assertState: async (page) => {
+      await expectAttribute(
+        page.locator('.supa-content-header .supa-theme-toggle-btn'),
+        'aria-expanded',
+        'true',
+        'the theme trigger'
+      );
+      await expectVisible(page.locator('.supa-theme-menu.show'), 'the theme menu');
+      await expectFocused(page, page.locator('.supa-theme-menu.show .menu-item'), 'a theme option');
+    }
+  },
+  {
+    name: 'copy-button-tooltip',
+    page: 'index.html',
+    viewport: DESKTOP,
+    setup: async (page) => {
+      await page.locator('#supa-main-content .supa-copy-btn').first().focus();
+    },
+    assertState: async (page) => {
+      await expectFocused(
+        page,
+        page.locator('#supa-main-content .supa-copy-btn').first(),
+        'the first copy button'
+      );
+      await expectVisible(
+        page.locator('.tooltip.show[role="tooltip"]:has-text("Copy code")'),
+        'the copy button tooltip'
+      );
+    }
+  },
+  {
+    name: 'copy-button-copied',
+    page: 'index.html',
+    viewport: DESKTOP,
+    permissions: ['clipboard-read', 'clipboard-write'],
+    scope: '#supa-main-content .supa-code-block',
+    setup: async (page) => {
+      await page.locator('#supa-main-content .supa-copy-btn').first().click();
+    },
+    assertState: async (page) => {
+      const button = page.locator('#supa-main-content .supa-copy-btn').first();
+      await expectAttribute(button, 'aria-label', 'Copied!', 'the first copy button');
+      await expectVisible(button, 'the first copy button');
+    }
+  },
+  {
+    name: 'sidebar-group-expanded',
+    page: 'index.html',
+    viewport: DESKTOP,
+    setup: async (page) => {
+      // Every self-site group renders open, so collapse one from the keyboard and
+      // expand it again to scan the state a reader's own toggle produces.
+      const group = page.locator('.supa-sidebar-tree details.supa-nav-details').first();
+      await group.locator(':scope > summary').focus();
+      await page.keyboard.press('Enter');
+      await expectAttribute(group, 'open', null, 'the collapsed sidebar group');
+      await page.keyboard.press('Enter');
+    },
+    assertState: async (page) => {
+      const group = page.locator('.supa-sidebar-tree details.supa-nav-details').first();
+      await expectVisible(group.locator(':scope > .supa-nav-sublist'), 'the re-expanded sidebar group');
+      await expectFocused(page, group.locator(':scope > summary'), 'the group toggle');
+    }
+  },
+  {
+    name: 'accordion-expanded',
+    page: 'components.html',
+    viewport: DESKTOP,
+    setup: async (page) => {
+      // The first item starts open; open the second so the shared `name` closes the first.
+      const item = page.locator('.supa-accordion').first().locator('details.accordion-item').nth(1);
+      await item.locator(':scope > summary').focus();
+      await page.keyboard.press('Enter');
+    },
+    assertState: async (page) => {
+      const item = page.locator('.supa-accordion').first().locator('details.accordion-item').nth(1);
+      await expectVisible(item.locator(':scope > .accordion-body'), 'the second accordion body');
+      await expectFocused(page, item.locator(':scope > summary'), 'the second accordion header');
+    }
+  },
+  {
+    name: 'content-tab-switched',
+    page: 'components.html',
+    viewport: DESKTOP,
+    setup: async (page) => {
+      await page.locator('.supa-tabs').first().locator('[role="tab"]').first().focus();
+      // Arrow keys move between tabs and select them (doxia.ts initContentTabs).
+      await page.keyboard.press('ArrowRight');
+    },
+    assertState: async (page) => {
+      const tab = page.locator('.supa-tabs').first().locator('[role="tab"]').nth(1);
+      await expectAttribute(tab, 'aria-selected', 'true', 'the second tab');
+      await expectFocused(page, tab, 'the second tab');
+      const panelId = await tab.getAttribute('aria-controls');
+      await expectVisible(page.locator(`[id="${panelId}"][role="tabpanel"]`), 'the second tab panel');
+    }
+  }
+];
 
 /**
  * Resolves a request URL path to a file under `siteDir`, refusing traversal.
@@ -147,7 +519,8 @@ async function startServer(siteDir: string): Promise<{ server: Server; baseUrl: 
  *
  * @param pages - Top-level HTML file names found in `target/site`.
  * @returns Every page in furo light/dark at desktop size, `index.html` in all
- *     12 palette × polarity variants, and `index.html` at a mobile viewport.
+ *     12 palette × polarity variants, `index.html` at a mobile viewport, and
+ *     every interaction scenario in each `SCENARIO_VARIANTS` entry.
  */
 function buildJobs(pages: string[]): ScanJob[] {
   const jobs: ScanJob[] = [];
@@ -167,6 +540,11 @@ function buildJobs(pages: string[]): ScanJob[] {
   for (const polarity of ['light', 'dark'] as const) {
     jobs.push({ page: 'index.html', palette: 'furo', polarity, ...MOBILE });
   }
+  for (const scenario of SCENARIOS) {
+    for (const variant of SCENARIO_VARIANTS) {
+      jobs.push({ page: scenario.page, ...variant, ...scenario.viewport, scenario });
+    }
+  }
   return jobs;
 }
 
@@ -174,14 +552,17 @@ function buildJobs(pages: string[]): ScanJob[] {
  * Formats a scan job's variant label for the report.
  *
  * @param job - Scan job.
- * @returns Human-readable variant such as `modus/dark @1440x900`.
+ * @returns Human-readable variant such as `modus/dark @1440x900` or
+ *     `furo/light @1440x900 +search-dialog-empty`.
  */
 function variantLabel(job: ScanJob): string {
-  return `${job.palette}/${job.polarity} @${job.width}x${job.height}`;
+  const base = `${job.palette}/${job.polarity} @${job.width}x${job.height}`;
+  return job.scenario ? `${base} +${job.scenario.name}` : base;
 }
 
 /**
- * Opens one page variant, waits for the skin to finish initialising, and runs axe.
+ * Opens one page variant, waits for the skin to finish initialising, drives it
+ * into the job's interaction scenario (if any), and runs axe.
  *
  * @param browser - Shared Chromium instance.
  * @param baseUrl - Static server base URL.
@@ -189,10 +570,12 @@ function variantLabel(job: ScanJob): string {
  * @returns Flattened violation nodes for this job.
  */
 async function scan(browser: Browser, baseUrl: string, job: ScanJob): Promise<Finding[]> {
+  const { scenario } = job;
   const context = await browser.newContext({
     viewport: { width: job.width, height: job.height },
     colorScheme: job.polarity,
-    reducedMotion: 'reduce'
+    reducedMotion: 'reduce',
+    permissions: scenario?.permissions ?? []
   });
   try {
     // Seed the same keys the <head> anti-FOUC script and theme.ts read, before
@@ -223,11 +606,34 @@ async function scan(browser: Browser, baseUrl: string, job: ScanJob): Promise<Fi
     }));
     if (applied.theme !== job.polarity || applied.palette !== job.palette) {
       throw new Error(
-        `${job.page} [${variantLabel(job)}] did not apply the requested variant ` +
+        `did not apply the requested variant ` +
           `(got data-bs-theme=${applied.theme}, data-supa-palette=${applied.palette}).`
       );
     }
-    const results = await new AxeBuilder({ page }).withTags(WCAG_TAGS).analyze();
+    if (scenario) {
+      // A mistyped setup locator should fail in seconds, not after Playwright's 30 s default.
+      page.setDefaultTimeout(STATE_TIMEOUT_MS);
+      try {
+        await scenario.setup(page);
+        await scenario.assertState(page);
+      } catch (error: unknown) {
+        throw new Error(`scenario state not reached: ${firstLine(error)}`, { cause: error });
+      }
+    }
+    const builder = new AxeBuilder({ page }).withTags(WCAG_TAGS);
+    if (scenario?.scope) {
+      builder.include(scenario.scope);
+    }
+    const results = await builder.analyze();
+    if (scenario) {
+      try {
+        await scenario.assertState(page);
+      } catch (error: unknown) {
+        throw new Error(`scenario state did not hold through the scan: ${firstLine(error)}`, {
+          cause: error
+        });
+      }
+    }
     const findings: Finding[] = [];
     // No rule exclusions: every violation is either fixed in the skin or in demo content.
     for (const violation of results.violations) {
@@ -298,7 +704,7 @@ function printReport(findings: Finding[]): void {
 /**
  * Entry point: serves the site, scans every job, prints a report, and sets the exit code.
  *
- * @returns Process exit code (0 when no violations, 1 otherwise).
+ * @returns Process exit code (0 when no violations or errors, 1 otherwise).
  */
 async function main(): Promise<number> {
   if (!existsSync(join(SITE_DIR, 'index.html'))) {
@@ -310,20 +716,36 @@ async function main(): Promise<number> {
   const pages = readdirSync(SITE_DIR)
     .filter((name) => name.endsWith('.html'))
     .sort();
-  // Optional positional page names (`npm run test:a11y -- team.html`) narrow
-  // the matrix while iterating on a fix; CI always runs the full matrix.
-  const only = new Set(process.argv.slice(2));
-  // A mistyped name would otherwise scan nothing and report success, which
-  // reads like a clean result; reject unknown names before starting a browser.
-  const unknown = [...only].filter((name) => !pages.includes(name));
-  if (unknown.length > 0) {
+  // A scenario whose page is gone would otherwise fail every variant with a 404-shaped
+  // "state not reached"; name the real cause up front.
+  const missing = SCENARIOS.filter((s) => !pages.includes(s.page));
+  if (missing.length > 0) {
     console.error(
-      `a11y: no such page in ${SITE_DIR}: ${unknown.join(', ')}\n` +
-        `a11y: available pages: ${pages.join(', ')}`
+      `a11y: scenario pages missing from ${SITE_DIR}: ` +
+        missing.map((s) => `${s.name} -> ${s.page}`).join(', ')
     );
     return 1;
   }
-  const jobs = buildJobs(pages).filter((job) => only.size === 0 || only.has(job.page));
+  const scenarioNames = SCENARIOS.map((s) => s.name);
+  // Optional positional page or scenario names (`npm run test:a11y -- team.html`,
+  // `npm run test:a11y -- search-dialog-results`) narrow the matrix while iterating
+  // on a fix; CI always runs the full matrix.
+  const only = new Set(process.argv.slice(2));
+  // A mistyped name would otherwise scan nothing and report success, which
+  // reads like a clean result; reject unknown names before starting a browser.
+  const unknown = [...only].filter((name) => !pages.includes(name) && !scenarioNames.includes(name));
+  if (unknown.length > 0) {
+    console.error(
+      `a11y: no such page or scenario in ${SITE_DIR}: ${unknown.join(', ')}\n` +
+        `a11y: available pages: ${pages.join(', ')}\n` +
+        `a11y: available scenarios: ${scenarioNames.join(', ')}`
+    );
+    return 1;
+  }
+  const jobs = buildJobs(pages).filter(
+    (job) =>
+      only.size === 0 || only.has(job.page) || (job.scenario !== undefined && only.has(job.scenario.name))
+  );
   if (jobs.length === 0) {
     console.error('a11y: nothing to scan (no HTML pages matched).');
     return 1;
@@ -333,23 +755,41 @@ async function main(): Promise<number> {
   try {
     browser = await chromium.launch();
     const activeBrowser = browser;
+    const scenarioJobs = jobs.filter((job) => job.scenario).length;
     console.log(
-      `a11y: scanning ${jobs.length} page variants (${pages.length} pages) with axe-core [${WCAG_TAGS.join(', ')}]`
+      `a11y: scanning ${jobs.length} page variants (${pages.length} pages, ` +
+        `${scenarioJobs} in interactive states) with axe-core [${WCAG_TAGS.join(', ')}]`
     );
+    const errors: ScanError[] = [];
     const perJob = await mapLimit(jobs, CONCURRENCY, async (job) => {
-      const findings = await scan(activeBrowser, baseUrl, job);
-      console.log(
-        `  ${findings.length === 0 ? 'ok  ' : 'FAIL'} ${job.page} [${variantLabel(job)}]` +
-          (findings.length > 0 ? ` (${findings.length} violation nodes)` : '')
-      );
-      return findings;
+      const label = `${job.page} [${variantLabel(job)}]`;
+      try {
+        const findings = await scan(activeBrowser, baseUrl, job);
+        console.log(
+          `  ${findings.length === 0 ? 'ok  ' : 'FAIL'} ${label}` +
+            (findings.length > 0 ? ` (${findings.length} violation nodes)` : '')
+        );
+        return findings;
+      } catch (error: unknown) {
+        // Keep scanning the rest so one broken scenario does not hide other results.
+        const message = firstLine(error);
+        errors.push({ page: job.page, variant: variantLabel(job), message });
+        console.log(`  ERR  ${label}: ${message}`);
+        return [];
+      }
     });
     const findings = perJob.flat();
     if (findings.length > 0) {
       printReport(findings);
+    }
+    for (const e of errors) {
+      console.error(`\n${e.page} [${e.variant}]\n  - could not scan: ${e.message}`);
+    }
+    if (findings.length > 0 || errors.length > 0) {
       const rules = new Set(findings.map((f) => f.ruleId));
       console.error(
-        `\na11y: ${findings.length} violation nodes (${rules.size} rules: ${[...rules].join(', ')}).`
+        `\na11y: ${findings.length} violation nodes (${rules.size} rules` +
+          `${rules.size > 0 ? `: ${[...rules].join(', ')}` : ''}), ${errors.length} variants not scanned.`
       );
       return 1;
     }

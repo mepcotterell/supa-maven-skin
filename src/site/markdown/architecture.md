@@ -114,7 +114,23 @@ Accessibility is verified in two layers that catch different classes of bugs:
 
 `npm run test:a11y` serves `target/site/` from an in-process Node server and opens it in headless Chromium (Playwright). It scans every top-level page (docs and `maven-project-info-reports-plugin` reports) in `furo` light and dark at 1440&times;900, `index.html` in all 12 palette &times; polarity variants (seeded through the same `supa-theme` / `supa-palette` `localStorage` keys the `<head>` script reads), and `index.html` at a 390&times;844 phone viewport. Before scanning it waits for `html[data-supa-ready="true"]`, which `initSupaSkin()` sets once every enhancer, including the asynchronous Mermaid/KaTeX loaders, has settled. Any violation fails the run with the page, variant, rule ID, impact, target selector, and help URL.
 
-The rendered-page check needs a browser, so it is deliberately **not** part of `npm test` or the Maven build: consumer sites and `mvn verify` never download Chromium. Build the self-site first (`mvn -B -ntp clean verify site`), install Chromium once (`npx playwright install chromium`), then run `npm run test:a11y` (append page names, such as `npm run test:a11y -- team.html`, to narrow the scan while iterating).
+A page scanned right after load shows the skin's chrome closed, so the same run also scans **interaction scenarios** in `furo` light, `furo` dark, and `modus` dark (AAA). Each scenario names a page and viewport, drives the page with Playwright locators and the keyboard, and then scans it:
+
+| Scenario | Page and viewport | State scanned |
+| :--- | :--- | :--- |
+| `search-dialog-empty` | `index.html`, 1440&times;900 | Search dialog opened with Ctrl/Cmd+K, before a query is typed |
+| `search-dialog-results` | `index.html`, 1440&times;900 | Search dialog opened from the sidebar button, with results and the second result active after ArrowDown |
+| `sidebar-drawer` | `index.html`, 390&times;844 | Navigation drawer opened from the mobile header |
+| `toc-drawer` | `getting-started.html`, 1100&times;900 | "On this page" drawer, below the `xl` breakpoint where the TOC is not inline |
+| `palette-menu`, `theme-menu` | `index.html`, 1440&times;900 | Color-scheme and theme menus opened with ArrowDown, first option focused |
+| `copy-button-tooltip` | `index.html`, 1440&times;900 | Code-block copy button focused, its tooltip shown |
+| `copy-button-copied` | `index.html`, 1440&times;900 | Copy button after a click, in its "Copied!" state (clipboard permission granted) |
+| `sidebar-group-expanded` | `index.html`, 1440&times;900 | A sidebar `<details>` group collapsed and re-expanded from the keyboard |
+| `accordion-expanded`, `content-tab-switched` | `components.html`, 1440&times;900 | Second accordion item expanded; second synchronized tab selected with ArrowRight |
+
+Every scenario asserts its state (`dialog[open]`, `aria-expanded="true"`, a visible tooltip, the focused element) after setup and again after the scan, so a broken selector or a state that closed mid-scan fails the run instead of quietly scanning the closed page. The "Copied!" state resets after 1.8 seconds, so that one scenario scans only the code blocks; the rest of the page is covered by the load-time scans.
+
+The rendered-page check needs a browser, so it is deliberately **not** part of `npm test` or the Maven build: consumer sites and `mvn verify` never download Chromium. Build the self-site first (`mvn -B -ntp clean verify site`), install Chromium once (`npx playwright install chromium`), then run `npm run test:a11y` (append page or scenario names, such as `npm run test:a11y -- team.html` or `npm run test:a11y -- palette-menu`, to narrow the scan while iterating).
 
 ### Zero-FOUC Initialization
 
