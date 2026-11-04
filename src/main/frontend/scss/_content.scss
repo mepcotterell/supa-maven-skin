@@ -550,6 +550,12 @@
       color: var(--supa-admonition-tip-accent);
       border-color: var(--supa-admonition-tip-accent);
     }
+
+    &.is-copy-failed {
+      opacity: 1;
+      color: var(--supa-admonition-caution-accent);
+      border-color: var(--supa-admonition-caution-accent);
+    }
   }
 
   &:hover,

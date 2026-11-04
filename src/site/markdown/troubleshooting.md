@@ -159,11 +159,13 @@ A fenced code block renders in a single color.
 
 **Fix:** Add a bundled language name after the opening fence (for example `java` or `xml`), or use `text` for output that should stay plain. Blocks that contain HTML elements are left unhighlighted on purpose.
 
-### The Copy Button Says "Copied!" but Nothing Was Copied
+### The Copy Button Says "Copy failed"
 
-**Cause:** Browsers only provide the asynchronous Clipboard API (`navigator.clipboard`) in [secure contexts](https://developer.mozilla.org/en-US/docs/Web/Security/Secure_Contexts): pages served over HTTPS, or from `localhost` and `127.0.0.1`. When a site is served over plain HTTP from another host (an internal staging server, for example), the API is missing, so no text is copied, but the button still shows its confirmation.
+Clicking a code block's copy button shows a cross icon and the tooltip "Copy failed", and the clipboard keeps its old contents.
 
-**Fix:** Serve the site over HTTPS, or preview it from `localhost`.
+**Cause:** The browser blocked both ways Supa Maven Skin copies text. It first uses the asynchronous Clipboard API (`navigator.clipboard`), which browsers only provide in [secure contexts](https://developer.mozilla.org/en-US/docs/Web/Security/Secure_Contexts): pages served over HTTPS, or from `localhost` and `127.0.0.1`. When that API is missing (on a site served over plain HTTP from another host, such as an internal staging server) or clipboard access is denied, the skin falls back to the older `document.execCommand('copy')`, which some browsers and embedded webviews also block.
+
+**Fix:** Serve the site over HTTPS, or preview it from `localhost`. Readers can still select the code and copy it manually.
 
 ---
 

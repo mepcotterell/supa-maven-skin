@@ -148,6 +148,127 @@ const COPY_ICON_SVG =
 const CHECK_ICON_SVG =
   '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>';
 
+const FAILED_ICON_SVG =
+  '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>';
+
+/** How long the copy button shows its "Copied!" or "Copy failed" result before resetting. */
+const COPY_RESULT_DURATION_MS = 1800;
+
+type CopyButtonState = 'idle' | 'copied' | 'failed';
+
+const COPY_BUTTON_STATES: Record<
+  CopyButtonState,
+  { icon: string; label: string; tooltip: string }
+> = {
+  idle: { icon: COPY_ICON_SVG, label: 'Copy code to clipboard', tooltip: 'Copy code' },
+  copied: { icon: CHECK_ICON_SVG, label: 'Copied!', tooltip: 'Copied!' },
+  failed: { icon: FAILED_ICON_SVG, label: 'Copy failed', tooltip: 'Copy failed' }
+};
+
+/**
+ * Updates a code-block copy button's icon, accessible name, tooltip, and state class.
+ *
+ * @param btn - Copy button to update.
+ * @param state - State to show.
+ */
+function setCopyButtonState(btn: HTMLButtonElement, state: CopyButtonState): void {
+  const { icon, label, tooltip } = COPY_BUTTON_STATES[state];
+  btn.classList.toggle('is-copied', state === 'copied');
+  btn.classList.toggle('is-copy-failed', state === 'failed');
+  btn.innerHTML = icon;
+  btn.setAttribute('aria-label', label);
+  setTooltipTitle(btn, tooltip, 'left');
+}
+
+/**
+ * Copies text with a hidden, read-only `<textarea>` and `document.execCommand('copy')`.
+ *
+ * This deprecated API is the only copy mechanism left where the asynchronous Clipboard API is
+ * missing (pages served over plain HTTP from a host other than `localhost`, some embedded
+ * webviews) or denied by a permission policy.
+ *
+ * The temporary `<textarea>` takes focus, and removing it leaves focus on `<body>`; callers
+ * restore focus with {@link restoreFocusAfterCopy}.
+ *
+ * @param text - Text to copy.
+ * @param container - Element that holds the temporary `<textarea>`. Use one next to the copy
+ *     button: while a modal `<dialog>` (Bootstrap's `.dialog` or `.drawer`) is open, everything
+ *     outside it is inert, so a `<textarea>` in `<body>` selects nothing, yet Chromium and
+ *     Firefox still report the copy as successful.
+ * @returns True if the `<textarea>` took focus and the browser reports that the copy succeeded.
+ */
+function copyWithExecCommand(text: string, container: HTMLElement): boolean {
+  if (typeof document.execCommand !== 'function') {
+    return false;
+  }
+  const textarea = document.createElement('textarea');
+  textarea.value = text;
+  // readonly keeps mobile browsers from opening the on-screen keyboard during select().
+  textarea.setAttribute('readonly', '');
+  textarea.setAttribute('aria-hidden', 'true');
+  textarea.tabIndex = -1;
+  textarea.style.position = 'fixed';
+  textarea.style.top = '0';
+  textarea.style.left = '-9999px';
+  textarea.style.opacity = '0';
+  container.appendChild(textarea);
+  try {
+    textarea.focus({ preventScroll: true });
+    textarea.select();
+    // iOS Safari ignores select() on a read-only field without an explicit range.
+    textarea.setSelectionRange(0, text.length);
+    // A textarea that could not take focus (inert, for example) has nothing selected, and
+    // execCommand('copy') can still return true, so do not trust it in that case.
+    return document.activeElement === textarea && document.execCommand('copy');
+  } catch {
+    return false;
+  } finally {
+    textarea.remove();
+  }
+}
+
+/**
+ * Copies text to the clipboard, preferring the asynchronous Clipboard API and falling back to
+ * `document.execCommand('copy')` when that API is absent or rejects the write.
+ *
+ * @param text - Text to copy.
+ * @param container - Element next to the copy button that holds the fallback's temporary
+ *     `<textarea>`.
+ * @returns True only if one of the two mechanisms reported a successful copy.
+ */
+async function copyTextToClipboard(text: string, container: HTMLElement): Promise<boolean> {
+  if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch {
+      // Permission denied or no document focus: try the legacy path before reporting failure.
+    }
+  }
+  return copyWithExecCommand(text, container);
+}
+
+/**
+ * Puts focus back where it was before a copy, if the `execCommand` fallback's temporary
+ * `<textarea>` left it on `<body>`, so keyboard users are not stranded.
+ *
+ * Focus that started on `<body>` stays there: WebKit does not focus a button on mouse click, and
+ * focusing it afterwards would leave mouse users with a focus ring.
+ *
+ * @param focusBeforeCopy - Element that had focus when the copy started.
+ */
+function restoreFocusAfterCopy(focusBeforeCopy: Element | null): void {
+  const focusWasLost = document.activeElement === null || document.activeElement === document.body;
+  if (
+    focusWasLost &&
+    focusBeforeCopy instanceof HTMLElement &&
+    focusBeforeCopy !== document.body &&
+    focusBeforeCopy.isConnected
+  ) {
+    focusBeforeCopy.focus({ preventScroll: true });
+  }
+}
+
 /**
  * Extracts a normalized display label for a `<pre>`/`<code>` block's language class.
  *
@@ -309,29 +430,22 @@ export function enhanceCodeBlocks(
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'supa-copy-btn';
-      btn.setAttribute('aria-label', 'Copy code to clipboard');
-      setTooltipTitle(btn, 'Copy code', 'left');
-      btn.innerHTML = COPY_ICON_SVG;
+      setCopyButtonState(btn, 'idle');
 
+      let resetTimer: number | undefined;
       btn.addEventListener('click', async () => {
-        try {
-          const textToCopy = (codeEl ?? pre).textContent ?? rawText;
-          if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
-            await navigator.clipboard.writeText(textToCopy);
-          }
-          btn.classList.add('is-copied');
-          btn.innerHTML = CHECK_ICON_SVG;
-          btn.setAttribute('aria-label', 'Copied!');
-          setTooltipTitle(btn, 'Copied!', 'left');
-          window.setTimeout(() => {
-            btn.classList.remove('is-copied');
-            btn.innerHTML = COPY_ICON_SVG;
-            btn.setAttribute('aria-label', 'Copy code to clipboard');
-            setTooltipTitle(btn, 'Copy code', 'left');
-          }, 1800);
-        } catch {
-          // Ignore clipboard write rejections
-        }
+        const textToCopy = (codeEl ?? pre).textContent ?? rawText;
+        const focusBeforeCopy = document.activeElement;
+        const copied = await copyTextToClipboard(textToCopy, btn.parentElement ?? document.body);
+        setCopyButtonState(btn, copied ? 'copied' : 'failed');
+        // Refocus only once the result is set, so screen readers announce "Copied!" or
+        // "Copy failed" when focus returns rather than the idle label.
+        restoreFocusAfterCopy(focusBeforeCopy);
+        // Restart the countdown so an earlier click cannot cut this result short.
+        window.clearTimeout(resetTimer);
+        resetTimer = window.setTimeout(() => {
+          setCopyButtonState(btn, 'idle');
+        }, COPY_RESULT_DURATION_MS);
       });
 
       wrapper.appendChild(btn);

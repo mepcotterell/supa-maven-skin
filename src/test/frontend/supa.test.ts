@@ -952,6 +952,288 @@ describe('Supa Maven Skin Frontend Modules', () => {
         warnSpy.mockRestore();
       }
     });
+
+    describe('Copy button clipboard access and fallback', () => {
+      const CODE_TEXT = 'mvn -B verify site';
+
+      /**
+       * Replaces `navigator.clipboard` for one test. Passing `undefined` simulates an insecure
+       * context (plain HTTP from a non-localhost host), where browsers do not expose the API.
+       *
+       * @param clipboard - Mock clipboard, or undefined to remove the API.
+       */
+      const mockClipboard = (clipboard: Pick<Clipboard, 'writeText'> | undefined): void => {
+        Object.defineProperty(navigator, 'clipboard', {
+          value: clipboard,
+          configurable: true,
+          writable: true
+        });
+      };
+
+      /**
+       * Installs a `document.execCommand` mock (happy-dom does not implement it). Real browsers
+       * focus the temporary `<textarea>` when it is selected, but happy-dom's `select()` does
+       * not, so the mock focuses it first. Without that, focus would never leave the button and
+       * the focus-return assertions would pass even if the code never returned focus.
+       *
+       * @param impl - Implementation called with the command name.
+       * @returns The installed mock.
+       */
+      const mockExecCommand = (impl: (commandId: string) => boolean) => {
+        const execCommand = vi.fn((commandId: string) => {
+          document.querySelector('textarea')?.focus();
+          return impl(commandId);
+        });
+        Object.defineProperty(document, 'execCommand', {
+          value: execCommand,
+          configurable: true,
+          writable: true
+        });
+        return execCommand;
+      };
+
+      /**
+       * Renders one code block into the document and returns its focused copy button.
+       *
+       * @returns The copy button.
+       */
+      const renderCopyButton = (): HTMLButtonElement => {
+        const container = document.createElement('div');
+        container.innerHTML = `<pre><code>${CODE_TEXT}</code></pre>`;
+        document.body.appendChild(container);
+        enhanceCodeBlocks(container, false, true);
+        const btn = container.querySelector<HTMLButtonElement>('.supa-copy-btn');
+        expect(btn).not.toBeNull();
+        btn!.focus();
+        return btn!;
+      };
+
+      /**
+       * Renders one code block, clicks its copy button, and waits for the click handler to
+       * settle on a result state.
+       *
+       * @returns The clicked copy button.
+       */
+      const clickCopyButton = async (): Promise<HTMLButtonElement> => {
+        const btn = renderCopyButton();
+        btn.click();
+        await vi.waitFor(() => {
+          expect(btn.getAttribute('aria-label')).not.toBe('Copy code to clipboard');
+        });
+        return btn;
+      };
+
+      /**
+       * Asserts that a copy button shows the "Copied!" confirmation.
+       *
+       * @param btn - Copy button to inspect.
+       */
+      const expectCopiedState = (btn: HTMLButtonElement): void => {
+        expect(btn.classList.contains('is-copied')).toBe(true);
+        expect(btn.classList.contains('is-copy-failed')).toBe(false);
+        expect(btn.getAttribute('aria-label')).toBe('Copied!');
+        expect(btn.getAttribute('data-bs-title')).toBe('Copied!');
+      };
+
+      /**
+       * Asserts that a copy button shows the failure state and never claims success.
+       *
+       * @param btn - Copy button to inspect.
+       */
+      const expectFailedState = (btn: HTMLButtonElement): void => {
+        expect(btn.classList.contains('is-copied')).toBe(false);
+        expect(btn.classList.contains('is-copy-failed')).toBe(true);
+        expect(btn.getAttribute('aria-label')).toBe('Copy failed');
+        expect(btn.getAttribute('data-bs-title')).toBe('Copy failed');
+      };
+
+      afterEach(() => {
+        Reflect.deleteProperty(navigator, 'clipboard');
+        Reflect.deleteProperty(document, 'execCommand');
+        vi.useRealTimers();
+      });
+
+      it('writes with navigator.clipboard when it is available and shows Copied!', async () => {
+        const writeText = vi.fn<(text: string) => Promise<void>>().mockResolvedValue(undefined);
+        mockClipboard({ writeText });
+        const execCommand = mockExecCommand(() => true);
+
+        const btn = await clickCopyButton();
+
+        expect(writeText).toHaveBeenCalledWith(CODE_TEXT);
+        expect(execCommand).not.toHaveBeenCalled();
+        expectCopiedState(btn);
+      });
+
+      it('falls back to a hidden textarea and execCommand("copy") when navigator.clipboard is absent', async () => {
+        mockClipboard(undefined);
+        let copiedValue: string | undefined;
+        let textareaWasReadonly = false;
+        const execCommand = mockExecCommand(() => {
+          const textarea = document.querySelector('textarea');
+          copiedValue = textarea?.value;
+          textareaWasReadonly = textarea?.hasAttribute('readonly') ?? false;
+          return true;
+        });
+
+        const btn = await clickCopyButton();
+
+        expect(execCommand).toHaveBeenCalledWith('copy');
+        expect(copiedValue).toBe(CODE_TEXT);
+        expect(textareaWasReadonly).toBe(true);
+        expect(document.querySelector('textarea')).toBeNull();
+        expect(document.activeElement).toBe(btn);
+        expectCopiedState(btn);
+      });
+
+      it('shows Copy failed, never Copied!, when navigator.clipboard is absent and execCommand fails or throws', async () => {
+        const failingImpls: Array<(commandId: string) => boolean> = [
+          () => false,
+          () => {
+            throw new Error('execCommand is not supported');
+          }
+        ];
+        for (const impl of failingImpls) {
+          document.body.innerHTML = '';
+          mockClipboard(undefined);
+          const execCommand = mockExecCommand(impl);
+
+          const btn = await clickCopyButton();
+
+          expect(execCommand).toHaveBeenCalledWith('copy');
+          expect(document.querySelector('textarea')).toBeNull();
+          expect(document.activeElement).toBe(btn);
+          expectFailedState(btn);
+        }
+      });
+
+      it('shows Copy failed when neither navigator.clipboard nor execCommand exists', async () => {
+        mockClipboard(undefined);
+        Reflect.deleteProperty(document, 'execCommand');
+
+        const btn = await clickCopyButton();
+
+        expect(document.querySelector('textarea')).toBeNull();
+        expectFailedState(btn);
+      });
+
+      it('falls back to execCommand("copy") when navigator.clipboard.writeText rejects', async () => {
+        const writeText = vi
+          .fn<(text: string) => Promise<void>>()
+          .mockRejectedValue(new DOMException('Write permission denied.', 'NotAllowedError'));
+        mockClipboard({ writeText });
+        const execCommand = mockExecCommand(() => true);
+
+        const btn = await clickCopyButton();
+
+        expect(writeText).toHaveBeenCalledWith(CODE_TEXT);
+        expect(execCommand).toHaveBeenCalledWith('copy');
+        expectCopiedState(btn);
+
+        document.body.innerHTML = '';
+        mockExecCommand(() => false);
+        expectFailedState(await clickCopyButton());
+      });
+
+      it('resets the failure state to the idle Copy code state after the same delay as success', async () => {
+        vi.useFakeTimers();
+        mockClipboard(undefined);
+        mockExecCommand(() => false);
+
+        // vi.waitFor() advances fake timers on every poll, so click directly and only flush
+        // pending promises (advancing by 0 ms) to keep the reset countdown measurable.
+        const btn = renderCopyButton();
+        btn.click();
+        await vi.advanceTimersByTimeAsync(0);
+        expectFailedState(btn);
+
+        vi.advanceTimersByTime(1799);
+        expectFailedState(btn);
+
+        vi.advanceTimersByTime(1);
+        expect(btn.classList.contains('is-copy-failed')).toBe(false);
+        expect(btn.classList.contains('is-copied')).toBe(false);
+        expect(btn.getAttribute('aria-label')).toBe('Copy code to clipboard');
+        expect(btn.getAttribute('data-bs-title')).toBe('Copy code');
+      });
+
+      it('puts the fallback textarea inside the code block, so a modal dialog cannot make it inert', async () => {
+        mockClipboard(undefined);
+        let textareaParent: Element | null | undefined;
+        mockExecCommand(() => {
+          textareaParent = document.querySelector('textarea')?.parentElement;
+          return true;
+        });
+
+        const btn = await clickCopyButton();
+
+        // A <textarea> appended to <body> is inert while a modal <dialog> (Bootstrap's .dialog or
+        // .drawer) is open, so nothing is selected, yet Chromium and Firefox report success.
+        expect(textareaParent).toBe(btn.parentElement);
+        expect(textareaParent?.classList.contains('supa-code-block')).toBe(true);
+        expectCopiedState(btn);
+      });
+
+      it('shows Copy failed when the fallback textarea cannot take focus, even if execCommand reports success', async () => {
+        mockClipboard(undefined);
+        // Stands in for an inert textarea: it cannot be focused or selected.
+        const focusSpy = vi
+          .spyOn(HTMLTextAreaElement.prototype, 'focus')
+          .mockImplementation(() => undefined);
+        mockExecCommand(() => true);
+        try {
+          const btn = await clickCopyButton();
+
+          expect(document.querySelector('textarea')).toBeNull();
+          expectFailedState(btn);
+        } finally {
+          focusSpy.mockRestore();
+        }
+      });
+
+      it('returns focus to the button only after showing the result, so it is announced on refocus', async () => {
+        for (const copied of [true, false]) {
+          document.body.innerHTML = '';
+          mockClipboard(undefined);
+          mockExecCommand(() => copied);
+          const btn = renderCopyButton();
+          const labelsOnRefocus: Array<string | null> = [];
+          btn.addEventListener('focus', () => {
+            labelsOnRefocus.push(btn.getAttribute('aria-label'));
+          });
+
+          btn.click();
+          await vi.waitFor(() => {
+            expect(document.activeElement).toBe(btn);
+          });
+
+          expect(labelsOnRefocus).toEqual([copied ? 'Copied!' : 'Copy failed']);
+          if (copied) {
+            expectCopiedState(btn);
+          } else {
+            expectFailedState(btn);
+          }
+        }
+      });
+
+      it('does not move focus to the button after the fallback when the button never had focus', async () => {
+        mockClipboard(undefined);
+        mockExecCommand(() => true);
+        const btn = renderCopyButton();
+        // WebKit does not focus a button on mouse click, so focus stays on <body>.
+        btn.blur();
+        expect(document.activeElement).toBe(document.body);
+
+        btn.click();
+        await vi.waitFor(() => {
+          expect(btn.getAttribute('aria-label')).not.toBe('Copy code to clipboard');
+        });
+
+        expectCopiedState(btn);
+        expect(document.activeElement).not.toBe(btn);
+        expect(document.activeElement).toBe(document.body);
+      });
+    });
   });
 
   describe('Client-Side Search Indexing, Filtering & Highlighting', () => {
