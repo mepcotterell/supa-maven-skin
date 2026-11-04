@@ -6,6 +6,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- **AAA Contrast in the Accessibility Scan**: `npm run test:a11y` now also runs axe's `color-contrast-enhanced` (7:1) rule on every `modus*` page scan and interaction scenario, and fails if a palette's `--supa-wcag-level` disagrees with that list. New scenarios hover sidebar links, search results, and Bootstrap components. Before each check, the scan waits for CSS transitions to finish, so it measures settled colors instead of a frame mid-fade.
+- **Navigation and Control State Tokens**: `--supa-nav-hover-fg`, `--supa-nav-active-fg`, `--supa-nav-active-bg`, `--supa-search-mark-fg`, `--supa-search-mark-bg`, `--supa-bg-active`, and `--supa-chip-selected-hover-opacity` set the colors of hovered and current sidebar links, search highlights, and hovered or toggled-on unthemed buttons and chips. They default to the previous colors and are documented in the Configuration Reference.
+
+### Changed
+
+- **Contrast Linter Coverage**: `scripts/lint-scss.ts` now also checks sidebar links at rest, hovered, and current; the TOC's current section; the active search result and search highlights; and, for every Bootstrap 6 theme, solid, outline, subtle, and text buttons, links, chips, and nav and list-group items at rest, hovered, and toggled on. It now checks 2,400 pairs, up from 732.
+- **Hovered Text and Subtle Buttons in Dark Mode**: In every palette's dark polarity, themed text and subtle buttons keep their resting text color when hovered or toggled on. Bootstrap darkens that text, which lowers contrast on a dark fill. A toggled-on solid button now darkens its fill to `l * 0.9`, matching Bootstrap's toggled-on outline button, instead of `l * 0.88`.
+
+### Fixed
+
+- **Remaining Modus AAA Failures**: In the four `modus*` palettes, these now meet 7:1: the current page in the sidebar (5.94–6.97:1 before), hovered sidebar links and the active search result, solid `secondary` buttons, badges, and avatars in dark mode (5.84:1), active outline buttons (5.39:1), hovered unthemed buttons and chips, hovered chips and nav or list-group items, and hovered selected chips. New colors come from the Modus Vivendi palettes where one had to change; `furo` and `bootstrap` tokens are unchanged.
+- **Search Highlights**: Highlighted matches in search result titles were brand-colored text on a brand tint, as low as 3.8:1 in `furo` dark. They now use the main text color.
+- **Dark Hover States in Furo and Bootstrap**: Hovered `secondary` and `accent` text buttons (3.48–4.06:1), hovered `inverse` chips (1.31:1), and hovered `secondary` chips and nav items (3.1:1) now meet AA.
+- **Disabled Pagination Links**: Doxia strips `aria-*` and `tabindex` from raw HTML in Markdown pages, so disabled pagination links were announced as ordinary links. The skin now adds `aria-disabled="true"` and `tabindex="-1"` to `.page-item.disabled > .page-link` when the page loads.
+
 ## [0.1.3] - 2026-11-04
 
 ### Added
