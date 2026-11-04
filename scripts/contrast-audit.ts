@@ -64,6 +64,13 @@ export interface SurfaceSpec {
   layers: readonly string[];
   /** Foreground colors painted on the topmost layer. */
   foregrounds: readonly ForegroundSpec[];
+  /**
+   * CSS `opacity` of the element that paints the topmost layer and the foregrounds, as the rule
+   * declares it (a number or a `var()`), such as Bootstrap's `.chip.active:hover { opacity: .9 }`.
+   * The element is composited as a group over the layers beneath it, so both its fill and its
+   * text fade toward them. Omitted means 1.
+   */
+  opacity?: string;
 }
 
 /** Result of auditing one palette in one polarity. */
@@ -155,18 +162,32 @@ const BOOTSTRAP_THEMES: readonly string[] = [
  */
 const SIDEBAR = 'var(--color-background-secondary)';
 
+/** One way a Bootstrap 6 themed component paints itself, as listed in `THEME_PAINTS`. */
+interface ThemePaint {
+  /** Component and state, used in surface names, such as `chip hovered`. */
+  variant: string;
+  /** Fill written with `--theme-<key>`; `transparent` sits directly on the page. */
+  fill: string;
+  /** Text color drawn on the fill, written the same way. */
+  text: string;
+  /** Element opacity, as in `SurfaceSpec.opacity`. */
+  opacity?: string;
+}
+
 /**
  * How Bootstrap 6 paints a themed component: the fill and the text drawn on it, written with
- * `--theme-<key>` the way the component rules in `node_modules/bootstrap/scss` declare them.
- * A fill of `transparent` sits directly on the page.
+ * `--theme-<key>` the way the component rules in `node_modules/bootstrap/scss` (and the solid
+ * button override in `_bootstrap-supa.scss`) declare them. A fill of `transparent` sits
+ * directly on the page.
  *
- * These are the pairs a component shows without a pointer on it, including a toggle button
- * left on (`.active`, a checked `.btn-check`), which the component showcase renders at rest.
- * The hover and press colors that Bootstrap's button, nav, list-group, and chip rules (and the
- * solid button override in `_bootstrap-supa.scss`) derive with `oklch(from ...)` or the
- * `bg-muted` fill are not audited yet.
+ * The first five are what a component shows without a pointer on it, including a toggle button
+ * left on (`.active`, a checked `.btn-check`), which the component showcase renders at rest. The
+ * rest are the hover and press states those rules derive with `oklch(from ...)`, the `bg-muted`
+ * fill, or `opacity`. A pressed (`:active`) button that is not toggled on keeps its hover colors:
+ * `_button.scss` applies the `--btn-active-*` colors only to `.active`, `.show`, and checked
+ * `.btn-check` buttons.
  */
-const THEME_PAINTS: ReadonlyArray<{ variant: string; fill: string; text: string }> = [
+const THEME_PAINTS: readonly ThemePaint[] = [
   {
     // `.btn` / `.btn-solid`, `.badge`, `.avatar`, `.page-link.active`, `.chip.active`,
     // `.menu-item.active`, `.nav-pills .nav-link.active`, `.card-header`, `.stepper-item.active`
@@ -195,10 +216,78 @@ const THEME_PAINTS: ReadonlyArray<{ variant: string; fill: string; text: string 
     text: 'var(--theme-fg)'
   },
   {
-    // `.toast-header`, `.card-subtle` header and footer
+    // `.toast-header`, `.card-subtle` header and footer, and a hovered `.page-link` or
+    // `.menu-item`
     variant: 'subtle fill, emphasized text',
     fill: 'var(--theme-bg-subtle)',
     text: 'var(--theme-fg-emphasis)'
+  },
+  {
+    // Solid `.btn:hover`, from the solid button override in `_bootstrap-supa.scss`
+    variant: 'solid button hovered',
+    fill: 'oklch(from var(--theme-bg) calc(l * 0.93) calc(c * 1.08) h)',
+    text: 'var(--theme-contrast)'
+  },
+  {
+    // Solid `.btn.active` and checked `.btn-check`, from the same override
+    variant: 'solid button toggled on',
+    fill: 'oklch(from var(--theme-bg) calc(l * 0.88) calc(c * 1.12) h)',
+    text: 'var(--theme-contrast)'
+  },
+  {
+    // `.btn-outline:hover` fills with a darkened `bg` under a darkened `contrast`.
+    variant: 'outline button hovered',
+    fill: 'oklch(from var(--theme-bg) calc(l * .95) calc(c * 1.1) h)',
+    text: 'oklch(from var(--theme-contrast) calc(l * .95) calc(c * 1.1) h)'
+  },
+  {
+    // `.btn-subtle:hover` mixes the muted and subtle fills under a darkened `fg-emphasis`.
+    variant: 'subtle button hovered',
+    fill: 'color-mix(in oklch, var(--theme-bg-muted) 50%, var(--theme-bg-subtle))',
+    text: 'oklch(from var(--theme-fg-emphasis) calc(l * .95) calc(c * 1.1) h)'
+  },
+  {
+    // `.btn-subtle.active` and a checked subtle `.btn-check`
+    variant: 'subtle button toggled on',
+    fill: 'var(--theme-bg-subtle)',
+    text: 'oklch(from var(--theme-fg-emphasis) calc(l * .9) calc(c * 1.15) h)'
+  },
+  {
+    // `.btn-text:hover` lays the subtle fill under a darkened `fg`.
+    variant: 'text button hovered',
+    fill: 'var(--theme-bg-subtle)',
+    text: 'oklch(from var(--theme-fg) calc(l * .95) calc(c * 1.1) h)'
+  },
+  {
+    // `.btn-text.active` and a checked text `.btn-check`
+    variant: 'text button toggled on',
+    fill: 'var(--theme-bg-subtle)',
+    text: 'oklch(from var(--theme-fg) calc(l * .9) calc(c * 1.15) h)'
+  },
+  {
+    // `.btn-link:hover` and a hovered themed `.navbar-brand`
+    variant: 'link hovered',
+    fill: 'transparent',
+    text: 'var(--theme-fg-emphasis)'
+  },
+  {
+    // `.chip:hover` swaps the subtle fill for the muted one and keeps `fg`.
+    variant: 'chip hovered',
+    fill: 'var(--theme-bg-muted)',
+    text: 'var(--theme-fg)'
+  },
+  {
+    // `.nav-link:hover` and `:focus`, and `.list-group-item-action` hovered, focused, or pressed
+    variant: 'muted fill, emphasized text',
+    fill: 'var(--theme-bg-muted)',
+    text: 'var(--theme-fg-emphasis)'
+  },
+  {
+    // `.chip.active:hover` keeps the solid fill and fades the whole chip to 90% opacity.
+    variant: 'selected chip hovered',
+    fill: 'var(--theme-bg)',
+    text: 'var(--theme-contrast)',
+    opacity: '.9'
   }
 ];
 
@@ -217,7 +306,8 @@ function forTheme(expr: string, theme: string): string {
  * Every surface the audit measures, with the foregrounds that render on it. The first two
  * entries are the original token audit (all semantic foregrounds on both page backgrounds,
  * plus control borders); the rest follow the rules that paint admonitions, alerts, the
- * sidebar, TOC, and search dialog states, and every Bootstrap 6 themed component.
+ * sidebar, TOC, and search dialog states, and every Bootstrap 6 component, with and without a
+ * theme, at rest, hovered, and toggled on.
  */
 export const SURFACE_AUDITS: readonly SurfaceSpec[] = [
   {
@@ -332,12 +422,29 @@ export const SURFACE_AUDITS: readonly SurfaceSpec[] = [
     layers: [PAGE, SIDEBAR, 'var(--color-background-item)'],
     foregrounds: [{ label: 'text', color: 'var(--color-foreground-secondary)', role: 'text' }]
   },
+  // Components without a Bootstrap theme, including theme names Bootstrap 6 does not define
+  // (`.btn.theme-light`): their `--theme-*` references are invalid, so the rules fall back to
+  // the `--bg-*` steps under body text (`.btn` sets `--btn-color: var(--fg-body)`, and a hovered
+  // button's undefined `--btn-hover-color` inherits it).
+  {
+    // `.btn`, `.chip`, `.badge`, `.avatar`, and `.nav-link.active`
+    surface: 'unthemed button, chip, or badge (--bg-2)',
+    layers: [PAGE, 'var(--bg-2)'],
+    foregrounds: [{ label: 'text', color: 'var(--fg-body)', role: 'text' }]
+  },
+  {
+    // `.btn` (any variant) hovered, pressed, or toggled on, and `.chip:hover`
+    surface: 'unthemed button or chip, hovered or pressed (--bg-3)',
+    layers: [PAGE, 'var(--bg-3)'],
+    foregrounds: [{ label: 'text', color: 'var(--fg-body)', role: 'text' }]
+  },
   ...BOOTSTRAP_THEMES.flatMap((theme: string): SurfaceSpec[] =>
     THEME_PAINTS.map(
-      ({ variant, fill, text }): SurfaceSpec => ({
+      ({ variant, fill, text, opacity }): SurfaceSpec => ({
         surface: `.theme-${theme} ${variant}`,
         layers: fill === 'transparent' ? [PAGE] : [PAGE, forTheme(fill, theme)],
-        foregrounds: [{ label: 'text', color: forTheme(text, theme), role: 'text' }]
+        foregrounds: [{ label: 'text', color: forTheme(text, theme), role: 'text' }],
+        ...(opacity === undefined ? {} : { opacity })
       })
     )
   )
@@ -989,19 +1096,56 @@ export function collectRootTokens(
 }
 
 /**
- * Resolves a surface's background layers, compositing each over the one below.
+ * Resolves a CSS `opacity` value: a number or percentage, or a `var()` of one (with an optional
+ * fallback), clamped to `[0, 1]` as CSS does.
  *
- * @param surface - Surface to resolve.
+ * @param expr - Opacity expression as the rule declares it.
+ * @param tokens - Custom property values on `<html>`.
+ * @param seen - Custom properties already being resolved, to detect cycles.
+ * @returns Opacity in `[0, 1]`.
+ */
+export function resolveOpacity(
+  expr: string,
+  tokens: ReadonlyMap<string, string>,
+  seen: ReadonlySet<string> = new Set<string>()
+): number {
+  const value: string = expr.trim();
+  const call = parseFunctionCall(value);
+  if (call?.name === 'var') {
+    const comma: number = call.args.indexOf(',');
+    const name: string = (comma === -1 ? call.args : call.args.slice(0, comma)).trim();
+    if (seen.has(name)) {
+      throw new Error(`Custom property cycle through '${name}'`);
+    }
+    const tokenValue: string | undefined = tokens.get(name);
+    if (tokenValue !== undefined) {
+      return resolveOpacity(tokenValue, tokens, new Set<string>([...seen, name]));
+    }
+    if (comma === -1) {
+      throw new Error(`opacity ${value} references an undefined custom property`);
+    }
+    return resolveOpacity(call.args.slice(comma + 1), tokens, seen);
+  }
+  if (!/^(\d+\.?\d*|\.\d+)%?$/.test(value)) {
+    throw new Error(`Unsupported opacity '${value}'`);
+  }
+  return Math.min(1, Math.max(0, parseNumber(value, 1)));
+}
+
+/**
+ * Resolves background layers, compositing each over the one below.
+ *
+ * @param layers - Background colors, bottom (an opaque page color) first.
  * @param tokens - Custom property values on `<html>`.
  * @param polarity - Active polarity.
  * @returns Opaque surface color.
  */
-function resolveSurface(
-  surface: SurfaceSpec,
+function resolveLayers(
+  layers: readonly string[],
   tokens: ReadonlyMap<string, string>,
   polarity: Polarity
 ): Rgba {
-  const [base, ...upper] = surface.layers;
+  const [base, ...upper] = layers;
   const page: Rgba | null = resolveColor(base ?? '', tokens, polarity);
   if (!page || page.a < 1) {
     throw new Error(`page background '${base}' must resolve to an opaque color`);
@@ -1041,8 +1185,18 @@ export function auditContrast(
 
   for (const surface of surfaces) {
     let background: Rgba;
+    // Fades a pixel of the element toward what lies beneath it. Group opacity scales the
+    // element's composited pixel, so mixing that pixel with the color beneath gives the same
+    // result as painting the group at `opacity` over it.
+    let fade = (color: Rgba): Rgba => color;
+    let opacity = 1;
     try {
-      background = resolveSurface(surface, tokens, polarity);
+      background = resolveLayers(surface.layers, tokens, polarity);
+      opacity = surface.opacity === undefined ? 1 : resolveOpacity(surface.opacity, tokens);
+      if (opacity < 1) {
+        const beneath: Rgba = resolveLayers(surface.layers.slice(0, -1), tokens, polarity);
+        fade = (color: Rgba): Rgba => compositeOver({ ...color, a: opacity }, beneath);
+      }
     } catch (err: unknown) {
       const message: string = err instanceof Error ? err.message : String(err);
       violations.push(`Cannot resolve ${surface.surface} in ${where}: ${message}.`);
@@ -1063,8 +1217,9 @@ export function auditContrast(
       }
       checked++;
       // A translucent foreground blends with the surface before it reaches the eye.
-      const painted: Rgba = compositeOver(color, background);
-      const ratio: number = contrastRatio(painted, background);
+      const painted: Rgba = fade(compositeOver(color, background));
+      const shownBackground: Rgba = fade(background);
+      const ratio: number = contrastRatio(painted, shownBackground);
       const min: number = minimum[fg.role];
       if (ratio < min) {
         const kind: string =
@@ -1072,10 +1227,13 @@ export function auditContrast(
         // Page-surface entries are labelled by their token already; name the token otherwise.
         const label: string =
           fg.color === `var(${fg.label})` ? fg.label : `${fg.label} ${fg.color}`;
+        // A faded element shows both colors mixed with what lies beneath, as axe reads them.
+        const shownColor: Rgba = opacity < 1 ? painted : color;
+        const faded: string = opacity < 1 ? ` at ${Math.round(opacity * 100)}% opacity` : '';
         violations.push(
-          `WCAG 2.2 ${kind} violation in ${where}: ${label} (${toHex(color)}) on ` +
-            `${surface.surface} (${toHex(background)}) has contrast ${ratio.toFixed(2)}:1 ` +
-            `(minimum ${min.toFixed(1)}:1).`
+          `WCAG 2.2 ${kind} violation in ${where}: ${label} (${toHex(shownColor)}) on ` +
+            `${surface.surface} (${toHex(shownBackground)})${faded} has contrast ` +
+            `${ratio.toFixed(2)}:1 (minimum ${min.toFixed(1)}:1).`
         );
       }
     }

@@ -7,21 +7,23 @@
  * WCAG 2.0/2.1/2.2 A and AA rule tags, plus the AAA `color-contrast-enhanced`
  * rule (7:1) on the `modus*` palettes that promise AAA. The SCSS token linter
  * (`npm run lint:scss`) proves palette pairs meet their contrast targets in
- * isolation; this script
- * proves the rendered combination of Velocity markup, CSS, and TypeScript
- * enhancements does too.
+ * isolation; this script proves the rendered combination of Velocity markup,
+ * CSS, and TypeScript enhancements does too.
  *
  * A page scanned right after load only shows the skin's chrome closed, so the
  * matrix also runs data-driven interaction scenarios (`SCENARIOS`): each drives
- * a page into an open or interacted state with Playwright locators and the
- * keyboard (the search dialog empty and with highlighted matches and an active
- * result, the sidebar and TOC drawers, the color-scheme and theme menus in each header and drawer
- * placement, a shown tooltip, a copy button and its tooltip in the "Copied!"
- * state, a re-expanded sidebar group, and an expanded accordion and switched
- * content tab on `components.html`), asserts the state was reached, scans it in
- * `furo` light and dark and `modus` dark (AAA) unless the scenario lists its
- * own variants, and asserts the state still held after the scan, so a broken
- * selector fails the run instead of quietly scanning the closed state.
+ * a page into an open, interacted, or hovered state with Playwright locators,
+ * the keyboard, and the mouse (the search dialog empty and with highlighted
+ * matches and an active result, the sidebar and TOC drawers, the color-scheme
+ * and theme menus in each header and drawer placement, a shown tooltip, a copy
+ * button and its tooltip in the "Copied!" state, a re-expanded sidebar group,
+ * an expanded accordion and switched content tab on `components.html`, and a
+ * hovered themed chip, unthemed chip, and text button there), asserts the
+ * state was reached, scans it in `furo` light and dark and `modus` dark (AAA)
+ * unless the scenario lists its own variants, and asserts the state still held
+ * after the scan, so a broken selector fails the run instead of quietly
+ * scanning the closed state. Every scan first waits for running CSS
+ * transitions to finish, so axe measures settled colors, not a fade.
  *
  * Run `mvn -B -ntp clean verify site` first, then `npm run test:a11y`; append
  * page or scenario names (`npm run test:a11y -- team.html palette-menu`) to
@@ -91,8 +93,9 @@ interface InteractionScenario {
   /**
    * Selectors that limit the scan to the regions the state changes. Only for a
    * state the skin holds briefly (the copy button resets "Copied!" after 1.8 s),
-   * so axe finishes well inside it; the unchanged rest of the page is covered by
-   * the load-time scans. Every other scenario scans the whole page.
+   * so axe finishes well inside it, or a hovered component, which changes only
+   * itself; the unchanged rest of the page is covered by the load-time scans.
+   * Every other scenario scans the whole page.
    */
   scope?: readonly string[];
   /** Drives the loaded page into the state with locators and the keyboard. */
@@ -265,6 +268,38 @@ async function expectAttribute(
 }
 
 /**
+ * Waits until the element matched by `locator` is under the mouse pointer.
+ *
+ * @param locator - Element that should be hovered.
+ * @param what - Human-readable description for the error message.
+ */
+async function expectHovered(locator: Locator, what: string): Promise<void> {
+  const hovered = await locator.evaluate((el) => el.matches(':hover'), undefined, {
+    timeout: STATE_TIMEOUT_MS
+  });
+  if (!hovered) {
+    throw new Error(`expected the pointer over ${what} [${String(locator)}]`);
+  }
+}
+
+/**
+ * Waits for the page's running CSS transitions to finish, so axe measures settled colors.
+ *
+ * A state change can recolor text at once while its background still fades (the search result
+ * that loses `.is-active`), and axe would otherwise measure whatever mix the fade had reached.
+ * Animations are not awaited: a spinner runs forever, and the skin's own animations end hidden.
+ *
+ * @param page - Page under test.
+ */
+async function settleTransitions(page: Page): Promise<void> {
+  await page.evaluate(async () => {
+    const transitions = document.getAnimations().filter((animation) => animation instanceof CSSTransition);
+    // A transition interrupted by another state change rejects `finished`; that one is settled too.
+    await Promise.all(transitions.map((transition) => transition.finished.catch(() => undefined)));
+  });
+}
+
+/**
  * Opens the sidebar drawer from its mobile-header toggle and waits until it is open.
  *
  * @param page - Page under test at a viewport below `lg`.
@@ -349,6 +384,48 @@ const MENU_PLACEMENTS: readonly MenuPlacement[] = [
     reveal: openSidebarDrawer
   }
 ];
+
+/**
+ * Variants a hovered component is scanned in: `furo` (AA) in both polarities, and the `modus`
+ * and `modus-tinted` polarities where Bootstrap 6's derived hover fills once missed 7:1 on the
+ * components page (accent text on a light hovered chip, white text on dark hovered unthemed chips,
+ * and darkened text on the tinted night-sky surfaces).
+ */
+const HOVER_VARIANTS: readonly Variant[] = [
+  { palette: 'furo', polarity: 'light' },
+  { palette: 'furo', polarity: 'dark' },
+  { palette: 'modus', polarity: 'light' },
+  { palette: 'modus', polarity: 'dark' },
+  { palette: 'modus-tinted', polarity: 'dark' }
+];
+
+/**
+ * Builds the scenario that hovers one Bootstrap 6 component on `components.html`.
+ *
+ * Only the hovered component is scanned: the rest of the page is the load-time scan's, and
+ * keeping each hover job to one element keeps the extra variants cheap.
+ *
+ * @param name - Scenario name.
+ * @param selector - CSS selector of the component; the first match is hovered.
+ * @param what - Human-readable description for error messages.
+ * @returns The scenario.
+ */
+function hoverScenario(name: string, selector: string, what: string): InteractionScenario {
+  return {
+    name,
+    page: 'components.html',
+    viewport: DESKTOP,
+    variants: HOVER_VARIANTS,
+    scope: [selector],
+    setup: async (page) => {
+      await page.locator(selector).first().hover();
+    },
+    assertState: async (page) => {
+      await expectVisible(page.locator(selector).first(), what);
+      await expectHovered(page.locator(selector).first(), what);
+    }
+  };
+}
 
 /**
  * Interactive states scanned on top of the load-time matrix, each in its
@@ -547,7 +624,12 @@ const SCENARIOS: readonly InteractionScenario[] = [
       const panelId = await tab.getAttribute('aria-controls');
       await expectVisible(page.locator(`[id="${panelId}"][role="tabpanel"]`), 'the second tab panel');
     }
-  }
+  },
+  // Hover fills that Bootstrap 6 derives from the theme tokens (`--<theme>-bg-muted`, darkened
+  // `oklch(from ...)` text) or falls back to without a theme (`--bg-3`).
+  hoverScenario('chip-hovered', '.supa-article .chip.theme-success', 'the success chip'),
+  hoverScenario('unthemed-chip-hovered', '.supa-article .chip-input .chip', 'a chip-input chip'),
+  hoverScenario('text-button-hovered', '.supa-article .btn-text.theme-primary', 'the text button')
 ];
 
 /**
@@ -725,6 +807,7 @@ async function scan(browser: Browser, baseUrl: string, job: ScanJob): Promise<Fi
         throw new Error(`scenario state not reached: ${firstLine(error)}`, { cause: error });
       }
     }
+    await settleTransitions(page);
     // `options()` replaces axe's run options, so it carries the AA tags itself. axe runs a rule
     // enabled under `rules` even when its tags are outside `runOnly`.
     const builder = new AxeBuilder({ page }).options({

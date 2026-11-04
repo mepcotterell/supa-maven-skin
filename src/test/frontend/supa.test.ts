@@ -19,6 +19,7 @@ import {
   compositeOver,
   matchRootSelector,
   resolveColor,
+  resolveOpacity,
   SURFACE_AUDITS,
   type SurfaceSpec,
   toHex
@@ -2205,7 +2206,18 @@ describe('WCAG contrast audit (scripts/contrast-audit.ts)', () => {
         `.theme-${theme} outline button toggled on`,
         `.theme-${theme} outline, text, and link`,
         `.theme-${theme} subtle fill`,
-        `.theme-${theme} subtle fill, emphasized text`
+        `.theme-${theme} subtle fill, emphasized text`,
+        `.theme-${theme} solid button hovered`,
+        `.theme-${theme} solid button toggled on`,
+        `.theme-${theme} outline button hovered`,
+        `.theme-${theme} subtle button hovered`,
+        `.theme-${theme} subtle button toggled on`,
+        `.theme-${theme} text button hovered`,
+        `.theme-${theme} text button toggled on`,
+        `.theme-${theme} link hovered`,
+        `.theme-${theme} chip hovered`,
+        `.theme-${theme} muted fill, emphasized text`,
+        `.theme-${theme} selected chip hovered`
       ]);
     }
   });
@@ -2230,5 +2242,55 @@ describe('WCAG contrast audit (scripts/contrast-audit.ts)', () => {
     expect(next?.getAttribute('aria-disabled')).toBe('true');
     expect(next?.hasAttribute('tabindex')).toBe(false);
     expect(kept?.getAttribute('tabindex')).toBe('0');
+  });
+
+  it('fades a translucent element toward what lies beneath, as a hovered selected chip paints', () => {
+    // Bootstrap's `.chip.active:hover { opacity: .9 }` on modus light's info fill. #196285 is the
+    // fill axe read back from Playwright Chromium for that chip on components.html.
+    const surfaces: SurfaceSpec[] = [
+      {
+        surface: '.theme-info selected chip hovered',
+        layers: ['var(--color-background-primary)', 'var(--info-bg)'],
+        foregrounds: [{ label: 'text', color: 'var(--info-contrast)', role: 'text' }],
+        opacity: 'var(--fade, .9)'
+      }
+    ];
+    const tokens = new Map([
+      ['--supa-wcag-level', '"AAA"'],
+      ['--color-background-primary', '#ffffff'],
+      ['--info-bg', '#005077'],
+      ['--info-contrast', '#ffffff']
+    ]);
+    expect(auditContrast(tokens, 'modus', 'light', surfaces).violations).toEqual([
+      "WCAG 2.2 AAA text contrast violation in palette 'modus' (light): text var(--info-contrast) " +
+        '(#ffffff) on .theme-info selected chip hovered (#196285) at 90% opacity has contrast ' +
+        '6.76:1 (minimum 7.0:1).'
+    ]);
+    tokens.set('--fade', '1');
+    expect(auditContrast(tokens, 'modus', 'light', surfaces).violations).toEqual([]);
+    expect(resolveOpacity('65%', tokens)).toBe(0.65);
+    expect(resolveOpacity('1.5', tokens)).toBe(1);
+    expect(() => resolveOpacity('var(--missing)', tokens)).toThrow(/undefined custom property/);
+  });
+
+  it('audits unthemed buttons and chips on the --bg-* steps Bootstrap falls back to', () => {
+    const unthemed = SURFACE_AUDITS.filter((surface: SurfaceSpec) => surface.surface.startsWith('unthemed'));
+    expect(unthemed.map((surface: SurfaceSpec) => surface.surface)).toEqual([
+      'unthemed button, chip, or badge (--bg-2)',
+      'unthemed button or chip, hovered or pressed (--bg-3)'
+    ]);
+    // Modus dark as 0.1.3 shipped it: `--bg-3` is the border gray, under white body text.
+    const tokens = new Map([
+      ['--supa-wcag-level', '"AAA"'],
+      ['--color-background-primary', '#000000'],
+      ['--bg-2', '#282828'],
+      ['--bg-3', '#646464'],
+      ['--fg-body', '#ffffff']
+    ]);
+    expect(auditContrast(tokens, 'modus', 'dark', unthemed).violations).toEqual([
+      "WCAG 2.2 AAA text contrast violation in palette 'modus' (dark): text var(--fg-body) " +
+        '(#ffffff) on unthemed button or chip, hovered or pressed (--bg-3) (#646464) has ' +
+        'contrast 5.92:1 (minimum 7.0:1).'
+    ]);
   });
 });
