@@ -80,7 +80,8 @@ npm run lint && npm test && npm run build
 # Full Maven build + Vitest unit tests + maven-invoker-plugin integration test + self-site render
 mvn -B -ntp clean verify site
 
-# Rendered-page WCAG 2.2 A/AA checks (axe-core + Playwright Chromium) on target/site/.
+# Rendered-page WCAG 2.2 A/AA checks, plus AAA contrast on the modus palettes (axe-core +
+# Playwright Chromium) on target/site/.
 # Not part of npm test or mvn verify; needs the site built above and a one-time browser install.
 npx playwright install chromium
 npm run test:a11y

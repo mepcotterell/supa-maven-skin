@@ -534,6 +534,8 @@ Authors can write a simple `<ol class="supa-stepper" title="3">` ordered list or
 
 ### Breadcrumbs & Pagination
 
+Doxia drops `aria-*` and `tabindex` attributes from raw-HTML links, so **Supa Maven Skin** restores Bootstrap's `aria-disabled="true"` and `tabindex="-1"` on disabled page links (`.page-item.disabled > .page-link`) when the page loads.
+
 <div class="supa-component-preview not-prose">
   <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
     <nav aria-label="Breadcrumb demo">

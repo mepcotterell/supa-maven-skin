@@ -14,8 +14,8 @@
  * A page scanned right after load only shows the skin's chrome closed, so the
  * matrix also runs data-driven interaction scenarios (`SCENARIOS`): each drives
  * a page into an open or interacted state with Playwright locators and the
- * keyboard (the search dialog empty and with an active result, the sidebar and
- * TOC drawers, the color-scheme and theme menus in each header and drawer
+ * keyboard (the search dialog empty and with highlighted matches and an active
+ * result, the sidebar and TOC drawers, the color-scheme and theme menus in each header and drawer
  * placement, a shown tooltip, a copy button and its tooltip in the "Copied!"
  * state, a re-expanded sidebar group, and an expanded accordion and switched
  * content tab on `components.html`), asserts the state was reached, scans it in

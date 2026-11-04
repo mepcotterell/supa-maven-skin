@@ -67,9 +67,10 @@ Maven reports (such as `dependencies.html`, `ci-management.html`, `team.html`, a
   - `prepareHeadings()` assigns clean URL-friendly slugs (`id="1-actions-buttons"`) while preserving the original Doxia `<a id="...">` anchor and recording `data-doxia-id`, ensuring both Doxia report links and clean Markdown `#slug` links scroll accurately.
 - **Responsive Table Classification (`doxia.ts`)**:
   - `normalizeDoxiaTables()` upgrades `table.bodyTable` into `.table.table-hover` inside `.supa-table-responsive` and classifies columns into `.supa-table-col-compact` (single-line identifiers/defaults) vs. `.supa-table-col-prose` (multi-sentence descriptions) so inline `<code>` tokens never wrap mid-word.
-- **Keyboard-Scrollable Regions & Report Images (`doxia.ts`)**:
+- **Keyboard-Scrollable Regions, Report Images & Disabled Links (`doxia.ts`)**:
   - `initScrollRegions()` gives `.supa-table-responsive` and `.supa-code-block > pre` a `tabindex="0"` only while they overflow (re-checked on resize), so keyboard users can scroll wide tables and code without adding a tab stop to every short block.
   - `labelReportAvatars()` marks the Team report's Gravatar `<img>` (emitted without `alt`) as decorative, because the adjacent cell already names the member.
+  - `markDisabledPageLinks()` restores Bootstrap's `aria-disabled="true"` and `tabindex="-1"` on `.page-item.disabled > .page-link` and `.page-link.disabled`. Doxia's Markdown sink keeps only base attributes (`class`, `href`, `id`) on raw-HTML links and list items, which left a disabled page link in the tab order, announced as an enabled link, and held to the text contrast that WCAG waives for inactive controls.
 - **`.prose` vs. `.not-prose` Isolation (`bootstrap-components.ts`)**:
   - Bootstrap 6's `.prose` class styles article paragraphs, lists, and tables. `isolateBootstrapComponentsFromProse()` automatically adds `.not-prose` to interactive Bootstrap 6 components (`.card`, `.alert`, `.accordion`, `.nav`, `.stepper`, `.chip-input`) so prose list/margin rules never collide with UI widgets.
 
@@ -81,12 +82,12 @@ Maven reports (such as `dependencies.html`, `ci-management.html`, `team.html`, a
 
 | Tier | Palettes | Minimum Contrast Guarantees |
 | :--- | :--- | :--- |
-| **WCAG 2.2 AA** | `furo`, `bootstrap` | &ge; `4.5:1` for every text and link color on every audited surface (primary and secondary backgrounds, admonition title bars and bodies, `.alert.theme-*` callouts); &ge; `3.0:1` for interactive UI borders and admonition icons. |
+| **WCAG 2.2 AA** | `furo`, `bootstrap` | &ge; `4.5:1` for every text and link color on every audited surface (primary and secondary backgrounds, admonition title bars and bodies, `.alert.theme-*` callouts, sidebar, TOC, and search-result states, and Bootstrap 6 themed fills); &ge; `3.0:1` for interactive UI borders and admonition icons. |
 | **WCAG 2.2 AAA** | `modus`, `modus-tinted`, `modus-deuteranopia`, `modus-tritanopia` | &ge; `7.0:1` for every text and link color on every audited surface; &ge; `4.5:1` for interactive UI borders and admonition icons; colorblind-safe semantic palettes for deuteranopia and tritanopia. |
 
 ### How the Contrast Audit Works
 
-`scripts/lint-scss.ts` compiles `main.scss` with Dart Sass and hands the CSS to `scripts/contrast-audit.ts`. For each palette and polarity, the audit collects the custom properties that apply to `<html>` the way the browser's cascade does (matching selector, specificity, source order), then resolves `var()`, `light-dark()`, `rgb()`, `oklch()`, and `color-mix(in oklch, ...)` down to sRGB. The resolver reproduces Chromium's rendering, including its rule that a near-neutral color mixed in OKLCH has no hue, so the colors it measures are the colors the page paints.
+`scripts/lint-scss.ts` compiles `main.scss` with Dart Sass and hands the CSS to `scripts/contrast-audit.ts`. For each palette and polarity, the audit collects the custom properties that apply to `<html>` the way the browser's cascade does (matching selector, specificity, source order), then resolves `var()`, `light-dark()`, `rgb()`, `oklch()`, relative `oklch(from ...)` colors (which Bootstrap 6 uses to darken button states), and `color-mix()` in OKLCH or sRGB down to sRGB. The resolver reproduces Chromium's rendering, including its rule that a near-neutral color mixed in OKLCH has no hue, so the colors it measures are the colors the page paints.
 
 What it measures is the `SURFACE_AUDITS` list: each surface's background layers, written as the CSS the painting rule uses, and every foreground drawn on it:
 
@@ -98,6 +99,17 @@ What it measures is the `SURFACE_AUDITS` list: each surface's background layers,
 | Admonition body | `--color-admonition-background` on the page | Body text and link (text) |
 | `.alert.theme-<name>` (every Bootstrap 6 theme: `primary`, `accent`, `success`, `info`, `warning`, `danger`, `secondary`, `inverse`) | `--<name>-bg-subtle` on the page | Text `--<name>-fg` and link (text) |
 | `.alert` without a Bootstrap theme (`[!ALERT:light]`, `[!ALERT:dark]`) | `--bg-1` on the page | Inherited text and link (text) |
+| Sidebar link: at rest, hovered, current page | `--color-background-secondary` on the page, under `--color-background-hover` (hovered) or `--supa-nav-active-bg` (current) | `--color-foreground-primary`, `--supa-nav-hover-fg`, `--supa-nav-active-fg` (text) |
+| TOC current section | 6% `color-mix(in srgb, ...)` brand tint on the page | `--color-brand-primary` (text) |
+| Search result, active or hovered | `--color-background-hover` on the page | Title `--supa-nav-hover-fg`, snippet `--color-foreground-secondary` (text) |
+| Search match highlight (`<mark>`), in a result and in the active result | 22% brand tint on the result's surface | `--color-foreground-primary` (text) |
+| Item badge (`.supa-search-result-badge`, `.supa-version-badge`) | `--color-background-item` on the sidebar | `--color-foreground-secondary` (text) |
+| `.theme-<name>` solid fill (`.btn`, `.badge`, `.avatar`, `.page-link.active`, `.chip.active`, `.card-header`, ...) for every Bootstrap 6 theme | `--<name>-bg` on the page | `--<name>-contrast` (text) |
+| `.theme-<name>` outline button toggled on (`.active`, checked `.btn-check`) | `--<name>-bg` darkened with `oklch(from ... calc(l * .9) calc(c * 1.15) h)` | `--<name>-contrast`, darkened the same way (text) |
+| `.theme-<name>` outline, text, and link variants | The page | `--<name>-fg` (text) |
+| `.theme-<name>` subtle fill (`.btn-subtle`, `.badge-subtle`, `.avatar-subtle`, `.chip`, `.list-group-item`, `.toast-header`, ...) | `--<name>-bg-subtle` on the page | `--<name>-fg` and `--<name>-fg-emphasis` (text) |
+
+The `.theme-<name>` rows cover what a component shows without a pointer on it, including a toggle button left on. The hover and press colors that Bootstrap's buttons, nav links, list groups, and chips derive with `oklch(from ...)` or their `--<name>-bg-muted` fill are not audited yet.
 
 Links are audited on every surface because `.supa-article a` paints them all with `--color-brand-content`, including links inside alerts and inside custom admonition titles, which keep their inline markup. Translucent backgrounds, such as the `rgba()` admonition tints of the `furo` and `bootstrap` dark polarities, are alpha-composited over the layer beneath before measuring. An undefined layer counts as transparent, as it does in CSS, which is why `--color-admonition-background` (defined by no built-in palette) still sits in the title bar's stack: a palette that defines it is measured with it.
 
@@ -110,16 +122,18 @@ Accessibility is verified in two layers that catch different classes of bugs:
 | Layer | Command | Runs in | What it proves |
 | :--- | :--- | :--- | :--- |
 | **Token contrast** | `npm run lint:scss` (`scripts/lint-scss.ts`) | `npm run lint` and `mvn verify` | Every foreground/surface pair in `SURFACE_AUDITS` (`scripts/contrast-audit.ts`) meets its AA/AAA ratio in all 12 palette &times; polarity variants, resolved from the compiled CSS before any HTML exists. |
-| **Rendered pages** | `npm run test:a11y` (`scripts/a11y-check.ts`) | CI (JDK 21 leg) and on demand | The HTML that Velocity, Doxia, the CSS bundle, and the TypeScript enhancers actually produce passes axe-core's `wcag2a`, `wcag2aa`, `wcag21a`, `wcag21aa`, and `wcag22aa` rules: landmarks, names, roles, keyboard reachability, link distinguishability, and computed contrast. |
+| **Rendered pages** | `npm run test:a11y` (`scripts/a11y-check.ts`) | CI (JDK 21 leg) and on demand | The HTML that Velocity, Doxia, the CSS bundle, and the TypeScript enhancers actually produce passes axe-core's `wcag2a`, `wcag2aa`, `wcag21a`, `wcag21aa`, and `wcag22aa` rules: landmarks, names, roles, keyboard reachability, link distinguishability, and computed contrast. On the `modus*` palettes it also passes the AAA `color-contrast-enhanced` rule (7:1). |
 
 `npm run test:a11y` serves `target/site/` from an in-process Node server and opens it in headless Chromium (Playwright). It scans every top-level page (docs and `maven-project-info-reports-plugin` reports) in `furo` light and dark at 1440&times;900, `index.html` in all 12 palette &times; polarity variants (seeded through the same `supa-theme` / `supa-palette` `localStorage` keys the `<head>` script reads), and `index.html` at a 390&times;844 phone viewport. Before scanning it waits for `html[data-supa-ready="true"]`, which `initSupaSkin()` sets once every enhancer, including the asynchronous Mermaid/KaTeX loaders, has settled. Any violation fails the run with the page, variant, rule ID, impact, target selector, and help URL.
+
+The AA tags check text contrast at 4.5:1 only, so every `modus*` job, page scans and interaction scenarios alike, also runs axe's `color-contrast-enhanced` rule (WCAG 1.4.6, 7:1 for text). It is the only AAA rule enabled. Before scanning, the run reads the palette's `--supa-wcag-level` from the page and fails if it disagrees with the AAA palettes the script lists, so a scan never measures a palette against the wrong target. The extra rule does not measurably lengthen the run (about 32 seconds for all 88 variants either way).
 
 A page scanned right after load shows the skin's chrome closed, so the same run also scans **interaction scenarios**, by default in `furo` light, `furo` dark, and `modus` dark (AAA); a scenario can list its own palette &times; polarity `variants` instead. Each scenario names a page and viewport, drives the page with Playwright locators and the keyboard, and then scans it:
 
 | Scenario | Page and viewport | State scanned |
 | :--- | :--- | :--- |
 | `search-dialog-empty` | `index.html`, 1440&times;900 | Search dialog opened with Ctrl/Cmd+K, before a query is typed |
-| `search-dialog-results` | `index.html`, 1440&times;900 | Search dialog opened from the sidebar button, with results and the second result active after ArrowDown |
+| `search-dialog-results` | `index.html`, 1440&times;900 | Search dialog opened from the sidebar button, searching a word that page titles contain (so matches are highlighted in titles and snippets), with the second result active after ArrowDown |
 | `sidebar-drawer` | `index.html`, 390&times;844 | Navigation drawer opened from the mobile header, with its native color-scheme `<select>` showing the active scheme |
 | `toc-drawer` | `getting-started.html`, 1100&times;900 | "On this page" drawer, below the `xl` breakpoint where the TOC is not inline |
 | `palette-menu`, `theme-menu` | `index.html`, 1440&times;900 | Content-header color-scheme and theme menus opened with ArrowDown, first option focused |

@@ -275,7 +275,7 @@ With the default URLs, allow `https://cdn.jsdelivr.net` in `script-src` (Mermaid
 
 ## Built-In Accessible Color Schemes
 
-Every built-in color scheme is verified at build time by `scripts/lint-scss.ts` against **WCAG 2.2** relative luminance and contrast rules across both Light and Dark polarities: text and accent tokens on the primary (`--color-background-primary`) and secondary (`--color-background-secondary`) surfaces, plus the text, link, and icon colors on admonition title bars and bodies and on `.alert.theme-*` callouts (see [Architecture](architecture.html) for the full list):
+Every built-in color scheme is verified at build time by `scripts/lint-scss.ts` against **WCAG 2.2** relative luminance and contrast rules across both Light and Dark polarities: text and accent tokens on the primary (`--color-background-primary`) and secondary (`--color-background-secondary`) surfaces, the text, link, and icon colors on admonition title bars and bodies and on `.alert.theme-*` callouts, the sidebar, TOC, and search-result states, and the solid, subtle, and outline fills of every Bootstrap 6 theme (see [Architecture](architecture.html) for the full list):
 
 | Scheme ID | Inspiration | Contrast | Notes |
 | :--- | :--- | :--- | :--- |
@@ -288,7 +288,7 @@ Every built-in color scheme is verified at build time by `scripts/lint-scss.ts` 
 
 ## Extending Palettes via `<lightCssVariables>` & `<darkCssVariables>`
 
-Just like Sphinx Furo's `light_css_variables` and `dark_css_variables`, any child element inside `<lightCssVariables>` or `<darkCssVariables>` is emitted as `--<tag-name>: <value>;` and automatically feeds into Bootstrap 6's component tokens (`--primary-*`, `--success-*`, `--warning-*`, `--danger-*`, `--info-*`, `--accent-*`) via `color-mix(in oklch, ...)`. In the four `modus*` schemes, `.theme-secondary` text and subtle surfaces (secondary alerts, outline buttons, and subtle badges) also follow `color-foreground-muted` on `color-background-secondary`, because Bootstrap's own grays fall short of 7:1. For the same reason, light `.theme-inverse` subtle surfaces in `modus-tritanopia` use `color-background-item`:
+Just like Sphinx Furo's `light_css_variables` and `dark_css_variables`, any child element inside `<lightCssVariables>` or `<darkCssVariables>` is emitted as `--<tag-name>: <value>;` and automatically feeds into Bootstrap 6's component tokens (`--primary-*`, `--success-*`, `--warning-*`, `--danger-*`, `--info-*`, `--accent-*`) via `color-mix(in oklch, ...)`. In the four `modus*` schemes, `.theme-secondary` text and subtle surfaces (secondary alerts, outline buttons, and subtle badges) also follow `color-foreground-muted` on `color-background-secondary`, and dark solid secondary fills (buttons, badges, avatars) use Modus Vivendi's `#505050` mode-line gray (`#484d67` in `modus-tinted`) under white, because Bootstrap's own grays fall short of 7:1. For the same reason, light `.theme-inverse` subtle surfaces in `modus-tritanopia` use `color-background-item`, and the `modus*` schemes override the `supa-nav-*` tokens below: hovered sidebar links keep `color-foreground-primary`, and the current page's brand tint is mixed into `color-background-primary` instead of laid over the sidebar:
 
 | Variable Name | Purpose |
 | :--- | :--- |
@@ -308,6 +308,9 @@ Just like Sphinx Furo's `light_css_variables` and `dark_css_variables`, any chil
 | `supa-admonition-warning-accent` | `warning` and `caution` admonition and `.theme-warning` accent color. |
 | `supa-admonition-caution-accent` | `danger`, `attention`, and `error` admonition and `.theme-danger` accent color. |
 | `supa-admonition-todo-accent` | `todo` admonition neutral accent color. |
+| `supa-nav-hover-fg` | Text color of a hovered sidebar link and of the active search result's title, on `color-background-hover` (default `var(--color-brand-primary)`). |
+| `supa-nav-active-fg` | Text color of the current page's sidebar link (default `var(--color-brand-primary)`). |
+| `supa-nav-active-bg` | Background of the current page's sidebar link (default `color-mix(in srgb, var(--color-brand-primary) 12%, transparent)`, laid over the sidebar). |
 | `supa-sidebar-brand-items-align` | Flex cross-axis alignment (`center`, `flex-start`, or `flex-end`) for `.supa-sidebar-brand` children. |
 | `supa-sidebar-brand-justify` | Flex main-axis alignment (`center`, `flex-start`, or `flex-end`) for `.supa-sidebar-brand-text` title and version badge. |
 | `supa-sidebar-brand-text-align` | Text alignment (`center`, `left`, or `right`) inside `.supa-sidebar-brand`. |
