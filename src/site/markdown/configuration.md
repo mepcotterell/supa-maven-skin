@@ -50,7 +50,7 @@ Click any color scheme card below (or use the palette selector in the top header
       <span class="supa-palette-swatch" style="background:#ffffff"></span>
       <span class="supa-palette-swatch" style="background:#000000"></span>
       <span class="supa-palette-swatch" style="background:#0031a9"></span>
-      <span class="supa-palette-swatch" style="background:#2fafff"></span>
+      <span class="supa-palette-swatch" style="background:#00bcff"></span>
       <span class="supa-palette-swatch" style="background:#531ab6"></span>
     </div>
   </button>
@@ -288,7 +288,7 @@ Every built-in color scheme is verified at build time by `scripts/lint-scss.ts` 
 
 ## Extending Palettes via `<lightCssVariables>` & `<darkCssVariables>`
 
-Just like Sphinx Furo's `light_css_variables` and `dark_css_variables`, any child element inside `<lightCssVariables>` or `<darkCssVariables>` is emitted as `--<tag-name>: <value>;` and automatically feeds into Bootstrap 6's component tokens (`--primary-*`, `--success-*`, `--warning-*`, `--danger-*`, `--info-*`, `--accent-*`) via `color-mix(in oklch, ...)`:
+Just like Sphinx Furo's `light_css_variables` and `dark_css_variables`, any child element inside `<lightCssVariables>` or `<darkCssVariables>` is emitted as `--<tag-name>: <value>;` and automatically feeds into Bootstrap 6's component tokens (`--primary-*`, `--success-*`, `--warning-*`, `--danger-*`, `--info-*`, `--accent-*`) via `color-mix(in oklch, ...)`. In the four `modus*` schemes, `.theme-secondary` text and subtle surfaces (secondary alerts, outline buttons, and subtle badges) also follow `color-foreground-muted` on `color-background-secondary`, because Bootstrap's own grays fall short of 7:1:
 
 | Variable Name | Purpose |
 | :--- | :--- |

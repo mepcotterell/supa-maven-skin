@@ -125,7 +125,8 @@
 //    Inspired by Protesilaos Stavrou's Emacs Modus Themes
 // ============================================================================
 @mixin modus-high-contrast-tokens {
-  --color-brand-primary: light-dark(#0031a9, #2fafff);
+  // Dark brand is Modus Vivendi blue-cooler: blue (#2fafff) reaches only 6.9:1 on bg-dim (#1e1e1e)
+  --color-brand-primary: light-dark(#0031a9, #00bcff);
   --color-brand-content: light-dark(#0031a9, #79a8ff);
 
   --color-background-primary: light-dark(#ffffff, #000000);
@@ -143,23 +144,31 @@
   --color-inline-code-background: light-dark(#e5e5e5, #2d2d2d);
   --color-inline-code-text: var(--color-foreground-secondary);
 
+  // Dark admonition title bars (also the `.alert.theme-*` surfaces) stay dark enough for
+  // Modus fg-link (#79a8ff) links in custom titles and alerts to keep 7:1.
   --supa-admonition-note-accent: light-dark(#005077, #00bcff);
-  --supa-admonition-note-bg: light-dark(#ebf6fa, #0f2537);
+  --supa-admonition-note-bg: light-dark(#ebf6fa, #091f31);
 
   --supa-admonition-tip-accent: light-dark(#005a00, #52c852);
-  --supa-admonition-tip-bg: light-dark(#e8f6e8, #0f2918);
+  --supa-admonition-tip-bg: light-dark(#e8f6e8, #082212);
 
   --supa-admonition-important-accent: light-dark(#531ab6, #b6a0ff);
   --supa-admonition-important-bg: light-dark(#f4eefc, #211838);
 
   --supa-admonition-warning-accent: light-dark(#604800, #d0bc00);
-  --supa-admonition-warning-bg: light-dark(#fcf5e0, #2a240a);
+  --supa-admonition-warning-bg: light-dark(#fcf5e0, #231d04);
 
-  --supa-admonition-caution-accent: light-dark(#970000, #ff7f7a);
+  // Dark caution is Modus Vivendi red-faint: the coral it replaced reached only 6.8:1 on bg-dim
+  --supa-admonition-caution-accent: light-dark(#970000, #ff9580);
   --supa-admonition-caution-bg: light-dark(#ffecec, #331111);
 
   --supa-admonition-todo-accent: light-dark(#505050, #adadad);
   --supa-admonition-todo-bg: light-dark(#f2f2f2, #1e1e1e);
+
+  // Bootstrap's `.theme-secondary` grays miss 7:1 (5.2:1 light, 4.5:1 dark), so secondary
+  // alerts, outline buttons, and subtle badges use the muted text on the secondary surface.
+  --secondary-fg: var(--color-foreground-muted);
+  --secondary-bg-subtle: var(--color-background-secondary);
 
   --supa-wcag-level: "AAA";
   --supa-link-decoration: underline;
@@ -204,23 +213,29 @@
   --color-inline-code-background: light-dark(#e3dccb, #2b3045);
   --color-inline-code-text: var(--color-foreground-secondary);
 
+  // Dark title bars stay dark enough for #82b0ff links in custom titles and alerts to keep 7:1
   --supa-admonition-note-accent: light-dark(#004c70, #00c4ff);
-  --supa-admonition-note-bg: light-dark(#e6eff3, #13283d);
+  --supa-admonition-note-bg: light-dark(#e6eff3, #10253a);
 
   --supa-admonition-tip-accent: light-dark(#005400, #58cc58);
-  --supa-admonition-tip-bg: light-dark(#e4f1e4, #142b22);
+  --supa-admonition-tip-bg: light-dark(#e4f1e4, #11281f);
 
   --supa-admonition-important-accent: light-dark(#531ab6, #bfaaff);
   --supa-admonition-important-bg: light-dark(#efe8f8, #241e3f);
 
   --supa-admonition-warning-accent: light-dark(#594300, #d8c400);
-  --supa-admonition-warning-bg: light-dark(#f6eed5, #2d2814);
+  --supa-admonition-warning-bg: light-dark(#f6eed5, #292410);
 
-  --supa-admonition-caution-accent: light-dark(#8f0000, #ff8782);
+  // Dark caution is Modus Vivendi red-faint: the coral it replaced reached only 6.8:1 on bg-dim
+  --supa-admonition-caution-accent: light-dark(#8f0000, #ff9580);
   --supa-admonition-caution-bg: light-dark(#f8e4e4, #351822);
 
   --supa-admonition-todo-accent: light-dark(#4a4845, #b0b8ca);
   --supa-admonition-todo-bg: light-dark(#efe9dd, #1d2235);
+
+  // Secondary theme follows the muted text on the secondary surface (see the modus mixin)
+  --secondary-fg: var(--color-foreground-muted);
+  --secondary-bg-subtle: var(--color-background-secondary);
 
   --supa-wcag-level: "AAA";
   --supa-link-decoration: underline;
@@ -236,22 +251,23 @@
   @include modus-high-contrast-tokens;
 
   --supa-admonition-note-accent: light-dark(#005077, #00bcff);
-  --supa-admonition-note-bg: light-dark(#ebf6fa, #0f2537);
+  --supa-admonition-note-bg: light-dark(#ebf6fa, #091f31);
 
-  // Positive / Tip uses unmistakable royal/sky blue instead of green
-  --supa-admonition-tip-accent: light-dark(#0031a9, #2fafff);
-  --supa-admonition-tip-bg: light-dark(#e8effc, #102240);
+  // Positive / Tip uses royal blue / Modus Vivendi blue-faint sky blue instead of green
+  // (blue #2fafff reaches only 6.9:1 on bg-dim)
+  --supa-admonition-tip-accent: light-dark(#0031a9, #82b0ec);
+  --supa-admonition-tip-bg: light-dark(#e8effc, #0c1d3b);
 
   --supa-admonition-important-accent: light-dark(#531ab6, #b6a0ff);
   --supa-admonition-important-bg: light-dark(#f4eefc, #211838);
 
   // Warning uses high-contrast olive-gold / yellow
   --supa-admonition-warning-accent: light-dark(#604800, #d0bc00);
-  --supa-admonition-warning-bg: light-dark(#fcf5e0, #2a240a);
+  --supa-admonition-warning-bg: light-dark(#fcf5e0, #231d04);
 
   // Caution / Danger uses deep burnt umber / warm orange instead of red
   --supa-admonition-caution-accent: light-dark(#6e3b00, #ffa00f);
-  --supa-admonition-caution-bg: light-dark(#f9efe4, #2f1f0a);
+  --supa-admonition-caution-bg: light-dark(#f9efe4, #2a1a06);
 }
 
 // ============================================================================
@@ -279,8 +295,8 @@
   --supa-admonition-warning-accent: light-dark(#6f0f4a, #f78fe7);
   --supa-admonition-warning-bg: light-dark(#faecf5, #2e1427);
 
-  // Caution / Danger uses high-contrast crimson / coral
-  --supa-admonition-caution-accent: light-dark(#970000, #ff7f7a);
+  // Caution / Danger uses high-contrast crimson / Modus Vivendi red-faint
+  --supa-admonition-caution-accent: light-dark(#970000, #ff9580);
   --supa-admonition-caution-bg: light-dark(#ffecec, #331111);
 }
 
