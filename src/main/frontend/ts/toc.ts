@@ -359,7 +359,9 @@ export function initTocAndScrollSpy(): void {
   }
 
   const body = document.body;
-  const enablePermalinks = body.getAttribute('data-supa-heading-permalinks') !== 'false';
+  // site.vm emits <headingPermalinks> as data-supa-permalinks (released 0.1.x HTML carries
+  // that name), so read it rather than renaming the template attribute.
+  const enablePermalinks = body.getAttribute('data-supa-permalinks') !== 'false';
   const permalinkSymbol = body.getAttribute('data-supa-permalink-symbol') || '#';
   const tocMaxDepth = Number.parseInt(body.getAttribute('data-supa-toc-max-depth') || '4', 10);
 

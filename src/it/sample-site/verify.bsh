@@ -113,6 +113,11 @@ if ( !html.contains( "bi-sun supa-theme-icon supa-theme-icon-light" )
 if ( !html.contains( "class=\"supa-body supa-sticky-content-header\"" ) ) {
     throw new IllegalStateException( "Missing supa-sticky-content-header body class for <stickyContentHeader>true</stickyContentHeader>" );
 }
+// toc.ts reads <headingPermalinks> back from this exact attribute name; 0.1.0/0.1.1 read a name
+// site.vm never emitted, so <headingPermalinks>false</headingPermalinks> had no effect.
+if ( !java.util.regex.Pattern.compile( "<body\\b[^>]*\\sdata-supa-permalinks=\"true\"" ).matcher( html ).find() ) {
+    throw new IllegalStateException( "Missing default data-supa-permalinks=\"true\" on <body> for <headingPermalinks>" );
+}
 // Pinned Mermaid/KaTeX CDN defaults (and their SRI hashes) live only in optional.ts, so site.vm
 // emits data-supa-*-url attributes solely for consumer overrides.
 if ( !html.contains( "data-supa-mermaid=\"auto\"" ) || !html.contains( "data-supa-katex=\"auto\"" ) ) {

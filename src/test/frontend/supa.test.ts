@@ -2,7 +2,7 @@
  * @fileoverview Unit test suite for Supa Maven Skin frontend TypeScript modules.
  */
 
-import { existsSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
@@ -62,6 +62,7 @@ import {
 import {
   buildTableOfContents,
   getStickyContentHeaderOffset,
+  initTocAndScrollSpy,
   prepareHeadings,
   slugifyHeading
 } from '../../main/frontend/ts/toc';
@@ -799,6 +800,89 @@ describe('Supa Maven Skin Frontend Modules', () => {
       expect(tocLinks[0].textContent).toBe('Getting Started');
       expect(tocLinks[1].classList.contains('supa-toc-level-3')).toBe(true);
       expect(tocLinks[2].getAttribute('href')).toBe('#1-actions-buttons');
+    });
+
+    it('honors <headingPermalinks> through the data-supa-permalinks attribute site.vm emits on <body>', () => {
+      /**
+       * Renders a fresh article, runs the real TOC enhancer, and counts permalinks.
+       *
+       * @param permalinks - Value for `data-supa-permalinks`, or `null` to omit it.
+       * @returns Number of `.supa-headerlink` anchors added to the article.
+       */
+      const countPermalinks = (permalinks: string | null): number => {
+        if (permalinks === null) {
+          document.body.removeAttribute('data-supa-permalinks');
+        } else {
+          document.body.setAttribute('data-supa-permalinks', permalinks);
+        }
+        document.body.innerHTML = `
+          <main id="supa-main-content">
+            <h1>Page Title</h1>
+            <h2>Install</h2>
+            <h3>Requirements</h3>
+            <h6>Footnote</h6>
+          </main>
+          <nav id="supaTocNav"></nav>
+        `;
+        initTocAndScrollSpy();
+        return document.querySelectorAll('#supa-main-content .supa-headerlink').length;
+      };
+
+      try {
+        expect(countPermalinks('false')).toBe(0);
+        expect(countPermalinks('true')).toBe(3);
+        expect(countPermalinks(null)).toBe(3);
+      } finally {
+        document.body.removeAttribute('data-supa-permalinks');
+      }
+    });
+
+    it('reads only <body> data-supa-* attributes that site.vm emits on <body>', () => {
+      // site.vm renders each <custom><supaSkin> option onto <body>, and the enhancers read them
+      // back with getAttribute(). A misspelled name on either side silently falls back to the
+      // default (toc.ts once read data-supa-heading-permalinks while site.vm emitted
+      // data-supa-permalinks, so <headingPermalinks>false</headingPermalinks> did nothing).
+      // Only <body> reads are checked. <html> mixes defaults site.vm emits (such as
+      // data-supa-default-theme) with attributes the inline <head> script sets at runtime, so it
+      // is out of scope for this scan. Attributes the enhancers set on <body> themselves are not
+      // template output either.
+      const tsDir = resolve(process.cwd(), 'src/main/frontend/ts');
+      const read = new Set<string>();
+      const setAtRuntime = new Set<string>();
+      for (const file of readdirSync(tsDir).filter((name) => name.endsWith('.ts'))) {
+        const source = readFileSync(resolve(tsDir, file), 'utf8');
+        // A bare `body.` receiver counts only where the file binds `body` to document.body
+        // (doxia.ts also names an accordion panel element `body`).
+        const receiver = /\bconst body = document\.body\b/.test(source)
+          ? '(?:\\bdocument\\.|(?<![\\w.$]))body'
+          : '\\bdocument\\.body';
+        /**
+         * Builds a matcher for `<receiver>.<method>('data-supa-*')` calls.
+         *
+         * @param methods - Alternation of DOM attribute method names.
+         * @returns Global regex capturing the attribute name.
+         */
+        const call = (methods: string): RegExp =>
+          new RegExp(`${receiver}\\.(?:${methods})\\(\\s*['"](data-supa-[\\w-]+)['"]`, 'g');
+        for (const match of source.matchAll(call('getAttribute|hasAttribute'))) {
+          read.add(match[1]);
+        }
+        for (const match of source.matchAll(call('setAttribute|toggleAttribute'))) {
+          setAtRuntime.add(match[1]);
+        }
+      }
+
+      const siteVm = readFileSync(resolve(process.cwd(), 'src/main/resources/META-INF/maven/site.vm'), 'utf8');
+      // The tag ends at the first `">` rather than `>`, so a Velocity comparison inside an
+      // #if( ... ) between attributes cannot cut the tag short.
+      const bodyTag = /<body\b[\s\S]*?">/.exec(siteVm)?.[0] ?? '';
+      const emitted = new Set(Array.from(bodyTag.matchAll(/\b(data-supa-[\w-]+)="/g), (match) => match[1]));
+
+      // Guard against the scan silently matching nothing.
+      expect(read.size).toBeGreaterThanOrEqual(5);
+      expect(emitted.size).toBeGreaterThanOrEqual(5);
+      const missing = [...read].filter((name) => !setAtRuntime.has(name) && !emitted.has(name)).sort();
+      expect(missing).toEqual([]);
     });
   });
 

@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Fixed
+
+- **`<headingPermalinks>false</headingPermalinks>` Had No Effect**: The TOC script read a `<body>` attribute (`data-supa-heading-permalinks`) that `site.vm` never emitted, so headings always got permalink anchors. It now reads `data-supa-permalinks`, and a unit test checks that every `data-supa-*` attribute the enhancers read from `<body>` is emitted by `site.vm`.
+
 ## [0.1.1] - 2026-11-03
 
 ### Added
