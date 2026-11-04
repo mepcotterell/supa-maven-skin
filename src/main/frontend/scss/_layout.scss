@@ -872,6 +872,13 @@ dialog[data-bs-backdrop="false"]::backdrop {
     transform: translateY(0);
   }
 
+  // Readers who ask for reduced motion get the button without the slide and fade, so it is never
+  // left half-faded, its label below the contrast minimum, while it appears.
+  @media (prefers-reduced-motion: reduce) {
+    transform: none;
+    transition: none;
+  }
+
   &:hover,
   &:focus-visible {
     color: var(--color-brand-primary);
