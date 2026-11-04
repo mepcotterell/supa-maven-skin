@@ -770,6 +770,11 @@ dialog[data-bs-backdrop="false"]::backdrop {
   &.is-active {
     border-color: var(--color-brand-primary);
     background-color: var(--color-background-hover);
+
+    // Brand text on the hover surface, like a hovered sidebar link
+    .supa-search-result-title {
+      color: var(--supa-nav-hover-fg);
+    }
   }
 }
 
@@ -817,7 +822,8 @@ dialog[data-bs-backdrop="false"]::backdrop {
   padding: 0 0.15rem;
   border-radius: 0.2rem;
   background-color: color-mix(in srgb, var(--color-brand-primary) 22%, transparent);
-  color: inherit;
+  // Not `inherit`: a match in a title would be brand text on a brand tint (3.8:1 in furo dark)
+  color: var(--color-foreground-primary);
   font-weight: 600;
 }
 

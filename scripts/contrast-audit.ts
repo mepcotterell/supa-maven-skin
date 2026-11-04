@@ -290,12 +290,12 @@ export const SURFACE_AUDITS: readonly SurfaceSpec[] = [
   {
     surface: 'sidebar link, hovered',
     layers: [PAGE, SIDEBAR, 'var(--color-background-hover)'],
-    foregrounds: [{ label: 'link', color: 'var(--color-brand-primary)', role: 'text' }]
+    foregrounds: [{ label: 'link', color: 'var(--supa-nav-hover-fg)', role: 'text' }]
   },
   {
     surface: 'sidebar current page (.supa-nav-link.active)',
-    layers: [PAGE, SIDEBAR, 'color-mix(in srgb, var(--color-brand-primary) 12%, transparent)'],
-    foregrounds: [{ label: 'link', color: 'var(--color-brand-primary)', role: 'text' }]
+    layers: [PAGE, SIDEBAR, 'var(--supa-nav-active-bg)'],
+    foregrounds: [{ label: 'link', color: 'var(--supa-nav-active-fg)', role: 'text' }]
   },
   // "On this page" TOC (`.supa-toc-nav .nav-link` in `_toc.scss`): the inline column is
   // transparent over the page and the drawer's `--drawer-bg` is the page color. Links at rest
@@ -312,7 +312,7 @@ export const SURFACE_AUDITS: readonly SurfaceSpec[] = [
     surface: 'search result, active or hovered',
     layers: [PAGE, 'var(--color-background-hover)'],
     foregrounds: [
-      { label: 'title', color: 'var(--color-brand-primary)', role: 'text' },
+      { label: 'title', color: 'var(--supa-nav-hover-fg)', role: 'text' },
       { label: 'snippet', color: 'var(--color-foreground-secondary)', role: 'text' }
     ]
   },
@@ -321,13 +321,10 @@ export const SURFACE_AUDITS: readonly SurfaceSpec[] = [
     { state: 'the active result', item: 'var(--color-background-hover)' }
   ].map(
     ({ state, item }): SurfaceSpec => ({
-      // `<mark class="supa-search-mark">` inherits the color of the title or snippet it is in.
+      // `<mark class="supa-search-mark">` in a result's title or snippet
       surface: `search match highlight in ${state}`,
       layers: [PAGE, item, 'color-mix(in srgb, var(--color-brand-primary) 22%, transparent)'],
-      foregrounds: [
-        { label: 'match in the title', color: 'var(--color-brand-primary)', role: 'text' },
-        { label: 'match in the snippet', color: 'var(--color-foreground-secondary)', role: 'text' }
-      ]
+      foregrounds: [{ label: 'match', color: 'var(--color-foreground-primary)', role: 'text' }]
     })
   ),
   {

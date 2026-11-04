@@ -66,6 +66,12 @@
   --supa-admonition-todo-accent: light-dark(#4b5563, #adb5bd);
   --supa-admonition-todo-bg: light-dark(#f1f3f5, rgba(139, 148, 158, 0.16));
 
+  // Sidebar navigation states (`.supa-nav-link` in _sidebar.scss; the hover text color also
+  // paints the active search result's title). Palettes override these tokens, not the rules.
+  --supa-nav-hover-fg: var(--color-brand-primary);
+  --supa-nav-active-fg: var(--color-brand-primary);
+  --supa-nav-active-bg: color-mix(in srgb, var(--color-brand-primary) 12%, transparent);
+
   // Accessibility metadata & focus tokens
   --supa-wcag-level: "AA";
   --supa-link-decoration: none;
@@ -169,6 +175,16 @@
   // alerts, outline buttons, and subtle badges use the muted text on the secondary surface.
   --secondary-fg: var(--color-foreground-muted);
   --secondary-bg-subtle: var(--color-background-secondary);
+  // Dark solid fills (buttons, badges, avatars) take Modus Vivendi's bg-mode-line-active under
+  // its white fg-mode-line-active: Bootstrap's gray-600 left white at 5.8:1, and the toggled-on
+  // outline button, which darkens both colors, at 5.4:1.
+  --secondary-bg: light-dark(var(--gray-100), #505050);
+
+  // Hovered links keep the main foreground on the hover surface, as Modus's `highlight` face
+  // does, and the current page's brand tint is mixed into the page color instead of laid over
+  // the sidebar: brand text missed 7:1 on both (6.3:1 and 6.2:1 in modus dark).
+  --supa-nav-hover-fg: var(--color-foreground-primary);
+  --supa-nav-active-bg: color-mix(in srgb, var(--color-brand-primary) 12%, var(--color-background-primary));
 
   --supa-wcag-level: "AAA";
   --supa-link-decoration: underline;
@@ -233,9 +249,15 @@
   --supa-admonition-todo-accent: light-dark(#4a4845, #b0b8ca);
   --supa-admonition-todo-bg: light-dark(#efe9dd, #1d2235);
 
-  // Secondary theme follows the muted text on the secondary surface (see the modus mixin)
+  // Secondary theme follows the muted text on the secondary surface, and dark solid fills take
+  // Modus Vivendi Tinted's bg-mode-line-active under white (see the modus mixin)
   --secondary-fg: var(--color-foreground-muted);
   --secondary-bg-subtle: var(--color-background-secondary);
+  --secondary-bg: light-dark(var(--gray-100), #484d67);
+
+  // Navigation states follow the modus mixin
+  --supa-nav-hover-fg: var(--color-foreground-primary);
+  --supa-nav-active-bg: color-mix(in srgb, var(--color-brand-primary) 12%, var(--color-background-primary));
 
   --supa-wcag-level: "AAA";
   --supa-link-decoration: underline;

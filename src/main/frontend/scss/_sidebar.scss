@@ -285,12 +285,12 @@ html:not([data-supa-resolved-theme]) .supa-logo-dark {
 
   &:hover {
     background-color: var(--color-background-hover);
-    color: var(--color-brand-primary);
+    color: var(--supa-nav-hover-fg);
   }
 
   &.active {
-    background-color: color-mix(in srgb, var(--color-brand-primary) 12%, transparent);
-    color: var(--color-brand-primary);
+    background-color: var(--supa-nav-active-bg);
+    color: var(--supa-nav-active-fg);
     font-weight: 600;
   }
 }

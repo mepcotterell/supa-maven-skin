@@ -2167,22 +2167,35 @@ describe('WCAG contrast audit (scripts/contrast-audit.ts)', () => {
   it('declares the sidebar, search, and Bootstrap theme surfaces with the target they promise', () => {
     const named = (prefix: string): SurfaceSpec[] =>
       SURFACE_AUDITS.filter((surface: SurfaceSpec) => surface.surface.startsWith(prefix));
-    // Modus dark: brand blue on the hover surface and on the current-page tint misses 7:1.
+    // Modus dark with the default navigation tokens: brand blue on the hover surface and on
+    // the current-page tint laid over the sidebar misses 7:1.
     const tokens = new Map([
       ['--supa-wcag-level', '"AAA"'],
       ['--color-background-primary', '#000000'],
       ['--color-background-secondary', '#1e1e1e'],
       ['--color-background-hover', '#2d2d2d'],
       ['--color-foreground-primary', '#ffffff'],
-      ['--color-brand-primary', '#00bcff']
+      ['--color-brand-primary', '#00bcff'],
+      ['--supa-nav-hover-fg', 'var(--color-brand-primary)'],
+      ['--supa-nav-active-fg', 'var(--color-brand-primary)'],
+      ['--supa-nav-active-bg', 'color-mix(in srgb, var(--color-brand-primary) 12%, transparent)']
     ]);
     expect(auditContrast(tokens, 'modus', 'dark', named('sidebar')).violations).toEqual([
-      "WCAG 2.2 AAA text contrast violation in palette 'modus' (dark): link var(--color-brand-primary) " +
+      "WCAG 2.2 AAA text contrast violation in palette 'modus' (dark): link var(--supa-nav-hover-fg) " +
         '(#00bcff) on sidebar link, hovered (#2d2d2d) has contrast 6.32:1 (minimum 7.0:1).',
-      "WCAG 2.2 AAA text contrast violation in palette 'modus' (dark): link var(--color-brand-primary) " +
+      "WCAG 2.2 AAA text contrast violation in palette 'modus' (dark): link var(--supa-nav-active-fg) " +
         '(#00bcff) on sidebar current page (.supa-nav-link.active) (#1a3139) has contrast 6.25:1 ' +
         '(minimum 7.0:1).'
     ]);
+    // The modus overrides in _variables.scss: main text on hover, brand tint mixed into the page.
+    tokens.set('--supa-nav-hover-fg', 'var(--color-foreground-primary)');
+    tokens.set(
+      '--supa-nav-active-bg',
+      'color-mix(in srgb, var(--color-brand-primary) 12%, var(--color-background-primary))'
+    );
+    const fixed = auditContrast(tokens, 'modus', 'dark', named('sidebar'));
+    expect(fixed.checked).toBe(3);
+    expect(fixed.violations).toEqual([]);
     expect(named('search result, active').length).toBe(1);
     expect(named('search match highlight').length).toBe(2);
     for (const theme of ['primary', 'accent', 'success', 'info', 'warning', 'danger', 'secondary', 'inverse']) {
