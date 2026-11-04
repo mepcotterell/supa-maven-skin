@@ -98,7 +98,7 @@ interface InteractionScenario {
    * Every other scenario scans the whole page.
    */
   scope?: readonly string[];
-  /** Drives the loaded page into the state with locators and the keyboard. */
+  /** Drives the loaded page into the state with locators, the keyboard, and the mouse. */
   setup: (page: Page) => Promise<void>;
   /**
    * Throws unless the page is in the state. Runs after `setup` and again after
@@ -268,7 +268,10 @@ async function expectAttribute(
 }
 
 /**
- * Waits until the element matched by `locator` is under the mouse pointer.
+ * Checks that the element matched by `locator` is under the mouse pointer (`:hover`).
+ *
+ * The pointer only moves when a scenario moves it, so one check after setup, and one after the
+ * scan, proves the hovered state; no polling is needed.
  *
  * @param locator - Element that should be hovered.
  * @param what - Human-readable description for the error message.
