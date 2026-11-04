@@ -328,6 +328,6 @@ Avoid these, because they are implementation details that can change in any rele
 ## Caveats
 
 - **Bootstrap 6 is an alpha.** **Supa Maven Skin** builds on Bootstrap 6 (`6.0.0-alpha.1`). Bootstrap's own class names and tokens may change before a stable release, which is one more reason to customize through the skin's `--color-*` tokens.
-- **Your overrides are not contrast-checked.** At build time, `scripts/lint-scss.ts` checks only the skin's built-in color schemes: text and accent tokens on both background surfaces, in both polarities, against WCAG 2.2 AA (4.5:1) for `furo` and `bootstrap` and AAA (7.0:1) for the four `modus*` schemes. Check your own colors against the same minimums in light and dark mode.
+- **Your overrides are not contrast-checked.** At build time, `scripts/lint-scss.ts` checks only the skin's built-in color schemes: text and accent tokens on both background surfaces, and the text, link, and icon colors on admonition title bars and bodies and on `.alert.theme-*` callouts, in both polarities, against WCAG 2.2 AA (4.5:1) for `furo` and `bootstrap` and AAA (7.0:1) for the four `modus*` schemes. Check your own colors against the same minimums in light and dark mode.
 - **`--color-brand-primary` is also a background.** The announcement banner puts white text (light mode) or black text (dark mode) on `--color-brand-primary`, so check that pair whenever you change the brand color.
 - **Changes in `target/site/` do not last.** `mvn site` regenerates that directory. Always edit files under `src/site/`.

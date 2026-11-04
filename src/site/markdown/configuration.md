@@ -275,7 +275,7 @@ With the default URLs, allow `https://cdn.jsdelivr.net` in `script-src` (Mermaid
 
 ## Built-In Accessible Color Schemes
 
-Every built-in color scheme is verified at build time by `scripts/lint-scss.ts` against **WCAG 2.2** relative luminance and contrast rules across both Light and Dark polarities and against both primary (`--color-background-primary`) and secondary (`--color-background-secondary`) surfaces:
+Every built-in color scheme is verified at build time by `scripts/lint-scss.ts` against **WCAG 2.2** relative luminance and contrast rules across both Light and Dark polarities: text and accent tokens on the primary (`--color-background-primary`) and secondary (`--color-background-secondary`) surfaces, plus the text, link, and icon colors on admonition title bars and bodies and on `.alert.theme-*` callouts (see [Architecture](architecture.html) for the full list):
 
 | Scheme ID | Inspiration | Contrast | Notes |
 | :--- | :--- | :--- | :--- |

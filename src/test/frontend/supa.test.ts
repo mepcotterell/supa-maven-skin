@@ -4,6 +4,7 @@
 
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { parse as parseCss } from 'postcss';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   BUNDLED_LICENSES,
@@ -12,6 +13,15 @@ import {
   packageNameFromSassSpecifier,
   sassModuleSpecifiers
 } from '../../../scripts/bundled-licenses';
+import {
+  auditContrast,
+  collectRootTokens,
+  compositeOver,
+  matchRootSelector,
+  resolveColor,
+  type SurfaceSpec,
+  toHex
+} from '../../../scripts/contrast-audit';
 import {
   BootstrapPlugins,
   Combobox,
@@ -1791,5 +1801,98 @@ describe('Supa Maven Skin Frontend Modules', () => {
         expect(existsSync(resolve(process.cwd(), 'node_modules', entry.name, 'LICENSE'))).toBe(true);
       }
     });
+  });
+});
+
+describe('WCAG contrast audit (scripts/contrast-audit.ts)', () => {
+  it('matches the unquoted palette selectors Dart Sass emits on <html>', () => {
+    const attributes = { 'data-supa-palette': 'modus', 'data-bs-theme': 'dark' };
+    expect(matchRootSelector('[data-supa-palette=modus]', attributes)).toBe(100);
+    expect(matchRootSelector('[data-supa-palette="modus"]', attributes)).toBe(100);
+    expect(matchRootSelector(':root[data-bs-theme=dark]', attributes)).toBe(200);
+    expect(matchRootSelector('[data-supa-palette=modus-tinted]', attributes)).toBeNull();
+    expect(matchRootSelector(':host', attributes)).toBeNull();
+    expect(matchRootSelector('[data-supa-palette] .alert', attributes)).toBeNull();
+  });
+
+  it('collects <html> custom properties by cascade order and skips @media and element rules', () => {
+    const css = parseCss(`
+      :root, :host { --fg: #111111; --bg: #ffffff; }
+      [data-supa-palette=furo] { --fg: #222222; }
+      [data-supa-palette=modus] { --fg: #000000; }
+      :root, [data-supa-palette] { --link: var(--fg); }
+      @media (prefers-contrast: more) { :root { --fg: #ff0000; } }
+      .alert { --fg: #00ff00; }
+    `);
+    const tokens = collectRootTokens(css, { 'data-supa-palette': 'modus', 'data-bs-theme': 'light' });
+    expect(tokens.get('--fg')).toBe('#000000');
+    expect(tokens.get('--bg')).toBe('#ffffff');
+    expect(tokens.get('--link')).toBe('var(--fg)');
+  });
+
+  it('resolves light-dark(), var() chains and fallbacks, and reports undefined properties as null', () => {
+    const tokens = new Map([
+      ['--brand', 'light-dark(#0031a9, #79a8ff)'],
+      ['--alias', 'var(--brand)']
+    ]);
+    expect(toHex(resolveColor('var(--alias)', tokens, 'light')!)).toBe('#0031a9');
+    expect(toHex(resolveColor('var(--alias)', tokens, 'dark')!)).toBe('#79a8ff');
+    expect(toHex(resolveColor('var(--missing, #123456)', tokens, 'dark')!)).toBe('#123456');
+    expect(resolveColor('var(--missing)', tokens, 'dark')).toBeNull();
+  });
+
+  it('mixes in OKLCH exactly as Chromium paints it', () => {
+    // Expected values are canvas pixels read back from Playwright Chromium.
+    const none = new Map<string, string>();
+    expect(toHex(resolveColor('color-mix(in oklch, #000 16%, oklch(60% 0.02 245deg))', none, 'light')!)).toBe(
+      '#5d666e'
+    );
+    // Chromium drops the hue of the near-neutral #fbf7f0, so the tint keeps the blue's hue
+    // instead of swinging to orange along the shorter hue arc.
+    expect(toHex(resolveColor('color-mix(in oklch, #0031a9 12%, #fbf7f0)', none, 'light')!)).toBe('#d5e1f6');
+  });
+
+  it('alpha-composites a translucent title bar over the surface underneath', () => {
+    const none = new Map<string, string>();
+    const bar = resolveColor('rgba(56, 139, 253, 0.14)', none, 'dark')!;
+    const page = resolveColor('#131416', none, 'dark')!;
+    expect(toHex(compositeOver(bar, page))).toBe('#182536');
+  });
+
+  it('fails a title-bar link below the palette target and treats an undefined layer as transparent', () => {
+    const surfaces: SurfaceSpec[] = [
+      {
+        surface: 'admonition title bar (note, seealso)',
+        layers: [
+          'var(--color-background-primary)',
+          'var(--color-admonition-background)',
+          'var(--supa-admonition-note-bg)'
+        ],
+        foregrounds: [
+          { label: 'title link', color: 'var(--color-brand-content)', role: 'text' },
+          { label: 'icon', color: 'var(--supa-admonition-note-accent)', role: 'non-text' }
+        ]
+      }
+    ];
+    const tokens = new Map([
+      ['--supa-wcag-level', '"AAA"'],
+      ['--color-background-primary', '#000000'],
+      ['--color-brand-content', '#79a8ff'],
+      ['--supa-admonition-note-accent', '#00bcff'],
+      ['--supa-admonition-note-bg', '#0f2537']
+    ]);
+    const before = auditContrast(tokens, 'modus', 'dark', surfaces);
+    expect(before.checked).toBe(2);
+    expect(before.violations).toEqual([
+      "WCAG 2.2 AAA text contrast violation in palette 'modus' (dark): title link var(--color-brand-content) " +
+        '(#79a8ff) on admonition title bar (note, seealso) (#0f2537) has contrast 6.61:1 (minimum 7.0:1).'
+    ]);
+
+    tokens.set('--supa-admonition-note-bg', '#091f31');
+    expect(auditContrast(tokens, 'modus', 'dark', surfaces).violations).toEqual([]);
+
+    tokens.set('--supa-admonition-note-bg', '#0f2537');
+    tokens.set('--supa-wcag-level', '"AA"');
+    expect(auditContrast(tokens, 'furo', 'dark', surfaces).violations).toEqual([]);
   });
 });

@@ -6,18 +6,13 @@ import { join, relative, resolve } from 'node:path';
 import type { ChildNode, Declaration, Root, Rule } from 'postcss';
 import postcssScss from 'postcss-scss';
 import * as sass from 'sass-embedded';
-
-interface LightDarkHexPair {
-  light: string;
-  dark: string;
-}
-
-type Polarity = 'light' | 'dark';
-
-interface PaletteTokenEntry {
-  hexPair?: LightDarkHexPair;
-  wcagLevel?: string;
-}
+import {
+  auditContrast,
+  collectRootTokens,
+  type ContrastAuditResult,
+  PALETTE_IDS,
+  POLARITIES
+} from './contrast-audit.ts';
 
 const rootDir: string = resolve(import.meta.dirname, '..');
 const scssDir: string = join(rootDir, 'src/main/frontend/scss');
@@ -39,53 +34,6 @@ function findScssFiles(dir: string): string[] {
     }
   }
   return results.sort();
-}
-
-/**
- * Computes WCAG 2.2 relative luminance for a 6-digit hex color (`#rrggbb`).
- *
- * @param hex - Six-digit hex color string (with or without leading `#`).
- * @returns Relative luminance in the range `[0, 1]`.
- */
-function hexLuminance(hex: string): number {
-  const clean: string = hex.replace(/^#/, '');
-  const r: number = parseInt(clean.slice(0, 2), 16) / 255;
-  const g: number = parseInt(clean.slice(2, 4), 16) / 255;
-  const b: number = parseInt(clean.slice(4, 6), 16) / 255;
-  const toLinear = (c: number): number =>
-    c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
-  return 0.2126 * toLinear(r) + 0.7152 * toLinear(g) + 0.0722 * toLinear(b);
-}
-
-/**
- * Computes the WCAG 2.2 contrast ratio between two 6-digit hex colors.
- *
- * @param hex1 - First 6-digit hex color string.
- * @param hex2 - Second 6-digit hex color string.
- * @returns Contrast ratio in the range `[1, 21]`.
- */
-function contrastRatio(hex1: string, hex2: string): number {
-  const l1: number = hexLuminance(hex1);
-  const l2: number = hexLuminance(hex2);
-  const lighter: number = Math.max(l1, l2);
-  const darker: number = Math.min(l1, l2);
-  return (lighter + 0.05) / (darker + 0.05);
-}
-
-/**
- * Extracts light and dark hex colors from a CSS `light-dark(#light, #dark)` expression.
- *
- * @param value - Raw CSS declaration value string.
- * @returns Parsed polarity hex pair, or null if not matched.
- */
-function parseLightDarkHex(value: string): LightDarkHexPair | null {
-  const match = value.match(
-    /light-dark\(\s*(#[0-9a-fA-F]{6})\s*,\s*(#[0-9a-fA-F]{6})\s*\)/
-  );
-  if (!match || !match[1] || !match[2]) {
-    return null;
-  }
-  return { light: match[1], dark: match[2] };
 }
 
 const files: string[] = findScssFiles(scssDir);
@@ -184,109 +132,34 @@ try {
   violations.push(`src/main/frontend/scss/main.scss: Sass compilation failed: ${message}`);
 }
 
-// 5. WCAG 2.2 Contrast Audit across all 6 built-in accessible palettes (12 light/dark polarities)
+// 5. WCAG 2.2 contrast audit of every surface in SURFACE_AUDITS, for all 6 built-in palettes in
+// both polarities (see contrast-audit.ts for how tokens are resolved and composited)
+let contrastPairs = 0;
 if (compiledCss) {
   const cssRoot: Root = postcssScss.parse(compiledCss);
-  const paletteTokens = new Map<string, Map<string, PaletteTokenEntry>>();
-
-  cssRoot.walkRules((rule: Rule) => {
-    for (const paletteId of [
-      'furo',
-      'bootstrap',
-      'modus',
-      'modus-tinted',
-      'modus-deuteranopia',
-      'modus-tritanopia'
-    ]) {
-      const selectorToken = `[data-supa-palette="${paletteId}"]`;
-      if (rule.selector.includes(selectorToken)) {
-        if (!paletteTokens.has(paletteId)) {
-          paletteTokens.set(paletteId, new Map<string, PaletteTokenEntry>());
-        }
-        const map = paletteTokens.get(paletteId)!;
-        for (const node of rule.nodes ?? []) {
-          if (node.type === 'decl' && node.prop.startsWith('--')) {
-            const parsed: LightDarkHexPair | null = parseLightDarkHex(node.value);
-            if (parsed) {
-              map.set(node.prop, { hexPair: parsed });
-            } else if (node.prop === '--supa-wcag-level') {
-              map.set(node.prop, {
-                wcagLevel: node.value.replace(/["']/g, '').trim()
-              });
-            }
-          }
-        }
-      }
-    }
-  });
-
-  const foregroundTokenNames: readonly string[] = [
-    '--color-foreground-primary',
-    '--color-foreground-secondary',
-    '--color-foreground-muted',
-    '--color-brand-primary',
-    '--color-brand-content',
-    '--supa-admonition-note-accent',
-    '--supa-admonition-tip-accent',
-    '--supa-admonition-important-accent',
-    '--supa-admonition-warning-accent',
-    '--supa-admonition-caution-accent',
-    '--supa-admonition-todo-accent'
-  ];
-
-  const polarities: readonly Polarity[] = ['light', 'dark'];
-
-  for (const [paletteId, tokens] of paletteTokens.entries()) {
-    const wcagLevel: string = tokens.get('--supa-wcag-level')?.wcagLevel || 'AA';
-    const minTextContrast: number = wcagLevel === 'AAA' ? 7.0 : 4.5;
-    const minBorderContrast: number = wcagLevel === 'AAA' ? 4.5 : 3.0;
-
-    const bgPrimary: LightDarkHexPair | undefined = tokens.get(
-      '--color-background-primary'
-    )?.hexPair;
-    const bgSecondary: LightDarkHexPair | undefined = tokens.get(
-      '--color-background-secondary'
-    )?.hexPair;
-
-    if (!bgPrimary || !bgSecondary) {
+  for (const paletteId of PALETTE_IDS) {
+    // Dart Sass prints `[data-supa-palette=furo]` without quotes. Matching only the quoted form
+    // once made this audit find no palette and pass without measuring anything, so a palette
+    // whose rule cannot be found is itself a violation.
+    const selectorPattern = new RegExp(`\\[data-supa-palette=(["']?)${paletteId}\\1\\]`);
+    const hasPaletteRule: boolean = (cssRoot.nodes ?? []).some(
+      (node: ChildNode) =>
+        node.type === 'rule' && node.selectors.some((s: string) => selectorPattern.test(s))
+    );
+    if (!hasPaletteRule) {
       violations.push(
-        `Palette '${paletteId}' is missing --color-background-primary or --color-background-secondary.`
+        `Palette '${paletteId}' has no [data-supa-palette="${paletteId}"] rule in the compiled CSS.`
       );
       continue;
     }
-
-    for (const polarity of polarities) {
-      for (const fgToken of foregroundTokenNames) {
-        const fg: LightDarkHexPair | undefined = tokens.get(fgToken)?.hexPair;
-        if (!fg) {
-          violations.push(`Palette '${paletteId}' is missing required token '${fgToken}'.`);
-          continue;
-        }
-        const bgPairs: Array<[string, string]> = [
-          ['--color-background-primary', bgPrimary[polarity]],
-          ['--color-background-secondary', bgSecondary[polarity]]
-        ];
-        for (const [bgLabel, bgHex] of bgPairs) {
-          const ratio: number = contrastRatio(fg[polarity], bgHex);
-          if (ratio < minTextContrast) {
-            violations.push(
-              `WCAG 2.2 ${wcagLevel} violation in palette '${paletteId}' (${polarity}): ${fgToken} (${fg[polarity]}) on ${bgLabel} (${bgHex}) has contrast ${ratio.toFixed(2)}:1 (minimum ${minTextContrast.toFixed(1)}:1).`
-            );
-          }
-        }
-      }
-
-      const fgBorder: LightDarkHexPair | undefined = tokens.get(
-        '--color-foreground-border'
-      )?.hexPair;
-      if (fgBorder) {
-        const borderRatio: number = contrastRatio(fgBorder[polarity], bgPrimary[polarity]);
-        if (borderRatio < minBorderContrast) {
-          violations.push(
-            `WCAG 2.2 1.4.11 Non-text contrast violation in palette '${paletteId}' (${polarity}): --color-foreground-border (${fgBorder[polarity]}) on --color-background-primary (${bgPrimary[polarity]}) has contrast ${borderRatio.toFixed(2)}:1 (minimum ${minBorderContrast.toFixed(1)}:1).`
-          );
-        }
-      }
+    for (const polarity of POLARITIES) {
+      const tokens: Map<string, string> = collectRootTokens(cssRoot, {
+        'data-supa-palette': paletteId,
+        'data-bs-theme': polarity
+      });
+      const result: ContrastAuditResult = auditContrast(tokens, paletteId, polarity);
+      contrastPairs += result.checked;
+      violations.push(...result.violations);
     }
   }
 }
@@ -299,6 +172,6 @@ if (violations.length > 0) {
   process.exit(1);
 } else {
   console.log(
-    `SCSS Linter checked ${files.length} files and verified WCAG 2.2 AA/AAA contrast across 6 palettes (12 polarities) with 0 violations.`
+    `SCSS Linter checked ${files.length} files and verified WCAG 2.2 AA/AAA contrast of ${contrastPairs} foreground/surface pairs across ${PALETTE_IDS.length} palettes (${PALETTE_IDS.length * POLARITIES.length} polarities) with 0 violations.`
   );
 }

@@ -80,8 +80,27 @@ Maven reports (such as `dependencies.html`, `ci-management.html`, `team.html`, a
 
 | Tier | Palettes | Minimum Contrast Guarantees |
 | :--- | :--- | :--- |
-| **WCAG 2.2 AA** | `furo`, `bootstrap` | &ge; `4.5:1` for body and secondary text against both primary and secondary backgrounds; &ge; `3.0:1` for interactive UI borders. |
-| **WCAG 2.2 AAA** | `modus`, `modus-tinted`, `modus-deuteranopia`, `modus-tritanopia` | &ge; `7.0:1` for body, secondary, muted, code, and admonition text against both primary and secondary backgrounds; colorblind-safe semantic palettes for deuteranopia and tritanopia. |
+| **WCAG 2.2 AA** | `furo`, `bootstrap` | &ge; `4.5:1` for every text and link color on every audited surface (primary and secondary backgrounds, admonition title bars and bodies, `.alert.theme-*` callouts); &ge; `3.0:1` for interactive UI borders and admonition icons. |
+| **WCAG 2.2 AAA** | `modus`, `modus-tinted`, `modus-deuteranopia`, `modus-tritanopia` | &ge; `7.0:1` for every text and link color on every audited surface; &ge; `4.5:1` for interactive UI borders and admonition icons; colorblind-safe semantic palettes for deuteranopia and tritanopia. |
+
+### How the Contrast Audit Works
+
+`scripts/lint-scss.ts` compiles `main.scss` with Dart Sass and hands the CSS to `scripts/contrast-audit.ts`. For each palette and polarity, the audit collects the custom properties that apply to `<html>` the way the browser's cascade does (matching selector, specificity, source order), then resolves `var()`, `light-dark()`, `rgb()`, `oklch()`, and `color-mix(in oklch, ...)` down to sRGB. The resolver reproduces Chromium's rendering, including its rule that a near-neutral color mixed in OKLCH has no hue, so the colors it measures are the colors the page paints.
+
+What it measures is the `SURFACE_AUDITS` list: each surface's background layers, written as the CSS the painting rule uses, and every foreground drawn on it:
+
+| Surface | Background layers (bottom first) | Foregrounds |
+| :--- | :--- | :--- |
+| Page | `--color-background-primary` | All 11 semantic text and accent tokens (text); `--color-foreground-border` (non-text) |
+| Secondary surface | `--color-background-secondary` on the page | All 11 semantic text and accent tokens (text) |
+| Admonition title bar (one per kind) | `--supa-admonition-<kind>-bg` on `--color-admonition-background` on the page | Title text `--color-foreground-primary` and title link `--color-brand-content` (text); icon `--supa-admonition-<kind>-accent` (non-text) |
+| Admonition body | `--color-admonition-background` on the page | Body text and link (text) |
+| `.alert.theme-<name>` (`primary`, `accent`, `success`, `info`, `warning`, `danger`, `secondary`) | `--<name>-bg-subtle` on the page | Text `--<name>-fg` and link (text) |
+| `.alert` without a Bootstrap theme (`[!ALERT:light]`, `[!ALERT:dark]`) | `--bg-1` on the page | Inherited text and link (text) |
+
+Links are audited on every surface because `.supa-article a` paints them all with `--color-brand-content`, including links inside alerts and inside custom admonition titles, which keep their inline markup. Translucent backgrounds, such as the `rgba()` admonition tints of the `furo` and `bootstrap` dark polarities, are alpha-composited over the layer beneath before measuring. An undefined layer counts as transparent, as it does in CSS, which is why `--color-admonition-background` (defined by no built-in palette) still sits in the title bar's stack: a palette that defines it is measured with it.
+
+Dart Sass compiles `[data-supa-palette="furo"]` to `[data-supa-palette=furo]`, so the audit fails when it cannot find a palette's rule instead of silently measuring nothing, and its success line states how many foreground/surface pairs it checked. To cover a new surface, add an entry to `SURFACE_AUDITS`.
 
 ### Build-Time Tokens vs. Rendered-Page Checks
 
@@ -89,7 +108,7 @@ Accessibility is verified in two layers that catch different classes of bugs:
 
 | Layer | Command | Runs in | What it proves |
 | :--- | :--- | :--- | :--- |
-| **Token contrast** | `npm run lint:scss` (`scripts/lint-scss.ts`) | `npm run lint` and `mvn verify` | Every semantic color pair in `_variables.scss` meets its AA/AAA ratio in all 12 palette &times; polarity variants, before any HTML exists. |
+| **Token contrast** | `npm run lint:scss` (`scripts/lint-scss.ts`) | `npm run lint` and `mvn verify` | Every foreground/surface pair in `SURFACE_AUDITS` (`scripts/contrast-audit.ts`) meets its AA/AAA ratio in all 12 palette &times; polarity variants, resolved from the compiled CSS before any HTML exists. |
 | **Rendered pages** | `npm run test:a11y` (`scripts/a11y-check.ts`) | CI (JDK 21 leg) and on demand | The HTML that Velocity, Doxia, the CSS bundle, and the TypeScript enhancers actually produce passes axe-core's `wcag2a`, `wcag2aa`, `wcag21a`, `wcag21aa`, and `wcag22aa` rules: landmarks, names, roles, keyboard reachability, link distinguishability, and computed contrast. |
 
 `npm run test:a11y` serves `target/site/` from an in-process Node server and opens it in headless Chromium (Playwright). It scans every top-level page (docs and `maven-project-info-reports-plugin` reports) in `furo` light and dark at 1440&times;900, `index.html` in all 12 palette &times; polarity variants (seeded through the same `supa-theme` / `supa-palette` `localStorage` keys the `<head>` script reads), and `index.html` at a 390&times;844 phone viewport. Before scanning it waits for `html[data-supa-ready="true"]`, which `initSupaSkin()` sets once every enhancer, including the asynchronous Mermaid/KaTeX loaders, has settled. Any violation fails the run with the page, variant, rule ID, impact, target selector, and help URL.
