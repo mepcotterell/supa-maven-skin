@@ -293,6 +293,23 @@ const THEME_PAINTS: readonly ThemePaint[] = [
 ];
 
 /**
+ * Datepicker calendar background: `--datepicker-bg: var(--bg-body)` on `[data-vc="calendar"]` in
+ * Bootstrap 6's `_datepicker.scss`. The calendar's other `--datepicker-*` tokens are written below
+ * as the `--bg-*` and `--fg-*` tokens they read, which resolve on `<html>`.
+ */
+const CALENDAR = 'var(--bg-body)';
+
+/** Text on the Datepicker calendar, at rest and on a hovered day, month, or year. */
+const CALENDAR_TEXT: readonly ForegroundSpec[] = [
+  // `--datepicker-color`: the days, and the month and year buttons in the header
+  { label: 'day', color: 'var(--fg-body)', role: 'text' },
+  // `--datepicker-weekday-color`: the weekday names, and the cells of the month and year views
+  { label: 'weekday name, month, or year', color: 'var(--fg-3)', role: 'text' },
+  // A day outside the shown month, which `_bootstrap-supa.scss` mutes instead of fading
+  { label: 'day outside the month', color: 'var(--color-foreground-muted)', role: 'text' }
+];
+
+/**
  * Replaces each `--theme-<key>` with the root token `.theme-<name>` maps it to.
  *
  * @param expr - Expression written with `--theme-<key>`.
@@ -307,8 +324,8 @@ function forTheme(expr: string, theme: string): string {
  * Every surface the audit measures, with the foregrounds that render on it. The first two
  * entries are the original token audit (all semantic foregrounds on both page backgrounds,
  * plus control borders); the rest follow the rules that paint admonitions, alerts, the
- * sidebar, TOC, and search dialog states, and every Bootstrap 6 component, with and without a
- * theme, at rest, hovered, and toggled on.
+ * sidebar, TOC, and search dialog states, the Datepicker calendar, and every Bootstrap 6
+ * component, with and without a theme, at rest, hovered, and toggled on.
  */
 export const SURFACE_AUDITS: readonly SurfaceSpec[] = [
   {
@@ -439,6 +456,31 @@ export const SURFACE_AUDITS: readonly SurfaceSpec[] = [
     surface: 'unthemed button or chip, hovered or pressed (--supa-bg-active)',
     layers: [PAGE, 'var(--supa-bg-active)'],
     foregrounds: [{ label: 'text', color: 'var(--fg-body)', role: 'text' }]
+  },
+  // Datepicker calendar (vanilla-calendar-pro, drawn by Bootstrap 6's `[data-vc]` rules)
+  {
+    surface: 'Datepicker calendar',
+    layers: [CALENDAR],
+    foregrounds: CALENDAR_TEXT
+  },
+  {
+    // `--datepicker-day-hover-bg`, under a hovered day, arrow, month button, or month or year cell
+    surface: 'Datepicker day, month, or year, hovered',
+    layers: [CALENDAR, 'var(--bg-1)'],
+    foregrounds: CALENDAR_TEXT
+  },
+  {
+    // `--datepicker-day-today-bg` and `--datepicker-day-today-color`
+    surface: 'Datepicker today',
+    layers: [CALENDAR, 'var(--bg-2)'],
+    foregrounds: [{ label: 'day', color: 'var(--fg-1)', role: 'text' }]
+  },
+  {
+    // `--datepicker-day-selected-bg` and `-color`: a selected day, month, or year, and every day of
+    // a selected range, which `_bootstrap-supa.scss` keeps opaque
+    surface: 'Datepicker selection',
+    layers: [CALENDAR, 'var(--primary-bg)'],
+    foregrounds: [{ label: 'day', color: 'var(--primary-contrast)', role: 'text' }]
   },
   ...BOOTSTRAP_THEMES.flatMap((theme: string): SurfaceSpec[] =>
     THEME_PAINTS.map(

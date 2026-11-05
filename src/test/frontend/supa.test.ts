@@ -2506,4 +2506,41 @@ describe('WCAG contrast audit (scripts/contrast-audit.ts)', () => {
       toHex(resolveColor('oklch(from #0031a9 calc(l * 0.95) calc(c * 1.1) h)', tokens, 'light')!)
     );
   });
+
+  it('audits the Datepicker calendar, whose days outside the month are muted rather than faded', () => {
+    const calendar = SURFACE_AUDITS.filter((surface: SurfaceSpec) => surface.surface.startsWith('Datepicker'));
+    expect(calendar.map((surface: SurfaceSpec) => surface.surface)).toEqual([
+      'Datepicker calendar',
+      'Datepicker day, month, or year, hovered',
+      'Datepicker today',
+      'Datepicker selection'
+    ]);
+    // Modus dark's calendar on components.html, where axe read Bootstrap's 50% fade of a day
+    // outside the month as #808080 on #000000 (5.31:1).
+    const tokens = new Map([
+      ['--supa-wcag-level', '"AAA"'],
+      ['--bg-body', '#000000'],
+      ['--bg-1', '#1e1e1e'],
+      ['--bg-2', '#282828'],
+      ['--fg-body', '#ffffff'],
+      ['--fg-1', '#ffffff'],
+      ['--fg-3', 'var(--color-foreground-muted)'],
+      ['--color-foreground-muted', '#adadad'],
+      ['--primary-bg', '#00bcff'],
+      ['--primary-contrast', '#000000']
+    ]);
+    const faded: SurfaceSpec = {
+      surface: 'Datepicker day outside the month, faded',
+      layers: ['var(--bg-body)', 'transparent'],
+      foregrounds: [{ label: 'day', color: 'var(--fg-body)', role: 'text' }],
+      opacity: '.5'
+    };
+    expect(auditContrast(tokens, 'modus', 'dark', [faded]).violations).toEqual([
+      "WCAG 2.2 AAA text contrast violation in palette 'modus' (dark): day var(--fg-body) (#808080) " +
+        'on Datepicker day outside the month, faded (#000000) at 50% opacity has contrast 5.28:1 ' +
+        '(minimum 7.0:1).'
+    ]);
+    // The skin keeps those days opaque and colors them with the muted text.
+    expect(auditContrast(tokens, 'modus', 'dark', calendar)).toEqual({ checked: 8, violations: [] });
+  });
 });

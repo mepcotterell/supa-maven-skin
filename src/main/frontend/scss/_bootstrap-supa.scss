@@ -266,6 +266,34 @@ dialog.drawer:not([open]) {
   }
 }
 
+// Datepicker calendar: vanilla-calendar-pro, drawn by Bootstrap 6's `[data-vc]` rules from
+// `--datepicker-*` tokens that read the `--bg-*` and `--fg-*` bridge above. Bootstrap gives the
+// calendar its own `color-scheme: light dark`, and copies `data-bs-theme` onto it only if the field
+// had such an ancestor when the calendar was created, which `auto` mode removes from <html>: after a
+// switch from `auto` to an explicit theme, the calendar followed the OS, not the page. It inherits
+// the page's scheme instead, along with the `--lightningcss-*` switches that Lightning CSS
+// polyfills `light-dark()` with, which `color-scheme: inherit` alone leaves to Bootstrap's rules.
+[data-vc="calendar"] {
+  --lightningcss-light: inherit;
+  --lightningcss-dark: inherit;
+  color-scheme: inherit;
+}
+
+// Bootstrap fades the days outside the shown month to 50% and the days inside a selected range to
+// 80%, which left their text below the palette's target (outside the month, 3.4:1 in furo light
+// and 5.3:1 in modus dark). Both are buttons that pick a date, so they stay opaque: muted text, as
+// on the weekday names, marks a day outside the month, and square corners the inside of a range.
+[data-vc-date-month="prev"],
+[data-vc-date-month="next"] {
+  --datepicker-color: var(--color-foreground-muted);
+}
+
+[data-vc-date-month="prev"] [data-vc-date-btn],
+[data-vc-date-month="next"] [data-vc-date-btn],
+[data-vc-date-selected="middle"] [data-vc-date-btn] {
+  opacity: 1;
+}
+
 // ============================================================================
 // CSS Guardrails: Isolate Bootstrap 6 Components inside .supa-article.prose
 // ============================================================================

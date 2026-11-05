@@ -300,7 +300,7 @@ Just like Sphinx Furo's `light_css_variables` and `dark_css_variables`, any chil
 | `color-background-border` | Subtle hairline border color across sidebars, tables, and headers (`--border-color`). |
 | `color-foreground-primary` | Primary body text and heading color (`--fg-body`). |
 | `color-foreground-secondary` | Secondary metadata, caption, and inactive TOC link color (`--fg-2`). |
-| `color-foreground-muted` | Muted text, permalink `#` indicators, and subtle labels (`--fg-3`). |
+| `color-foreground-muted` | Muted text, permalink `#` indicators, subtle labels, and the Datepicker's weekday names and days outside the shown month (`--fg-3`). |
 | `color-foreground-border` | Interactive control border color (WCAG 1.4.11 non-text contrast &ge; 3:1). |
 | `supa-admonition-note-accent` | `note` and `seealso` admonition and `.theme-info` accent color. |
 | `supa-admonition-tip-accent` | `tip` and `hint` admonition and `.theme-success` accent color. |

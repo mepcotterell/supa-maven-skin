@@ -19,7 +19,8 @@
  * button and its tooltip in the "Copied!" state, a re-expanded sidebar group,
  * an expanded accordion and switched content tab on `components.html`, a
  * hovered themed chip, unthemed chip, and text button there, an opened
- * Combobox, whose script is a lazily loaded chunk, and content pages printed,
+ * Combobox, whose script is a lazily loaded chunk, the opened Datepicker
+ * calendar in every palette and polarity, and content pages printed,
  * with print media emulated and backgrounds dropped as browsers print them, so
  * text must read on white paper in every polarity, including the default
  * `auto` mode under a dark OS preference), asserts the
@@ -95,11 +96,17 @@ interface InteractionScenario {
   /** Browser permissions the setup needs, such as clipboard access for the copy button. */
   permissions?: string[];
   /**
+   * Date and time the page's clock is fixed at (`Date` only; timers keep running), for a widget
+   * that renders around today, such as a calendar.
+   */
+  now?: string;
+  /**
    * Selectors that limit the scan to the regions the state changes. Only for a
    * state the skin holds briefly (the copy button resets "Copied!" after 1.8 s),
-   * so axe finishes well inside it, or a hovered component, which changes only
-   * itself; the unchanged rest of the page is covered by the load-time scans.
-   * Every other scenario scans the whole page.
+   * so axe finishes well inside it, a hovered component, which changes only
+   * itself, or a widget opened from a field in every variant, which changes only
+   * itself and the field; the unchanged rest of the page is covered by the
+   * load-time scans. Every other scenario scans the whole page.
    */
   scope?: readonly string[];
   /** Drives the loaded page into the state with locators, the keyboard, and the mouse. */
@@ -601,6 +608,17 @@ function autoPrintScenario(page: string): InteractionScenario {
   };
 }
 
+/** Every palette in both polarities, for a widget that draws its own colors. */
+const ALL_VARIANTS: readonly Variant[] = PALETTES.flatMap((palette) =>
+  (['light', 'dark'] as const).map((polarity): Variant => ({ palette, polarity }))
+);
+
+/** The Datepicker field on `components.html`, whose value is 2026-10-20. */
+const DATEPICKER_FIELD = '.supa-article [data-bs-toggle="datepicker"]';
+
+/** The shown calendar that vanilla-calendar-pro appends to `<body>` for a field. */
+const OPEN_CALENDAR = '[data-vc="calendar"][data-vc-input]:not([data-vc-calendar-hidden])';
+
 /**
  * Interactive states scanned on top of the load-time matrix, each in its
  * `variants` (by default every `SCENARIO_VARIANTS` entry). Selectors target the
@@ -835,6 +853,58 @@ const SCENARIOS: readonly InteractionScenario[] = [
       await expectVisible(page.locator('.supa-article .combobox-toggle + .menu.show'), 'the open combobox menu');
     }
   },
+  {
+    // The Datepicker calendar is vanilla-calendar-pro drawn by Bootstrap 6's `[data-vc]` rules, not
+    // by the skin's components, so it is scanned in every variant, and only it and its field are
+    // scanned, which keeps those variants cheap. Its script is an on-demand chunk like the
+    // Combobox's. It opens on today's month, so the clock is fixed in the month of the field's date:
+    // the scan sees the weekday names, days in and outside the month, today, the selected day, and a
+    // day outside the month under the pointer (a two-digit one: axe leaves single-character text
+    // unmeasured).
+    name: 'datepicker-open',
+    page: 'components.html',
+    viewport: DESKTOP,
+    variants: ALL_VARIANTS,
+    now: '2026-10-14T12:00:00',
+    scope: [OPEN_CALENDAR, DATEPICKER_FIELD],
+    setup: async (page) => {
+      await page.locator(DATEPICKER_FIELD).click();
+      await page.locator(`${OPEN_CALENDAR} [data-vc-date="2026-09-30"] [data-vc-date-btn]`).hover();
+    },
+    assertState: async (page) => {
+      // The plugin joins window.bootstrap only once its chunk has loaded.
+      const bound = await page.locator(DATEPICKER_FIELD).evaluate(
+        (el) => {
+          const plugins = (window as unknown as {
+            bootstrap?: Record<string, { getInstance: (element: Element) => unknown } | undefined>;
+          }).bootstrap;
+          return Boolean(plugins?.Datepicker?.getInstance(el));
+        },
+        undefined,
+        { timeout: STATE_TIMEOUT_MS }
+      );
+      if (!bound) {
+        throw new Error('expected the lazily loaded Datepicker on the datepicker field');
+      }
+      const calendar = page.locator(OPEN_CALENDAR);
+      await expectVisible(calendar, 'the open calendar');
+      await expectVisible(calendar.locator('[data-vc-date="2026-10-14"][data-vc-date-today]'), 'today');
+      await expectVisible(
+        calendar.locator('[data-vc-date="2026-10-20"][data-vc-date-selected]'),
+        'the selected day'
+      );
+      await expectHovered(
+        calendar.locator('[data-vc-date="2026-09-30"][data-vc-date-month="prev"] [data-vc-date-btn]'),
+        'a day outside the month'
+      );
+      const schemes = await calendar.evaluate((el) =>
+        [el, document.documentElement].map((node) => getComputedStyle(node).colorScheme)
+      );
+      if (schemes[0] !== schemes[1]) {
+        throw new Error(`expected the calendar in the page's color-scheme "${schemes[1]}", got "${schemes[0]}"`);
+      }
+    }
+  },
   // Printed pages at the paper's width, and once from a wide window, whose screen layout has the
   // sticky inline sidebar and TOC that print must drop.
   printScenario('index.html', PRINT_PAGE),
@@ -966,6 +1036,9 @@ async function scan(browser: Browser, baseUrl: string, job: ScanJob): Promise<Fi
     permissions: scenario?.permissions ?? []
   });
   try {
+    if (scenario?.now !== undefined) {
+      await context.clock.setFixedTime(scenario.now);
+    }
     // Seed the same keys the <head> anti-FOUC script and theme.ts read, before
     // any page script runs, so the first paint already uses the variant.
     await context.addInitScript(
