@@ -15,14 +15,14 @@ On a phone, the sidebar and table of contents move into drawers behind the heade
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset=".github/screenshots/mobile-dark.webp">
-  <img src=".github/screenshots/mobile-light.webp" alt="Two phone screenshots of the Quickstart Tutorial page, 390 pixels wide. Left: a compact header with menu, theme, search, and table of contents buttons above the page title, an introduction, and a blue note admonition. Right: the navigation drawer open over the page, with the logo, search box, and menu.">
+  <img src=".github/screenshots/mobile-light.webp" alt="Two phone screenshots of the Quickstart Tutorial page on a 390-pixel-wide screen. Left: a compact header with menu, theme, search, and table of contents buttons above the page title, an introduction, and a blue note admonition. Right: the navigation drawer open over the page, with the logo, search box, and menu.">
 </picture>
 
 The six built-in color schemes, each on the Kitchen Sink page:
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset=".github/screenshots/palettes-dark.webp">
-  <img src=".github/screenshots/palettes-light.webp" alt="Six thumbnails of the Kitchen Sink page, one per color scheme, labeled Furo (AA), Bootstrap 6 (AA), Modus (AAA), Modus Tinted (AAA), Modus Deuteranopia (AAA), and Modus Tritanopia (AAA). Each shows the announcement bar, sidebar, and purple, red, and yellow admonitions in that scheme's colors.">
+  <img src=".github/screenshots/palettes-light.webp" alt="Six thumbnails of the Kitchen Sink page, one per color scheme, labeled Furo (AA), Bootstrap 6 (AA), Modus (AAA), Modus Tinted (AAA), Modus Deuteranopia (AAA), and Modus Tritanopia (AAA). Each shows the announcement bar, sidebar, table of contents, and the first three admonitions (Custom Admonition Title, Attention, and Caution) in that scheme's colors.">
 </picture>
 
 ## Key Features
