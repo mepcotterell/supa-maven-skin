@@ -363,7 +363,7 @@
                 <span class="supa-sidebar-footer-label">Appearance</span>
                 <div class="supa-sidebar-footer-controls">
 #if( $colorSchemeSelector )
-#supaPaletteSelect( "" )
+#supaPaletteSelect( "" $colorScheme )
 #end
 #supaThemeToggle( "" "top-end" )
                 </div>

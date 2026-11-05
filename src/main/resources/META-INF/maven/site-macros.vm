@@ -209,25 +209,37 @@ Apache Maven Doxia Site Renderer#if( $doxiaSiteRendererVersion ) $doxiaSiteRende
 #end
 #end
 ##
-## Render Accessible Color Scheme Menu Picker (Bootstrap 6 .menu) for the configured <colorScheme>
-## $palette. The trigger shows the scheme's short name (SUPA_PALETTES shortLabel in theme.ts), and
-## its accessible name and tooltip contain it, so voice-control users can activate it by saying what
-## they see (WCAG 2.5.3 Label in Name) before scripts run; theme.ts rewrites all three on every
-## change. An unknown ID falls back to furo, as theme.ts does.
-#macro( supaPalettePicker $extraClasses $placement $palette )
+## Resolve the configured <colorScheme> $palette into $paletteId and its short name $paletteName
+## (SUPA_PALETTES shortLabel in theme.ts). An unknown ID falls back to furo, as theme.ts does. The
+## picker and the drawer select both start on it, so before scripts run every control agrees.
+#macro( supaResolvePalette $palette )
 #if( $palette == 'bootstrap' )
+#set( $paletteId = 'bootstrap' )
 #set( $paletteName = 'Bootstrap 6 (AA)' )
 #elseif( $palette == 'modus' )
+#set( $paletteId = 'modus' )
 #set( $paletteName = 'Modus (AAA)' )
 #elseif( $palette == 'modus-tinted' )
+#set( $paletteId = 'modus-tinted' )
 #set( $paletteName = 'Modus Tinted (AAA)' )
 #elseif( $palette == 'modus-deuteranopia' )
+#set( $paletteId = 'modus-deuteranopia' )
 #set( $paletteName = 'Modus Deuteranopia (AAA)' )
 #elseif( $palette == 'modus-tritanopia' )
+#set( $paletteId = 'modus-tritanopia' )
 #set( $paletteName = 'Modus Tritanopia (AAA)' )
 #else
+#set( $paletteId = 'furo' )
 #set( $paletteName = 'Furo (AA)' )
 #end
+#end
+##
+## Render Accessible Color Scheme Menu Picker (Bootstrap 6 .menu) for the configured <colorScheme>
+## $palette. The trigger shows the scheme's short name, and its accessible name and tooltip contain
+## it, so voice-control users can activate it by saying what they see (WCAG 2.5.3 Label in Name)
+## before scripts run; theme.ts rewrites all three, and the checked item, on every change.
+#macro( supaPalettePicker $extraClasses $placement $palette )
+#supaResolvePalette( $palette )
         <div class="supa-palette-picker#if( $extraClasses && $extraClasses != '' ) $extraClasses#end">
           <button type="button"
                   class="supa-palette-btn"
@@ -246,29 +258,29 @@ Apache Maven Doxia Site Renderer#if( $doxiaSiteRendererVersion ) $doxiaSiteRende
 ## technology; every option name already states its WCAG level, such as "Modus (AAA)".
           <div class="menu supa-palette-menu" role="menu" aria-label="Accessible color schemes">
             <h6 class="menu-header" aria-hidden="true">WCAG 2.2 AA Standard</h6>
-            <button type="button" class="menu-item selected" role="menuitemradio" aria-checked="true" data-supa-palette-option="furo">
+            <button type="button" class="menu-item#if( $paletteId == 'furo' ) selected#end" role="menuitemradio" aria-checked="#if( $paletteId == 'furo' )true#{else}false#end" data-supa-palette-option="furo">
               <span class="menu-item-content">Furo (AA)</span>
               <svg class="menu-item-check" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="2.5 8.5 6.5 12.5 13.5 4.5"></polyline></svg>
             </button>
-            <button type="button" class="menu-item" role="menuitemradio" aria-checked="false" data-supa-palette-option="bootstrap">
+            <button type="button" class="menu-item#if( $paletteId == 'bootstrap' ) selected#end" role="menuitemradio" aria-checked="#if( $paletteId == 'bootstrap' )true#{else}false#end" data-supa-palette-option="bootstrap">
               <span class="menu-item-content">Bootstrap 6 (AA)</span>
               <svg class="menu-item-check" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="2.5 8.5 6.5 12.5 13.5 4.5"></polyline></svg>
             </button>
             <hr class="menu-divider" />
             <h6 class="menu-header" aria-hidden="true">WCAG 2.2 AAA High Contrast</h6>
-            <button type="button" class="menu-item" role="menuitemradio" aria-checked="false" data-supa-palette-option="modus">
+            <button type="button" class="menu-item#if( $paletteId == 'modus' ) selected#end" role="menuitemradio" aria-checked="#if( $paletteId == 'modus' )true#{else}false#end" data-supa-palette-option="modus">
               <span class="menu-item-content">Modus (AAA)</span>
               <svg class="menu-item-check" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="2.5 8.5 6.5 12.5 13.5 4.5"></polyline></svg>
             </button>
-            <button type="button" class="menu-item" role="menuitemradio" aria-checked="false" data-supa-palette-option="modus-tinted">
+            <button type="button" class="menu-item#if( $paletteId == 'modus-tinted' ) selected#end" role="menuitemradio" aria-checked="#if( $paletteId == 'modus-tinted' )true#{else}false#end" data-supa-palette-option="modus-tinted">
               <span class="menu-item-content">Modus Tinted (AAA)</span>
               <svg class="menu-item-check" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="2.5 8.5 6.5 12.5 13.5 4.5"></polyline></svg>
             </button>
-            <button type="button" class="menu-item" role="menuitemradio" aria-checked="false" data-supa-palette-option="modus-deuteranopia">
+            <button type="button" class="menu-item#if( $paletteId == 'modus-deuteranopia' ) selected#end" role="menuitemradio" aria-checked="#if( $paletteId == 'modus-deuteranopia' )true#{else}false#end" data-supa-palette-option="modus-deuteranopia">
               <span class="menu-item-content">Modus Deuteranopia (AAA)</span>
               <svg class="menu-item-check" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="2.5 8.5 6.5 12.5 13.5 4.5"></polyline></svg>
             </button>
-            <button type="button" class="menu-item" role="menuitemradio" aria-checked="false" data-supa-palette-option="modus-tritanopia">
+            <button type="button" class="menu-item#if( $paletteId == 'modus-tritanopia' ) selected#end" role="menuitemradio" aria-checked="#if( $paletteId == 'modus-tritanopia' )true#{else}false#end" data-supa-palette-option="modus-tritanopia">
               <span class="menu-item-content">Modus Tritanopia (AAA)</span>
               <svg class="menu-item-check" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="2.5 8.5 6.5 12.5 13.5 4.5"></polyline></svg>
             </button>
@@ -281,20 +293,21 @@ Apache Maven Doxia Site Renderer#if( $doxiaSiteRendererVersion ) $doxiaSiteRende
 ## of the links under its edges tappable (axe target-size, WCAG 2.5.8), so a tap meant to dismiss it
 ## can follow a half-hidden link. The browser draws a native picker outside the page, so nothing is
 ## partly covered. theme.ts keeps every [data-supa-palette-select] in sync with the menus.
-#macro( supaPaletteSelect $extraClasses )
+#macro( supaPaletteSelect $extraClasses $palette )
+#supaResolvePalette( $palette )
         <div class="supa-palette-picker#if( $extraClasses && $extraClasses != '' ) $extraClasses#end">
           <select class="supa-palette-select"
                   data-supa-palette-select="true"
                   aria-label="Accessible color scheme">
             <optgroup label="WCAG 2.2 AA Standard">
-              <option value="furo" selected>Furo (AA)</option>
-              <option value="bootstrap">Bootstrap 6 (AA)</option>
+              <option value="furo"#if( $paletteId == 'furo' ) selected#end>Furo (AA)</option>
+              <option value="bootstrap"#if( $paletteId == 'bootstrap' ) selected#end>Bootstrap 6 (AA)</option>
             </optgroup>
             <optgroup label="WCAG 2.2 AAA High Contrast">
-              <option value="modus">Modus (AAA)</option>
-              <option value="modus-tinted">Modus Tinted (AAA)</option>
-              <option value="modus-deuteranopia">Modus Deuteranopia (AAA)</option>
-              <option value="modus-tritanopia">Modus Tritanopia (AAA)</option>
+              <option value="modus"#if( $paletteId == 'modus' ) selected#end>Modus (AAA)</option>
+              <option value="modus-tinted"#if( $paletteId == 'modus-tinted' ) selected#end>Modus Tinted (AAA)</option>
+              <option value="modus-deuteranopia"#if( $paletteId == 'modus-deuteranopia' ) selected#end>Modus Deuteranopia (AAA)</option>
+              <option value="modus-tritanopia"#if( $paletteId == 'modus-tritanopia' ) selected#end>Modus Tritanopia (AAA)</option>
             </optgroup>
           </select>
           <svg class="supa-palette-picker-chevron" viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="4 6 8 10 12 6"></polyline></svg>

@@ -257,6 +257,15 @@ if ( !drawerFooter.contains( "<select class=\"supa-palette-select\"" )
      || drawerFooter.contains( "supa-palette-btn" ) ) {
     throw new IllegalStateException( "Sidebar drawer footer must render the color-scheme picker as a native <select data-supa-palette-select> (axe target-size, WCAG 2.5.8)" );
 }
+// Before theme.ts runs, every color-scheme control starts on the configured scheme, so the menus
+// and the drawer <select> agree with the trigger instead of always marking furo.
+String checkedBootstrap = "aria-checked=\"true\" data-supa-palette-option=\"bootstrap\"";
+if ( html.split( java.util.regex.Pattern.quote( checkedBootstrap ), -1 ).length - 1 != 2
+     || html.contains( "aria-checked=\"true\" data-supa-palette-option=\"furo\"" )
+     || !drawerFooter.contains( "<option value=\"bootstrap\" selected>" )
+     || drawerFooter.contains( "<option value=\"furo\" selected>" ) ) {
+    throw new IllegalStateException( "Color-scheme menus and the drawer <select> must start on the configured <colorScheme>bootstrap</colorScheme>" );
+}
 
 // Pages in subdirectories: site.xml hrefs reach the template relative to the site root, so the
 // skin must rewrite menu, breadcrumb, Previous / Next, logo, and footer icon URLs for the
