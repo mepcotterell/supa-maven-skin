@@ -17,7 +17,7 @@ export type SupaPaletteId =
 
 export interface SupaPaletteMeta {
   id: SupaPaletteId;
-  label: string;
+  /** Name the color-scheme trigger, menu items, and drawer `<select>` show, such as "Furo (AA)". */
   shortLabel: string;
   wcag: 'AA' | 'AAA';
   description: string;
@@ -29,42 +29,36 @@ export const PALETTE_STORAGE_KEY = 'supa-palette';
 export const SUPA_PALETTES: readonly SupaPaletteMeta[] = [
   {
     id: 'furo',
-    label: 'Furo Default (AA)',
     shortLabel: 'Furo (AA)',
     wcag: 'AA',
     description: 'Sphinx Furo default documentation palette (WCAG 2.2 AA >= 4.5:1).'
   },
   {
     id: 'bootstrap',
-    label: 'Bootstrap 6 OKLCH (AA)',
     shortLabel: 'Bootstrap 6 (AA)',
     wcag: 'AA',
     description: 'Perceptually uniform Bootstrap 6 OKLCH semantic palette (WCAG 2.2 AA >= 4.5:1).'
   },
   {
     id: 'modus',
-    label: 'Modus High Contrast (AAA)',
     shortLabel: 'Modus (AAA)',
     wcag: 'AAA',
     description: 'Emacs Modus Operandi & Modus Vivendi strict high-contrast palette (WCAG 2.2 AAA >= 7:1).'
   },
   {
     id: 'modus-tinted',
-    label: 'Modus Tinted (AAA)',
     shortLabel: 'Modus Tinted (AAA)',
     wcag: 'AAA',
     description: 'Low-glare warm cream paper & deep night-sky surfaces (WCAG 2.2 AAA >= 7:1).'
   },
   {
     id: 'modus-deuteranopia',
-    label: 'Modus Deuteranopia (AAA)',
     shortLabel: 'Modus Deuteranopia (AAA)',
     wcag: 'AAA',
     description: 'Red-green colorblind-safe Blue / Gold / Warm Amber palette (WCAG 2.2 AAA >= 7:1).'
   },
   {
     id: 'modus-tritanopia',
-    label: 'Modus Tritanopia (AAA)',
     shortLabel: 'Modus Tritanopia (AAA)',
     wcag: 'AAA',
     description: 'Blue-yellow colorblind-safe Teal / Magenta / Crimson palette (WCAG 2.2 AAA >= 7:1).'
@@ -170,10 +164,10 @@ function updatePaletteControls(palette: SupaPaletteId): void {
     labelEl.textContent = shortLabel;
   });
 
-  const paletteMeta = SUPA_PALETTES.find((p) => p.id === palette);
-  const triggerLabel = paletteMeta
-    ? `Accessible color scheme: ${paletteMeta.label}`
-    : 'Select accessible color scheme (WCAG 2.2 AA / AAA)';
+  // Voice-control users activate the trigger by saying the name it shows, so its accessible name
+  // and tooltip must contain `shortLabel` (WCAG 2.5.3 Label in Name). site-macros.vm
+  // #supaPalettePicker renders the same string for the configured palette before this runs.
+  const triggerLabel = `Color scheme: ${shortLabel}`;
   const paletteBtns = document.querySelectorAll<HTMLButtonElement>('.supa-palette-btn');
   paletteBtns.forEach((btn) => {
     btn.setAttribute('aria-label', triggerLabel);

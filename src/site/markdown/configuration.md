@@ -186,7 +186,7 @@ Controls the initial Light/Dark polarity, accessible color scheme preset, and le
 | :--- | :--- | :--- |
 | `<defaultTheme>` | `auto` | Initial light/dark polarity before user selection (`auto`, `light`, or `dark`). |
 | `<colorScheme>` | `furo` | Default accessible color scheme preset (`furo`, `bootstrap`, `modus`, `modus-tinted`, `modus-deuteranopia`, or `modus-tritanopia`). |
-| `<colorSchemeSelector>` | `true` | Render the accessible color scheme selector: a menu in the content header utility bar (`lg+`) and the mobile header (`768px`&ndash;`1023px`), and a native `<select>` in the sidebar drawer's Appearance footer (below `lg`). |
+| `<colorSchemeSelector>` | `true` | Render the accessible color scheme selector: a menu in the content header utility bar (`lg+`) and the mobile header (`768px`&ndash;`1023px`), and a native `<select>` in the sidebar drawer's Appearance footer (below `lg`). The menu trigger shows the active scheme's name, such as `Furo (AA)` (the configured `<colorScheme>` until a reader picks another), and its accessible name and tooltip are `Color scheme: Furo (AA)`, so voice-control users can say what they see (WCAG 2.5.3 Label in Name). |
 | `<sidebarBrandAlign>` | `center` | Horizontal alignment of the sidebar brand logo, project title, and version badge (`center`, `left` / `start`, or `right` / `end`). |
 | `<sidebarHideName>` | `false` | Hide the project name text under the logo in the left sidebar. |
 | `<lightLogo>` | *(empty)* | Relative path or URL to the logo shown when the resolved theme is light. |

@@ -209,18 +209,35 @@ Apache Maven Doxia Site Renderer#if( $doxiaSiteRendererVersion ) $doxiaSiteRende
 #end
 #end
 ##
-## Render Accessible Color Scheme Menu Picker (Bootstrap 6 .menu)
-#macro( supaPalettePicker $extraClasses $placement )
+## Render Accessible Color Scheme Menu Picker (Bootstrap 6 .menu) for the configured <colorScheme>
+## $palette. The trigger shows the scheme's short name (SUPA_PALETTES shortLabel in theme.ts), and
+## its accessible name and tooltip contain it, so voice-control users can activate it by saying what
+## they see (WCAG 2.5.3 Label in Name) before scripts run; theme.ts rewrites all three on every
+## change. An unknown ID falls back to furo, as theme.ts does.
+#macro( supaPalettePicker $extraClasses $placement $palette )
+#if( $palette == 'bootstrap' )
+#set( $paletteName = 'Bootstrap 6 (AA)' )
+#elseif( $palette == 'modus' )
+#set( $paletteName = 'Modus (AAA)' )
+#elseif( $palette == 'modus-tinted' )
+#set( $paletteName = 'Modus Tinted (AAA)' )
+#elseif( $palette == 'modus-deuteranopia' )
+#set( $paletteName = 'Modus Deuteranopia (AAA)' )
+#elseif( $palette == 'modus-tritanopia' )
+#set( $paletteName = 'Modus Tritanopia (AAA)' )
+#else
+#set( $paletteName = 'Furo (AA)' )
+#end
         <div class="supa-palette-picker#if( $extraClasses && $extraClasses != '' ) $extraClasses#end">
           <button type="button"
                   class="supa-palette-btn"
                   data-bs-toggle="menu"
                   data-bs-placement="#if( $placement && $placement != '' )$placement#else bottom-end#end"
-                  data-bs-title="Select accessible color scheme (WCAG 2.2 AA / AAA)"
+                  data-bs-title="Color scheme: $paletteName"
                   data-supa-palette-trigger="true"
                   aria-expanded="false"
-                  aria-label="Select accessible color scheme">
-            <span class="supa-palette-btn-label" data-supa-palette-label="true">Furo (AA)</span>
+                  aria-label="Color scheme: $paletteName">
+            <span class="supa-palette-btn-label" data-supa-palette-label="true">$paletteName</span>
             <svg class="supa-palette-picker-chevron" viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="4 6 8 10 12 6"></polyline></svg>
           </button>
 ## A role="menu" may own only menu items, groups, and separators (axe aria-required-children), and

@@ -78,6 +78,7 @@ import {
   getStoredThemeMode,
   initTheme,
   PALETTE_STORAGE_KEY,
+  SUPA_PALETTES,
   THEME_STORAGE_KEY
 } from '../../main/frontend/ts/theme';
 import {
@@ -279,6 +280,31 @@ describe('Supa Maven Skin Frontend Modules', () => {
 
       document.querySelector<HTMLButtonElement>('[data-supa-palette-option="modus-tinted"]')!.click();
       expect(select.value).toBe('modus-tinted');
+    });
+
+    it('names the color-scheme trigger after the scheme it shows in every palette (WCAG 2.5.3 Label in Name)', () => {
+      // Voice-control users activate a button by saying its visible text, so the trigger's
+      // accessible name and tooltip must contain the short name it shows ("Furo (AA)"); the
+      // long names ("Furo Default (AA)") did not.
+      document.body.innerHTML = `
+        <div class="supa-palette-picker">
+          <button type="button" class="supa-palette-btn" data-bs-toggle="menu"
+                  data-bs-title="Color scheme: Furo (AA)" aria-label="Color scheme: Furo (AA)">
+            <span class="supa-palette-btn-label" data-supa-palette-label="true">Furo (AA)</span>
+          </button>
+        </div>
+      `;
+
+      initTheme();
+      const trigger = document.querySelector<HTMLButtonElement>('.supa-palette-btn')!;
+      expect(SUPA_PALETTES.length).toBe(6);
+      for (const { id, shortLabel } of SUPA_PALETTES) {
+        applyPalette(id);
+        const visibleText = trigger.textContent!.replace(/\s+/g, ' ').trim();
+        expect(visibleText).toBe(shortLabel);
+        expect(trigger.getAttribute('aria-label')).toBe(`Color scheme: ${visibleText}`);
+        expect(trigger.getAttribute('data-bs-title')).toBe(`Color scheme: ${visibleText}`);
+      }
     });
   });
 
@@ -821,7 +847,7 @@ describe('Supa Maven Skin Frontend Modules', () => {
       expect(Tooltip.getInstance(themeBtn)).not.toBeNull();
 
       expect(paletteBtn.getAttribute('data-bs-toggle')).toBe('menu');
-      expect(paletteBtn.getAttribute('data-bs-title')).toContain('Accessible color scheme:');
+      expect(paletteBtn.getAttribute('data-bs-title')).toBe('Color scheme: Furo (AA)');
       expect(Tooltip.getInstance(paletteBtn)).not.toBeNull();
 
       expect(permalink.getAttribute('data-bs-toggle')).toBe('tooltip');

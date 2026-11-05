@@ -13,6 +13,7 @@
   <custom>
     <supaSkin>
       <defaultTheme>auto</defaultTheme>
+      <colorScheme>bootstrap</colorScheme>
       <announcement>Integration Test Announcement</announcement>
       <sourceRepository>https://github.com/mepcotterell/supa-maven-skin</sourceRepository>
       <sourceBranch>main</sourceBranch>

@@ -219,6 +219,24 @@ if ( !html.contains( "<h6 class=\"menu-header\" aria-hidden=\"true\">WCAG 2.2 AA
      || html.contains( "<h6 class=\"menu-header\">" ) ) {
     throw new IllegalStateException( "Color-scheme menu headers must carry aria-hidden=\"true\" inside role=\"menu\" (axe aria-required-children, WCAG 1.3.1)" );
 }
+// Voice-control users activate the color-scheme trigger by saying the scheme it shows, so its
+// accessible name and tooltip must contain that text (WCAG 2.5.3) before theme.ts runs, for the
+// configured <colorScheme>bootstrap</colorScheme>. Up to 0.1.5 it showed "Furo (AA)" whatever the
+// configuration and was named "Select accessible color scheme".
+java.util.regex.Matcher paletteTriggers = java.util.regex.Pattern.compile( "<button type=\"button\"\\s+class=\"supa-palette-btn\"[^>]*>\\s*<span class=\"supa-palette-btn-label\" data-supa-palette-label=\"true\">([^<]*)</span>" ).matcher( html );
+int paletteTriggerCount = 0;
+while ( paletteTriggers.find() ) {
+    paletteTriggerCount++;
+    String paletteTrigger = paletteTriggers.group( 0 );
+    if ( !"Bootstrap 6 (AA)".equals( paletteTriggers.group( 1 ) )
+         || !paletteTrigger.contains( "aria-label=\"Color scheme: Bootstrap 6 (AA)\"" )
+         || !paletteTrigger.contains( "data-bs-title=\"Color scheme: Bootstrap 6 (AA)\"" ) ) {
+        throw new IllegalStateException( "Color-scheme trigger must show the configured scheme and be named \"Color scheme: Bootstrap 6 (AA)\" (WCAG 2.5.3 Label in Name): " + paletteTrigger );
+    }
+}
+if ( paletteTriggerCount != 2 ) {
+    throw new IllegalStateException( "Expected the mobile-header and content-header color-scheme triggers, found " + paletteTriggerCount );
+}
 // Opened from the bottom of the sidebar drawer, the color-scheme .menu covered all but slivers of
 // the nav links above it (axe target-size, WCAG 2.5.8); the drawer footer uses a native <select>.
 int drawerFooterStart = html.indexOf( "<div class=\"supa-sidebar-footer" );

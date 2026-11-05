@@ -235,7 +235,7 @@
       </div>
       <div class="supa-mobile-header-right">
 #if( $colorSchemeSelector )
-#supaPalettePicker( "" "bottom-end" )
+#supaPalettePicker( "" "bottom-end" $colorScheme )
 #end
 #supaThemeToggle( "" "bottom-end" )
 #if( $enableSearch )
@@ -442,7 +442,7 @@
 #end
 #end
 #if( $colorSchemeSelector )
-#supaPalettePicker( "d-none lg:d-inline-flex" "bottom-end" )
+#supaPalettePicker( "d-none lg:d-inline-flex" "bottom-end" $colorScheme )
 #end
 #supaThemeToggle( "d-none lg:d-inline-flex" "bottom-end" )
 #if( $tocSidebar )

@@ -5,7 +5,9 @@
  * top-level page in headless Chromium (Playwright), waits for Supa Maven Skin to
  * finish initialising (`html[data-supa-ready]`), and runs axe-core with the
  * WCAG 2.0/2.1/2.2 A and AA rule tags, plus the AAA `color-contrast-enhanced`
- * rule (7:1) on the `modus*` palettes that promise AAA. The SCSS token linter
+ * rule (7:1) on the `modus*` palettes that promise AAA, and checks that the
+ * color-scheme trigger's accessible name contains the scheme name it shows
+ * (WCAG 2.5.3 Label in Name). The SCSS token linter
  * (`npm run lint:scss`) proves palette pairs meet their contrast targets in
  * isolation; this script proves the rendered combination of Velocity markup,
  * CSS, and TypeScript enhancements does too.
@@ -162,6 +164,15 @@ const AAA_PALETTES: ReadonlySet<Palette> = new Set<Palette>([
   'modus-tritanopia'
 ]);
 const AAA_CONTRAST_RULE = 'color-contrast-enhanced';
+/**
+ * Buttons whose visible text must appear in their `aria-label` (WCAG 2.5.3 Label in Name, Level
+ * A), so a voice-control user can activate them by saying what they see. axe's own
+ * `label-content-name-mismatch` rule runs under `wcag21a`, but it drops parenthesized text before
+ * comparing, so it passed a color-scheme trigger that showed "Furo (AA)" and was named
+ * "Accessible color scheme: Furo Default (AA)".
+ */
+const LABEL_IN_NAME_SELECTOR = '.supa-palette-btn';
+const LABEL_IN_NAME_RULE = 'label-in-name';
 const DESKTOP: Viewport = { width: 1440, height: 900 };
 const MOBILE: Viewport = { width: 390, height: 844 };
 /**
@@ -312,6 +323,45 @@ async function settleTransitions(page: Page): Promise<void> {
     // A transition interrupted by another state change rejects `finished`; that one is settled too.
     await Promise.all(transitions.map((transition) => transition.finished.catch(() => undefined)));
   });
+}
+
+/**
+ * Checks WCAG 2.5.3 Label in Name on every visible `LABEL_IN_NAME_SELECTOR` button: its
+ * accessible name must contain its visible text, compared case-insensitively with whitespace
+ * collapsed, as Playwright's `getByRole` matches a string `name`.
+ *
+ * @param page - Page in the job's state.
+ * @param job - Scan job, for the report and to know whether the content header is shown.
+ * @returns One finding per visible button whose accessible name lacks its visible text.
+ */
+async function checkLabelInName(page: Page, job: ScanJob): Promise<Finding[]> {
+  const findings: Finding[] = [];
+  const controls = await page.locator(LABEL_IN_NAME_SELECTOR).filter({ visible: true }).all();
+  // The content header shows the trigger at every desktop page load, so finding none there means
+  // the selector broke, and the check would otherwise pass without checking anything.
+  if (controls.length === 0 && !job.scenario && job.width >= DESKTOP.width) {
+    throw new Error(`no visible ${LABEL_IN_NAME_SELECTOR} to check for WCAG 2.5.3 label in name.`);
+  }
+  for (const [index, control] of controls.entries()) {
+    const text = (await control.innerText()).replace(/\s+/g, ' ').trim();
+    if (!text || (await control.and(page.getByRole('button', { name: text })).count()) > 0) {
+      continue;
+    }
+    const name = await control.getAttribute('aria-label');
+    findings.push({
+      page: job.page,
+      variant: variantLabel(job),
+      ruleId: LABEL_IN_NAME_RULE,
+      impact: 'serious',
+      target: `${LABEL_IN_NAME_SELECTOR} >> nth=${index}`,
+      summary:
+        `Fix the following: the accessible name (aria-label ${JSON.stringify(name)}) does not ` +
+        `contain the visible text ${JSON.stringify(text)} (WCAG 2.5.3 Label in Name)`,
+      html: (await control.evaluate((el) => el.outerHTML)).replace(/\s+/g, ' ').trim().slice(0, 160),
+      helpUrl: 'https://www.w3.org/WAI/WCAG22/Understanding/label-in-name.html'
+    });
+  }
+  return findings;
 }
 
 /**
@@ -1193,6 +1243,8 @@ async function scan(browser: Browser, baseUrl: string, job: ScanJob): Promise<Fi
       }
     }
     await settleTransitions(page);
+    // A scoped scan covers only the regions its state changes; the load-time scans check the rest.
+    const labelFindings = scenario?.scope ? [] : await checkLabelInName(page, job);
     // `options()` replaces axe's run options, so it carries the AA tags itself. axe runs a rule
     // enabled under `rules` even when its tags are outside `runOnly`.
     const builder = new AxeBuilder({ page }).options({
@@ -1212,7 +1264,7 @@ async function scan(browser: Browser, baseUrl: string, job: ScanJob): Promise<Fi
         });
       }
     }
-    const findings: Finding[] = [];
+    const findings: Finding[] = [...labelFindings];
     // No rule exclusions: every violation is either fixed in the skin or in demo content.
     for (const violation of results.violations) {
       for (const node of violation.nodes) {
@@ -1338,7 +1390,8 @@ async function main(): Promise<number> {
     console.log(
       `a11y: scanning ${jobs.length} page variants (${pages.length} pages, ` +
         `${scenarioJobs} in interactive states) with axe-core [${WCAG_TAGS.join(', ')}], ` +
-        `plus ${AAA_CONTRAST_RULE} on the ${aaaJobs} AAA-palette variants`
+        `plus ${AAA_CONTRAST_RULE} on the ${aaaJobs} AAA-palette variants ` +
+        `and ${LABEL_IN_NAME_RULE} (WCAG 2.5.3) on every visible ${LABEL_IN_NAME_SELECTOR}`
     );
     const errors: ScanError[] = [];
     const perJob = await mapLimit(jobs, CONCURRENCY, async (job) => {
@@ -1375,7 +1428,8 @@ async function main(): Promise<number> {
     }
     console.log(
       `a11y: no WCAG A/AA violations across ${jobs.length} page variants, ` +
-        `and no AAA contrast violations across the ${aaaJobs} AAA-palette variants.`
+        `no AAA contrast violations across the ${aaaJobs} AAA-palette variants, ` +
+        `and no ${LABEL_IN_NAME_RULE} violations on ${LABEL_IN_NAME_SELECTOR}.`
     );
     return 0;
   } finally {
