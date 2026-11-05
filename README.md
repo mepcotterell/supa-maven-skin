@@ -2,6 +2,29 @@
 
 A modern, responsive, accessible three-column [Apache Maven Site Skin](https://maven.apache.org/plugins/maven-site-plugin/examples/creatingskins.html) inspired by [Sphinx Furo](https://github.com/pradyunsg/furo), built with **Bootstrap 6 (`6.0.0-alpha.1`)**, **Bootstrap Icons**, **Vite**, **Dart Sass (SCSS)**, **TypeScript**, and **`frontend-maven-plugin`**.
 
+## Screenshots
+
+These pages come from this repository's own documentation site, and each image follows your GitHub light or dark theme.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset=".github/screenshots/desktop-dark.webp">
+  <img src=".github/screenshots/desktop-light.webp" alt="The Troubleshooting page at desktop width in the Furo color scheme: a navigation sidebar with the logo, search box, and collapsible menu on the left; the page title, a green tip admonition, inline code, and a Bash code block in the center; and the “On this page” table of contents on the right.">
+</picture>
+
+On a phone, the sidebar and table of contents move into drawers behind the header buttons:
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset=".github/screenshots/mobile-dark.webp">
+  <img src=".github/screenshots/mobile-light.webp" alt="Two phone screenshots of the Quickstart Tutorial page, 390 pixels wide. Left: a compact header with menu, theme, search, and table of contents buttons above the page title, an introduction, and a blue note admonition. Right: the navigation drawer open over the page, with the logo, search box, and menu.">
+</picture>
+
+The six built-in color schemes, each on the Kitchen Sink page:
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset=".github/screenshots/palettes-dark.webp">
+  <img src=".github/screenshots/palettes-light.webp" alt="Six thumbnails of the Kitchen Sink page, one per color scheme, labeled Furo (AA), Bootstrap 6 (AA), Modus (AAA), Modus Tinted (AAA), Modus Deuteranopia (AAA), and Modus Tritanopia (AAA). Each shows the announcement bar, sidebar, and purple, red, and yellow admonitions in that scheme's colors.">
+</picture>
+
 ## Key Features
 
 - **Canonical 3-Column Furo Layout**:
@@ -86,6 +109,9 @@ mvn -B -ntp clean verify site
 # Not part of npm test or mvn verify; needs the site built above and a one-time browser install.
 npx playwright install chromium
 npm run test:a11y
+
+# Regenerate the README screenshots in .github/screenshots/ from target/site/ (same browser).
+npm run screenshots
 ```
 
 ## License
