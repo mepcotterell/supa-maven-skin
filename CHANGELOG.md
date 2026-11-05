@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- **Print Styles**: Printing a page, or saving it as PDF, now prints only the article. The sidebar, TOC, drawers, headers, search, color-scheme and theme controls, previous/next cards, back-to-top button, copy buttons, and heading permalinks are left out; the copyright line stays. Every page prints in the active color scheme's light polarity, even in dark mode or Auto mode with a dark operating system, so text never prints light on white paper. Long code lines and table cells wrap instead of being cut off, external links print their URL after the link text, and the browser avoids breaking inside code blocks, admonitions, alerts, figures, and table rows. See "Adjusting the Printed Page" in the customizing guide.
+- **Print and Lazy-Widget Accessibility Scenarios**: `npm run test:a11y` now prints `index.html` and `kitchen-sink.html` with backgrounds dropped, as browsers print them, in explicit light and dark mode and in Auto mode with a dark operating system, and checks the printed layout and contrast. It also opens the Combobox on `components.html`, which proves an on-demand widget script loads and initializes in a real browser.
+- **README Screenshots**: The README shows the desktop layout, the phone layout with its drawer open, and all six color schemes, each in the light or dark version that matches the reader's GitHub theme. `npm run screenshots` (`scripts/screenshots.ts`) regenerates them from the built self-site.
+
+### Changed
+
+- **On-Demand Bootstrap Widgets**: The scripts for the Bootstrap 6 widgets only author content uses (`Carousel`, `Chips`, `Combobox`, `Datepicker`, `NavOverflow`, `OtpInput`, `Range`, `Strength`, `Tab`, and the Component Playground) now ship as separate `js/supa-maven-skin-<name>.min.js` files in the skin JAR and load only on pages whose markup contains them. The main script drops from 100.5 KiB to 68.6 KiB gzipped. These plugins appear on `window.bootstrap` only on pages that load them, and `data-supa-ready` is set once their scripts have loaded. Widget markup that a script adds after the page starts does not load its widget's script; the customizing guide describes the workaround.
+- **Dark CSS Variables on Screen Only**: `<darkCssVariables>` overrides now apply only on screen, since printed pages use the light polarity.
+- **Bundle Size Budgets**: The size check now budgets the JS entry (73 KiB gzipped) and the on-demand chunks together (42 KiB), and fails if a script in `js/` is not covered by a budget.
+- **Build Dependencies**: Updated eslint to 10.14.0, postcss to 8.5.32, sass-embedded to 1.107.1, typescript-eslint to 8.72.1, and vite to 8.3.6. The built CSS is byte-identical.
+
 ## [0.1.4] - 2026-11-04
 
 ### Added
