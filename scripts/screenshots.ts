@@ -16,12 +16,13 @@
  * animations. The pointer is parked outside the viewport and nothing keeps focus, so no hover
  * state, focus ring, or tooltip shows, and a check refuses to capture if one does or if a
  * `-SNAPSHOT` version is in view. Tiles are framed and laid out by a small HTML page in the same
- * browser, and Chromium's own canvas encoder writes lossless WebP, so no image library is needed
- * and two runs over the same `target/site/` produce byte-identical files.
+ * browser, and Chromium's own canvas encoder writes WebP (lossless, except for the phone figure),
+ * so no image library is needed and two runs over the same `target/site/` produce byte-identical
+ * files.
  *
  * Run `mvn -B -ntp clean verify site` first, then `npm run screenshots`, and commit the changed
- * images. Requires a Chromium build (`npx playwright install chromium`). Like
- * `npm run test:a11y`, it is not part of CI or the Maven build.
+ * images. Requires a Chromium build (`npx playwright install chromium`). It is not part of CI or
+ * the Maven build.
  */
 import { existsSync, statSync } from 'node:fs';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
@@ -75,6 +76,10 @@ interface Figure {
   /** File name under `.github/screenshots/`. */
   file: string;
   polarity: Polarity;
+  /** Device pixels per CSS pixel, for capturing the shots and for laying out the figure. */
+  deviceScaleFactor: number;
+  /** WebP quality for Chromium's canvas encoder: 1 selects lossless, anything lower lossy. */
+  quality: number;
   columns: number;
   /** Size of each tile relative to its viewport (1 is native size, 1/3 a thumbnail). */
   scale: number;
@@ -89,10 +94,26 @@ const OUT_DIR: string = join(ROOT_DIR, '.github', 'screenshots');
 const POLARITIES: readonly Polarity[] = ['light', 'dark'];
 
 /**
- * Device pixels per CSS pixel. README.md shows the desktop image at roughly 60% of its width, so
- * one device pixel per CSS pixel is already sharp there and keeps the images small.
+ * Device pixels per CSS pixel for the desktop and color-scheme figures. GitHub's README column is
+ * about 830 CSS pixels wide, so it shows these figures, about 1450 image pixels wide, at roughly
+ * 60% of their width: close to one image pixel per device pixel even on a 2x display, so a
+ * higher factor would only make the files bigger.
  */
-const DEVICE_SCALE_FACTOR = 1;
+const WIDE_SCALE_FACTOR = 1;
+/**
+ * Device pixels per CSS pixel for the phone figure. Its two 390px tiles fill about the same
+ * column at almost their CSS width, so at a factor of 1 a 2x display would upscale them and
+ * blur their text.
+ */
+const PHONE_SCALE_FACTOR = 2;
+/** WebP quality that selects the canvas encoder's lossless mode, which keeps text as sharp as PNG. */
+const LOSSLESS = 1;
+/**
+ * WebP quality for the phone figure. Losslessly encoded at a factor of 2 it alone would take
+ * over half a megabyte and push the six images past about 1.5 MB; at this lossy quality it is
+ * about 45% smaller, and GitHub shows it at about half its size, where no artifacts are visible.
+ */
+const PHONE_QUALITY = 0.9;
 /**
  * Tall enough to show the hero page's admonition and its first code block below the title, with
  * the sidebar on the left and the "On this page" TOC (shown from 1280px up) on the right.
@@ -168,6 +189,8 @@ const FIGURES: readonly Figure[] = POLARITIES.flatMap((polarity): Figure[] => [
   {
     file: `desktop-${polarity}.webp`,
     polarity,
+    deviceScaleFactor: WIDE_SCALE_FACTOR,
+    quality: LOSSLESS,
     columns: 1,
     scale: 1,
     captions: false,
@@ -176,6 +199,8 @@ const FIGURES: readonly Figure[] = POLARITIES.flatMap((polarity): Figure[] => [
   {
     file: `mobile-${polarity}.webp`,
     polarity,
+    deviceScaleFactor: PHONE_SCALE_FACTOR,
+    quality: PHONE_QUALITY,
     columns: 2,
     scale: 1,
     captions: false,
@@ -193,6 +218,8 @@ const FIGURES: readonly Figure[] = POLARITIES.flatMap((polarity): Figure[] => [
   {
     file: `palettes-${polarity}.webp`,
     polarity,
+    deviceScaleFactor: WIDE_SCALE_FACTOR,
+    quality: LOSSLESS,
     columns: 3,
     scale: 1 / 3,
     captions: true,
@@ -335,12 +362,18 @@ async function assertCleanState(page: Page): Promise<void> {
  * @param browser - Shared Chromium instance.
  * @param baseUrl - Static server base URL.
  * @param shot - Page, viewport, and variant to capture.
+ * @param deviceScaleFactor - Device pixels per CSS pixel of the figure the shot belongs to.
  * @returns The viewport PNG and the color-scheme name the skin shows for the variant.
  */
-async function captureShot(browser: Browser, baseUrl: string, shot: Shot): Promise<Capture> {
+async function captureShot(
+  browser: Browser,
+  baseUrl: string,
+  shot: Shot,
+  deviceScaleFactor: number
+): Promise<Capture> {
   const context = await browser.newContext({
     viewport: shot.viewport,
-    deviceScaleFactor: DEVICE_SCALE_FACTOR,
+    deviceScaleFactor,
     colorScheme: shot.polarity,
     reducedMotion: 'reduce',
     locale: 'en-US',
@@ -455,7 +488,7 @@ function figureHtml(figure: Figure, captures: Capture[]): string {
 }
 
 /**
- * Renders a figure from its captures and encodes it as lossless WebP.
+ * Renders a figure from its captures and encodes it as WebP at the figure's quality.
  *
  * @param browser - Shared Chromium instance.
  * @param figure - Figure to render.
@@ -463,8 +496,10 @@ function figureHtml(figure: Figure, captures: Capture[]): string {
  * @returns The encoded WebP image.
  */
 async function renderFigure(browser: Browser, figure: Figure, captures: Capture[]): Promise<Buffer> {
+  // The same factor as the shots, so a native-size tile (scale 1) is drawn one capture pixel
+  // per device pixel, without resampling.
   const context = await browser.newContext({
-    deviceScaleFactor: DEVICE_SCALE_FACTOR,
+    deviceScaleFactor: figure.deviceScaleFactor,
     reducedMotion: 'reduce'
   });
   try {
@@ -472,9 +507,9 @@ async function renderFigure(browser: Browser, figure: Figure, captures: Capture[
     await page.setContent(figureHtml(figure, captures), { waitUntil: 'load' });
     await settle(page);
     const png = await page.locator('.figure').screenshot({ type: 'png', omitBackground: true });
-    // Playwright writes only PNG and JPEG. Chromium's canvas encoder writes WebP, and a quality
-    // of 1 selects its lossless mode, which keeps text as sharp as PNG at about 70% of the size.
-    const webp = await page.evaluate(async (base64: string) => {
+    // Playwright writes only PNG and JPEG. Chromium's canvas encoder writes WebP, losslessly at
+    // a quality of 1, which keeps text as sharp as PNG at about 70% of the size.
+    const webp = await page.evaluate(async ([base64, quality]: [string, number]) => {
       const blob = await (await fetch(`data:image/png;base64,${base64}`)).blob();
       const bitmap = await createImageBitmap(blob, { colorSpaceConversion: 'none', premultiplyAlpha: 'none' });
       const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
@@ -483,7 +518,7 @@ async function renderFigure(browser: Browser, figure: Figure, captures: Capture[
         throw new Error('no 2D canvas context');
       }
       ctx.drawImage(bitmap, 0, 0);
-      const encoded = await canvas.convertToBlob({ type: 'image/webp', quality: 1 });
+      const encoded = await canvas.convertToBlob({ type: 'image/webp', quality });
       if (encoded.type !== 'image/webp') {
         throw new Error(`this Chromium cannot encode WebP (got ${encoded.type})`);
       }
@@ -493,7 +528,7 @@ async function renderFigure(browser: Browser, figure: Figure, captures: Capture[
         binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
       }
       return btoa(binary);
-    }, png.toString('base64'));
+    }, [png.toString('base64'), figure.quality] as [string, number]);
     return Buffer.from(webp, 'base64');
   } finally {
     await context.close();
@@ -531,7 +566,7 @@ async function main(): Promise<number> {
       // should depend on how fast a page happens to load.
       for (const shot of figure.shots) {
         try {
-          captures.push(await captureShot(browser, baseUrl, shot));
+          captures.push(await captureShot(browser, baseUrl, shot, figure.deviceScaleFactor));
         } catch (error: unknown) {
           const message = error instanceof Error ? error.message.split('\n', 1)[0] : String(error);
           throw new Error(`${shot.page} [${shot.palette}/${shot.polarity}]: ${message}`, { cause: error });
