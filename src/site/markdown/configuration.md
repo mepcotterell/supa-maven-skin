@@ -319,6 +319,8 @@ Just like Sphinx Furo's `light_css_variables` and `dark_css_variables`, any chil
 | `supa-sidebar-brand-justify` | Flex main-axis alignment (`center`, `flex-start`, or `flex-end`) for `.supa-sidebar-brand-text` title and version badge. |
 | `supa-sidebar-brand-text-align` | Text alignment (`center`, `left`, or `right`) inside `.supa-sidebar-brand`. |
 
+`<darkCssVariables>` apply on screen only: a printed page uses the light polarity, whose values come from the built-in scheme and `<lightCssVariables>` (see [Adjusting the Printed Page](customizing.html#adjusting-the-printed-page)).
+
 ## Velocity Helper Macros Reference (`site-macros.vm`)
 
 When authoring Velocity-preprocessed pages (`.md.vm`, `.apt.vm`, `.xhtml.vm`), **Supa Maven Skin** globally registers the following helper macros from `META-INF/maven/site-macros.vm`:

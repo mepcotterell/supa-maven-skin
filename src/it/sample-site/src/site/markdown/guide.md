@@ -1,6 +1,7 @@
 # User Guide
 
-Second page in the menu to verify Previous / Next navigation cards.
+Second page in the menu to verify Previous / Next navigation cards. Read the
+[Maven Site Plugin documentation](https://maven.apache.org/plugins/maven-site-plugin/) at <https://maven.apache.org/>.
 
 ## Configuration
 

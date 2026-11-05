@@ -18,6 +18,7 @@ Reach for the lightest layer that does the job. Built-in options are tested with
 | Restyle elements, tune tokens per polarity or per color scheme, change widths and fonts | A custom stylesheet | `src/site/resources/css/site.css` |
 | Add a favicon, web fonts, analytics, or extra scripts | `<body><head>` | `src/site/site.xml` |
 | Replace the copyright line in the footer | `<body><footer>` | `src/site/site.xml` |
+| Change what a printed page shows | `@media print` rules in a custom stylesheet | `src/site/resources/css/site.css` |
 
 > [!TIP] Check the Options First
 > Many changes need no CSS at all. Browse the [Configuration Options](configuration.html#configuration-options) before writing overrides.
@@ -304,6 +305,48 @@ For elements without an option, or to restyle one, use `site.css`:
 ```
 
 The announcement example reuses token pairs the skin already checks: the build verifies that `--color-foreground-primary` and `--color-brand-content` meet the scheme's contrast minimum on `--color-background-secondary` in every built-in scheme. Inventing new color pairs would bypass that check.
+
+---
+
+## Adjusting the Printed Page
+
+When a reader prints a page or saves it as PDF, the skin's `@media print` styles print only the article. They leave out the sidebar, the "On this page" TOC, both drawers, the mobile header, the content header (breadcrumbs, source buttons, color-scheme and theme controls), the search box, the announcement banner, the skip link, the previous/next cards, the "Back to top" button, copy buttons, heading permalinks, and tooltips. The footer keeps only the copyright line, or your `<body><footer>`, so the printout still names who owns the text. The "Built with" credit, the "Last updated" date, and the footer icons are left out.
+
+Other changes on paper:
+
+- **Colors:** browsers print without backgrounds by default, so every page prints in the active color scheme's light polarity, even when the reader views it in dark mode. Text, links, code highlighting, admonitions, alerts, and tables print dark on white paper, and `<darkCssVariables>` overrides apply on screen only. Badges, buttons, chips, avatars, progress bars, and steppers keep their light-polarity fills, because their text or state is drawn on them. A Mermaid diagram rendered in dark mode prints inverted into light colors.
+- **Layout:** the article spans the page, long code lines and table cells wrap instead of scrolling, and nothing stays fixed or sticky.
+- **Links:** an external link in the article prints its URL in parentheses after the link text, unless the text already is the URL. Links to other pages of the site, in-page links, and links in code blocks or navigation print as text only.
+- **Page breaks:** headings stay with the content that follows them, and the browser avoids breaking inside code blocks, admonitions, alerts, cards, diagrams, figures, and table rows.
+- **Interactive content:** only the selected tab of a tab group prints, and closed accordions and `<details>` stay closed. Readers open what they want on paper before printing.
+
+To change the printout, add your own `@media print` block to `site.css`. The skin hides furniture with `display: none !important`, so a rule that shows an element again needs `!important` too:
+
+```css
+/* src/site/resources/css/site.css */
+@media print {
+  /* Print the "Built with" line, which carries the "Last updated" date. */
+  .supa-built-with {
+    display: block !important;
+  }
+
+  /* Print link text only, without URLs. */
+  .supa-article a::after {
+    content: none !important;
+  }
+
+  /* Smaller text and wider margins on paper. */
+  .supa-article {
+    font-size: 11pt;
+  }
+
+  @page {
+    margin: 2cm;
+  }
+}
+```
+
+Print your page in light and dark mode to check the result, or save it as PDF.
 
 ---
 

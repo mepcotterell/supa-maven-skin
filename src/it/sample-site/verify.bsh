@@ -138,6 +138,10 @@ if ( !html.contains( "--color-brand-primary: #0055ff;" ) ) {
 if ( !html.contains( "--color-brand-primary: #6699ff;" ) ) {
     throw new IllegalStateException( "Missing custom darkCssVariables" );
 }
+// A printout uses the light polarity on white paper, so dark overrides must not apply in print
+if ( !html.contains( "@media screen {" ) || !html.contains( "@media screen and (prefers-color-scheme: dark) {" ) ) {
+    throw new IllegalStateException( "Custom darkCssVariables must be scoped to @media screen" );
+}
 if ( !html.contains( "supa-next-page" ) || !html.contains( "guide.html" ) ) {
     throw new IllegalStateException( "Missing Next page navigation card on index.html" );
 }
@@ -149,6 +153,11 @@ if ( !guideHtml.isFile() ) {
 String guideText = Files.readString( guideHtml.toPath(), StandardCharsets.UTF_8 );
 if ( !guideText.contains( "supa-prev-page" ) ) {
     throw new IllegalStateException( "Missing Previous page navigation card on guide.html" );
+}
+// site.vm marks a link whose text is its own URL, so print styles do not print that URL twice
+if ( !java.util.regex.Pattern.compile( "<a [^>]*href=\"https://maven\\.apache\\.org/\"[^>]* data-supa-bare-url>https://maven\\.apache\\.org/</a>" ).matcher( guideText ).find()
+     || guideText.contains( "data-supa-bare-url>Maven Site Plugin documentation</a>" ) ) {
+    throw new IllegalStateException( "Expected data-supa-bare-url on the bare-URL link only in guide.html" );
 }
 
 if ( html.contains( "${currentYear}" ) || html.contains( "$currentDate" ) ) {

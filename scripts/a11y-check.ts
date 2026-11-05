@@ -17,8 +17,10 @@
  * matches and an active result, the sidebar and TOC drawers, the color-scheme
  * and theme menus in each header and drawer placement, a shown tooltip, a copy
  * button and its tooltip in the "Copied!" state, a re-expanded sidebar group,
- * an expanded accordion and switched content tab on `components.html`, and a
- * hovered themed chip, unthemed chip, and text button there), asserts the
+ * an expanded accordion and switched content tab on `components.html`, a
+ * hovered themed chip, unthemed chip, and text button there, and content pages
+ * printed, with print media emulated and backgrounds dropped as browsers print
+ * them, so text must read on white paper in every polarity), asserts the
  * state was reached, scans it in `furo` light and dark and `modus` dark (AAA)
  * unless the scenario lists its own variants, and asserts the state still held
  * after the scan, so a broken selector fails the run instead of quietly
@@ -431,6 +433,128 @@ function hoverScenario(name: string, selector: string, what: string): Interactio
 }
 
 /**
+ * Printable area of an A4 page inside Chrome's default 1 cm margins, at 96 CSS pixels per inch.
+ * Browsers lay a page out at its paper width when printing, which is below the skin's `lg`
+ * breakpoint, where the screen layout shows the mobile header rather than the inline sidebar.
+ */
+const PRINT_PAGE: Viewport = { width: 718, height: 1047 };
+
+/**
+ * Page furniture that a printed page leaves out: the regions of `site.vm` around the article, the
+ * controls inside them, and the controls the enhancers add to the article. Every selector must
+ * match on the scanned page, so a renamed class fails the run instead of passing unseen.
+ */
+const PRINT_HIDDEN: readonly string[] = [
+  '.supa-skip-link',
+  '.supa-announcement',
+  '.supa-mobile-header',
+  '.supa-sidebar-column',
+  '.supa-search-trigger',
+  '.supa-content-header',
+  '.supa-palette-picker',
+  '.supa-theme-toggle',
+  '.supa-content-header a[aria-label="Edit this page"]',
+  '.supa-toc-column',
+  '.supa-related-pages',
+  '.supa-back-to-top',
+  '.supa-built-with',
+  '#supa-main-content .supa-copy-btn',
+  '#supa-main-content .supa-headerlink'
+];
+
+/**
+ * Drops backgrounds the way a browser prints them, which print media emulation alone does not.
+ *
+ * Unless the reader opts in (Chrome's "Background graphics", Firefox's "Print backgrounds"), a
+ * printout keeps only the backgrounds of `print-color-adjust: exact` elements. Axe then measures
+ * text against the white paper: light text from a dark polarity, unreadable on paper, fails there
+ * instead of passing on its screen background. CSS cannot select by computed value, so the
+ * elements without `exact` are marked first.
+ *
+ * @param page - Page under test, emulating print media.
+ */
+async function dropPrintBackgrounds(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    for (const el of Array.from(document.querySelectorAll('*'))) {
+      if (getComputedStyle(el).getPropertyValue('print-color-adjust') !== 'exact') {
+        el.setAttribute('data-a11y-print-economy', '');
+      }
+    }
+  });
+  const economy = ['', '::before', '::after'].map((pseudo) => `[data-a11y-print-economy]${pseudo}`);
+  await page.addStyleTag({
+    content: `${economy.join(', ')} { background-color: transparent !important; background-image: none !important; }`
+  });
+}
+
+/**
+ * Throws unless the page lays out for print: the furniture is not rendered, the article spans the
+ * page, nothing is fixed or sticky, and no code block or table scrolls (clips) its content.
+ *
+ * @param page - Page under test, emulating print media.
+ */
+async function expectPrintLayout(page: Page): Promise<void> {
+  const problems = await page.evaluate((hidden: readonly string[]) => {
+    const found: string[] = [];
+    const describe = (el: Element): string => `<${el.tagName.toLowerCase()} class="${el.className}">`;
+    if (!window.matchMedia('print').matches) {
+      found.push('print media is not emulated');
+    }
+    for (const selector of hidden) {
+      const matches = Array.from(document.querySelectorAll(selector));
+      if (matches.length === 0) {
+        found.push(`nothing matches ${selector}`);
+      } else if (matches.some((el) => el.checkVisibility())) {
+        found.push(`${selector} is rendered`);
+      }
+    }
+    const article = document.querySelector('#supa-main-content');
+    const pageWidth = document.documentElement.clientWidth;
+    const box = article?.getBoundingClientRect();
+    if (!article || !box || box.left > 1 || box.width < pageWidth - 1) {
+      found.push(`the article spans ${box?.left ?? '?'}-${box?.right ?? '?'} of a ${pageWidth}px page`);
+    }
+    for (const el of Array.from(document.querySelectorAll('body *'))) {
+      const { position } = getComputedStyle(el);
+      if ((position === 'fixed' || position === 'sticky') && el.checkVisibility()) {
+        found.push(`${describe(el)} is ${position}`);
+      }
+    }
+    for (const el of Array.from(article?.querySelectorAll('pre, [class*="table-responsive"]') ?? [])) {
+      if (el.checkVisibility() && el.scrollWidth > el.clientWidth + 1) {
+        found.push(`${describe(el)} clips ${el.scrollWidth - el.clientWidth}px`);
+      }
+    }
+    return found;
+  }, PRINT_HIDDEN);
+  if (problems.length > 0) {
+    throw new Error(`expected a print layout, but ${problems.join('; ')}`);
+  }
+}
+
+/**
+ * Builds the scenario that prints a content-rich page: print media emulated, and backgrounds
+ * dropped as a browser drops them.
+ *
+ * @param page - Top-level HTML file to print.
+ * @param viewport - Layout width: the paper's printable width, or a wide window.
+ * @param suffix - Name suffix that tells apart scenarios of one page.
+ * @returns The scenario.
+ */
+function printScenario(page: string, viewport: Viewport, suffix = ''): InteractionScenario {
+  return {
+    name: `print-${page.replace(/\.html$/, '')}${suffix}`,
+    page,
+    viewport,
+    setup: async (p) => {
+      await p.emulateMedia({ media: 'print' });
+      await dropPrintBackgrounds(p);
+    },
+    assertState: expectPrintLayout
+  };
+}
+
+/**
  * Interactive states scanned on top of the load-time matrix, each in its
  * `variants` (by default every `SCENARIO_VARIANTS` entry). Selectors target the
  * skin's own markup from `site.vm`, `site-macros.vm`, and the TypeScript
@@ -632,7 +756,12 @@ const SCENARIOS: readonly InteractionScenario[] = [
   // `oklch(from ...)` text) or falls back to without a theme (`--bg-3`).
   hoverScenario('chip-hovered', '.supa-article .chip.theme-success', 'the success chip'),
   hoverScenario('unthemed-chip-hovered', '.supa-article .chip-input .chip', 'a chip-input chip'),
-  hoverScenario('text-button-hovered', '.supa-article .btn-text.theme-primary', 'the text button')
+  hoverScenario('text-button-hovered', '.supa-article .btn-text.theme-primary', 'the text button'),
+  // Printed pages at the paper's width, and once from a wide window, whose screen layout has the
+  // sticky inline sidebar and TOC that print must drop.
+  printScenario('index.html', PRINT_PAGE),
+  printScenario('kitchen-sink.html', PRINT_PAGE),
+  printScenario('index.html', DESKTOP, '-wide')
 ];
 
 /**

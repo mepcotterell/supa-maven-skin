@@ -1,0 +1,116 @@
+// ============================================================================
+// Print Stylesheet: the article on paper
+//
+// A printout keeps the article and the copyright line, which names the text's owner on paper. The
+// rest of the page is screen furniture: navigation, controls, the "Built with" credit, and footer
+// icon links. Browsers leave backgrounds out of a printout by default, so surfaces print as white
+// paper and every text color must read on white.
+// ============================================================================
+@media print {
+  // Every palette token is a `light-dark()` pair (polyfilled with `--lightningcss-*` switches that
+  // follow `color-scheme`), so forcing the light scheme prints the active palette's light polarity:
+  // its text, link, code, admonition, alert, and table colors are the ones checked against light
+  // surfaces. `*` also beats Bootstrap's layered `.color-scheme-*` utilities, `[data-bs-theme]`
+  // the skin's own polarity rules. A dark page background is never forced onto paper.
+  *,
+  [data-bs-theme] {
+    color-scheme: light;
+  }
+
+  // Components that draw their text or state on a solid fill (white on the brand color) would
+  // print white on white, so they keep the light polarity's fills, which meet the same contrast.
+  .badge,
+  .btn,
+  .chip,
+  .avatar,
+  .progress,
+  .stepper {
+    print-color-adjust: exact;
+  }
+
+  .supa-skip-link,
+  .supa-announcement,
+  .supa-mobile-header,
+  .supa-sidebar-column,
+  .supa-content-header,
+  .supa-toc-column,
+  .supa-related-pages,
+  .supa-back-to-top,
+  .supa-search-dialog,
+  .supa-built-with,
+  .supa-footer-right,
+  .supa-copy-btn,
+  .supa-code-lang,
+  .supa-headerlink,
+  .tooltip {
+    display: none !important;
+  }
+
+  // Flex columns become blocks the full width of the page, which also paginate reliably.
+  body.supa-body,
+  .supa-page,
+  .supa-main,
+  .supa-content,
+  .supa-article-container {
+    display: block;
+    min-height: 0;
+    max-width: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .supa-footer {
+    margin-top: 2rem;
+    padding: 0.75rem 0 0;
+  }
+
+  // Paper cannot scroll: long code lines and table cells wrap, and nothing clips.
+  .supa-article :is(pre, [class*="table-responsive"], .mermaid, .katex-display) {
+    overflow: visible;
+  }
+
+  .supa-article pre {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+
+  // Cells keep whole words; code and URLs, the long unbroken tokens, may break anywhere.
+  .supa-table-responsive :is(th, td, code) {
+    white-space: normal !important;
+  }
+
+  .supa-table-responsive :is(code, a) {
+    overflow-wrap: anywhere !important;
+  }
+
+  // Mermaid draws its dark theme with fixed colors, and SVG fills print: invert it into a light
+  // one. `exact` stops the browser from first darkening its light text for white paper, which the
+  // inversion would turn mid-gray.
+  [data-supa-resolved-theme="dark"] .mermaid svg {
+    filter: invert(1) hue-rotate(180deg);
+    print-color-adjust: exact;
+  }
+
+  // Print the target of an external link in prose. Relative (same-site) and in-page links, code
+  // blocks, navigation, and links whose text is already the URL (`data-supa-bare-url`, set by
+  // `site.vm`) are left alone.
+  .supa-article a[href^="http"]:not(pre a, nav a, [data-supa-bare-url])::after {
+    content: " (" attr(href) ")";
+  }
+
+  .supa-article :is(h1, h2, h3, h4, h5, h6) {
+    break-after: avoid;
+    break-inside: avoid;
+  }
+
+  .supa-code-block,
+  .supa-article pre,
+  .supa-admonition,
+  .alert,
+  .card,
+  .mermaid,
+  figure,
+  tr {
+    break-inside: avoid;
+  }
+}

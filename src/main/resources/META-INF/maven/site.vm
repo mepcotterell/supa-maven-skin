@@ -149,13 +149,16 @@
 #end
       }
 #end
+## Dark overrides are screen-only: a printout uses the light polarity, since paper is white
 #if( $darkVars && $darkVars.getChildren().size() > 0 )
-      html[data-bs-theme="dark"], html[data-supa-palette][data-bs-theme="dark"] {
+      @media screen {
+        html[data-bs-theme="dark"], html[data-supa-palette][data-bs-theme="dark"] {
 #foreach( $child in $darkVars.getChildren() )
-        --$child.getName(): $child.getValue();
+          --$child.getName(): $child.getValue();
 #end
+        }
       }
-      @media (prefers-color-scheme: dark) {
+      @media screen and (prefers-color-scheme: dark) {
         html:root:not([data-bs-theme="light"]), html[data-supa-palette]:not([data-bs-theme="light"]) {
 #foreach( $child in $darkVars.getChildren() )
           --$child.getName(): $child.getValue();
@@ -462,8 +465,12 @@
             </div>
 
             <!-- Main Article Prose Content -->
+## Mark links whose text is their own URL (Doxia autolinks and project-info report links) so the
+## print stylesheet does not print that URL a second time. CSS cannot compare text with an
+## attribute. Velocity keeps the backslash in a single-quoted string, so `\2` is a backreference.
+#set( $supaBodyContent = $bodyContent.replaceAll( '(<a(?: [^>]*)? href="(https?://[^"]+)"[^>]*)>\2</a>', '$1 data-supa-bare-url>$2</a>' ) )
             <main id="supa-main-content" class="supa-article prose" role="main">
-              $bodyContent
+              $supaBodyContent
             </main>
 
 #if( $prevNextBtns )
