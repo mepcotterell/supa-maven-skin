@@ -13,6 +13,19 @@
   font-size: 1rem;
   line-height: 1.7;
 
+  // Empty anchors in front of headings (Doxia's own, and the skin's aliases for Doxia-encoded
+  // Markdown links to non-ASCII headings, see toc.ts) clear the headers like the heading itself, so
+  // a link lands at the same place whichever id it names.
+  a[id]:empty {
+    scroll-margin-top: calc(var(--supa-header-height) + 1.25rem);
+
+    .supa-sticky-content-header & {
+      @media (width >= 1024px) {
+        scroll-margin-top: calc(var(--supa-content-header-height) + 1.25rem);
+      }
+    }
+  }
+
   // Heading hierarchy & anchor permalinks
   h1,
   h2,
