@@ -477,7 +477,8 @@ export const SURFACE_AUDITS: readonly SurfaceSpec[] = [
   },
   {
     // `--datepicker-day-selected-bg` and `-color`: a selected day, month, or year, and every day of
-    // a selected range, which `_bootstrap-supa.scss` keeps opaque
+    // a selected range, which `_bootstrap-supa.scss` keeps opaque. The pair is measured opaque
+    // whether or not that rule exists; the `datepicker-range-switched` a11y scenario guards it.
     surface: 'Datepicker selection',
     layers: [CALENDAR, 'var(--primary-bg)'],
     foregrounds: [{ label: 'day', color: 'var(--primary-contrast)', role: 'text' }]

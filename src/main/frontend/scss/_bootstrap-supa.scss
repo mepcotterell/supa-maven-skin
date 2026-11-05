@@ -273,6 +273,8 @@ dialog.drawer:not([open]) {
 // switch from `auto` to an explicit theme, the calendar followed the OS, not the page. It inherits
 // the page's scheme instead, along with the `--lightningcss-*` switches that Lightning CSS
 // polyfills `light-dark()` with, which `color-scheme: inherit` alone leaves to Bootstrap's rules.
+// The tokens resolve on <html>, so no color depends on this today: it keeps a `light-dark()`
+// declared on the calendar, and the browser's own colors, on the page's polarity.
 [data-vc="calendar"] {
   --lightningcss-light: inherit;
   --lightningcss-dark: inherit;
@@ -292,6 +294,13 @@ dialog.drawer:not([open]) {
 [data-vc-date-month="next"] [data-vc-date-btn],
 [data-vc-date-selected="middle"] [data-vc-date-btn] {
   opacity: 1;
+}
+
+// Bootstrap marks a disabled day only with `--fg-4`, which the bridge above also sets to the muted
+// text, so it looked like an enabled day outside the month. It fades instead: vanilla-calendar-pro
+// disables the button, and a disabled control is exempt from the contrast minimum.
+[data-vc-date-disabled] [data-vc-date-btn] {
+  opacity: 0.5;
 }
 
 // ============================================================================

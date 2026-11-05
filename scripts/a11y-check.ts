@@ -20,7 +20,8 @@
  * an expanded accordion and switched content tab on `components.html`, a
  * hovered themed chip, unthemed chip, and text button there, an opened
  * Combobox, whose script is a lazily loaded chunk, the opened Datepicker
- * calendar in every palette and polarity, and content pages printed,
+ * calendar in every palette and polarity, and again as a range picker opened
+ * after a switch from `auto` to an explicit theme, and content pages printed,
  * with print media emulated and backgrounds dropped as browsers print them, so
  * text must read on white paper in every polarity, including the default
  * `auto` mode under a dark OS preference), asserts the
@@ -104,9 +105,9 @@ interface InteractionScenario {
    * Selectors that limit the scan to the regions the state changes. Only for a
    * state the skin holds briefly (the copy button resets "Copied!" after 1.8 s),
    * so axe finishes well inside it, a hovered component, which changes only
-   * itself, or a widget opened from a field in every variant, which changes only
-   * itself and the field; the unchanged rest of the page is covered by the
-   * load-time scans. Every other scenario scans the whole page.
+   * itself, or a widget opened from a field, which changes only itself and the
+   * field; the unchanged rest of the page is covered by the load-time scans.
+   * Every other scenario scans the whole page.
    */
   scope?: readonly string[];
   /** Drives the loaded page into the state with locators, the keyboard, and the mouse. */
@@ -619,6 +620,12 @@ const DATEPICKER_FIELD = '.supa-article [data-bs-toggle="datepicker"]';
 /** The shown calendar that vanilla-calendar-pro appends to `<body>` for a field. */
 const OPEN_CALENDAR = '[data-vc="calendar"][data-vc-input]:not([data-vc-calendar-hidden])';
 
+/** The Datepicker plugin's static methods, on `window.bootstrap` once its chunk has loaded. */
+interface DatepickerStatics {
+  getInstance: (element: Element) => { dispose: () => void } | null;
+  getOrCreateInstance: (element: Element, config: Record<string, unknown>) => unknown;
+}
+
 /**
  * Interactive states scanned on top of the load-time matrix, each in its
  * `variants` (by default every `SCENARIO_VARIANTS` entry). Selectors target the
@@ -897,11 +904,103 @@ const SCENARIOS: readonly InteractionScenario[] = [
         calendar.locator('[data-vc-date="2026-09-30"][data-vc-date-month="prev"] [data-vc-date-btn]'),
         'a day outside the month'
       );
-      const schemes = await calendar.evaluate((el) =>
-        [el, document.documentElement].map((node) => getComputedStyle(node).colorScheme)
+      // The picker was created under the seeded theme, so Bootstrap copied it onto the calendar and
+      // its `[data-bs-theme]` token rules apply there; `datepicker-range-switched` scans the
+      // calendar without that copy.
+      const theme = await page.locator('html').getAttribute('data-bs-theme');
+      await expectAttribute(calendar, 'data-bs-theme', theme, 'the calendar');
+    }
+  },
+  {
+    // What the demo field never shows. Bootstrap copies `data-bs-theme` onto the calendar only from
+    // an ancestor the field had when the picker was created, and `auto` mode leaves <html> without
+    // one, so the picker is re-created in `auto` mode, as on a page loaded in it, then the theme is
+    // switched to the variant's polarity with the OS preferring the other: the calendar's
+    // `color-scheme` follows the page only through the skin's rule. It is re-created as a range
+    // picker with a latest date, so the scan sees the days inside a range, which Bootstrap fades
+    // and the skin keeps opaque (the token audit measures them opaque, so only this scan guards
+    // that), and disabled days, exempt from contrast but drawn unlike the enabled days outside the
+    // month.
+    name: 'datepicker-range-switched',
+    page: 'components.html',
+    viewport: DESKTOP,
+    now: '2026-10-14T12:00:00',
+    scope: [OPEN_CALENDAR],
+    setup: async (page) => {
+      const root = page.locator('html');
+      const polarity = await root.getAttribute('data-bs-theme');
+      // The theme menu's options run theme.ts's own switch. They are hidden until the menu opens,
+      // so the clicks are dispatched rather than performed.
+      await page.locator('[data-supa-theme-option="auto"]').first().dispatchEvent('click');
+      await expectAttribute(root, 'data-bs-theme', null, '<html> in auto mode');
+      const recreated = await page.evaluate((field: string) => {
+        const plugin = (window as unknown as { bootstrap?: { Datepicker?: DatepickerStatics } }).bootstrap
+          ?.Datepicker;
+        const instance = plugin?.getInstance(document.querySelector(field) as Element);
+        if (!plugin || !instance) {
+          return false;
+        }
+        instance.dispose();
+        // Disposing puts back a copy of the field as the page loaded it, so it is looked up again.
+        const el = document.querySelector<HTMLInputElement>(field);
+        if (!el) {
+          return false;
+        }
+        // The picker would parse the field's single date and select it instead of the range.
+        el.value = '';
+        plugin.getOrCreateInstance(el, {
+          selectionMode: 'multiple-ranged',
+          // Every day of the range, as plain dates: Bootstrap reads the first to pick the month.
+          selectedDates: Array.from({ length: 9 }, (_, i) => `2026-10-${12 + i}`),
+          dateMax: '2026-10-25'
+        });
+        return true;
+      }, DATEPICKER_FIELD);
+      if (!recreated) {
+        throw new Error('expected the lazily loaded Datepicker on the datepicker field');
+      }
+      await page.locator(`[data-supa-theme-option="${polarity}"]`).first().dispatchEvent('click');
+      await expectAttribute(root, 'data-bs-theme', polarity, '<html>');
+      await page.emulateMedia({ colorScheme: polarity === 'dark' ? 'light' : 'dark' });
+      await page.locator(DATEPICKER_FIELD).click();
+    },
+    assertState: async (page) => {
+      const calendar = page.locator(OPEN_CALENDAR);
+      await expectVisible(calendar, 'the open calendar');
+      await expectAttribute(calendar, 'data-bs-theme', null, 'the calendar, which has no copied theme');
+      await expectVisible(
+        calendar.locator('[data-vc-date="2026-10-16"][data-vc-date-selected="middle"]'),
+        'a day inside the selected range'
       );
-      if (schemes[0] !== schemes[1]) {
-        throw new Error(`expected the calendar in the page's color-scheme "${schemes[1]}", got "${schemes[0]}"`);
+      const problems = await calendar.evaluate((el) => {
+        const found: string[] = [];
+        const html = document.documentElement;
+        const theme = html.getAttribute('data-bs-theme');
+        if (theme === null || html.getAttribute('data-supa-theme-mode') !== theme) {
+          found.push(`<html> is not in an explicit theme (data-bs-theme=${theme})`);
+        } else if (window.matchMedia('(prefers-color-scheme: dark)').matches === (theme === 'dark')) {
+          found.push(`the OS prefers the page's ${theme} theme`);
+        }
+        const [own, inherited] = [el, html].map((node) => getComputedStyle(node).colorScheme);
+        if (own !== inherited) {
+          found.push(`the calendar has color-scheme "${own}", the page "${inherited}"`);
+        }
+        const look = (selector: string): string | null => {
+          const button = el.querySelector(`${selector} [data-vc-date-btn]`);
+          const style = button ? getComputedStyle(button) : null;
+          return style ? `${style.color} at opacity ${style.opacity}` : null;
+        };
+        const disabled = look('[data-vc-date="2026-10-28"][data-vc-date-disabled]');
+        const outside = look('[data-vc-date="2026-09-30"][data-vc-date-month="prev"]:not([data-vc-date-disabled])');
+        if (disabled === null || outside === null) {
+          found.push('no disabled day on 2026-10-28, or no enabled day outside the month on 2026-09-30');
+        } else if (disabled === outside) {
+          found.push(`a disabled day looks like an enabled day outside the month (${disabled})`);
+        }
+        return found;
+      });
+      if (problems.length > 0) {
+        throw new Error(`expected a calendar on the page's scheme with distinct disabled days: ${problems.join('; ')}`);
       }
     }
   },
