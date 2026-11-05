@@ -786,3 +786,11 @@ Bootstrap 6 adds native interactive widgets for **Combobox** (`[data-bs-toggle="
   <span class="strength-segment active"></span>
 </div>
 ```
+
+The Datepicker's calendar comes from vanilla-calendar-pro, whose month view shows each month's short name ("Jan") but labels its button with the long one ("January"). Supa Maven Skin removes those labels, so each month is named by the text it shows in any `data-bs-locale`, and a voice-control user can say "click Jan" (WCAG 2.5.3 Label in Name). It does this through Bootstrap's `Datepicker.Default.vcpOptions`, which covers every picker on the page, including those your own scripts create. A picker created with its own `vcpOptions` replaces those defaults, so spread them into yours once the Datepicker has loaded (see [Running Scripts After the Skin Initializes](customizing.html#running-scripts-after-the-skin-initializes)):
+
+```javascript
+new bootstrap.Datepicker(field, {
+  vcpOptions: { ...bootstrap.Datepicker.Default.vcpOptions, disableWeekdays: [0, 6] }
+});
+```

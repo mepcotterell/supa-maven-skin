@@ -508,6 +508,30 @@ export function isolateBootstrapComponentsFromProse(container: ParentNode = docu
   });
 }
 
+/** A month button in the month view of a Datepicker's calendar (vanilla-calendar-pro). */
+const CALENDAR_MONTH_BUTTON = '[data-vc-months-month]';
+
+/**
+ * Names a month button in a Datepicker calendar's month view by the text it shows.
+ *
+ * vanilla-calendar-pro shows each month's short name but sets the long one as the button's
+ * `aria-label` ("Jan", named "January"), so the name lacks the visible text (WCAG 2.5.3 Label in
+ * Name) and a voice-control user who says "click Jan" activates nothing. Removing the label, rather
+ * than copying the text into it, lets the browser name the button from its text, so the name is
+ * whatever the calendar shows in any locale and cannot fall out of step with it. A button without
+ * text keeps its label, so it is never left unnamed.
+ *
+ * @param monthEl - Month cell passed to the calendar's `onCreateMonthEls` hook, or the month button.
+ */
+export function nameMonthButtonByText(monthEl: HTMLElement): void {
+  const button = monthEl.matches(CALENDAR_MONTH_BUTTON)
+    ? monthEl
+    : monthEl.querySelector<HTMLElement>(CALENDAR_MONTH_BUTTON);
+  if (button?.textContent?.trim()) {
+    button.removeAttribute('aria-label');
+  }
+}
+
 /** Initializes one element that matches a lazily loaded widget's selector. */
 export type WidgetInitializer = (el: HTMLElement) => void;
 
@@ -555,6 +579,14 @@ export const LAZY_WIDGETS: readonly LazyWidget[] = [
     load: async () => {
       // The largest chunk by far: it carries the vanilla-calendar-pro peer dependency.
       const { default: Datepicker } = await import('bootstrap/js/dist/datepicker.js');
+      // Bootstrap hands `vcpOptions` to the calendar it creates, and the calendar calls
+      // `onCreateMonthEls` for each month every time it draws the month view. As a default, the
+      // hook reaches every picker created from now on: the skin's, Bootstrap's data API's, and an
+      // author script's, unless that passes its own `vcpOptions`, which replace these whole.
+      Datepicker.Default.vcpOptions = {
+        ...Datepicker.Default.vcpOptions,
+        onCreateMonthEls: (_calendar, monthEl) => nameMonthButtonByText(monthEl)
+      };
       BootstrapPlugins.Datepicker = Datepicker;
       return (el) => {
         Datepicker.getOrCreateInstance(el);

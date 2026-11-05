@@ -34,6 +34,7 @@ import {
   LAZY_WIDGETS,
   type LazyWidget,
   Menu,
+  nameMonthButtonByText,
   Tooltip
 } from '../../main/frontend/ts/bootstrap-components';
 import { enhanceCodeBlocks } from '../../main/frontend/ts/code';
@@ -1061,6 +1062,143 @@ describe('Supa Maven Skin Frontend Modules', () => {
       const playground = document.querySelector('.supa-playground')!;
       expect(playground.getAttribute('data-supa-playground-ready')).toBe('true');
       expect(playground.querySelector('[data-playground-stage] .btn')).not.toBeNull();
+    });
+
+    it('names a calendar month button by its text, and keeps the label of a button without text', () => {
+      const cell = document.createElement('div');
+      cell.innerHTML = '<button type="button" aria-label="January" data-vc-months-month="0">Jan</button>';
+      nameMonthButtonByText(cell);
+      const button = cell.querySelector('button')!;
+      expect(button.hasAttribute('aria-label')).toBe(false);
+      expect(button.textContent).toBe('Jan');
+
+      // The month button itself, not its cell.
+      const own = document.createElement('button');
+      own.setAttribute('aria-label', 'February');
+      own.setAttribute('data-vc-months-month', '1');
+      own.textContent = 'Feb';
+      nameMonthButtonByText(own);
+      expect(own.hasAttribute('aria-label')).toBe(false);
+
+      // Without text, the label is the button's only name.
+      const blank = document.createElement('div');
+      blank.innerHTML = '<button type="button" aria-label="March" data-vc-months-month="2"> </button>';
+      nameMonthButtonByText(blank);
+      expect(blank.querySelector('button')?.getAttribute('aria-label')).toBe('March');
+
+      // Anything but a month button, such as a year, is left alone.
+      const year = document.createElement('div');
+      year.innerHTML = '<button type="button" aria-label="2026" data-vc-years-year="2026">2026</button>';
+      nameMonthButtonByText(year);
+      expect(year.querySelector('button')?.getAttribute('aria-label')).toBe('2026');
+    });
+
+    it('names the month buttons of every lazily loaded Datepicker by their text, in each month view and locale', async () => {
+      // The calendar labels a month with `button.ariaLabel = 'January'`. Browsers reflect that
+      // property to `aria-label`; happy-dom does not, so it would leave no label to check.
+      const nativeAriaLabel = Object.getOwnPropertyDescriptor(Element.prototype, 'ariaLabel');
+      Object.defineProperty(Element.prototype, 'ariaLabel', {
+        configurable: true,
+        get(this: Element): string | null {
+          return this.getAttribute('aria-label');
+        },
+        set(this: Element, value: string | null) {
+          if (value === null) {
+            this.removeAttribute('aria-label');
+          } else {
+            this.setAttribute('aria-label', value);
+          }
+        }
+      });
+      try {
+        document.body.innerHTML = `
+          <input type="text" id="dpEnglish" data-bs-toggle="datepicker" value="2026-10-20" />
+          <input type="text" id="dpGerman" data-bs-toggle="datepicker" data-bs-locale="de-DE" value="2026-10-20" />
+        `;
+        await initLazyWidgets(document.body);
+        const Datepicker = BootstrapPlugins.Datepicker!;
+        expect(Datepicker.Default.vcpOptions.onCreateMonthEls).toBeTypeOf('function');
+
+        /**
+         * Opens a field's calendar with a click, as a reader does (the calendar is built after the
+         * first one), after closing every other picker.
+         *
+         * @param input - Field with a Datepicker.
+         * @returns The field's shown calendar.
+         */
+        const open = async (input: HTMLElement): Promise<HTMLElement> => {
+          for (const other of document.querySelectorAll('input')) {
+            await Datepicker.getInstance(other)?.hide();
+          }
+          input.click();
+          return vi.waitFor(() => {
+            const shown = document.querySelectorAll<HTMLElement>(
+              '[data-vc="calendar"]:not([data-vc-calendar-hidden])'
+            );
+            expect(shown).toHaveLength(1);
+            return shown[0];
+          });
+        };
+        /**
+         * Lists the month buttons of a calendar's month view as text and label.
+         *
+         * @param calendar - Calendar showing its month view.
+         * @returns Each month button's text and `aria-label`.
+         */
+        const months = (calendar: HTMLElement): Array<{ text: string; label: string | null }> => {
+          expect(calendar.getAttribute('data-vc-type')).toBe('month');
+          return Array.from(calendar.querySelectorAll('[data-vc-months-month]'), (el) => ({
+            text: el.textContent ?? '',
+            label: el.getAttribute('aria-label')
+          }));
+        };
+
+        // Without the skin's hook (a picker given its own `vcpOptions` replaces the defaults whole),
+        // the calendar shows short names and labels the buttons with long ones.
+        const replaced = document.createElement('input');
+        replaced.type = 'text';
+        replaced.value = '2026-10-20';
+        document.body.appendChild(replaced);
+        Datepicker.getOrCreateInstance(replaced, { vcpOptions: {} });
+        const unhooked = await open(replaced);
+        unhooked.querySelector<HTMLElement>('[data-vc="month"]')!.click();
+        expect(months(unhooked).slice(0, 2)).toEqual([
+          { text: 'Jan', label: 'January' },
+          { text: 'Feb', label: 'February' }
+        ]);
+
+        const english = await open(document.getElementById('dpEnglish')!);
+        english.querySelector<HTMLElement>('[data-vc="month"]')!.click();
+        const unlabelledEnglish = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map(
+          (text) => ({ text, label: null })
+        );
+        expect(months(english)).toEqual(unlabelledEnglish);
+        // The calendar draws the month view anew after the year view, and after a new selection.
+        english.querySelector<HTMLElement>('[data-vc="year"]')!.click();
+        expect(english.getAttribute('data-vc-type')).toBe('year');
+        expect(english.querySelector('[data-vc-years-year="2026"]')?.getAttribute('aria-label')).toBe('2026');
+        english.querySelector<HTMLElement>('[data-vc="month"]')!.click();
+        expect(months(english)).toEqual(unlabelledEnglish);
+        Datepicker.getInstance(document.getElementById('dpEnglish')!)!.setSelectedDates(['2026-03-05']);
+        english.querySelector<HTMLElement>('[data-vc="month"]')!.click();
+        expect(months(english)).toEqual(unlabelledEnglish);
+
+        const german = await open(document.getElementById('dpGerman')!);
+        german.querySelector<HTMLElement>('[data-vc="month"]')!.click();
+        const shortGerman = new Intl.DateTimeFormat('de-DE', { month: 'short', timeZone: 'UTC' });
+        expect(months(german)).toEqual(
+          Array.from({ length: 12 }, (_, month) => ({
+            text: shortGerman.format(Date.UTC(2026, month, 1)),
+            label: null
+          }))
+        );
+      } finally {
+        if (nativeAriaLabel) {
+          Object.defineProperty(Element.prototype, 'ariaLabel', nativeAriaLabel);
+        } else {
+          Reflect.deleteProperty(Element.prototype, 'ariaLabel');
+        }
+      }
     });
 
     it('scrolls back to the top smoothly only while the reader allows motion, asking at each click', () => {

@@ -23,8 +23,10 @@
  * Markdown link followed to a heading whose id starts with a digit there, a
  * hovered themed chip, unthemed chip, and text button there, an opened
  * Combobox, whose script is a lazily loaded chunk, the opened Datepicker
- * calendar in every palette and polarity, and again as a range picker opened
- * after a switch from `auto` to an explicit theme, and content pages printed,
+ * calendar in every palette and polarity, again as a range picker opened
+ * after a switch from `auto` to an explicit theme, and in its month view,
+ * whose buttons must be named by the month names they show, and content
+ * pages printed,
  * with print media emulated and backgrounds dropped as browsers print them, so
  * text must read on white paper in every polarity, including the default
  * `auto` mode under a dark OS preference, the component showcase printed,
@@ -1505,6 +1507,43 @@ const SCENARIOS: readonly InteractionScenario[] = [
       if (problems.length > 0) {
         throw new Error(`expected a calendar on the page's scheme with distinct disabled days: ${problems.join('; ')}`);
       }
+    }
+  },
+  {
+    // The month view, opened from the month name in the calendar's header. vanilla-calendar-pro
+    // shows each month's short name but labels the button with the long one ("Jan", named
+    // "January"), which axe's `label-content-name-mismatch` (WCAG 2.5.3 Label in Name) flags; the
+    // skin names each button by its text. The calendar draws a new month view each time it is
+    // shown, so the scan sees one drawn after a trip through the year view. The clock is fixed as
+    // in `datepicker-open`, so October 2026 is the selected month.
+    name: 'datepicker-months',
+    page: 'components.html',
+    viewport: DESKTOP,
+    now: '2026-10-14T12:00:00',
+    scope: [OPEN_CALENDAR],
+    setup: async (page) => {
+      await page.locator(DATEPICKER_FIELD).click();
+      const calendar = page.locator(OPEN_CALENDAR);
+      await calendar.locator('[data-vc="month"]').click();
+      await expectAttribute(calendar, 'data-vc-type', 'month', 'the calendar in its month view');
+      await calendar.locator('[data-vc="year"]').click();
+      await expectAttribute(calendar, 'data-vc-type', 'year', 'the calendar in its year view');
+      await calendar.locator('[data-vc="month"]').click();
+    },
+    assertState: async (page) => {
+      const calendar = page.locator(OPEN_CALENDAR);
+      await expectVisible(calendar, 'the open calendar');
+      await expectAttribute(calendar, 'data-vc-type', 'month', 'the calendar in its month view');
+      const months = calendar.locator('[data-vc-months-month]');
+      const count = await months.count();
+      if (count !== 12) {
+        throw new Error(`expected 12 month buttons in the month view, got ${count}`);
+      }
+      await expectVisible(months.last(), 'the last month button');
+      await expectVisible(
+        calendar.locator('[data-vc-months-month="9"][data-vc-months-month-selected]'),
+        'the selected month'
+      );
     }
   },
   // Printed pages at the paper's width, and once from a wide window, whose screen layout has the
