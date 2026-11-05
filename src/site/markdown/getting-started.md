@@ -87,7 +87,7 @@ Create the file `src/site/site.xml` to declare **Supa Maven Skin**, configure th
   <skin>
     <groupId>io.github.mepcotterell</groupId>
     <artifactId>supa-maven-skin</artifactId>
-    <version>0.1.5</version>
+    <version>0.1.6</version>
   </skin>
 
   <custom>

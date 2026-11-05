@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.1.6] - 2026-11-05
+
 ### Fixed
 
 - **Datepicker Calendar Contrast**: The open calendar faded days outside the shown month to 50% opacity, as low as 3.3:1 in the light palettes and 5.3:1 in `modus` dark, and days inside a selected range to 80% (4.4:1 in `furo` light). Both are clickable, so days outside the month now use the muted text color at full opacity, and days inside a range keep their full selected colors. Both meet AA (`furo`, `bootstrap`) or AAA (`modus*`). Disabled days now fade to 50%, which is allowed for controls that cannot be used, so they still look different from the muted days that can be picked. The calendar's `color-scheme` now follows the page's after a switch out of Auto mode rather than the operating system's; no calendar color depends on it today. The new `datepicker-open` scenario scans the calendar in all 12 palette and polarity variants, `datepicker-range-switched` scans a range picker after a switch out of Auto mode, and the contrast linter checks the calendar's colors (now 2,496 pairs).
@@ -150,7 +152,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   - Organized `src/site/markdown/` around the Diátaxis framework (`index.md.vm`, `getting-started.md`, `authoring-guide.md`, `configuration.md`, `components.md`, `kitchen-sink.md`, `architecture.md`) with custom dual-theme `rocket-takeoff` logos (`src/site/resources/images/logo-light.svg` and `logo-dark.svg`).
   - Added automated TypeScript linters for SCSS WCAG 2.2 AA/AAA contrast (`scripts/lint-scss.ts`), Velocity directive balance (`scripts/lint-velocity.ts`), and documentation version alignment + Keep a Changelog 1.1.0 compliance (`scripts/lint-docs.ts`), enforced alongside the Google TypeScript Style Guide and Google-style TSDoc (`supa/google-tsdoc`).
 
-[Unreleased]: https://github.com/mepcotterell/supa-maven-skin/compare/v0.1.5...HEAD
+[Unreleased]: https://github.com/mepcotterell/supa-maven-skin/compare/v0.1.6...HEAD
+[0.1.6]: https://github.com/mepcotterell/supa-maven-skin/compare/v0.1.5...v0.1.6
 [0.1.5]: https://github.com/mepcotterell/supa-maven-skin/compare/v0.1.4...v0.1.5
 [0.1.4]: https://github.com/mepcotterell/supa-maven-skin/compare/v0.1.3...v0.1.4
 [0.1.3]: https://github.com/mepcotterell/supa-maven-skin/compare/v0.1.2...v0.1.3
