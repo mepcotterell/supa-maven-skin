@@ -531,7 +531,7 @@
 
 #if( $tocSidebar )
         <!-- 3. Right Table of Contents Sidebar ("On this page" — Inline on xl+, Bootstrap 6 Right Drawer below xl) -->
-        <aside class="supa-toc-column" aria-label="On this page">
+        <aside class="supa-toc-column" aria-label="$esc.html( $tocTitle )">
           <dialog class="xl:drawer drawer-end supa-toc-drawer"
                   id="supaTocDrawer"
                   data-bs-scroll="$esc.html( $tocDrawerScroll )"

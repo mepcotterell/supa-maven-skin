@@ -124,6 +124,14 @@ if ( !html.contains( "class=\"supa-sidebar-brand\" data-supa-brand-align=\"cente
 if ( !html.contains( "id=\"supaTocDrawer\"" ) || !html.contains( "xl:drawer drawer-end supa-toc-drawer" ) ) {
     throw new IllegalStateException( "Missing Bootstrap 6 right TOC drawer" );
 }
+// <tocTitle> (localized here) must name the TOC <aside> landmark as well as its <nav>, or screen
+// readers list the landmark under the English default.
+java.util.regex.Matcher tocAsideLabel = java.util.regex.Pattern.compile( "<aside class=\"supa-toc-column\" aria-label=\"([^\"]*)\"" ).matcher( html );
+java.util.regex.Matcher tocNavLabel = java.util.regex.Pattern.compile( "<nav id=\"supaTocNav\"[^>]*\\saria-label=\"([^\"]*)\"" ).matcher( html );
+if ( !tocAsideLabel.find() || !tocNavLabel.find()
+     || !"Sur cette page".equals( tocAsideLabel.group( 1 ) ) || !tocAsideLabel.group( 1 ).equals( tocNavLabel.group( 1 ) ) ) {
+    throw new IllegalStateException( "TOC <aside> aria-label must follow <tocTitle> (\"Sur cette page\"), like the TOC <nav>" );
+}
 if ( !html.contains( "data-bs-scroll=" ) || !html.contains( "data-bs-backdrop=" ) ) {
     throw new IllegalStateException( "Missing drawer data-bs-scroll / data-bs-backdrop attributes" );
 }

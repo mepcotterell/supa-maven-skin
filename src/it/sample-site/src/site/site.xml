@@ -18,6 +18,7 @@
       <sourceBranch>main</sourceBranch>
       <sourceDirectory>src/site</sourceDirectory>
       <stickyContentHeader>true</stickyContentHeader>
+      <tocTitle>Sur cette page</tocTitle>
       <lightLogo>images/logo.svg</lightLogo>
       <navIcons>
         <icon>

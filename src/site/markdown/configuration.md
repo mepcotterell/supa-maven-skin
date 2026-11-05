@@ -215,7 +215,7 @@ Configures the top announcement banner, breadcrumbs, left sidebar menu tree, rig
 | `<stickyContentHeader>` | `false` | Pin the top content utility bar (breadcrumbs, source links, palette picker, theme toggle) to the top of the viewport on `lg+` (`1024px`) screens. Adds `.supa-sticky-content-header` to `<body>`; heading anchors and ScrollSpy offset by `--supa-content-header-height`. Below `lg`, the mobile header is already sticky. |
 | `<sidebarCollapseDepth>` | `1` | Menu nesting depth expanded by default in the left sidebar (`<details open>`). |
 | `<tocSidebar>` | `true` | Enable the right-hand "On this page" table of contents column and right drawer (`#supaTocDrawer`). |
-| `<tocTitle>` | `On this page` | Heading label for the right-hand table of contents. |
+| `<tocTitle>` | `On this page` | Heading label for the right-hand table of contents. Also names the TOC landmark (`<aside>`) and its `<nav>` for screen readers. |
 | `<tocMaxDepth>` | `4` | Maximum heading level (`2`–`6`) included in the right-hand TOC. |
 | `<prevNextButtons>` | `true` | Render Furo-styled Previous / Next page navigation cards at the bottom of articles. |
 
