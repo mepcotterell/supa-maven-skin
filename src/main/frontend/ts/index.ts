@@ -9,24 +9,15 @@ import {
   Alert,
   BootstrapPlugins,
   Button,
-  Carousel,
-  Chips,
   Collapse,
-  Combobox,
-  Datepicker,
   Dialog,
   Drawer,
   initBootstrapComponents,
   initTooltips,
   Menu,
-  NavOverflow,
-  OtpInput,
   Popover,
-  Range,
   ScrollSpy,
   setTooltipTitle,
-  Strength,
-  Tab,
   Toast,
   Toggler,
   Tooltip
@@ -146,16 +137,17 @@ export function initBackToTop(): void {
 
 /**
  * Attribute set on `<html>` once every enhancer (including the asynchronous
- * Mermaid/KaTeX loaders) has settled. Rendered-page checks such as
- * `npm run test:a11y` wait for it so they never scan a half-enhanced DOM.
+ * Mermaid/KaTeX loaders and the lazily loaded widget chunks) has settled.
+ * Rendered-page checks such as `npm run test:a11y` wait for it so they never
+ * scan a half-enhanced DOM.
  */
 export const SUPA_READY_ATTRIBUTE = 'data-supa-ready';
 
 /**
  * Boots all Supa Maven Skin frontend modules in deterministic order.
  *
- * @returns Promise that resolves once optional libraries have settled and
- *     `data-supa-ready` has been set on `<html>`.
+ * @returns Promise that resolves once optional libraries and lazily loaded
+ *     widgets have settled and `data-supa-ready` has been set on `<html>`.
  */
 export function initSupaSkin(): Promise<void> {
   initTheme();
@@ -165,11 +157,13 @@ export function initSupaSkin(): Promise<void> {
   initSearch();
   initDrawers();
   initBackToTop();
-  initBootstrapComponents(document);
-  // After code blocks, tables, and the playground exist so every scroll wrapper is seen.
+  const widgetsSettled = initBootstrapComponents(document);
+  // After code blocks and tables exist so every scroll wrapper is seen. The lazily loaded
+  // playground fills its code block later; the regions' ResizeObserver re-checks it then.
   initScrollRegions(document);
-  // `finally` (not `then`) so a failed CDN import still marks the page ready.
-  return initOptionalLibraries().finally(() => {
+  // `allSettled` so a failed CDN import or widget chunk still marks the page ready, and only
+  // once every widget on the page has initialized.
+  return Promise.allSettled([initOptionalLibraries(), widgetsSettled]).then(() => {
     document.documentElement.setAttribute(SUPA_READY_ATTRIBUTE, 'true');
   });
 }
@@ -188,23 +182,14 @@ export {
   Alert,
   BootstrapPlugins,
   Button,
-  Carousel,
-  Chips,
   Collapse,
-  Combobox,
-  Datepicker,
   Dialog,
   Drawer,
   initTooltips,
   Menu,
-  NavOverflow,
-  OtpInput,
   Popover,
-  Range,
   ScrollSpy,
   setTooltipTitle,
-  Strength,
-  Tab,
   Toast,
   Toggler,
   Tooltip

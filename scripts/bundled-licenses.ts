@@ -22,7 +22,8 @@ export interface BundledPackageLicense {
 
 /**
  * Every package whose code or assets end up in `css/supa-maven-skin.min.css`,
- * `js/supa-maven-skin.min.js`, or `css/fonts/`. Bootstrap and Bootstrap Icons reach the CSS via
+ * `js/supa-maven-skin.min.js`, a lazily loaded `js/supa-maven-skin-*.min.js` chunk, or
+ * `css/fonts/`. Bootstrap and Bootstrap Icons reach the CSS via
  * Sass `@use`; the rest are JS modules. `@floating-ui/*` and `vanilla-calendar-pro` are Bootstrap 6
  * peer dependencies imported by the bundled Tooltip/Popover/Menu and Datepicker plugins.
  */

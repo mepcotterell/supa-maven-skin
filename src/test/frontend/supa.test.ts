@@ -2,6 +2,7 @@
  * @fileoverview Unit test suite for Supa Maven Skin frontend TypeScript modules.
  */
 
+import Combobox from 'bootstrap/js/dist/combobox.js';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { parse as parseCss } from 'postcss';
@@ -26,11 +27,12 @@ import {
 } from '../../../scripts/contrast-audit';
 import {
   BootstrapPlugins,
-  Combobox,
   initBootstrapComponents,
   initComponentExamples,
-  initComponentPlayground,
+  initLazyWidgets,
   isolateBootstrapComponentsFromProse,
+  LAZY_WIDGETS,
+  type LazyWidget,
   Menu,
   Tooltip
 } from '../../main/frontend/ts/bootstrap-components';
@@ -57,6 +59,7 @@ import {
   SUPA_READY_ATTRIBUTE
 } from '../../main/frontend/ts/index';
 import { initOptionalLibraries, isModuleUrl, PINNED_ASSETS, pinnedIntegrity } from '../../main/frontend/ts/optional';
+import { initComponentPlayground } from '../../main/frontend/ts/playground';
 import {
   collectLocalSearchDocuments,
   filterSearchDocuments,
@@ -603,7 +606,7 @@ describe('Supa Maven Skin Frontend Modules', () => {
   });
 
   describe('Bootstrap 6 Plugins, Drawers & .prose Isolation', () => {
-    it('exports all 20 Bootstrap 6 JS plugins on window.bootstrap and isolates components from .prose', () => {
+    it('exposes Bootstrap 6 plugins on window.bootstrap (lazy ones once loaded) and isolates components from .prose', async () => {
       const container = document.createElement('div');
       container.innerHTML = `
         <div class="card"><div class="card-body">Card</div></div>
@@ -612,21 +615,38 @@ describe('Supa Maven Skin Frontend Modules', () => {
       `;
 
       isolateBootstrapComponentsFromProse(container);
-      initBootstrapComponents(container);
+      const settled = initBootstrapComponents(container);
 
-      expect(Object.keys(BootstrapPlugins).length).toBe(20);
-      expect(window.bootstrap).toBeDefined();
+      // The plugins the skin's chrome uses are bundled into the main script.
+      expect(Object.keys(BootstrapPlugins)).toEqual(
+        expect.arrayContaining([
+          'Alert',
+          'Button',
+          'Collapse',
+          'Dialog',
+          'Drawer',
+          'Menu',
+          'Popover',
+          'ScrollSpy',
+          'Toast',
+          'Toggler',
+          'Tooltip'
+        ])
+      );
+      expect(window.bootstrap).toBe(BootstrapPlugins);
       expect(window.bootstrap?.Dialog).toBeDefined();
-      expect(window.bootstrap?.Combobox).toBeDefined();
-      expect(window.bootstrap?.Datepicker).toBeDefined();
-      expect(window.bootstrap?.Chips).toBeDefined();
       expect(window.bootstrap?.Menu).toBeDefined();
+
+      // Chips loads on demand because the container has a chip input.
+      await settled;
+      const chipInput = container.querySelector<HTMLElement>('.chip-input')!;
+      expect(window.bootstrap?.Chips?.getInstance(chipInput)).not.toBeNull();
       expect(container.querySelector('.card')?.classList.contains('not-prose')).toBe(true);
       expect(container.querySelector('.nav')?.classList.contains('not-prose')).toBe(true);
       expect(container.querySelector('.chip-input')?.classList.contains('not-prose')).toBe(true);
     });
 
-    it('initializes Combobox and internal Menu on the same toggle element without Data.set console errors', () => {
+    it('initializes Combobox and internal Menu on the same toggle element without Data.set console errors', async () => {
       const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
       try {
         const container = document.createElement('div');
@@ -646,7 +666,9 @@ describe('Supa Maven Skin Frontend Modules', () => {
         `;
         document.body.appendChild(container);
 
-        initBootstrapComponents(container);
+        // Combobox is a lazily loaded chunk; its Menu and the patched Data map come from the
+        // main bundle, so both instances must coexist on the toggle.
+        await initBootstrapComponents(container);
 
         const toggleBtn = container.querySelector<HTMLElement>('[data-bs-toggle="combobox"]')!;
         expect(errorSpy).not.toHaveBeenCalled();
@@ -874,6 +896,139 @@ describe('Supa Maven Skin Frontend Modules', () => {
         modal: true,
         preventBodyScroll: true
       });
+    });
+
+    it('never imports a lazy widget chunk when the page lacks its trigger', async () => {
+      const load = vi.fn(async () => () => undefined);
+      const widget: LazyWidget = { name: 'Absent', selector: '[data-test-absent]', load };
+      const container = document.createElement('div');
+      container.innerHTML = '<p>No widgets here</p>';
+
+      await initLazyWidgets(container, [widget]);
+
+      expect(load).not.toHaveBeenCalled();
+    });
+
+    it('imports a lazy widget chunk once when its trigger is present and initializes every match', async () => {
+      const init = vi.fn();
+      const load = vi.fn(async () => init);
+      const widget: LazyWidget = { name: 'Present', selector: '[data-test-present]', load };
+      const container = document.createElement('div');
+      container.innerHTML = '<span data-test-present></span><span data-test-present></span>';
+
+      await initLazyWidgets(container, [widget]);
+      expect(load).toHaveBeenCalledTimes(1);
+      expect(init).toHaveBeenCalledTimes(2);
+      expect(init.mock.calls.map(([el]) => el)).toEqual(
+        Array.from(container.querySelectorAll('[data-test-present]'))
+      );
+
+      // Re-initializing (new content, or a second initBootstrapComponents call) reuses the chunk.
+      container.insertAdjacentHTML('beforeend', '<span data-test-present></span>');
+      await initLazyWidgets(container, [widget]);
+      expect(load).toHaveBeenCalledTimes(1);
+      expect(init).toHaveBeenCalledTimes(5);
+    });
+
+    it('tolerates a rejected chunk import: warns once, leaves the markup alone, and still initializes other widgets', async () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+      try {
+        const brokenLoad = vi.fn(() => Promise.reject(new TypeError('Failed to fetch dynamically imported module')));
+        const throwingInit = vi.fn(() => {
+          throw new Error('bad markup');
+        });
+        const workingInit = vi.fn();
+        const widgets: LazyWidget[] = [
+          { name: 'Broken', selector: '[data-test-broken]', load: brokenLoad },
+          { name: 'Throws', selector: '[data-test-throws]', load: async () => throwingInit },
+          { name: 'Works', selector: '[data-test-works]', load: async () => workingInit }
+        ];
+        const container = document.createElement('div');
+        container.innerHTML =
+          '<input data-test-broken value="2026-10-20" /><span data-test-throws></span><span data-test-works></span>';
+        const before = container.innerHTML;
+
+        await expect(initLazyWidgets(container, widgets)).resolves.toBeUndefined();
+        await expect(initLazyWidgets(container, widgets)).resolves.toBeUndefined();
+
+        expect(brokenLoad).toHaveBeenCalledTimes(1);
+        expect(warnSpy).toHaveBeenCalledTimes(1);
+        expect(String(warnSpy.mock.calls[0][0])).toContain('Broken');
+        expect(container.innerHTML).toBe(before);
+        expect(throwingInit).toHaveBeenCalledTimes(2);
+        expect(workingInit).toHaveBeenCalledTimes(2);
+      } finally {
+        warnSpy.mockRestore();
+      }
+    });
+
+    it('loads every lazily loaded Bootstrap 6 widget chunk and exposes its plugin on window.bootstrap', async () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+      try {
+        const container = document.createElement('div');
+        container.innerHTML = `
+          <div class="carousel"><div class="carousel-inner"><div class="carousel-item active">1</div></div></div>
+          <div class="chip-input"><input type="text" class="form-ghost" /></div>
+          <div class="dropdown">
+            <button type="button" class="form-control" data-bs-toggle="combobox" aria-expanded="false"></button>
+            <div class="menu"><button type="button" class="menu-item" data-bs-value="a">A</button></div>
+          </div>
+          <input type="text" class="form-control" data-bs-toggle="datepicker" />
+          <ul class="nav nav-overflow"><li class="nav-item"><a class="nav-link" href="#a">A</a></li></ul>
+          <div class="otp"><input type="text" /><input type="text" /></div>
+          <input type="range" class="form-range" />
+          <input type="password" id="lazyPw" /><div class="strength"></div>
+          <ul class="nav nav-tabs" role="tablist">
+            <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#lazyTabA" type="button" role="tab">A</button></li>
+          </ul>
+          <div class="tab-content"><div class="tab-pane active" id="lazyTabA" role="tabpanel">A</div></div>
+        `;
+        document.body.appendChild(container);
+
+        await initLazyWidgets(container);
+
+        expect(warnSpy).not.toHaveBeenCalled();
+        const lazyPlugins = [
+          'Carousel',
+          'Chips',
+          'Combobox',
+          'Datepicker',
+          'NavOverflow',
+          'OtpInput',
+          'Range',
+          'Strength',
+          'Tab'
+        ] as const;
+        lazyPlugins.forEach((name) => {
+          expect(BootstrapPlugins[name], name).toBeDefined();
+        });
+        expect(LAZY_WIDGETS.length).toBe(lazyPlugins.length + 1);
+        const tab = container.querySelector<HTMLElement>('[data-bs-toggle="tab"]')!;
+        expect(BootstrapPlugins.Tab?.getInstance(tab)).not.toBeNull();
+        expect(container.querySelector('.strength')?.getAttribute('data-bs-input')).toBe('#lazyPw');
+      } finally {
+        warnSpy.mockRestore();
+      }
+    });
+
+    it('sets html[data-supa-ready] only after the lazily loaded Component Playground has initialized', async () => {
+      document.body.innerHTML = `
+        <main id="supa-main-content">
+          <div class="supa-playground" data-supa-playground="true">
+            <button type="button" class="supa-playground-pill active" data-playground-component="button"></button>
+            <div class="supa-playground-stage" data-playground-stage="true"></div>
+            <pre><code class="language-html" data-playground-code="true"></code></pre>
+          </div>
+        </main>
+      `;
+      document.documentElement.removeAttribute(SUPA_READY_ATTRIBUTE);
+
+      await initSupaSkin();
+
+      expect(document.documentElement.getAttribute(SUPA_READY_ATTRIBUTE)).toBe('true');
+      const playground = document.querySelector('.supa-playground')!;
+      expect(playground.getAttribute('data-supa-playground-ready')).toBe('true');
+      expect(playground.querySelector('[data-playground-stage] .btn')).not.toBeNull();
     });
   });
 

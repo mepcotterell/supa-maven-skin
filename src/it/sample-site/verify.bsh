@@ -77,6 +77,34 @@ for ( int i = 0; i < bundledPeers.length; i++ ) {
         throw new IllegalStateException( "JS license banner does not name bundled package " + bundledPeers[i] );
     }
 }
+// Widgets only author content uses (LAZY_WIDGETS in bootstrap-components.ts) load on demand from
+// chunks beside the entry, so the skin JAR must ship them and consumer sites must serve them. Each
+// chunk imports shared code (Bootstrap's patched Data map, Menu, the skin's helpers) from the
+// entry rather than carrying a second copy.
+String[] lazyChunks = new String[] {
+    "carousel", "chips", "combobox", "datepicker", "nav-overflow", "otp-input", "playground", "range", "strength", "tab"
+};
+for ( int i = 0; i < lazyChunks.length; i++ ) {
+    String chunkPath = "js/supa-maven-skin-" + lazyChunks[i] + ".min.js";
+    File chunkFile = new File( siteDir, chunkPath );
+    if ( !chunkFile.isFile() || chunkFile.length() < 500 ) {
+        throw new IllegalStateException( "Lazily loaded JS chunk missing or empty: " + chunkPath );
+    }
+    String chunkText = Files.readString( chunkFile.toPath(), StandardCharsets.UTF_8 );
+    if ( !chunkText.startsWith( "/*!" ) || !chunkText.contains( "META-INF/LICENSE" ) ) {
+        throw new IllegalStateException( chunkPath + " is missing its /*! ... */ license attribution header" );
+    }
+    if ( !chunkText.contains( "\"./supa-maven-skin.min.js\"" ) ) {
+        throw new IllegalStateException( chunkPath + " does not import shared code from js/supa-maven-skin.min.js" );
+    }
+}
+String datepickerChunk = Files.readString( new File( siteDir, "js/supa-maven-skin-datepicker.min.js" ).toPath(), StandardCharsets.UTF_8 );
+if ( !datepickerChunk.substring( 0, datepickerChunk.indexOf( "*/" ) ).contains( "vanilla-calendar-pro" ) ) {
+    throw new IllegalStateException( "Datepicker chunk license banner does not name bundled package vanilla-calendar-pro" );
+}
+if ( !jsHead.contains( "supa-maven-skin-datepicker.min.js" ) ) {
+    throw new IllegalStateException( "JS entry does not reference its lazily loaded Datepicker chunk" );
+}
 
 File indexHtml = new File( siteDir, "index.html" );
 if ( !indexHtml.isFile() ) {

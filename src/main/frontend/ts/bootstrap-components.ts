@@ -1,31 +1,36 @@
 /**
  * @fileoverview Bootstrap 6.0.0-alpha.1 plugin registration, multi-instance Data map patch,
  * prose isolation, native-title-to-Tooltip promotion, interactive component examples,
- * and the interactive Bootstrap 6 Component Playground.
+ * and on-demand loading of the widgets only author content uses (`LAZY_WIDGETS`), including
+ * the interactive Bootstrap 6 Component Playground (`playground.ts`).
+ *
+ * The plugins the skin's own chrome needs on every page (menus, tooltips, drawers, the search
+ * dialog, ScrollSpy) and the small data-API plugins stay in the main bundle. The rest are split
+ * into chunks next to it (`js/supa-maven-skin-<name>.min.js`) and imported only when the page
+ * contains their markup, which keeps most of the weight off pages that never use them.
  */
 
 import Alert from 'bootstrap/js/dist/alert.js';
 import Button from 'bootstrap/js/dist/button.js';
-import Carousel from 'bootstrap/js/dist/carousel.js';
-import Chips from 'bootstrap/js/dist/chips.js';
+import type CarouselPlugin from 'bootstrap/js/dist/carousel.js';
+import type ChipsPlugin from 'bootstrap/js/dist/chips.js';
 import Collapse from 'bootstrap/js/dist/collapse.js';
-import Combobox from 'bootstrap/js/dist/combobox.js';
-import Datepicker from 'bootstrap/js/dist/datepicker.js';
+import type ComboboxPlugin from 'bootstrap/js/dist/combobox.js';
+import type DatepickerPlugin from 'bootstrap/js/dist/datepicker.js';
 import Dialog from 'bootstrap/js/dist/dialog.js';
 import Data from 'bootstrap/js/dist/dom/data.js';
 import Drawer from 'bootstrap/js/dist/drawer.js';
 import Menu from 'bootstrap/js/dist/menu.js';
-import NavOverflow from 'bootstrap/js/dist/nav-overflow.js';
-import OtpInput from 'bootstrap/js/dist/otp-input.js';
+import type NavOverflowPlugin from 'bootstrap/js/dist/nav-overflow.js';
+import type OtpInputPlugin from 'bootstrap/js/dist/otp-input.js';
 import Popover from 'bootstrap/js/dist/popover.js';
-import Range from 'bootstrap/js/dist/range.js';
+import type RangePlugin from 'bootstrap/js/dist/range.js';
 import ScrollSpy from 'bootstrap/js/dist/scrollspy.js';
-import Strength from 'bootstrap/js/dist/strength.js';
-import Tab from 'bootstrap/js/dist/tab.js';
+import type StrengthPlugin from 'bootstrap/js/dist/strength.js';
+import type TabPlugin from 'bootstrap/js/dist/tab.js';
 import Toast from 'bootstrap/js/dist/toast.js';
 import Toggler from 'bootstrap/js/dist/toggler.js';
 import Tooltip from 'bootstrap/js/dist/tooltip.js';
-import { highlightCodeElement } from './code';
 import { initContentTabs } from './doxia';
 
 /**
@@ -36,6 +41,9 @@ import { initContentTabs } from './doxia';
  * same toggle element that already holds `bs.combobox`, and triggers with tooltips (`bs.tooltip`)
  * also share their element with `bs.menu` / `bs.dialog` / `bs.drawer`.
  * Patch `Data` so each element can hold one instance per distinct `DATA_KEY`.
+ *
+ * The lazily loaded plugin chunks import `dom/data.js` (through `base-component.js`) from the
+ * main bundle rather than carrying their own copy, so this patch covers their instances too.
  */
 const elementInstanceMap = new Map<Element, Map<string, unknown>>();
 
@@ -71,27 +79,41 @@ Data.remove = (element: Element, key: string): void => {
   }
 };
 
-export const BootstrapPlugins = {
+/** Bootstrap 6 plugins bundled into the main script and available on every page. */
+const EAGER_PLUGINS = {
   Alert,
   Button,
-  Carousel,
-  Chips,
   Collapse,
-  Combobox,
-  Datepicker,
   Dialog,
   Drawer,
   Menu,
-  NavOverflow,
-  OtpInput,
   Popover,
-  Range,
   ScrollSpy,
-  Strength,
-  Tab,
   Toast,
   Toggler,
   Tooltip
+};
+
+/** Bootstrap 6 plugins in `LAZY_WIDGETS`, present only once their chunk has loaded. */
+interface LazyBootstrapPlugins {
+  Carousel: typeof CarouselPlugin;
+  Chips: typeof ChipsPlugin;
+  Combobox: typeof ComboboxPlugin;
+  Datepicker: typeof DatepickerPlugin;
+  NavOverflow: typeof NavOverflowPlugin;
+  OtpInput: typeof OtpInputPlugin;
+  Range: typeof RangePlugin;
+  Strength: typeof StrengthPlugin;
+  Tab: typeof TabPlugin;
+}
+
+/**
+ * The Bootstrap 6 plugins exposed on `window.bootstrap`: the eager plugins at once, and each
+ * lazily loaded plugin as soon as its chunk loads (on pages that contain its markup, before
+ * `html[data-supa-ready]` is set).
+ */
+export const BootstrapPlugins: typeof EAGER_PLUGINS & Partial<LazyBootstrapPlugins> = {
+  ...EAGER_PLUGINS
 };
 
 declare global {
@@ -163,8 +185,15 @@ const NON_TOOLTIP_TAGS = new Set([
 const CODE_ICON_SVG =
   '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>';
 
-const CHEVRON_ICON_SVG =
+/** Chevron of the "Hide code" toggles on component examples and the playground. */
+export const CHEVRON_ICON_SVG =
   '<svg class="supa-code-toggle-chevron" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>';
+
+/**
+ * Interactive Component Playground roots. Defined here rather than in `playground.ts` so the
+ * main bundle can detect a playground without pulling that module out of its chunk.
+ */
+export const PLAYGROUND_SELECTOR = '.supa-playground, [data-supa-playground]';
 
 /**
  * Checks whether an element's `title` attribute is used as Doxia shorthand metadata
@@ -347,7 +376,7 @@ export function initComponentExamples(root: ParentNode = document): void {
     if (
       previewEl.hasAttribute('data-supa-example-bound') ||
       previewEl.closest('.supa-component-example') ||
-      previewEl.closest('.supa-playground, [data-supa-playground]')
+      previewEl.closest(PLAYGROUND_SELECTOR)
     ) {
       return;
     }
@@ -464,408 +493,6 @@ export function initComponentExamples(root: ParentNode = document): void {
   });
 }
 
-type PlaygroundComponent = 'button' | 'alert' | 'badge' | 'card';
-type PlaygroundTheme =
-  | 'primary'
-  | 'accent'
-  | 'success'
-  | 'danger'
-  | 'warning'
-  | 'info'
-  | 'secondary';
-type PlaygroundVariant = 'solid' | 'outline' | 'subtle' | 'text' | 'styled';
-type PlaygroundSize = 'xs' | 'sm' | 'md' | 'lg';
-
-interface PlaygroundState {
-  component: PlaygroundComponent;
-  theme: PlaygroundTheme;
-  variant: PlaygroundVariant;
-  size: PlaygroundSize;
-  syntaxTab: string;
-}
-
-interface PlaygroundSyntaxTab {
-  id: string;
-  label: string;
-  lang: string;
-  code: string;
-}
-
-const ARROW_LEFT_SVG =
-  '<svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M15 8a.5.5 0 0 0-.5-.5H2.707l3.147-3.146a.5.5 0 1 0-.708-.708l-4 4a.5.5 0 0 0 0 .708l4 4a.5.5 0 0 0 .708-.708L2.707 8.5H14.5A.5.5 0 0 0 15 8"/></svg>';
-const ARROW_RIGHT_SVG =
-  '<svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M1 8a.5.5 0 0 1 .5-.5h11.793l-3.147-3.146a.5.5 0 0 1 .708-.708l4 4a.5.5 0 0 1 0 .708l-4 4a.5.5 0 0 1-.708-.708L13.293 8.5H1.5A.5.5 0 0 1 1 8"/></svg>';
-const PLUS_ICON_SVG =
-  '<svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M8 2a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 2"/></svg>';
-
-/**
- * Capitalizes the first character of `word`.
- *
- * @param word - String to capitalize.
- * @returns Capitalized string.
- */
-function capitalize(word: string): string {
-  return word.charAt(0).toUpperCase() + word.slice(1);
-}
-
-/**
- * Renders the live HTML preview and syntax code tabs for the given `PlaygroundState`.
- *
- * @param state - Current interactive playground state.
- * @returns Rendered HTML preview and code tabs.
- */
-function renderPlaygroundState(state: PlaygroundState): {
-  html: string;
-  tabs: PlaygroundSyntaxTab[];
-} {
-  const { component, theme, variant, size } = state;
-  const label = capitalize(theme);
-  const sizeClass = size === 'md' ? '' : ` btn-${size}`;
-
-  if (component === 'button') {
-    const variantClass =
-      variant === 'styled' ? 'btn-solid btn-styled' : `btn-${variant}`;
-    const btnCls = `btn ${variantClass} theme-${theme}${sizeClass}`;
-    const iconBtnCls = `btn ${variantClass} btn-icon theme-${theme}${sizeClass}`;
-
-    const html = `
-      <div class="d-flex flex-wrap align-items-center gap-2">
-        <button type="button" class="${btnCls}" data-button-type="text">${label}</button>
-        <button type="button" class="${btnCls} d-inline-flex align-items-center gap-2" data-button-type="left-icon">${ARROW_LEFT_SVG}<span>Left icon</span></button>
-        <button type="button" class="${btnCls} d-inline-flex align-items-center gap-2" data-button-type="right-icon"><span>Right icon</span>${ARROW_RIGHT_SVG}</button>
-        <button type="button" class="${iconBtnCls}" data-button-type="icon-only" aria-label="Add item" data-bs-title="Icon-only button (${btnCls})">${PLUS_ICON_SVG}</button>
-        <button type="button" class="${btnCls}" data-bs-toggle="button" aria-pressed="false">Toggle state</button>
-      </div>
-    `;
-
-    const htmlCode = [
-      `<!-- Direct HTML in Markdown (.md) -->`,
-      `<button type="button" class="${btnCls}">${label}</button>`,
-      `<button type="button" class="${btnCls}">`,
-      `  <svg class="bi" width="16" height="16" aria-hidden="true"><use href="#arrow-left"/></svg>`,
-      `  Left icon`,
-      `</button>`,
-      `<button type="button" class="${btnCls}">`,
-      `  Right icon`,
-      `  <svg class="bi" width="16" height="16" aria-hidden="true"><use href="#arrow-right"/></svg>`,
-      `</button>`,
-      `<button type="button" class="${iconBtnCls}" aria-label="Add item">`,
-      `  <svg class="bi" width="16" height="16" aria-hidden="true"><use href="#plus-lg"/></svg>`,
-      `</button>`,
-      `<button type="button" class="${btnCls}" data-bs-toggle="button" aria-pressed="false">Toggle state</button>`
-    ].join('\n');
-
-    return {
-      html,
-      tabs: [{ id: 'html', label: 'Markdown + HTML', lang: 'html', code: htmlCode }]
-    };
-  }
-
-  if (component === 'alert') {
-    const alertTheme = theme === 'accent' ? 'primary' : theme;
-    const html = `
-      <div class="alert theme-${theme} not-prose mb-0" role="alert">
-        <div class="flex-grow-1">
-          <div class="alert-heading fw-semibold mb-1">${label} Alert Callout</div>
-          <p class="mb-0">Contextual feedback rendered with <code>.alert.theme-${theme}</code> and optional inline dismissal.</p>
-        </div>
-        <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
-      </div>
-    `;
-
-    const mdCode = [
-      `> [!ALERT:${alertTheme} dismissible] ${label} Alert Callout`,
-      `> Contextual feedback rendered with \`.alert.theme-${theme}\` and optional inline dismissal.`
-    ].join('\n');
-
-    const htmlCode = [
-      `<div class="alert theme-${theme}" role="alert">`,
-      `  <div class="flex-grow-1">`,
-      `    <div class="alert-heading fw-semibold mb-1">${label} Alert Callout</div>`,
-      `    <p class="mb-0">Contextual feedback rendered with <code>.alert.theme-${theme}</code>.</p>`,
-      `  </div>`,
-      `  <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>`,
-      `</div>`
-    ].join('\n');
-
-    const vmCode = `#bsAlert("${alertTheme}", "<strong>${label} Alert Callout:</strong> Contextual feedback.")`;
-
-    return {
-      html,
-      tabs: [
-        { id: 'md', label: 'Markdown Shorthand', lang: 'markdown', code: mdCode },
-        { id: 'html', label: 'Markdown + HTML', lang: 'html', code: htmlCode },
-        { id: 'vm', label: 'Velocity Macro (.md.vm)', lang: 'velocity', code: vmCode }
-      ]
-    };
-  }
-
-  if (component === 'badge') {
-    const badgeVariant =
-      variant === 'outline'
-        ? ' badge-outline'
-        : variant === 'subtle' || variant === 'text'
-          ? ' badge-subtle'
-          : '';
-    const badgeSize = size === 'lg' ? ' badge-lg' : size === 'sm' || size === 'xs' ? ' badge-sm' : '';
-    const badgeCls = `badge${badgeVariant}${badgeSize} theme-${theme}`;
-    const pillCls = `badge${badgeVariant}${badgeSize} rounded-pill theme-${theme}`;
-    const chipCls = `chip ${variant === 'solid' || variant === 'styled' ? 'active ' : ''}theme-${theme}`;
-
-    const html = `
-      <div class="d-flex flex-wrap align-items-center gap-2">
-        <span class="${badgeCls}">${label} Badge</span>
-        <span class="${pillCls}">${label} Pill</span>
-        <span class="${chipCls}">${theme}-tag</span>
-        <span class="avatar avatar-${size === 'md' ? 'sm' : size} theme-${theme}">${theme.slice(0, 2).toUpperCase()}<span class="avatar-status status-online"></span></span>
-      </div>
-    `;
-
-    const htmlCode = [
-      `<span class="${badgeCls}">${label} Badge</span>`,
-      `<span class="${pillCls}">${label} Pill</span>`,
-      `<span class="${chipCls}">${theme}-tag</span>`,
-      `<span class="avatar avatar-${size === 'md' ? 'sm' : size} theme-${theme}">`,
-      `  ${theme.slice(0, 2).toUpperCase()}<span class="avatar-status status-online"></span>`,
-      `</span>`
-    ].join('\n');
-
-    const vmCode = `#bsBadge("${theme}", "${label} Badge")`;
-
-    return {
-      html,
-      tabs: [
-        { id: 'html', label: 'Markdown + HTML', lang: 'html', code: htmlCode },
-        { id: 'vm', label: 'Velocity Macro (.md.vm)', lang: 'velocity', code: vmCode }
-      ]
-    };
-  }
-
-  // component === 'card'
-  const btnVariant = variant === 'styled' ? 'btn-solid btn-styled' : `btn-${variant}`;
-  const btnCls = `btn ${btnVariant} theme-${theme}${sizeClass}`;
-  const badgeCls = `badge badge-subtle theme-${theme}`;
-
-  const html = `
-    <div class="card" style="max-width: 28rem;">
-      <div class="card-header d-flex justify-content-between align-items-center">
-        <span class="fw-semibold">${label} Component Card</span>
-        <span class="${badgeCls}">theme-${theme}</span>
-      </div>
-      <div class="card-body">
-        <div class="card-title h6 mb-2">Composable Bootstrap 6 Surface</div>
-        <p class="card-text text-body-secondary small mb-3">Combine <code>.card</code> containers with <code>.theme-${theme}</code> badges and <code>.${btnVariant}</code> actions inside any Doxia Markdown page.</p>
-        <button type="button" class="${btnCls}">Inspect ${label}</button>
-      </div>
-    </div>
-  `;
-
-  const htmlCode = [
-    `<div class="card">`,
-    `  <div class="card-header d-flex justify-content-between align-items-center">`,
-    `    <span class="fw-semibold">${label} Component Card</span>`,
-    `    <span class="${badgeCls}">theme-${theme}</span>`,
-    `  </div>`,
-    `  <div class="card-body">`,
-    `    <div class="card-title h6">Composable Bootstrap 6 Surface</div>`,
-    `    <p class="card-text text-body-secondary">Combine .card containers with .theme-${theme} actions.</p>`,
-    `    <button type="button" class="${btnCls}">Inspect ${label}</button>`,
-    `  </div>`,
-    `</div>`
-  ].join('\n');
-
-  const vmCode = `#bsCard("${label} Component Card", "<p>Combine .card containers with .theme-${theme} actions.</p>")`;
-
-  return {
-    html,
-    tabs: [
-      { id: 'html', label: 'Markdown + HTML', lang: 'html', code: htmlCode },
-      { id: 'vm', label: 'Velocity Macro (.md.vm)', lang: 'velocity', code: vmCode }
-    ]
-  };
-}
-
-/**
- * Initializes the interactive Bootstrap 6 Component Playground (`[data-supa-playground]`),
- * inspired by https://getbootstrap.com/docs/6.0/components/button/#playground.
- *
- * @param root - Root node to scan for `.supa-playground` blocks.
- */
-export function initComponentPlayground(root: ParentNode = document): void {
-  const playgrounds = Array.from(
-    root.querySelectorAll<HTMLElement>('.supa-playground, [data-supa-playground]')
-  );
-  playgrounds.forEach((pg) => {
-    if (pg.hasAttribute('data-supa-playground-ready')) {
-      return;
-    }
-    pg.setAttribute('data-supa-playground-ready', 'true');
-
-    const stageEl = pg.querySelector<HTMLElement>(
-      '.supa-playground-stage, [data-playground-stage]'
-    );
-    const codeEl = pg.querySelector<HTMLElement>(
-      '[data-playground-code], .supa-code-block code, pre code'
-    );
-    if (!stageEl || !codeEl) {
-      return;
-    }
-
-    const codeBlockEl =
-      codeEl.closest<HTMLElement>('.supa-code-block') ??
-      codeEl.closest<HTMLElement>('pre') ??
-      codeEl;
-
-    const barEl = document.createElement('div');
-    barEl.className = 'supa-tab-list supa-playground-bar';
-
-    // Only the syntax tabs live in the tablist; the sibling "Hide code" toggle is not a tab
-    // (axe aria-required-children).
-    const tabBtnsContainer = document.createElement('div');
-    tabBtnsContainer.className = 'supa-tab-list-tabs d-flex flex-wrap gap-1 align-items-center';
-    tabBtnsContainer.setAttribute('role', 'tablist');
-    tabBtnsContainer.setAttribute('aria-label', 'Code syntax');
-
-    const toggleBtn = document.createElement('button');
-    toggleBtn.type = 'button';
-    toggleBtn.className = 'supa-component-code-toggle ms-auto';
-    toggleBtn.setAttribute('aria-expanded', 'true');
-    toggleBtn.innerHTML = `<span class="supa-code-toggle-text">Hide code</span>${CHEVRON_ICON_SVG}`;
-    setTooltipTitle(toggleBtn, 'Collapse or expand code snippet', 'top');
-
-    toggleBtn.addEventListener('click', () => {
-      const isCollapsed = pg.classList.toggle('is-code-collapsed');
-      toggleBtn.setAttribute('aria-expanded', isCollapsed ? 'false' : 'true');
-      const labelSpan = toggleBtn.querySelector('.supa-code-toggle-text');
-      if (labelSpan) {
-        labelSpan.textContent = isCollapsed ? 'Show code' : 'Hide code';
-      }
-      codeBlockEl.hidden = isCollapsed;
-    });
-
-    barEl.appendChild(tabBtnsContainer);
-    barEl.appendChild(toggleBtn);
-    codeBlockEl.parentNode?.insertBefore(barEl, codeBlockEl);
-
-    const state: PlaygroundState = {
-      component: 'button',
-      theme: 'primary',
-      variant: 'solid',
-      size: 'sm',
-      syntaxTab: ''
-    };
-
-    /**
-     * Synchronizes the playground control buttons, stage HTML preview, and syntax code block
-     * with the current `state`.
-     */
-    const updateUI = () => {
-      pg.querySelectorAll<HTMLButtonElement>('[data-playground-component]').forEach((btn) => {
-        const active = btn.getAttribute('data-playground-component') === state.component;
-        btn.classList.toggle('active', active);
-        btn.setAttribute('aria-pressed', active ? 'true' : 'false');
-      });
-
-      pg.querySelectorAll<HTMLButtonElement>('[data-playground-theme]').forEach((btn) => {
-        const active = btn.getAttribute('data-playground-theme') === state.theme;
-        btn.classList.toggle('active', active);
-        btn.setAttribute('aria-pressed', active ? 'true' : 'false');
-      });
-
-      pg.querySelectorAll<HTMLButtonElement>('[data-playground-variant]').forEach((btn) => {
-        const active = btn.getAttribute('data-playground-variant') === state.variant;
-        btn.classList.toggle('active', active);
-        btn.setAttribute('aria-pressed', active ? 'true' : 'false');
-      });
-
-      pg.querySelectorAll<HTMLButtonElement>('[data-playground-size]').forEach((btn) => {
-        const active = btn.getAttribute('data-playground-size') === state.size;
-        btn.classList.toggle('active', active);
-        btn.setAttribute('aria-pressed', active ? 'true' : 'false');
-      });
-
-      const { html, tabs } = renderPlaygroundState(state);
-      stageEl.innerHTML = html;
-
-      const activeTab =
-        tabs.find((t) => t.id === state.syntaxTab) ?? tabs[0];
-      state.syntaxTab = activeTab.id;
-
-      tabBtnsContainer.innerHTML = '';
-      tabs.forEach((tab) => {
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = `supa-tab-btn${tab.id === activeTab.id ? ' active' : ''}`;
-        btn.setAttribute('role', 'tab');
-        btn.setAttribute('aria-selected', tab.id === activeTab.id ? 'true' : 'false');
-        btn.setAttribute('data-playground-syntax', tab.id);
-        btn.textContent = tab.label;
-        btn.addEventListener('click', () => {
-          state.syntaxTab = tab.id;
-          if (pg.classList.contains('is-code-collapsed')) {
-            pg.classList.remove('is-code-collapsed');
-            toggleBtn.setAttribute('aria-expanded', 'true');
-            const labelSpan = toggleBtn.querySelector('.supa-code-toggle-text');
-            if (labelSpan) {
-              labelSpan.textContent = 'Hide code';
-            }
-            codeBlockEl.hidden = false;
-          }
-          updateUI();
-        });
-        tabBtnsContainer.appendChild(btn);
-      });
-
-      codeEl.textContent = activeTab.code;
-      highlightCodeElement(codeEl, activeTab.lang);
-      initTooltips(stageEl);
-    };
-
-    pg.querySelectorAll<HTMLButtonElement>('[data-playground-component]').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const val = btn.getAttribute('data-playground-component') as PlaygroundComponent | null;
-        if (val) {
-          state.component = val;
-          state.syntaxTab = '';
-          updateUI();
-        }
-      });
-    });
-
-    pg.querySelectorAll<HTMLButtonElement>('[data-playground-theme]').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const val = btn.getAttribute('data-playground-theme') as PlaygroundTheme | null;
-        if (val) {
-          state.theme = val;
-          updateUI();
-        }
-      });
-    });
-
-    pg.querySelectorAll<HTMLButtonElement>('[data-playground-variant]').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const val = btn.getAttribute('data-playground-variant') as PlaygroundVariant | null;
-        if (val) {
-          state.variant = val;
-          updateUI();
-        }
-      });
-    });
-
-    pg.querySelectorAll<HTMLButtonElement>('[data-playground-size]').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const val = btn.getAttribute('data-playground-size') as PlaygroundSize | null;
-        if (val) {
-          state.size = val;
-          updateUI();
-        }
-      });
-    });
-
-    updateUI();
-  });
-}
-
 /**
  * Automatically adds `.not-prose` to Bootstrap 6 component root containers inside
  * `.supa-article` so site authors don't have to manually wrap every component.
@@ -881,21 +508,246 @@ export function isolateBootstrapComponentsFromProse(container: ParentNode = docu
   });
 }
 
+/** Initializes one element that matches a lazily loaded widget's selector. */
+export type WidgetInitializer = (el: HTMLElement) => void;
+
 /**
- * Attaches all 20 Bootstrap 6 JS plugins to `window.bootstrap` and auto-initializes
- * opt-in interactive widgets (`Tooltip`, `Popover`, `Toast`, `Combobox`, `Datepicker`,
- * `Chips`, `OtpInput`, `Range`, `Strength`, `NavOverflow`, `Carousel`).
+ * A widget that only author content uses, whose code ships as its own chunk next to the main
+ * bundle (`js/supa-maven-skin-<chunk>.min.js`) and is imported only when a page contains its
+ * markup, the way `optional.ts` loads Mermaid and KaTeX only when a page needs them.
+ */
+export interface LazyWidget {
+  /** Plugin or feature name, used in the console warning when its chunk fails to load. */
+  name: string;
+  /** Markup that needs the widget: the chunk loads only when the root contains a match. */
+  selector: string;
+  /** Imports the widget's chunk and returns the initializer for each matching element. */
+  load: () => Promise<WidgetInitializer>;
+}
+
+/**
+ * The lazily loaded widgets. Each loader names its module in a literal `import()` so Vite splits
+ * it into its own chunk; the chunk imports everything it shares with the skin (Bootstrap's
+ * `base-component.js` and patched `dom/data.js`, `Menu`, the sanitizer, the skin's own helpers)
+ * from the main bundle, so one instance of each serves both.
+ *
+ * Bootstrap's own `DOMContentLoaded` and `window` `load` data-API initializers have usually
+ * fired before a chunk arrives, so each selector also covers the markup those initializers would
+ * have handled.
+ */
+export const LAZY_WIDGETS: readonly LazyWidget[] = [
+  {
+    name: 'Combobox',
+    selector: '[data-bs-toggle="combobox"]',
+    load: async () => {
+      // Combobox creates a Menu instance on its own toggle; the Data patch above lets both live
+      // there, and Menu itself comes from the main bundle.
+      const { default: Combobox } = await import('bootstrap/js/dist/combobox.js');
+      BootstrapPlugins.Combobox = Combobox;
+      return (el) => {
+        Combobox.getOrCreateInstance(el);
+      };
+    }
+  },
+  {
+    name: 'Datepicker',
+    selector: '[data-bs-toggle="datepicker"]',
+    load: async () => {
+      // The largest chunk by far: it carries the vanilla-calendar-pro peer dependency.
+      const { default: Datepicker } = await import('bootstrap/js/dist/datepicker.js');
+      BootstrapPlugins.Datepicker = Datepicker;
+      return (el) => {
+        Datepicker.getOrCreateInstance(el);
+      };
+    }
+  },
+  {
+    name: 'Chips',
+    selector: '[data-bs-chips], .chip-input',
+    load: async () => {
+      const { default: Chips } = await import('bootstrap/js/dist/chips.js');
+      BootstrapPlugins.Chips = Chips;
+      return (el) => {
+        if (!el.hasAttribute('data-bs-chips')) {
+          el.setAttribute('data-bs-chips', '');
+        }
+        Chips.getOrCreateInstance(el);
+      };
+    }
+  },
+  {
+    name: 'OtpInput',
+    selector: '[data-bs-otp], .otp',
+    load: async () => {
+      const { default: OtpInput } = await import('bootstrap/js/dist/otp-input.js');
+      BootstrapPlugins.OtpInput = OtpInput;
+      return (el) => {
+        if (!el.hasAttribute('data-bs-otp')) {
+          el.setAttribute('data-bs-otp', '');
+        }
+        OtpInput.getOrCreateInstance(el);
+      };
+    }
+  },
+  {
+    name: 'Range',
+    selector: '.form-range',
+    load: async () => {
+      const { default: Range } = await import('bootstrap/js/dist/range.js');
+      BootstrapPlugins.Range = Range;
+      return (el) => {
+        if (!el.hasAttribute('data-bs-bubble')) {
+          el.setAttribute('data-bs-bubble', 'true');
+        }
+        Range.getOrCreateInstance(el);
+      };
+    }
+  },
+  {
+    name: 'Strength',
+    selector: '[data-bs-strength], .strength',
+    load: async () => {
+      const { default: Strength } = await import('bootstrap/js/dist/strength.js');
+      BootstrapPlugins.Strength = Strength;
+      return (el) => {
+        if (!el.hasAttribute('data-bs-strength')) {
+          el.setAttribute('data-bs-strength', '');
+        }
+        if (!el.hasAttribute('data-bs-input')) {
+          const prevInput = el.previousElementSibling;
+          if (prevInput instanceof HTMLInputElement && prevInput.id) {
+            el.setAttribute('data-bs-input', `#${prevInput.id}`);
+          }
+        }
+        Strength.getOrCreateInstance(el);
+      };
+    }
+  },
+  {
+    name: 'NavOverflow',
+    selector: '.nav-overflow, [data-bs-toggle="nav-overflow"]',
+    load: async () => {
+      const { default: NavOverflow } = await import('bootstrap/js/dist/nav-overflow.js');
+      BootstrapPlugins.NavOverflow = NavOverflow;
+      return (el) => {
+        NavOverflow.getOrCreateInstance(el);
+      };
+    }
+  },
+  {
+    name: 'Carousel',
+    selector: '[data-bs-ride="carousel"], [data-bs-autoplay="true"], .carousel',
+    load: async () => {
+      const { default: Carousel } = await import('bootstrap/js/dist/carousel.js');
+      BootstrapPlugins.Carousel = Carousel;
+      return (el) => {
+        Carousel.getOrCreateInstance(el);
+      };
+    }
+  },
+  {
+    name: 'Tab',
+    selector: '[data-bs-toggle="tab"]',
+    load: async () => {
+      const { default: Tab } = await import('bootstrap/js/dist/tab.js');
+      BootstrapPlugins.Tab = Tab;
+      return (el) => {
+        // Bootstrap creates the active tabs' instances (which wire up the tablist's ARIA
+        // attributes) on window `load`, and creates the rest on click.
+        if (el.classList.contains('active')) {
+          Tab.getOrCreateInstance(el);
+        }
+      };
+    }
+  },
+  {
+    name: 'Component Playground',
+    selector: PLAYGROUND_SELECTOR,
+    load: async () => {
+      const { initPlayground } = await import('./playground');
+      return initPlayground;
+    }
+  }
+];
+
+/** One load per widget and page, so a chunk is fetched, and a failure logged, only once. */
+const widgetLoads = new Map<LazyWidget, Promise<WidgetInitializer | null>>();
+
+/**
+ * Loads a widget's chunk once. A failed load (offline, a server that does not serve the chunk
+ * files, a Content Security Policy that blocks them) is logged once and resolves to `null`, so the
+ * widget's markup stays plain HTML and the rest of the skin keeps working.
+ *
+ * @param widget - Widget to load.
+ * @returns The widget's initializer, or `null` when its chunk could not be loaded.
+ */
+function loadWidget(widget: LazyWidget): Promise<WidgetInitializer | null> {
+  let pending = widgetLoads.get(widget);
+  if (!pending) {
+    pending = Promise.resolve()
+      .then(() => widget.load())
+      .catch((error: unknown) => {
+        console.warn(
+          `Supa Maven Skin: could not load the ${widget.name} script; its markup stays plain HTML.`,
+          error
+        );
+        return null;
+      });
+    widgetLoads.set(widget, pending);
+  }
+  return pending;
+}
+
+/**
+ * Loads and initializes each widget whose selector matches inside `root`. Widgets without a match
+ * are never imported. Safe to call again: chunks load once and initializers are idempotent.
+ *
+ * @param root - Root node to scan (defaults to `document`).
+ * @param widgets - Widgets to consider (defaults to `LAZY_WIDGETS`; injectable for tests).
+ * @returns Promise that resolves once every matching widget has initialized or failed to load;
+ *     it never rejects.
+ */
+export async function initLazyWidgets(
+  root: ParentNode = document,
+  widgets: readonly LazyWidget[] = LAZY_WIDGETS
+): Promise<void> {
+  await Promise.all(
+    widgets.map(async (widget) => {
+      if (!root.querySelector(widget.selector)) {
+        return;
+      }
+      const init = await loadWidget(widget);
+      if (!init) {
+        return;
+      }
+      root.querySelectorAll<HTMLElement>(widget.selector).forEach((el) => {
+        try {
+          init(el);
+        } catch {
+          // Ignore initialization errors in synthetic DOMs and malformed markup
+        }
+      });
+    })
+  );
+}
+
+/**
+ * Attaches the Bootstrap 6 plugins to `window.bootstrap` and auto-initializes opt-in
+ * interactive widgets (`Tooltip`, `Popover`, `Toast`, and the `LAZY_WIDGETS`: `Combobox`,
+ * `Datepicker`, `Chips`, `OtpInput`, `Range`, `Strength`, `NavOverflow`, `Carousel`, `Tab`, and
+ * the Component Playground).
  *
  * @param root - Root node to initialize (defaults to `document`).
+ * @returns Promise that resolves once the lazily loaded widgets on the page have initialized
+ *     (or failed to load); everything else is initialized synchronously. It never rejects.
  */
-export function initBootstrapComponents(root: ParentNode = document): void {
+export function initBootstrapComponents(root: ParentNode = document): Promise<void> {
   if (typeof window !== 'undefined') {
     window.bootstrap = BootstrapPlugins;
   }
 
   isolateBootstrapComponentsFromProse(root);
   initComponentExamples(root);
-  initComponentPlayground(root);
 
   // 1. Tooltips (including upgrading native [title] attributes across the page)
   initTooltips(root);
@@ -939,116 +791,9 @@ export function initBootstrapComponents(root: ParentNode = document): void {
     });
   });
 
-  // 4. Comboboxes: [data-bs-toggle="combobox"]
-  root.querySelectorAll<HTMLElement>('[data-bs-toggle="combobox"]').forEach((el) => {
-    try {
-      Combobox.getOrCreateInstance(el);
-    } catch {
-      // Ignore
-    }
-  });
-
-  // 5. Datepickers: [data-bs-toggle="datepicker"]
-  root.querySelectorAll<HTMLElement>('[data-bs-toggle="datepicker"]').forEach((el) => {
-    try {
-      Datepicker.getOrCreateInstance(el);
-    } catch {
-      // Ignore
-    }
-  });
-
-  // 6. Chips input: [data-bs-chips], .chip-input
-  root.querySelectorAll<HTMLElement>('[data-bs-chips], .chip-input').forEach((el) => {
-    try {
-      if (!el.hasAttribute('data-bs-chips')) {
-        el.setAttribute('data-bs-chips', '');
-      }
-      Chips.getOrCreateInstance(el);
-    } catch {
-      // Ignore
-    }
-  });
-
-  // 7. OTP inputs: [data-bs-otp], .otp
-  root.querySelectorAll<HTMLElement>('[data-bs-otp], .otp').forEach((el) => {
-    try {
-      if (!el.hasAttribute('data-bs-otp')) {
-        el.setAttribute('data-bs-otp', '');
-      }
-      OtpInput.getOrCreateInstance(el);
-    } catch {
-      // Ignore
-    }
-  });
-
-  // 8. Range sliders: .form-range
-  root.querySelectorAll<HTMLElement>('.form-range').forEach((el) => {
-    try {
-      if (!el.hasAttribute('data-bs-bubble')) {
-        el.setAttribute('data-bs-bubble', 'true');
-      }
-      Range.getOrCreateInstance(el);
-    } catch {
-      // Ignore
-    }
-  });
-
-  // 9. Password / token strength meters: [data-bs-strength], .strength
-  root.querySelectorAll<HTMLElement>('[data-bs-strength], .strength').forEach((el) => {
-    try {
-      if (!el.hasAttribute('data-bs-strength')) {
-        el.setAttribute('data-bs-strength', '');
-      }
-      if (!el.hasAttribute('data-bs-input')) {
-        const prevInput = el.previousElementSibling;
-        if (prevInput instanceof HTMLInputElement && prevInput.id) {
-          el.setAttribute('data-bs-input', `#${prevInput.id}`);
-        }
-      }
-      Strength.getOrCreateInstance(el);
-    } catch {
-      // Ignore
-    }
-  });
-
-  // 10. Overflowing horizontal navigation bars: .nav-overflow
-  root.querySelectorAll<HTMLElement>('.nav-overflow').forEach((el) => {
-    try {
-      NavOverflow.getOrCreateInstance(el);
-    } catch {
-      // Ignore
-    }
-  });
-
-  // 11. Carousels: [data-bs-ride="carousel"], .carousel
-  root.querySelectorAll<HTMLElement>('[data-bs-ride="carousel"], .carousel').forEach((el) => {
-    try {
-      Carousel.getOrCreateInstance(el);
-    } catch {
-      // Ignore
-    }
-  });
+  // 4. Widgets only author content uses: Combobox, Datepicker, Chips, OTP inputs, Range
+  //    sliders, strength meters, overflowing navs, carousels, Bootstrap tabs, and the playground.
+  return initLazyWidgets(root);
 }
 
-export {
-  Alert,
-  Button,
-  Carousel,
-  Chips,
-  Collapse,
-  Combobox,
-  Datepicker,
-  Dialog,
-  Drawer,
-  Menu,
-  NavOverflow,
-  OtpInput,
-  Popover,
-  Range,
-  ScrollSpy,
-  Strength,
-  Tab,
-  Toast,
-  Toggler,
-  Tooltip
-};
+export { Alert, Button, Collapse, Dialog, Drawer, Menu, Popover, ScrollSpy, Toast, Toggler, Tooltip };
