@@ -18,10 +18,11 @@
  * and theme menus in each header and drawer placement, a shown tooltip, a copy
  * button and its tooltip in the "Copied!" state, a re-expanded sidebar group,
  * an expanded accordion and switched content tab on `components.html`, a
- * hovered themed chip, unthemed chip, and text button there, and content pages
- * printed, with print media emulated and backgrounds dropped as browsers print
- * them, so text must read on white paper in every polarity, including the
- * default `auto` mode under a dark OS preference), asserts the
+ * hovered themed chip, unthemed chip, and text button there, an opened
+ * Combobox, whose script is a lazily loaded chunk, and content pages printed,
+ * with print media emulated and backgrounds dropped as browsers print them, so
+ * text must read on white paper in every polarity, including the default
+ * `auto` mode under a dark OS preference), asserts the
  * state was reached, scans it in `furo` light and dark and `modus` dark (AAA)
  * unless the scenario lists its own variants, and asserts the state still held
  * after the scan, so a broken selector fails the run instead of quietly
@@ -799,6 +800,37 @@ const SCENARIOS: readonly InteractionScenario[] = [
   hoverScenario('chip-hovered', '.supa-article .chip.theme-success', 'the success chip'),
   hoverScenario('unthemed-chip-hovered', '.supa-article .chip-input .chip', 'a chip-input chip'),
   hoverScenario('text-button-hovered', '.supa-article .btn-text.theme-primary', 'the text button'),
+  {
+    // Combobox is not in the main bundle: bootstrap-components.ts imports its chunk only because
+    // components.html contains a [data-bs-toggle="combobox"] toggle. The menu opening proves the
+    // chunk loaded and initialized in a real browser before data-supa-ready, with the Menu it
+    // creates on the same toggle coming from the main bundle.
+    name: 'combobox-open',
+    page: 'components.html',
+    viewport: DESKTOP,
+    setup: async (page) => {
+      await page.locator('.supa-article [data-bs-toggle="combobox"]').click();
+    },
+    assertState: async (page) => {
+      const toggle = page.locator('.supa-article [data-bs-toggle="combobox"]');
+      // The plugin joins window.bootstrap only once its chunk has loaded.
+      const initialized = await toggle.evaluate(
+        (el) => {
+          const plugins = (window as unknown as {
+            bootstrap?: Record<string, { getInstance: (element: Element) => unknown } | undefined>;
+          }).bootstrap;
+          return Boolean(plugins?.Combobox?.getInstance(el) && plugins.Menu?.getInstance(el));
+        },
+        undefined,
+        { timeout: STATE_TIMEOUT_MS }
+      );
+      if (!initialized) {
+        throw new Error('expected the lazily loaded Combobox and its Menu on the combobox toggle');
+      }
+      await expectAttribute(toggle, 'aria-expanded', 'true', 'the combobox toggle');
+      await expectVisible(page.locator('.supa-article .combobox-toggle + .menu.show'), 'the open combobox menu');
+    }
+  },
   // Printed pages at the paper's width, and once from a wide window, whose screen layout has the
   // sticky inline sidebar and TOC that print must drop.
   printScenario('index.html', PRINT_PAGE),
