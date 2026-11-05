@@ -596,8 +596,8 @@ Wrap `<div title="Question Title">` items inside `<div class="supa-accordion">` 
     <div title="How does Supa Maven Skin isolate Bootstrap components from .prose?" class="open">
       <p><code>initBootstrapComponents()</code> automatically adds <code>.not-prose</code> to top-level Bootstrap component containers and applies CSS guardrails in <code>_bootstrap-supa.scss</code> so lists, links, and headings inside components never inherit article prose styles.</p>
     </div>
-    <div title="Are all 20 Bootstrap 6 JavaScript plugins available globally?">
-      <p>Yes! All 20 Bootstrap 6 plugins ship with the skin and are exposed on <code>window.bootstrap</code>. <code>Alert</code>, <code>Button</code>, <code>Collapse</code>, <code>Dialog</code>, <code>Drawer</code>, <code>Menu</code>, <code>Popover</code>, <code>ScrollSpy</code>, <code>Toast</code>, <code>Toggler</code>, and <code>Tooltip</code> are in the main script on every page. <code>Carousel</code>, <code>Chips</code>, <code>Combobox</code>, <code>Datepicker</code>, <code>NavOverflow</code>, <code>OtpInput</code>, <code>Range</code>, <code>Strength</code>, and <code>Tab</code> load on pages whose markup uses them and join <code>window.bootstrap</code> before <code>html[data-supa-ready]</code> is set.</p>
+    <div title="Which Bootstrap 6 JavaScript plugins are on window.bootstrap?">
+      <p>All 20 Bootstrap 6 plugins ship with the skin. Eleven are on <code>window.bootstrap</code> on every page: <code>Alert</code>, <code>Button</code>, <code>Collapse</code>, <code>Dialog</code>, <code>Drawer</code>, <code>Menu</code>, <code>Popover</code>, <code>ScrollSpy</code>, <code>Toast</code>, <code>Toggler</code>, and <code>Tooltip</code>. The other nine (<code>Carousel</code>, <code>Chips</code>, <code>Combobox</code>, <code>Datepicker</code>, <code>NavOverflow</code>, <code>OtpInput</code>, <code>Range</code>, <code>Strength</code>, and <code>Tab</code>) load only on pages whose markup uses them, and join <code>window.bootstrap</code> before <code>html[data-supa-ready]</code> is set.</p>
     </div>
     <div title="Can I use Velocity macros in .md.vm pages?">
       <p>Yes. <code>site-macros.vm</code> provides <code>#bsAlert</code>, <code>#bsBadge</code>, and <code>#bsCard</code> macros for Doxia pages rendered through Velocity.</p>
@@ -610,8 +610,8 @@ Wrap `<div title="Question Title">` items inside `<div class="supa-accordion">` 
   &lt;div title="How does Supa Maven Skin isolate Bootstrap components from .prose?" class="open"&gt;
     &lt;p&gt;&lt;code&gt;initBootstrapComponents()&lt;/code&gt; automatically adds &lt;code&gt;.not-prose&lt;/code&gt; to top-level Bootstrap component containers.&lt;/p&gt;
   &lt;/div&gt;
-  &lt;div title="Are all 20 Bootstrap 6 JavaScript plugins available globally?"&gt;
-    &lt;p&gt;Yes! All 20 Bootstrap 6 plugins ship with the skin and are exposed on &lt;code&gt;window.bootstrap&lt;/code&gt;.&lt;/p&gt;
+  &lt;div title="Which Bootstrap 6 JavaScript plugins are on window.bootstrap?"&gt;
+    &lt;p&gt;All 20 Bootstrap 6 plugins ship with the skin. Eleven are on &lt;code&gt;window.bootstrap&lt;/code&gt; on every page, and the other nine join it on pages whose markup uses them.&lt;/p&gt;
   &lt;/div&gt;
 &lt;/div&gt;</code></pre></div>
   <div title="Bootstrap 6 Native &lt;details&gt; HTML" data-tab="Bootstrap 6 Native &lt;details&gt; HTML"><pre><code class="language-html">&lt;div class="accordion" id="faqAccordion"&gt;

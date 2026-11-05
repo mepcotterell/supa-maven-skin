@@ -134,6 +134,8 @@ whenSupaReady(() => {
 });
 ```
 
+The skin checks the page's markup for those widgets once, when it starts. Widget markup that your script adds later, for example in a `DOMContentLoaded` listener, does not load the widget's script: its plugin stays missing from `window.bootstrap`, and its `data-bs-*` attributes do nothing. Keep widgets in the page source where you can. If a script has to add one, also put an element the skin recognizes as that widget in the page source, such as `<span hidden data-bs-toggle="tab"></span>` for tabs, and add the widget in a `whenSupaReady` callback, when its plugin is on `window.bootstrap`.
+
 To react when a reader changes the theme or color scheme, listen for the events the skin dispatches on `document`:
 
 ```javascript
