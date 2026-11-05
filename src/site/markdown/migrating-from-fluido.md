@@ -85,7 +85,7 @@ Replace the Fluido `<skin>` element in `src/site/site.xml`:
 <skin>
   <groupId>io.github.mepcotterell</groupId>
   <artifactId>supa-maven-skin</artifactId>
-  <version>0.1.4</version>
+  <version>0.1.5</version>
 </skin>
 ```
 

@@ -101,7 +101,7 @@ export function openSearchModal(dialogEl: HTMLDialogElement): void {
 -  <version>2.0.0-M11</version>
 +  <groupId>io.github.mepcotterell</groupId>
 +  <artifactId>supa-maven-skin</artifactId>
-+  <version>0.1.4</version>
++  <version>0.1.5</version>
  </skin>
 ```
 
