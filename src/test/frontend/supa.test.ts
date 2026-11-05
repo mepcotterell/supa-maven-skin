@@ -1227,6 +1227,9 @@ describe('Supa Maven Skin Frontend Modules', () => {
       expect(slugifyHeading('Ångström'.normalize('NFC'))).toBe(nfc);
       // J + caron has no precomposed capital, but lowercasing gives the precomposed U+01F0
       expect(slugifyHeading('J\u030C')).toBe('\u01F0');
+      // Composing first turns = + combining long solidus into \u2260, a symbol, before symbols are
+      // stripped; decomposed, its mark would survive as a letter-less slug part
+      expect(slugifyHeading('a \u2260 b'.normalize('NFD'))).toBe('a-b');
 
       // Emoji carry no slug text, including their variation selectors and keycap marks
       expect(slugifyHeading('🚀✨')).toBe('section');

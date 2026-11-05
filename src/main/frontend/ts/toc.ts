@@ -108,8 +108,10 @@ export function decodeFragment(hash: string): string {
 
 /**
  * Finds the element a URL fragment names. Like the browser, it tries the fragment as written,
- * then percent-decoded, and finally in NFC, the form `slugifyHeading()` produces, so a
- * hand-typed decomposed `#u%CC%88berblick` still reaches the `überblick` heading.
+ * then percent-decoded, and finally in NFC, the form `slugifyHeading()` produces, so a page
+ * opened with a hand-typed decomposed `#u%CC%88berblick` still scrolls to the `überblick`
+ * heading. Only the load-time scroll uses it; a decomposed fragment followed on an open page
+ * is left to the browser, which does not normalize it.
  *
  * @param hash - Fragment with or without its leading `#`.
  * @returns The named element, or null.
@@ -214,7 +216,9 @@ export function prepareHeadings(
 
     // Doxia rewrites a Markdown link to #überblick as #a.C3.BCberblick, so give the heading an
     // empty anchor with that id, as Doxia does for its own anchors. It holds `.XX` escapes, so
-    // it can never take a slug from a later heading.
+    // it can never take a slug from a later heading. It can coincide with Doxia's own anchor for
+    // a later heading whose text is this slug (`## Überblick` then `## überblick`); that anchor
+    // already exists, so the alias is skipped and such links reach the later heading.
     const linkId = doxiaLinkId(id);
     if (linkId && !document.getElementById(linkId)) {
       const linkAnchor = document.createElement('a');

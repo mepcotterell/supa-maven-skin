@@ -219,7 +219,12 @@ After you upgrade Supa Maven Skin to 0.1.6, links to headings that contain accen
 - **In a `site.xml` menu item**, either form works (`guide.html#überblick` or `guide.html#%C3%BCberblick`), because the href reaches the page unchanged and browsers treat both forms the same.
 - **In email, chat, and other plain text**, paste the full URL the `#` permalink copies. It is percent-encoded (`https://example.org/guide.html#%C3%BCberblick`), so linkifiers keep it whole.
 
-Doxia's own anchor for the heading (`#a.C3.9Cberblick` for `Überblick`) did not change and still works. A reader who had already opened the search dialog in a tab may get the old IDs from search results until they open a new tab (see [Search Results Are Out of Date After a Rebuild](#search-results-are-out-of-date-after-a-rebuild)).
+Doxia's own anchor for the heading (`#a.C3.9Cberblick` for `Überblick`) did not change and still works.
+
+Two limits apply to Markdown links, because of how Doxia rewrites them:
+
+- **Headings that differ only in case or separators** (`Überblick` and `überblick` on one page) can collide: a Markdown link to the first can open the second. Rename one of them.
+- **Headings that start with a digit** (`1. Install`, ID `1-install`) cannot be reached from a Markdown link: Doxia rewrites `#1-install` to `#a1-install`, which no element has. This was already the case before 0.1.6. Link from `site.xml` instead, or start the heading with a word.
 
 ---
 
