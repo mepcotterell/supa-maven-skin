@@ -597,7 +597,7 @@ Wrap `<div title="Question Title">` items inside `<div class="supa-accordion">` 
       <p><code>initBootstrapComponents()</code> automatically adds <code>.not-prose</code> to top-level Bootstrap component containers and applies CSS guardrails in <code>_bootstrap-supa.scss</code> so lists, links, and headings inside components never inherit article prose styles.</p>
     </div>
     <div title="Are all 20 Bootstrap 6 JavaScript plugins available globally?">
-      <p>Yes! All 20 Bootstrap 6 plugins (<code>Alert</code>, <code>Button</code>, <code>Carousel</code>, <code>Chips</code>, <code>Collapse</code>, <code>Combobox</code>, <code>Datepicker</code>, <code>Dialog</code>, <code>Drawer</code>, <code>Menu</code>, <code>NavOverflow</code>, <code>OtpInput</code>, <code>Popover</code>, <code>Range</code>, <code>ScrollSpy</code>, <code>Strength</code>, <code>Tab</code>, <code>Toast</code>, <code>Toggler</code>, and <code>Tooltip</code>) are bundled and exposed on <code>window.bootstrap</code>.</p>
+      <p>Yes! All 20 Bootstrap 6 plugins ship with the skin and are exposed on <code>window.bootstrap</code>. <code>Alert</code>, <code>Button</code>, <code>Collapse</code>, <code>Dialog</code>, <code>Drawer</code>, <code>Menu</code>, <code>Popover</code>, <code>ScrollSpy</code>, <code>Toast</code>, <code>Toggler</code>, and <code>Tooltip</code> are in the main script on every page. <code>Carousel</code>, <code>Chips</code>, <code>Combobox</code>, <code>Datepicker</code>, <code>NavOverflow</code>, <code>OtpInput</code>, <code>Range</code>, <code>Strength</code>, and <code>Tab</code> load on pages whose markup uses them and join <code>window.bootstrap</code> before <code>html[data-supa-ready]</code> is set.</p>
     </div>
     <div title="Can I use Velocity macros in .md.vm pages?">
       <p>Yes. <code>site-macros.vm</code> provides <code>#bsAlert</code>, <code>#bsBadge</code>, and <code>#bsCard</code> macros for Doxia pages rendered through Velocity.</p>
@@ -611,7 +611,7 @@ Wrap `<div title="Question Title">` items inside `<div class="supa-accordion">` 
     &lt;p&gt;&lt;code&gt;initBootstrapComponents()&lt;/code&gt; automatically adds &lt;code&gt;.not-prose&lt;/code&gt; to top-level Bootstrap component containers.&lt;/p&gt;
   &lt;/div&gt;
   &lt;div title="Are all 20 Bootstrap 6 JavaScript plugins available globally?"&gt;
-    &lt;p&gt;Yes! All 20 Bootstrap 6 plugins are bundled and exposed on &lt;code&gt;window.bootstrap&lt;/code&gt;.&lt;/p&gt;
+    &lt;p&gt;Yes! All 20 Bootstrap 6 plugins ship with the skin and are exposed on &lt;code&gt;window.bootstrap&lt;/code&gt;.&lt;/p&gt;
   &lt;/div&gt;
 &lt;/div&gt;</code></pre></div>
   <div title="Bootstrap 6 Native &lt;details&gt; HTML" data-tab="Bootstrap 6 Native &lt;details&gt; HTML"><pre><code class="language-html">&lt;div class="accordion" id="faqAccordion"&gt;

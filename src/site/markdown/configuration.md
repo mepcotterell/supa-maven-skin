@@ -263,7 +263,7 @@ Integrity hashes apply only to the built-in defaults (or to an override that rep
 
 If a custom URL is an ES module under another name (for example a self-hosted `mermaid.esm.js`), the skin first runs it as a classic `<script>`, sees that no `window.mermaid` or `window.renderMathInElement` appeared, and then loads it again with `import()`. Rendering still works, but the browser logs a `SyntaxError` from the first attempt; rename the file to `.mjs` to load it as a module directly. The built-in defaults never take this fallback, so they only ever run with SRI.
 
-Once the Mermaid and KaTeX loaders have settled, whether or not they succeeded, the skin sets `data-supa-ready="true"` on `<html>`. Scripts that post-process diagrams or math can wait for it; see [Running Scripts After the Skin Initializes](customizing.html#running-scripts-after-the-skin-initializes).
+Once the Mermaid and KaTeX loaders have settled, whether or not they succeeded, the skin sets `data-supa-ready="true"` on `<html>`. It also waits for the on-demand scripts of the Bootstrap 6 widgets on the page (such as a Datepicker or Combobox) to load and initialize. Scripts that post-process diagrams or math can wait for it; see [Running Scripts After the Skin Initializes](customizing.html#running-scripts-after-the-skin-initializes).
 
 ### Self-Hosted URLs
 

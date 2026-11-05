@@ -142,6 +142,19 @@ A `:bi-...:` shortcode leaves a blank gap, or stays as literal text.
 
 **Fix:** Copy the exact icon name from the [Bootstrap Icons](https://icons.getbootstrap.com/) catalogue and write it in lowercase, for example `:bi-rocket-takeoff:`.
 
+### A Datepicker, Combobox, or Carousel Does Nothing
+
+The rest of the page works, but a widget stays plain HTML: a Datepicker is an ordinary text field, a Combobox does not open, a carousel never moves. The browser console shows `Supa Maven Skin: could not load the Datepicker script; its markup stays plain HTML.` (with the widget's name), usually next to a failed request for a file in `js/`.
+
+**Cause:** To keep every page light, the skin loads the scripts for its less common Bootstrap 6 widgets (`Carousel`, `Chips`, `Combobox`, `Datepicker`, `NavOverflow`, `OtpInput`, `Range`, `Strength`, `Tab`, and the Component Playground) only on pages that contain them, as separate files next to the main script: `js/supa-maven-skin-datepicker.min.js`, `js/supa-maven-skin-combobox.min.js`, and so on. The browser could not load that file:
+
+- The deployment copied `js/supa-maven-skin.min.js` but not the other `js/supa-maven-skin-*.min.js` files.
+- The server sends `.js` files without a JavaScript MIME type such as `text/javascript`, which browsers require for module scripts.
+- A Content Security Policy only allows specific script URLs instead of the site's own origin.
+- After a skin upgrade, a browser or CDN cache serves the old main script next to the new widget files. The files are not renamed between versions, so the two do not fit together.
+
+**Fix:** Publish the whole generated `target/site/` directory, including every file in `js/`, and serve `.js` files as `text/javascript`. If the site sends a Content Security Policy, allow the site's own scripts (`script-src 'self'`). After an upgrade, purge the CDN cache or force-reload the page.
+
 ---
 
 ## Code Blocks

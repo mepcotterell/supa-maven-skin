@@ -111,7 +111,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 ```
 
-Mermaid diagrams and KaTeX math load asynchronously afterwards, so they may not be rendered yet when `DOMContentLoaded` fires. Once every enhancement, including the Mermaid and KaTeX loaders, has settled, the skin sets `data-supa-ready="true"` on `<html>`. It does so even when a library fails to load, so "settled" does not guarantee that diagrams or math rendered. The skin dispatches no event at that point, and the attribute is usually set after `DOMContentLoaded`, so check it first and then watch for it:
+Mermaid diagrams and KaTeX math load asynchronously afterwards, so they may not be rendered yet when `DOMContentLoaded` fires. So do the Bootstrap 6 widgets that only some pages use (`Carousel`, `Chips`, `Combobox`, `Datepicker`, `NavOverflow`, `OtpInput`, `Range`, `Strength`, `Tab`, and the Component Playground): the skin loads each one's script only on pages whose markup contains it, and adds its plugin to `window.bootstrap` at that point. Once every enhancement, including the Mermaid and KaTeX loaders and those widget scripts, has settled, the skin sets `data-supa-ready="true"` on `<html>`. It does so even when a library fails to load, so "settled" does not guarantee that diagrams or math rendered. The skin dispatches no event at that point, and the attribute is usually set after `DOMContentLoaded`, so check it first and then watch for it:
 
 ```javascript
 // src/site/resources/js/custom.js
@@ -357,7 +357,7 @@ Print your page in light and dark mode to check the result, or save it as PDF.
 | Prefer | Examples |
 | :--- | :--- |
 | Theme state on `<html>` | `data-supa-palette`, `data-supa-resolved-theme` (`light` / `dark`), `data-supa-theme-mode` (`light` / `dark` / `auto`) |
-| Page state on `<html>` | `data-supa-ready` (`true` once every enhancement, including the Mermaid and KaTeX loaders, has settled) |
+| Page state on `<html>` | `data-supa-ready` (`true` once every enhancement, including the Mermaid and KaTeX loaders and the on-demand Bootstrap 6 widget scripts, has settled) |
 | Documented tokens | `--color-*`, `--supa-admonition-*`, `--supa-sidebar-width`, `--supa-toc-width`, `--supa-content-max-width`, `--font-stack` |
 | Page regions and IDs | `#supa-main-content` (main article and skip-link target), `#supaSidebarDrawer`, `#supaTocDrawer`, `.supa-sidebar-brand`, `.supa-footer`, `.supa-footer-icons`, `body.supa-sticky-content-header` |
 | Authoring classes | `.supa-tabs`, `.supa-accordion`, `ol.supa-stepper`, `.not-prose` (see [Authoring Rich Content](authoring-guide.html)) |

@@ -179,7 +179,7 @@ All [Bootstrap Icons](https://icons.getbootstrap.com/) are bundled offline in **
 <details class="mb-3">
   <summary class="fw-semibold" style="cursor: pointer;">Click to expand build pipeline details</summary>
   <p class="mt-2 mb-0">
-    <code>frontend-maven-plugin</code> runs Vite and Dart Sass during the <code>generate-resources</code> phase, outputting <code>css/supa-maven-skin.min.css</code> and <code>js/supa-maven-skin.min.js</code> into <code>target/classes/</code>.
+    <code>frontend-maven-plugin</code> runs Vite and Dart Sass during the <code>generate-resources</code> phase, outputting <code>css/supa-maven-skin.min.css</code>, <code>js/supa-maven-skin.min.js</code>, and the on-demand <code>js/supa-maven-skin-*.min.js</code> widget chunks into <code>target/classes/</code>.
   </p>
 </details>
 

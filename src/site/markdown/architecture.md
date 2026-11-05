@@ -13,7 +13,7 @@ flowchart TD
     subgraph SkinBuild["1. Skin Build (Supa Maven Skin)"]
       TS["TypeScript Modules (src/main/frontend/ts)"] --> Vite["Vite + Dart Sass Build"]
       SCSS["SCSS + Bootstrap 6 + Bootstrap Icons"] --> Vite
-      Vite --> Assets["css/supa-maven-skin.min.css & js/supa-maven-skin.min.js"]
+      Vite --> Assets["css/supa-maven-skin.min.css, js/supa-maven-skin.min.js & on-demand js/supa-maven-skin-*.min.js chunks"]
       Vite --> Licenses["META-INF/LICENSE & META-INF/THIRD-PARTY-LICENSES.txt"]
       VM["Velocity Templates (site.vm & site-macros.vm)"] --> JAR["supa-maven-skin.jar"]
       Assets --> JAR
@@ -27,18 +27,44 @@ flowchart TD
     end
 ```
 
+### On-Demand Widget Chunks
+
+`js/supa-maven-skin.min.js` is a single ES module that every page loads. It holds everything the skin's own chrome needs: the theme engine, Doxia normalization, Highlight.js, search, the TOC, and the Bootstrap 6 plugins behind the header menus, tooltips, drawers, search dialog, and ScrollSpy, plus the small data-API plugins (`Alert`, `Button`, `Collapse`, `Popover`, `Toast`, `Toggler`) that cost a few hundred bytes each. The widgets that only author content uses ship as separate chunks beside it, and `bootstrap-components.ts` imports each one with `import()` only when the page contains its markup (`LAZY_WIDGETS`):
+
+| Chunk (`js/supa-maven-skin-<name>.min.js`) | Loads when the page contains |
+| :--- | :--- |
+| `datepicker` (with its `vanilla-calendar-pro` peer dependency) | `[data-bs-toggle="datepicker"]` |
+| `combobox` | `[data-bs-toggle="combobox"]` |
+| `chips` | `[data-bs-chips]`, `.chip-input` |
+| `otp-input` | `[data-bs-otp]`, `.otp` |
+| `range` | `.form-range` |
+| `strength` | `[data-bs-strength]`, `.strength` |
+| `nav-overflow` | `.nav-overflow`, `[data-bs-toggle="nav-overflow"]` |
+| `carousel` | `[data-bs-ride="carousel"]`, `[data-bs-autoplay="true"]`, `.carousel` |
+| `tab` | `[data-bs-toggle="tab"]` |
+| `playground` (the Component Playground) | `.supa-playground`, `[data-supa-playground]` |
+
+Before the split, the single bundle was 100.5 KiB gzip of its 104 KiB budget. The Datepicker and its calendar library alone added about 18.5 KiB of that, highlight.js and its 18 languages about 29 KiB, the Component Playground 2.4 KiB, and each other widget plugin 0.7&ndash;2.7 KiB. Highlight.js stays in the entry because most documentation pages have code blocks, and loading it later would show the code unhighlighted first. Moving the widgets out brought the entry to 68.6 KiB gzip.
+
+The chunks need no configuration and no extra request on pages without those widgets:
+
+- **Resolution.** `import()` resolves against the importing module's own URL, so the chunks load from `js/` beside the entry on pages at any directory depth. Their names are unhashed, like the skin's other assets, because the JAR is versioned as a whole.
+- **One copy of shared code.** Each chunk imports what it shares with the skin (Bootstrap's `base-component.js`, the `dom/data.js` instance map that `bootstrap-components.ts` patches to allow one instance per plugin on an element, `Menu`, and the skin's own helpers) from `js/supa-maven-skin.min.js` itself, so the page keeps one instance of each module. A code-splitting group in `vite.config.ts` keeps all of it in the entry, and a guard plugin fails the build if the entry gains a static import or Rolldown splits off a shared chunk that every page would have to fetch as a second script.
+- **Failure tolerance.** A chunk that cannot load (offline, not deployed, blocked by a Content Security Policy) logs one console warning, and its markup stays plain HTML: a datepicker is an ordinary text field, a carousel shows its first slide. The rest of the skin is unaffected.
+- **Readiness.** `initSupaSkin()` sets `html[data-supa-ready]` only after every widget chunk the page needed has loaded and initialized (or failed), the same way it waits for Mermaid and KaTeX. Each lazily loaded plugin joins `window.bootstrap` when its chunk loads.
+
 ### Bundle Size Budget
 
-Every consumer site downloads `css/supa-maven-skin.min.css` and `js/supa-maven-skin.min.js` on every page, so their size is guarded like contrast is. After Vite finishes, `npm run build` runs `scripts/check-bundle-size.ts`, which prints the raw and gzip size of both bundles and fails when either gzip size exceeds its budget. Maven's `vite-build` execution runs `npm run build`, so `mvn verify` fails on a size regression too. The budgets live in the `BUDGETS` constant of that script: each is the gzip size measured with the Node version Maven pins in `pom.xml`, plus about 5% headroom, rounded up to a whole KiB. A change that legitimately grows a bundle raises the budget in the same change and states the new size and its cause in `CHANGELOG.md`.
+Every consumer site downloads `css/supa-maven-skin.min.css` and `js/supa-maven-skin.min.js` on every page, and the widget chunks on the pages that use them, so their size is guarded like contrast is. After Vite finishes, `npm run build` runs `scripts/check-bundle-size.ts`, which prints the raw and gzip size of each file and fails when the CSS bundle, the JS entry, or the widget chunks together exceed their gzip budget, or when a script in `js/` falls under no budget. The shared budget for the chunks means weight moved out of the entry into a chunk, or a new chunk, still has to fit. Maven's `vite-build` execution runs `npm run build`, so `mvn verify` fails on a size regression too. The budgets live in the `BUDGETS` constant of that script: each is the gzip size measured with the Node version Maven pins in `pom.xml`, plus about 5% headroom, rounded up to a whole KiB. A change that legitimately grows a bundle raises the budget in the same change and states the new size and its cause in `CHANGELOG.md`.
 
 ### Packaged JAR Layout & `META-INF/` License Isolation
 
-Because `doxia-site-renderer` extracts all non-`META-INF/` files from a skin JAR directly into a consumer project's `target/site/` directory, `supa-maven-skin.jar` keeps only runtime web assets (`css/supa-maven-skin.min.css`, `css/fonts/bootstrap-icons.woff2`, `css/fonts/bootstrap-icons.woff`, and `js/supa-maven-skin.min.js`) at the JAR root. All Velocity templates, Maven descriptors, and license files are packaged under `META-INF/`:
+Because `doxia-site-renderer` extracts all non-`META-INF/` files from a skin JAR directly into a consumer project's `target/site/` directory, `supa-maven-skin.jar` keeps only runtime web assets (`css/supa-maven-skin.min.css`, `css/fonts/bootstrap-icons.woff2`, `css/fonts/bootstrap-icons.woff`, `js/supa-maven-skin.min.js`, and the `js/supa-maven-skin-*.min.js` widget chunks) at the JAR root. All Velocity templates, Maven descriptors, and license files are packaged under `META-INF/`:
 
 - `META-INF/maven/site.vm`, `META-INF/maven/site-macros.vm`, `META-INF/maven/skin.xml` — Velocity layout, macros, and skin descriptor.
 - `META-INF/LICENSE` — The project's own MIT License.
-- `META-INF/THIRD-PARTY-LICENSES.txt` & `META-INF/licenses/LICENSE-*.txt` — Bundled upstream license notices for every npm package compiled into the CSS/JS bundles: `bootstrap` (MIT), `bootstrap-icons` (MIT), `highlight.js` (BSD-3-Clause), and Bootstrap 6's peer dependencies `vanilla-calendar-pro`, `@floating-ui/dom`, `@floating-ui/core`, and `@floating-ui/utils` (MIT). The list lives in `scripts/bundled-licenses.ts`, and the build fails when the bundles contain a package it does not list: JS packages are found from the bundler's module graph and Sass packages from the partials' `@use` specifiers, so a new transitive dependency cannot ship without its notice.
-- `/*! ... */` **Bundle Legal Banners** — Both `css/supa-maven-skin.min.css` and `js/supa-maven-skin.min.js` begin with a `/*! ... */` copyright and license attribution header referencing `META-INF/LICENSE` and `META-INF/THIRD-PARTY-LICENSES.txt`.
+- `META-INF/THIRD-PARTY-LICENSES.txt` & `META-INF/licenses/LICENSE-*.txt` — Bundled upstream license notices for every npm package compiled into the CSS bundle, the JS entry, or a widget chunk: `bootstrap` (MIT), `bootstrap-icons` (MIT), `highlight.js` (BSD-3-Clause), and Bootstrap 6's peer dependencies `vanilla-calendar-pro`, `@floating-ui/dom`, `@floating-ui/core`, and `@floating-ui/utils` (MIT). The list lives in `scripts/bundled-licenses.ts`, and the build fails when any emitted file contains a package it does not list: JS packages are found from the module graph of every chunk and Sass packages from the partials' `@use` specifiers, so a new transitive dependency cannot ship without its notice.
+- `/*! ... */` **Bundle Legal Banners** — `css/supa-maven-skin.min.css`, `js/supa-maven-skin.min.js`, and every widget chunk begin with a `/*! ... */` copyright and license attribution header referencing `META-INF/LICENSE`. The stylesheet and the entry name every package the skin bundles; a chunk names only the packages compiled into it (the Datepicker chunk names `bootstrap` and `vanilla-calendar-pro`), each with a pointer to `META-INF/THIRD-PARTY-LICENSES.txt`.
 
 ---
 
@@ -135,7 +161,7 @@ Accessibility is verified in two layers that catch different classes of bugs:
 | **Token contrast** | `npm run lint:scss` (`scripts/lint-scss.ts`) | `npm run lint` and `mvn verify` | Every foreground/surface pair in `SURFACE_AUDITS` (`scripts/contrast-audit.ts`) meets its AA/AAA ratio in all 12 palette &times; polarity variants, resolved from the compiled CSS before any HTML exists. |
 | **Rendered pages** | `npm run test:a11y` (`scripts/a11y-check.ts`) | CI (JDK 21 leg) and on demand | The HTML that Velocity, Doxia, the CSS bundle, and the TypeScript enhancers actually produce passes axe-core's `wcag2a`, `wcag2aa`, `wcag21a`, `wcag21aa`, and `wcag22aa` rules: landmarks, names, roles, keyboard reachability, link distinguishability, and computed contrast. On the `modus*` palettes it also passes the AAA `color-contrast-enhanced` rule (7:1). |
 
-`npm run test:a11y` serves `target/site/` from an in-process Node server and opens it in headless Chromium (Playwright). It scans every top-level page (docs and `maven-project-info-reports-plugin` reports) in `furo` light and dark at 1440&times;900, `index.html` in all 12 palette &times; polarity variants (seeded through the same `supa-theme` / `supa-palette` `localStorage` keys the `<head>` script reads), and `index.html` at a 390&times;844 phone viewport. Before scanning it waits for `html[data-supa-ready="true"]`, which `initSupaSkin()` sets once every enhancer, including the asynchronous Mermaid/KaTeX loaders, has settled. Any violation fails the run with the page, variant, rule ID, impact, target selector, and help URL.
+`npm run test:a11y` serves `target/site/` from an in-process Node server and opens it in headless Chromium (Playwright). It scans every top-level page (docs and `maven-project-info-reports-plugin` reports) in `furo` light and dark at 1440&times;900, `index.html` in all 12 palette &times; polarity variants (seeded through the same `supa-theme` / `supa-palette` `localStorage` keys the `<head>` script reads), and `index.html` at a 390&times;844 phone viewport. Before scanning it waits for `html[data-supa-ready="true"]`, which `initSupaSkin()` sets once every enhancer, including the asynchronous Mermaid/KaTeX loaders and the on-demand widget chunks, has settled. Any violation fails the run with the page, variant, rule ID, impact, target selector, and help URL.
 
 The AA tags check text contrast at 4.5:1 only, so every `modus*` job, page scans and interaction scenarios alike, also runs axe's `color-contrast-enhanced` rule (WCAG 1.4.6, 7:1 for text). It is the only AAA rule enabled. Before scanning, the run reads the palette's `--supa-wcag-level` from the page and fails if it disagrees with the AAA palettes the script lists, so a scan never measures a palette against the wrong target. The extra rule does not measurably lengthen the run (about 42 seconds for all 116 variants, hover and print scenarios included).
 
@@ -157,6 +183,7 @@ A page scanned right after load shows the skin's chrome closed, so the same run 
 | `sidebar-group-expanded` | `index.html`, 1440&times;900 | A sidebar `<details>` group collapsed and re-expanded from the keyboard |
 | `accordion-expanded`, `content-tab-switched` | `components.html`, 1440&times;900 | Second accordion item expanded; second synchronized tab selected with ArrowRight |
 | `chip-hovered`, `unthemed-chip-hovered`, `text-button-hovered` | `components.html`, 1440&times;900 | The `.theme-success` chip, a `.chip-input` chip, and the `.btn-text.theme-primary` button under the mouse, in `furo` light and dark, `modus` light and dark, and `modus-tinted` dark |
+| `combobox-open` | `components.html`, 1440&times;900 | The Combobox opened with a click, its menu shown. Its script is an [on-demand chunk](#on-demand-widget-chunks), so the scenario also proves the chunk loaded and initialized in a real browser before `data-supa-ready` |
 | `print-index`, `print-kitchen-sink`, `print-index-wide` | `index.html` and `kitchen-sink.html`, 718&times;1047 (an A4 page's printable width); `index.html`, 1440&times;900 | The page printed: print media emulated and every background dropped except on `print-color-adjust: exact` elements, as browsers print by default, so text is measured against white paper and light text from a dark polarity fails. The scenario asserts `<html>` resolves `color-scheme: light`, the page furniture is not rendered, the article spans the page, nothing is fixed or sticky, and no code block or table scrolls its content. |
 | `print-index-auto`, `print-kitchen-sink-auto` | `index.html` and `kitchen-sink.html`, 718&times;1047, in `furo` and `modus` dark | The same printed pages after the theme menu's "Auto" option, with the operating system preferring dark: `<html>` then has no `data-bs-theme`, and the dark polarity comes from Bootstrap's `prefers-color-scheme` rule on `:root`, which the print styles must override too. |
 
