@@ -515,11 +515,15 @@ async function expectPrintLayout(page: Page): Promise<void> {
         found.push(`${selector} is rendered`);
       }
     }
+    // Measured against <body>, not documentElement.clientWidth: on Linux, headless Chromium lays the
+    // page out 15px (a classic scrollbar) narrower than clientWidth reports, and every block from
+    // <html> down shares that width. Print zeroes <body>'s margin and padding, so the article must
+    // fill it.
     const article = document.querySelector('#supa-main-content');
-    const pageWidth = document.documentElement.clientWidth;
+    const page = document.body.getBoundingClientRect();
     const box = article?.getBoundingClientRect();
-    if (!article || !box || box.left > 1 || box.width < pageWidth - 1) {
-      found.push(`the article spans ${box?.left ?? '?'}-${box?.right ?? '?'} of a ${pageWidth}px page`);
+    if (!article || !box || box.left > page.left + 1 || box.width < page.width - 1) {
+      found.push(`the article spans ${box?.left ?? '?'}-${box?.right ?? '?'} of a ${page.left}-${page.right}px page`);
     }
     for (const el of Array.from(document.querySelectorAll('body *'))) {
       const { position } = getComputedStyle(el);
