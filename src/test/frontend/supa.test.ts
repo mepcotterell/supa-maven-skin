@@ -63,6 +63,7 @@ import { initComponentPlayground } from '../../main/frontend/ts/playground';
 import {
   collectLocalSearchDocuments,
   filterSearchDocuments,
+  getSearchIndexCacheKey,
   getSiteRelativePath,
   highlightQueryTerms,
   initSearch,
@@ -1596,7 +1597,16 @@ describe('Supa Maven Skin Frontend Modules', () => {
           <main id="supa-main-content"><h1>Welcome</h1><h2 id="architecture">Architecture</h2><p>Layers.</p></main>`,
         'https://example.org/docs/guides/install.html': `
           <title>Installation</title>
-          <main id="supa-main-content"><h1>Installation</h1><h2 id="requirements">Requirements</h2><p>Java.</p></main>`
+          <main id="supa-main-content"><h1>Installation</h1><h2 id="requirements">Requirements</h2><p>Java.</p></main>`,
+        'https://example.org/docs/faq.html': `
+          <title>FAQ</title>
+          <main id="supa-main-content"><h1>FAQ</h1><h2 id="top">Top Questions</h2><p>Answers.</p></main>`,
+        'https://example.org/docs/fr/index.html': `
+          <title>Bienvenue</title>
+          <main id="supa-main-content"><h1>Bienvenue</h1><h2 id="architecture">Architecture</h2><p>Couches.</p></main>`,
+        'https://example.org/docs/fr/guides/install.html': `
+          <title>Mise en route</title>
+          <main id="supa-main-content"><h1>Mise en route</h1><h2 id="prerequis">Prérequis</h2><p>Java.</p></main>`
       };
       const fetchMock = vi.fn(async (input: string) => {
         // search.ts fetches page-relative URLs, which the browser resolves against the page
@@ -1616,6 +1626,7 @@ describe('Supa Maven Skin Frontend Modules', () => {
         window.sessionStorage.clear();
         document.documentElement.removeAttribute('data-supa-relative-path');
         document.documentElement.removeAttribute('data-supa-project-version');
+        document.documentElement.removeAttribute('lang');
       });
 
       /**
@@ -1678,7 +1689,7 @@ describe('Supa Maven Skin Frontend Modules', () => {
         ]);
         expect(fetchMock).toHaveBeenCalledTimes(2);
         const cached = JSON.parse(
-          window.sessionStorage.getItem('supa-search-index-1.0.0') || '[]'
+          window.sessionStorage.getItem(getSearchIndexCacheKey()) || '[]'
         ) as Array<{ href: string }>;
         expect(cached.map((doc) => doc.href).sort()).toEqual([
           'guides/install.html',
@@ -1749,6 +1760,146 @@ describe('Supa Maven Skin Frontend Modules', () => {
         ).toEqual(['https://example.org/docs/index.html#architecture']);
         expect(fetchMock).toHaveBeenCalledWith('https://example.org/docs/index.html');
         expect(fetchMock).not.toHaveBeenCalledWith('https://maven.apache.org/index.html');
+      });
+
+      /**
+       * Reads the rendered search results as their displayed titles and href attributes.
+       *
+       * @returns `[title text, href]` for each result, in rendered order.
+       */
+      const renderedResults = (): Array<[string, string]> =>
+        Array.from(document.querySelectorAll('.supa-search-result-item')).map((link) => [
+          link.querySelector('.supa-search-result-title')?.textContent || '',
+          link.getAttribute('href') || ''
+        ]);
+
+      it('keeps the index of each locale of a multi-locale site apart', async () => {
+        // maven-site-plugin renders the default locale at the site root and every other locale
+        // under <locale>/, on the same origin and with the same project version
+        document.documentElement.setAttribute('lang', 'en');
+        openPage('https://example.org/docs/index.html', '.', 'architecture');
+        expect(await search('requirements', 'guides/install.html#requirements')).toEqual([
+          'guides/install.html#requirements'
+        ]);
+        expect(fetchMock).toHaveBeenCalledTimes(2);
+
+        document.documentElement.setAttribute('lang', 'fr');
+        openPage('https://example.org/docs/fr/index.html', '.', 'architecture');
+        expect(await search('prérequis', 'guides/install.html#prerequis')).toEqual([
+          'guides/install.html#prerequis'
+        ]);
+        expect(renderedResults()).toEqual([
+          ['Mise en route › Prérequis', 'guides/install.html#prerequis']
+        ]);
+        expect(fetchMock).toHaveBeenCalledTimes(4);
+
+        // Every page of one locale shares that locale's index, at any directory depth
+        openPage('https://example.org/docs/fr/guides/install.html', '..', 'prerequis');
+        expect(await search('couches', '../index.html#architecture')).toEqual([
+          '../index.html#architecture'
+        ]);
+        expect(renderedResults()).toEqual([
+          ['Bienvenue › Architecture', '../index.html#architecture']
+        ]);
+
+        document.documentElement.setAttribute('lang', 'en');
+        openPage('https://example.org/docs/guides/install.html', '..', 'requirements');
+        expect(await search('layers', '../index.html#architecture')).toEqual([
+          '../index.html#architecture'
+        ]);
+        expect(renderedResults()).toEqual([
+          ['Welcome › Architecture', '../index.html#architecture']
+        ]);
+        expect(fetchMock).toHaveBeenCalledTimes(4);
+      });
+
+      it('caches entry kinds rather than generic section text, and still shows and ranks that text', async () => {
+        // No <title> or <h1> here, so this page's headings fall back to the generic section
+        // name; faq.html is reached only through a #fragment link, so its page entry survives
+        // the merge with the sidebar links
+        openPage(
+          'https://example.org/docs/index.html',
+          '.',
+          'architecture',
+          '<a class="supa-nav-link" href="faq.html#top">FAQ</a>'
+        );
+        expect(await search('site page', 'faq.html')).toEqual(['faq.html']);
+        expect(renderedResults()).toEqual([['Site Page › FAQ', 'faq.html']]);
+
+        const cacheKeys = Object.keys(window.sessionStorage).filter((key) =>
+          key.startsWith('supa-search-index-')
+        );
+        expect(cacheKeys).toHaveLength(1);
+        const cached = window.sessionStorage.getItem(cacheKeys[0]) || '';
+        expect(cached).not.toContain('Site Page');
+        expect(
+          (JSON.parse(cached) as Array<{ kind: string }>).map((doc) => doc.kind).sort()
+        ).toEqual(['page', 'page', 'page', 'section', 'section', 'section']);
+
+        await search('navigation', 'index.html');
+        expect(renderedResults()).toEqual([
+          ['Navigation › Welcome', 'index.html'],
+          ['Navigation › Installation', 'guides/install.html'],
+          ['Navigation › FAQ', 'faq.html#top']
+        ]);
+        await search('current page', '#architecture');
+        expect(renderedResults()).toEqual([['Current Page › architecture', '#architecture']]);
+        await search('installation', 'guides/install.html#requirements');
+        expect(renderedResults()).toEqual([
+          ['Navigation › Installation', 'guides/install.html'],
+          ['Installation › Requirements', 'guides/install.html#requirements']
+        ]);
+        await search('faq', 'faq.html');
+        expect(renderedResults()).toEqual([
+          ['Navigation › FAQ', 'faq.html#top'],
+          ['Site Page › FAQ', 'faq.html']
+        ]);
+
+        // The cached kinds give the same text on a page that reuses the index
+        openPage('https://example.org/docs/guides/install.html', '..', 'requirements');
+        expect(await search('site page', '../faq.html')).toEqual(['../faq.html']);
+        expect(renderedResults()).toEqual([['Site Page › FAQ', '../faq.html']]);
+        expect(fetchMock).toHaveBeenCalledTimes(3);
+      });
+
+      it('keys the index by project version, page language, and site root URL', () => {
+        /**
+         * Points the document at `pageUrl` as site.vm would render it and reads the cache key.
+         *
+         * @param pageUrl - Absolute URL of the page.
+         * @param relativePath - Doxia `$relativePath` of the page.
+         * @param lang - `<html lang>` of the page.
+         * @param version - Project version of the page.
+         * @returns The page's search index cache key.
+         */
+        const keyFor = (pageUrl: string, relativePath: string, lang: string, version = '1.0.0'): string => {
+          happyDOM.setURL(pageUrl);
+          document.documentElement.setAttribute('data-supa-relative-path', relativePath);
+          document.documentElement.setAttribute('data-supa-project-version', version);
+          document.documentElement.setAttribute('lang', lang);
+          return getSearchIndexCacheKey();
+        };
+
+        const defaultLocale = keyFor('https://example.org/docs/index.html', '.', 'en');
+        expect(defaultLocale).toBe('supa-search-index-1.0.0 en https://example.org/docs/');
+        expect(keyFor('https://example.org/docs/', '.', 'en')).toBe(defaultLocale);
+        expect(keyFor('https://example.org/docs/guides/install.html?q=1#setup', '..', 'en')).toBe(
+          defaultLocale
+        );
+        expect(keyFor('https://example.org/docs/a/b/c.html', '../..', 'en')).toBe(defaultLocale);
+
+        const french = keyFor('https://example.org/docs/fr/index.html', '.', 'fr');
+        expect(french).toBe('supa-search-index-1.0.0 fr https://example.org/docs/fr/');
+        expect(keyFor('https://example.org/docs/fr/guides/install.html', '..', 'fr')).toBe(french);
+
+        // Another site root (a module site below its parent) or version keeps its own index
+        expect(keyFor('https://example.org/docs/module-a/index.html', '.', 'en')).toBe(
+          'supa-search-index-1.0.0 en https://example.org/docs/module-a/'
+        );
+        expect(keyFor('https://example.org/docs/index.html', '.', 'en', '1.1.0')).toBe(
+          'supa-search-index-1.1.0 en https://example.org/docs/'
+        );
+        expect(keyFor('https://example.org/docs/index.html', '.', 'de')).not.toBe(defaultLocale);
       });
     });
   });

@@ -6,6 +6,12 @@
 import Dialog from 'bootstrap/js/dist/dialog.js';
 import { slugifyHeading } from './toc';
 
+/**
+ * What a search entry points at: a crawled site page (`page`), a heading on a page (`section`),
+ * or a sidebar link (`nav`).
+ */
+export type SearchDocumentKind = 'page' | 'section' | 'nav';
+
 export interface SearchDocument {
   title: string;
   /**
@@ -15,13 +21,45 @@ export interface SearchDocument {
    * back into links for the page that renders the results.
    */
   href: string;
+  /**
+   * Section name taken from the site itself: a sidebar menu caption from `site.xml` or a page
+   * title. Absent when the site provides none; `resolveSearchSection()` then supplies the
+   * generic name for the entry's `kind`.
+   */
   section?: string;
-  kind?: 'page' | 'section' | 'nav';
+  kind?: SearchDocumentKind;
   content: string;
 }
 
 /** Matches an href that starts with a URL scheme such as `https:` or `mailto:`. */
 const URL_SCHEME_PATTERN = /^[a-z][a-z\d+.-]*:/i;
+
+/**
+ * Generic section names for entries whose section the site does not name. They are looked up
+ * when results are ranked and rendered instead of being stored in the entries, so the
+ * `sessionStorage` index holds only the site's own text and never goes stale when these change.
+ * A `section` entry lacks a section only on the current page, when it has neither a `<title>`
+ * nor an `<h1>`; headings on crawled pages fall back to the page's sidebar link text or href.
+ */
+const GENERIC_SECTION_NAMES: Record<SearchDocumentKind, string> = {
+  page: 'Site Page',
+  section: 'Current Page',
+  nav: 'Navigation'
+};
+
+/** Prefix of the `sessionStorage` key that caches the crawled search index. */
+const SEARCH_INDEX_KEY_PREFIX = 'supa-search-index-';
+
+/**
+ * Returns the section name that search results show and match for `doc`: the site's own name
+ * when the entry has one, otherwise the generic name for its kind.
+ *
+ * @param doc - Search entry.
+ * @returns Section name, or `''` for an entry with neither a section nor a kind.
+ */
+function resolveSearchSection(doc: SearchDocument): string {
+  return doc.section || (doc.kind ? GENERIC_SECTION_NAMES[doc.kind] : '');
+}
 
 /**
  * Escapes HTML special characters in `text` and wraps matching search query terms
@@ -72,6 +110,34 @@ function normalizeSyntheticReportHref(href: string): string {
 export function getSiteRelativePath(doc: Document = document): string {
   const raw = doc.documentElement.getAttribute('data-supa-relative-path')?.trim() || '';
   return raw.replace(/\/+$/, '') || '.';
+}
+
+/**
+ * Builds the `sessionStorage` key for the crawled search index. Cached hrefs are relative to
+ * one site root and the cached titles are in one language, so the key names both, along with
+ * the project version so that a new version starts a fresh index. maven-site-plugin renders the
+ * default locale at the site root and every other locale under `<locale>/`, on the same origin
+ * with the same version, and module sites sit below their parent's, so a key without the root
+ * would hand one site's index to another. All pages of one site resolve to the same root, at any
+ * directory depth, and share one index.
+ *
+ * @param doc - Document to read `<html lang>`, the project version, and the relative path from
+ *     (defaults to the global `document`).
+ * @returns `supa-search-index-<version> <lang> <site root URL>`. Spaces separate the parts
+ *     because neither a language tag nor a serialized URL contains one.
+ */
+export function getSearchIndexCacheKey(doc: Document = document): string {
+  const html = doc.documentElement;
+  const version = html.getAttribute('data-supa-project-version')?.trim() || '0.1.0';
+  const lang = html.getAttribute('lang')?.trim() || '';
+  let siteRoot = '';
+  try {
+    // The same root toSiteRootHref() makes the cached hrefs relative to
+    siteRoot = new URL(`${getSiteRelativePath(doc)}/`, doc.baseURI).href;
+  } catch {
+    // Unparseable page URL (for example about:blank): key by version and language only
+  }
+  return `${SEARCH_INDEX_KEY_PREFIX}${version} ${lang} ${siteRoot}`;
 }
 
 /**
@@ -223,7 +289,7 @@ export function collectLocalSearchDocuments(doc: Document = document): SearchDoc
     results.push({
       title,
       href,
-      section: groupCaption || 'Navigation',
+      section: groupCaption || undefined,
       kind: 'nav',
       content: `${title} ${groupCaption || ''}`.trim()
     });
@@ -232,7 +298,7 @@ export function collectLocalSearchDocuments(doc: Document = document): SearchDoc
   // 2. Collect headings and section snippets from the current article
   const article = doc.getElementById('supa-main-content');
   if (article) {
-    const pageTitle = extractCleanDocumentTitle(doc, 'Current Page');
+    const pageTitle = extractCleanDocumentTitle(doc, '');
     const headings = article.querySelectorAll<HTMLHeadingElement>('h1[id], h2[id], h3[id], h4[id]');
     headings.forEach((h) => {
       const clone = h.cloneNode(true) as HTMLElement;
@@ -252,7 +318,7 @@ export function collectLocalSearchDocuments(doc: Document = document): SearchDoc
       results.push({
         title: headingTitle,
         href,
-        section: pageTitle,
+        section: pageTitle || undefined,
         kind: 'section',
         content: `${headingTitle} ${nextText}`.trim()
       });
@@ -285,7 +351,8 @@ export function filterSearchDocuments(
   for (const item of docs) {
     const titleLower = item.title.toLowerCase();
     const contentLower = item.content.toLowerCase();
-    const sectionLower = (item.section || '').toLowerCase();
+    // Match the section name the result shows, generic names included
+    const sectionLower = resolveSearchSection(item).toLowerCase();
 
     let matchesAll = true;
     let score = 0;
@@ -362,7 +429,7 @@ function mergeSearchDocuments(
  * caching) and merges their content and headings into the search index.
  *
  * @param localDocs - Local search documents from the active DOM.
- * @param cacheKey - `sessionStorage` key scoped to the project version.
+ * @param cacheKey - `sessionStorage` key from `getSearchIndexCacheKey()`.
  * @param relativePath - Path from the current page back to the site root.
  * @returns Promise resolving to the merged site search index.
  */
@@ -428,7 +495,6 @@ async function fetchSiteIndex(
         remoteDocs.push({
           title: pageTitle,
           href,
-          section: 'Site Page',
           kind: 'page',
           content: `${pageTitle} ${bodySnippet}`
         });
@@ -508,9 +574,7 @@ export function initSearch(): void {
   let fullSiteIndexed = false;
   let activeIndex = -1;
 
-  const version =
-    document.documentElement.getAttribute('data-supa-project-version') || '0.1.0';
-  const cacheKey = `supa-search-index-${version}`;
+  const cacheKey = getSearchIndexCacheKey(document);
   const relativePath = getSiteRelativePath(document);
 
   /**
@@ -546,7 +610,8 @@ export function initSearch(): void {
 
       const titleDiv = document.createElement('div');
       titleDiv.className = 'supa-search-result-title';
-      const displayTitle = match.section ? `${match.section} \u203a ${match.title}` : match.title;
+      const section = resolveSearchSection(match);
+      const displayTitle = section ? `${section} \u203a ${match.title}` : match.title;
       titleDiv.innerHTML = highlightQueryTerms(displayTitle, query);
 
       const badgeSpan = document.createElement('span');

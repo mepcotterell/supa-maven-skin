@@ -29,9 +29,9 @@ python3 -m http.server 8000 --directory target/site
 
 You rebuilt the site, but the search dialog still lists old headings or misses new pages.
 
-**Cause:** The first time you open search, Supa Maven Skin fetches the other pages and caches the index in the tab's `sessionStorage` under the key `supa-search-index-<project version>`. When you rebuild with the same version (for example a `-SNAPSHOT`), the cache key stays the same, so that tab keeps using the old index.
+**Cause:** The first time you open search, Supa Maven Skin fetches the other pages and caches the index in the tab's `sessionStorage` under a key that starts with `supa-search-index-<project version>`, followed by the page language and the URL of the site root (each locale of a multi-locale site has its own). When you rebuild with the same version (for example a `-SNAPSHOT`), the cache key stays the same, so that tab keeps using the old index.
 
-**Fix:** Open the site in a new tab (each tab has its own `sessionStorage`), or remove the `supa-search-index-…` entry under *Session Storage* in your browser's developer tools.
+**Fix:** Open the site in a new tab (each tab has its own `sessionStorage`), or remove the `supa-search-index-…` entries under *Session Storage* in your browser's developer tools.
 
 ---
 
