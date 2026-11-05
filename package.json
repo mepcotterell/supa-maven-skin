@@ -17,6 +17,7 @@
     "test": "vitest run --config src/main/frontend/vite.config.ts",
     "test:watch": "vitest --config src/main/frontend/vite.config.ts",
     "test:a11y": "node --no-warnings=ExperimentalWarning --experimental-strip-types scripts/a11y-check.ts",
+    "screenshots": "node --no-warnings=ExperimentalWarning --experimental-strip-types scripts/screenshots.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
