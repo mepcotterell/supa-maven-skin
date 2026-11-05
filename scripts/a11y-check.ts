@@ -20,7 +20,8 @@
  * an expanded accordion and switched content tab on `components.html`, a
  * hovered themed chip, unthemed chip, and text button there, and content pages
  * printed, with print media emulated and backgrounds dropped as browsers print
- * them, so text must read on white paper in every polarity), asserts the
+ * them, so text must read on white paper in every polarity, including the
+ * default `auto` mode under a dark OS preference), asserts the
  * state was reached, scans it in `furo` light and dark and `modus` dark (AAA)
  * unless the scenario lists its own variants, and asserts the state still held
  * after the scan, so a broken selector fails the run instead of quietly
@@ -500,6 +501,11 @@ async function expectPrintLayout(page: Page): Promise<void> {
     if (!window.matchMedia('print').matches) {
       found.push('print media is not emulated');
     }
+    // Every token resolves at <html> and is inherited from there, so its scheme decides the polarity.
+    const scheme = getComputedStyle(document.documentElement).getPropertyValue('color-scheme');
+    if (scheme !== 'light') {
+      found.push(`<html> has color-scheme "${scheme}" instead of the light polarity`);
+    }
     for (const selector of hidden) {
       const matches = Array.from(document.querySelectorAll(selector));
       if (matches.length === 0) {
@@ -551,6 +557,42 @@ function printScenario(page: string, viewport: Viewport, suffix = ''): Interacti
       await dropPrintBackgrounds(p);
     },
     assertState: expectPrintLayout
+  };
+}
+
+/**
+ * Builds the scenario that prints a page in the default `auto` theme mode under a dark OS
+ * preference: the dark variants' context sets `colorScheme: 'dark'`.
+ *
+ * `scan()` seeds an explicit polarity, which puts `data-bs-theme` on `<html>`. In `auto` mode,
+ * the skin's default, theme.ts removes that attribute, and Bootstrap's
+ * `@media (prefers-color-scheme: dark) { :root { ... } }` rule selects the dark polarity instead,
+ * which a print rule matching only `[data-bs-theme]` never overrides.
+ *
+ * @param page - Top-level HTML file to print.
+ * @returns The scenario.
+ */
+function autoPrintScenario(page: string): InteractionScenario {
+  const printed = printScenario(page, PRINT_PAGE, '-auto');
+  const root = (p: Page): Locator => p.locator('html');
+  return {
+    ...printed,
+    variants: [
+      { palette: 'furo', polarity: 'dark' },
+      { palette: 'modus', polarity: 'dark' }
+    ],
+    setup: async (p) => {
+      // The theme menu's "Auto" option runs theme.ts's own switch. It is hidden at the paper's
+      // width, so the click is dispatched rather than performed.
+      await p.locator('[data-supa-theme-option="auto"]').first().dispatchEvent('click');
+      await printed.setup(p);
+    },
+    assertState: async (p) => {
+      await expectAttribute(root(p), 'data-supa-theme-mode', 'auto', '<html>');
+      await expectAttribute(root(p), 'data-bs-theme', null, '<html>');
+      await expectAttribute(root(p), 'data-supa-resolved-theme', 'dark', '<html>');
+      await printed.assertState(p);
+    }
   };
 }
 
@@ -761,7 +803,10 @@ const SCENARIOS: readonly InteractionScenario[] = [
   // sticky inline sidebar and TOC that print must drop.
   printScenario('index.html', PRINT_PAGE),
   printScenario('kitchen-sink.html', PRINT_PAGE),
-  printScenario('index.html', DESKTOP, '-wide')
+  printScenario('index.html', DESKTOP, '-wide'),
+  // The same pages printed in the default `auto` mode while the OS prefers dark.
+  autoPrintScenario('index.html'),
+  autoPrintScenario('kitchen-sink.html')
 ];
 
 /**

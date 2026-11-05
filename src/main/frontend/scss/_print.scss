@@ -10,8 +10,11 @@
   // Every palette token is a `light-dark()` pair (polyfilled with `--lightningcss-*` switches that
   // follow `color-scheme`), so forcing the light scheme prints the active palette's light polarity:
   // its text, link, code, admonition, alert, and table colors are the ones checked against light
-  // surfaces. `*` also beats Bootstrap's layered `.color-scheme-*` utilities, `[data-bs-theme]`
-  // the skin's own polarity rules. A dark page background is never forced onto paper.
+  // surfaces. Tokens resolve on <html>, which in `auto` mode has no `data-bs-theme`: `:root` beats
+  // Bootstrap's earlier `@media (prefers-color-scheme: dark) { :root { ... } }` there.
+  // `[data-bs-theme]` beats the skin's own polarity rules, and `*` Bootstrap's layered
+  // `.color-scheme-*` utilities. A dark page background is never forced onto paper.
+  :root,
   *,
   [data-bs-theme] {
     color-scheme: light;
