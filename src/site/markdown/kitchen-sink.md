@@ -227,3 +227,15 @@ $$
   <dt>Bootstrap 6 (6.0.0-alpha.1)</dt>
   <dd>Next-generation Bootstrap featuring native HTML5 <code>&lt;dialog&gt;</code> modals and drawers, <code>.prose</code> typography, and <code>light-dark()</code> CSS tokens.</dd>
 </dl>
+
+### Headings in Other Scripts
+
+Heading anchors keep the letters and digits of every script. The German and Japanese headings below get the anchors `#überblick` and `#概要`. Their `#` permalinks copy the percent-encoded form (`#%C3%BCberblick`), which browsers decode again.
+
+#### <span lang="de">Überblick</span>
+
+German for "overview": the `Ü` stays in the anchor.
+
+#### <span lang="ja">概要</span>
+
+Japanese for "overview": an anchor made only of non-Latin letters.

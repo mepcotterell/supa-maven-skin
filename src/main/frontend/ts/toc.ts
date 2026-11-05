@@ -6,20 +6,66 @@ import ScrollSpy from 'bootstrap/js/dist/scrollspy.js';
 import { setTooltipTitle } from './bootstrap-components';
 
 /**
- * Converts a heading text string into a URL-safe lowercase hyphenated slug.
+ * Converts a heading text string into a lowercase hyphenated slug. Doxia 2 writes no `id` on
+ * headings, so this slug is the anchor of every heading. Letters, combining marks, and digits of
+ * any script are kept (`Überblick` gives `überblick`, `概要` stays `概要`), and the result is in
+ * Unicode NFC so composed and decomposed input give the same slug. For ASCII-only text the slug
+ * is the same as in releases before 0.1.6, which kept only `[A-Za-z0-9_]`.
  *
  * @param text - Raw heading text content.
- * @returns URL-safe lowercase slug (defaults to `'section'` if empty).
+ * @returns Lowercase slug (defaults to `'section'` if no letter or digit remains).
  */
 export function slugifyHeading(text: string): string {
   return (
     text
+      .normalize('NFC')
       .toLowerCase()
       .trim()
-      .replace(/[^\w\s-]/g, '')
+      // Variation selectors (U+FE0F after the warning sign U+26A0) and enclosing marks (the
+      // keycap U+20E3) only change how a character is drawn. They are combining marks, so
+      // without this an emoji heading would leave an invisible mark behind as its slug.
+      .replace(/[\p{Variation_Selector}\p{Me}]/gu, '')
+      .replace(/[^\p{L}\p{M}\p{N}\s_-]/gu, '')
       .replace(/[\s_-]+/g, '-')
       .replace(/^-+|-+$/g, '') || 'section'
   );
+}
+
+/**
+ * Percent-decodes a URL fragment. Browsers report `location.hash` and `<a>.hash`
+ * percent-encoded (`#%C3%BCberblick` for `#überblick`), while heading ids hold the decoded text.
+ *
+ * @param hash - Fragment with or without its leading `#`.
+ * @returns The decoded fragment, or the fragment as written when it is not valid
+ *     percent-encoding (a stray `%`).
+ */
+function decodeFragment(hash: string): string {
+  const raw = hash.replace(/^#/, '');
+  try {
+    return decodeURIComponent(raw);
+  } catch {
+    return raw;
+  }
+}
+
+/**
+ * Finds the element a URL fragment names. Like the browser, it tries the fragment as written,
+ * then percent-decoded, and finally in NFC, the form `slugifyHeading()` produces, so a
+ * hand-typed decomposed `#u%CC%88berblick` still reaches the `überblick` heading.
+ *
+ * @param hash - Fragment with or without its leading `#`.
+ * @returns The named element, or null.
+ */
+function findFragmentTarget(hash: string): HTMLElement | null {
+  const decoded = decodeFragment(hash);
+  const candidates = [hash.replace(/^#/, ''), decoded, decoded.normalize('NFC')];
+  for (const id of candidates) {
+    const target = id ? document.getElementById(id) : null;
+    if (target) {
+      return target;
+    }
+  }
+  return null;
 }
 
 /**
@@ -120,6 +166,10 @@ export function prepareHeadings(
         try {
           if (typeof window !== 'undefined' && navigator.clipboard?.writeText) {
             const url = new URL(window.location.href);
+            // The URL setter percent-encodes the fragment (#%C3%BCberblick), as the browser
+            // does when copying from its own address bar. Chat, mail, and Markdown linkifiers
+            // can end a URL at its first non-ASCII character, and browsers decode the fragment
+            // again when they look for the target.
             url.hash = id;
             await navigator.clipboard.writeText(url.toString());
             anchor.classList.add('is-copied');
@@ -220,7 +270,7 @@ export function buildTableOfContents(
       return false;
     }
     const pagePart = href.slice(0, hashIdx).split('/').pop() || '';
-    const hashPart = href.slice(hashIdx + 1);
+    const hashPart = decodeFragment(href.slice(hashIdx + 1));
     if (!pagePart) {
       return true;
     }
@@ -235,8 +285,8 @@ export function buildTableOfContents(
     const href = link.getAttribute('href') || '';
     const hashIdx = href.indexOf('#');
     if (hashIdx >= 0) {
-      const rawHash = href.slice(hashIdx + 1);
-      const canonical = aliasToHeadingId.get(rawHash);
+      const hashId = decodeFragment(href.slice(hashIdx + 1));
+      const canonical = aliasToHeadingId.get(hashId);
       if (canonical) {
         sidebarTargetHeadingIds.add(canonical);
       }
@@ -282,8 +332,8 @@ export function buildTableOfContents(
       const href = link.getAttribute('href') || '';
       const hashIdx = href.indexOf('#');
       if (hashIdx >= 0) {
-        const rawHash = href.slice(hashIdx + 1);
-        const canonical = aliasToHeadingId.get(rawHash) || rawHash;
+        const hashId = decodeFragment(href.slice(hashIdx + 1));
+        const canonical = aliasToHeadingId.get(hashId) || hashId;
         link.classList.toggle('active', canonical === sidebarActiveId);
       }
     });
@@ -339,7 +389,7 @@ export function buildTableOfContents(
     document.body.addEventListener('activate.bs.scrollspy', syncActiveOnScroll);
     window.addEventListener('scroll', syncActiveOnScroll, { passive: true });
     window.addEventListener('hashchange', () => {
-      const hashId = decodeURIComponent(window.location.hash.replace(/^#/, ''));
+      const hashId = decodeFragment(window.location.hash);
       const canonical = aliasToHeadingId.get(hashId) || hashId;
       if (canonical && tocLinksById.has(canonical)) {
         setActiveHeading(canonical);
@@ -371,8 +421,7 @@ export function initTocAndScrollSpy(): void {
   // dynamically by prepareHeadings(), scroll to it before building the TOC so initial
   // active state reflects the scrolled position.
   if (typeof window !== 'undefined' && window.location.hash.length > 1) {
-    const rawHash = decodeURIComponent(window.location.hash.slice(1));
-    const targetEl = document.getElementById(rawHash);
+    const targetEl = findFragmentTarget(window.location.hash);
     if (targetEl && window.scrollY === 0) {
       targetEl.scrollIntoView();
     }

@@ -191,13 +191,27 @@ A link such as `page.html#my-section`, perhaps a sub-item in `site.xml`, opens t
 
 **Cause:** Heading IDs are assigned in the browser by Supa Maven Skin, and they may differ from the slug you guessed. The rules are:
 
-- The text is lowercased, and every character other than ASCII letters, digits, `_`, spaces, and hyphens is removed. Dots, parentheses, and backticks disappear, so `(.md.vm)` becomes `mdvm`. Accented and non-Latin letters are removed too, so a heading with no ASCII letters at all gets the ID `section`.
+- The text is lowercased, and every character other than letters, digits, `_`, spaces, and hyphens is removed. Dots, parentheses, backticks, and emoji disappear, so `(.md.vm)` becomes `mdvm`. Letters and digits of every script are kept, accents included, so `Überblick` becomes `überblick` and `概要` stays `概要`. A heading with no letters or digits at all gets the ID `section`.
 - Runs of spaces, underscores, and hyphens become a single `-`.
 - Repeated headings get `-2`, `-3`, and so on.
 
 Doxia's own anchors (such as `#My_Section`) are kept, so older links keep working.
 
 **Fix:** Do not guess the ID. Open the rendered page, hover over the heading, and copy the link from its `#` permalink, or copy the entry from the "On this page" column.
+
+### Links to Headings With Non-ASCII Letters Changed After Upgrading to 0.1.6
+
+After you upgrade Supa Maven Skin to 0.1.6, links to headings that contain accented or non-Latin letters (German, Japanese, Cyrillic, Greek, or Hindi headings, for example) open the right page but no longer jump to the heading.
+
+**Cause:** Before 0.1.6, heading IDs kept only ASCII letters and digits. Every other letter was dropped, so `Überblick` became `berblick`, and a heading with no ASCII letters at all became `section`, then `section-2`, `section-3`, and so on in page order. Since 0.1.6, IDs keep the letters, accents, and digits of every script. IDs of headings written only in ASCII did not change.
+
+| Heading | ID before 0.1.6 | ID since 0.1.6 |
+| --- | --- | --- |
+| `Überblick` | `#berblick` | `#überblick` |
+| `Начало работы` (first heading on the page with no ASCII letters) | `#section` | `#начало-работы` |
+| `概要` (second heading on the page with no ASCII letters) | `#section-2` | `#概要` |
+
+**Fix:** Update the links in your Markdown pages, in `site.xml` menu items, and anywhere else that links to these headings, for example `guide.html#berblick` becomes `guide.html#überblick`. Copy each new link from the heading's `#` permalink or from the "On this page" column. The permalink copies the percent-encoded form (`guide.html#%C3%BCberblick`), which works in plain-text places such as email and chat. You can also write the ID as it appears (`guide.html#überblick`), because browsers treat both forms the same. Doxia's own anchor for the heading (`#a.C3.9Cberblick` for `Überblick`) did not change and still works. A reader who had already opened the search dialog in a tab may get the old IDs from search results until they open a new tab (see [Search Results Are Out of Date After a Rebuild](#search-results-are-out-of-date-after-a-rebuild)).
 
 ---
 

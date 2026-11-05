@@ -1205,6 +1205,189 @@ describe('Supa Maven Skin Frontend Modules', () => {
       const missing = [...read].filter((name) => !setAtRuntime.has(name) && !emitted.has(name)).sort();
       expect(missing).toEqual([]);
     });
+
+    it('keeps Unicode letters, combining marks, and digits in heading slugs', () => {
+      expect(slugifyHeading('Überblick')).toBe('überblick');
+      expect(slugifyHeading('Größe & Maße')).toBe('größe-maße');
+      expect(slugifyHeading('概要')).toBe('概要');
+      expect(slugifyHeading('インストール手順')).toBe('インストール手順');
+      expect(slugifyHeading('Начало работы')).toBe('начало-работы');
+      expect(slugifyHeading('Εισαγωγή')).toBe('εισαγωγή');
+      // Devanagari vowel signs and the virama are combining marks (Mc, Mn)
+      expect(slugifyHeading('हिन्दी अनुवाद')).toBe('हिन्दी-अनुवाद');
+
+      // Mixed scripts and separators
+      expect(slugifyHeading('Java 21 и Kotlin 2')).toBe('java-21-и-kotlin-2');
+      expect(slugifyHeading('API リファレンス (v2)')).toBe('api-リファレンス-v2');
+      expect(slugifyHeading('Café-Menü_Übersicht')).toBe('café-menü-übersicht');
+
+      // Composed and decomposed input give one NFC slug
+      const nfc = 'ångström';
+      expect(slugifyHeading('Ångström'.normalize('NFD'))).toBe(nfc);
+      expect(slugifyHeading('Ångström'.normalize('NFC'))).toBe(nfc);
+
+      // Emoji carry no slug text, including their variation selectors and keycap marks
+      expect(slugifyHeading('🚀✨')).toBe('section');
+      expect(slugifyHeading('⚠️')).toBe('section');
+      expect(slugifyHeading('👩‍💻')).toBe('section');
+      expect(slugifyHeading('🇩🇪')).toBe('section');
+      expect(slugifyHeading('🚀 Quick Start')).toBe('quick-start');
+      expect(slugifyHeading('1️⃣ Install')).toBe('1-install');
+
+      // Nothing left falls back to 'section'
+      expect(slugifyHeading('')).toBe('section');
+      expect(slugifyHeading('   ')).toBe('section');
+      expect(slugifyHeading('— · —')).toBe('section');
+    });
+
+    it('keeps the slug of every ASCII heading unchanged from 0.1.5', () => {
+      // 0.1.5 removed [^\w\s-] without the u flag. Published links to ASCII headings must keep
+      // working, so the Unicode rules must give the same slug for any ASCII-only text.
+      const legacySlug = (text: string): string =>
+        text
+          .toLowerCase()
+          .trim()
+          .replace(/[^\w\s-]/g, '')
+          .replace(/[\s_-]+/g, '-')
+          .replace(/^-+|-+$/g, '') || 'section';
+      const ascii = [
+        '\t',
+        '\n',
+        ...Array.from({ length: 95 }, (_, i) => String.fromCharCode(32 + i))
+      ];
+      const samples = [
+        ...ascii,
+        'Getting Started with Furo!',
+        '1. Actions & Buttons',
+        'Choosing Markdown (`.md`) vs. Velocity Templates (`.md.vm`)',
+        'Extending Palettes via `<lightCssVariables>` / `<darkCssVariables>`',
+        '  __Leading -- and trailing__  '
+      ];
+      // A fixed-seed linear congruential generator keeps the random sample reproducible
+      let seed = 20261105;
+      const next = (): number => (seed = (seed * 1103515245 + 12345) % 2 ** 31);
+      for (let n = 0; n < 2000; n++) {
+        const length = next() % 32;
+        samples.push(Array.from({ length }, () => ascii[next() % ascii.length]).join(''));
+      }
+
+      expect(samples.filter((text) => slugifyHeading(text) !== legacySlug(text))).toEqual([]);
+    });
+
+    it('gives non-ASCII headings Unicode ids that TOC links and permalinks reuse, de-duplicated as before', () => {
+      document.body.innerHTML = `
+        <main id="supa-main-content">
+          <h1>Handbuch</h1>
+          <a id="a.C3.9Cberblick"></a><h2>Überblick</h2>
+          <h2>概要</h2>
+          <h3>概要</h3>
+          <h2>🚀</h2>
+          <h2>✨</h2>
+          <h2>Начало работы</h2>
+        </main>
+        <aside class="supa-toc-column"><nav id="supaTocNav"></nav></aside>
+      `;
+      const article = document.getElementById('supa-main-content')!;
+      const tocNav = document.getElementById('supaTocNav')!;
+
+      prepareHeadings(article, true, '#');
+      buildTableOfContents(article, tocNav, 4);
+
+      const headings = Array.from(article.querySelectorAll('h1, h2, h3'));
+      expect(headings.map((h) => h.id)).toEqual([
+        'handbuch',
+        'überblick',
+        '概要',
+        '概要-2',
+        'section',
+        'section-2',
+        'начало-работы'
+      ]);
+      expect(headings[1].getAttribute('data-doxia-id')).toBe('a.C3.9Cberblick');
+
+      const tocLinks = Array.from(tocNav.querySelectorAll<HTMLAnchorElement>('a.nav-link'));
+      const permalinks = Array.from(article.querySelectorAll<HTMLAnchorElement>('.supa-headerlink'));
+      expect(tocLinks.map((link) => link.getAttribute('href'))).toEqual(
+        headings.slice(1).map((h) => `#${h.id}`)
+      );
+      expect(permalinks.map((link) => link.getAttribute('href'))).toEqual(
+        headings.slice(1).map((h) => `#${h.id}`)
+      );
+      // Browsers report link.hash percent-encoded (#%C3%BCberblick), and ScrollSpy decodes it
+      // again to find each section with getElementById
+      tocLinks.forEach((link, idx) => {
+        expect(document.getElementById(decodeURIComponent(link.hash.slice(1)))).toBe(headings[idx + 1]);
+      });
+    });
+
+    it('copies a percent-encoded permalink that leads back to a non-ASCII heading', async () => {
+      const writeText = vi.fn(async (_text: string) => {});
+      Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+      try {
+        document.body.innerHTML = '<main id="supa-main-content"><h2>Überblick</h2></main>';
+        prepareHeadings(document.getElementById('supa-main-content')!, true, '#');
+        const permalink = document.querySelector<HTMLAnchorElement>('.supa-headerlink')!;
+        permalink.addEventListener('click', (event) => event.preventDefault());
+        permalink.click();
+        await vi.waitFor(() => expect(writeText).toHaveBeenCalledTimes(1));
+
+        const copied = new URL(writeText.mock.calls[0][0]);
+        expect(copied.hash).toBe('#%C3%BCberblick');
+        expect(document.getElementById(decodeURIComponent(copied.hash.slice(1)))).toBe(
+          document.querySelector('h2')
+        );
+      } finally {
+        Reflect.deleteProperty(navigator, 'clipboard');
+      }
+    });
+
+    it('follows percent-encoded, decomposed, and malformed fragments to non-ASCII headings', () => {
+      const happyDOM = (window as unknown as { happyDOM: { setURL: (url: string) => void } })
+        .happyDOM;
+      const originalUrl = window.location.href;
+      const scrolledTo: string[] = [];
+      const scrollSpy = vi
+        .spyOn(Element.prototype, 'scrollIntoView')
+        .mockImplementation(function (this: Element) {
+          scrolledTo.push(this.id);
+        });
+      /**
+       * Opens a page at `hash`, as a link from another page would, and runs the TOC enhancer.
+       *
+       * @param hash - URL fragment, including the leading `#`.
+       */
+      const load = (hash: string): void => {
+        happyDOM.setURL(`https://example.org/docs/guide.html${hash}`);
+        document.body.innerHTML = `
+          <nav class="supa-sidebar-tree">
+            <a class="supa-nav-link" href="#%C3%BCberblick">Überblick</a>
+          </nav>
+          <main id="supa-main-content"><h1>Handbuch</h1><h2>Einleitung</h2><h2>Überblick</h2></main>
+          <aside class="supa-toc-column"><nav id="supaTocNav"></nav></aside>
+        `;
+        initTocAndScrollSpy();
+      };
+
+      try {
+        // Browsers report location.hash percent-encoded; NFD input names the same NFC id
+        load('#%C3%BCberblick');
+        load('#u%CC%88berblick');
+        expect(scrolledTo).toEqual(['überblick', 'überblick']);
+
+        // A link that changes the fragment in place marks the matching TOC and sidebar entries
+        window.dispatchEvent(new HashChangeEvent('hashchange'));
+        expect(document.querySelector('#supaTocNav a.active')?.getAttribute('href')).toBe('#überblick');
+        expect(document.querySelector('.supa-sidebar-tree a')?.classList.contains('active')).toBe(true);
+
+        // A stray "%" is not a percent-encoded sequence and must not stop the TOC from building
+        expect(() => load('#100%')).not.toThrow();
+        expect(document.querySelectorAll('#supaTocNav a').length).toBe(2);
+        expect(scrolledTo).toHaveLength(2);
+      } finally {
+        scrollSpy.mockRestore();
+        happyDOM.setURL(originalUrl);
+      }
+    });
   });
 
   describe('Code Block Highlighting, Language Pill, and Copy Button', () => {
@@ -1927,6 +2110,68 @@ describe('Supa Maven Skin Frontend Modules', () => {
         );
         expect(keyFor('https://example.org/docs/index.html', '.', 'de')).not.toBe(defaultLocale);
       });
+    });
+
+    it('links results to non-ASCII headings on crawled pages by the ids those pages assign', async () => {
+      const happyDOM = (window as unknown as { happyDOM: { setURL: (url: string) => void } })
+        .happyDOM;
+      const originalUrl = window.location.href;
+      // Doxia 2 writes no heading ids, so the crawler slugs headings the way prepareHeadings does
+      const guideArticle =
+        '<h1>Handbuch</h1><h2>Überblick</h2><p>Erste Schritte.</p><h2>概要</h2><h3>概要</h3>';
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async () => ({
+          ok: true,
+          text: async () => `<title>Handbuch</title><main id="supa-main-content">${guideArticle}</main>`
+        }) as unknown as Response)
+      );
+      window.sessionStorage.clear();
+      try {
+        happyDOM.setURL('https://example.org/docs/index.html');
+        document.body.innerHTML = `
+          <nav class="supa-sidebar-tree"><a class="supa-nav-link" href="guide.html">Handbuch</a></nav>
+          <main id="supa-main-content"><h1>Start</h1></main>
+          <dialog id="supaSearchDialog">
+            <input id="supaSearchInput" />
+            <div id="supaSearchStatus"></div>
+            <div id="supaSearchResults"></div>
+          </dialog>`;
+        initSearch();
+        const resultHrefs = (): string[] =>
+          Array.from(document.querySelectorAll('.supa-search-result-item')).map(
+            (link) => link.getAttribute('href') || ''
+          );
+        const input = document.getElementById('supaSearchInput') as HTMLInputElement;
+        input.value = '概要';
+        input.dispatchEvent(new Event('input'));
+        await vi.waitFor(() => expect(resultHrefs()).toContain('guide.html#概要-2'));
+        input.value = 'überblick';
+        input.dispatchEvent(new Event('input'));
+        const fragments = [...resultHrefs()];
+        input.value = '概要';
+        input.dispatchEvent(new Event('input'));
+        fragments.push(...resultHrefs());
+        const sectionFragments = fragments
+          .filter((href) => href.includes('#'))
+          .map((href) => href.slice(href.indexOf('#') + 1));
+        expect(sectionFragments).toEqual(['überblick', '概要', '概要-2']);
+
+        // Open the crawled page: every fragment names the heading the search result is titled after
+        document.body.innerHTML = `<main id="supa-main-content">${guideArticle}</main>`;
+        prepareHeadings(document.getElementById('supa-main-content')!, false);
+        expect(sectionFragments.map((id) => document.getElementById(id)?.textContent)).toEqual([
+          'Überblick',
+          '概要',
+          '概要'
+        ]);
+        expect(document.getElementById('概要')?.tagName).toBe('H2');
+        expect(document.getElementById('概要-2')?.tagName).toBe('H3');
+      } finally {
+        happyDOM.setURL(originalUrl);
+        vi.unstubAllGlobals();
+        window.sessionStorage.clear();
+      }
     });
   });
 
