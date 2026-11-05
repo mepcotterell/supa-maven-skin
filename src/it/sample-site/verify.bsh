@@ -195,6 +195,13 @@ if ( !java.util.regex.Pattern.compile( "<a [^>]*href=\"https://maven\\.apache\\.
      || guideText.contains( "data-supa-bare-url>Maven Site Plugin documentation</a>" ) ) {
     throw new IllegalStateException( "Expected data-supa-bare-url on the bare-URL link only in guide.html" );
 }
+// Doxia passes the fragment of a relative Markdown link that is not a valid Doxia ID through
+// DoxiaUtils.encodeId, so [..](#überblick) is written as #a.C3.BCberblick. prepareHeadings() in
+// toc.ts adds an anchor with that ID before each heading whose ID has non-ASCII letters; if Doxia
+// changes this encoding, change doxiaLinkId() in toc.ts to match.
+if ( !guideText.contains( "href=\"#a.C3.BCberblick\"" ) ) {
+    throw new IllegalStateException( "Expected Doxia to write the Markdown link to #überblick in guide.html as #a.C3.BCberblick" );
+}
 
 if ( html.contains( "${currentYear}" ) || html.contains( "$currentDate" ) ) {
     throw new IllegalStateException( "Uninterpolated Velocity date variable found in footer" );

@@ -1225,6 +1225,8 @@ describe('Supa Maven Skin Frontend Modules', () => {
       const nfc = 'ångström';
       expect(slugifyHeading('Ångström'.normalize('NFD'))).toBe(nfc);
       expect(slugifyHeading('Ångström'.normalize('NFC'))).toBe(nfc);
+      // J + caron has no precomposed capital, but lowercasing gives the precomposed U+01F0
+      expect(slugifyHeading('J\u030C')).toBe('\u01F0');
 
       // Emoji carry no slug text, including their variation selectors and keycap marks
       expect(slugifyHeading('🚀✨')).toBe('section');
@@ -1233,6 +1235,8 @@ describe('Supa Maven Skin Frontend Modules', () => {
       expect(slugifyHeading('🇩🇪')).toBe('section');
       expect(slugifyHeading('🚀 Quick Start')).toBe('quick-start');
       expect(slugifyHeading('1️⃣ Install')).toBe('1-install');
+      // U+2139 INFORMATION SOURCE is an emoji with the letter category Ll
+      expect(slugifyHeading('ℹ️ Note')).toBe('note');
 
       // Nothing left falls back to 'section'
       expect(slugifyHeading('')).toBe('section');
@@ -1362,11 +1366,20 @@ describe('Supa Maven Skin Frontend Modules', () => {
           <nav class="supa-sidebar-tree">
             <a class="supa-nav-link" href="#%C3%BCberblick">Überblick</a>
           </nav>
-          <main id="supa-main-content"><h1>Handbuch</h1><h2>Einleitung</h2><h2>Überblick</h2></main>
+          <main id="supa-main-content"><h1>Handbuch</h1><h2>Überblick</h2><h2>Einleitung</h2></main>
           <aside class="supa-toc-column"><nav id="supaTocNav"></nav></aside>
         `;
         initTocAndScrollSpy();
       };
+      const activeTocHref = (): string | null | undefined =>
+        document.querySelector('#supaTocNav a.active')?.getAttribute('href');
+      const sidebarLink = (): Element | null => document.querySelector('.supa-sidebar-tree a');
+      // happy-dom reports an exception thrown by an event listener as a window "error" event
+      const listenerErrors: string[] = [];
+      const recordError = (event: ErrorEvent): void => {
+        listenerErrors.push(event.message);
+      };
+      window.addEventListener('error', recordError);
 
       try {
         // Browsers report location.hash percent-encoded; NFD input names the same NFC id
@@ -1374,18 +1387,155 @@ describe('Supa Maven Skin Frontend Modules', () => {
         load('#u%CC%88berblick');
         expect(scrolledTo).toEqual(['überblick', 'überblick']);
 
-        // A link that changes the fragment in place marks the matching TOC and sidebar entries
-        window.dispatchEvent(new HashChangeEvent('hashchange'));
-        expect(document.querySelector('#supaTocNav a.active')?.getAttribute('href')).toBe('#überblick');
-        expect(document.querySelector('.supa-sidebar-tree a')?.classList.contains('active')).toBe(true);
+        // happy-dom lays every heading out at the top, so the scroll sync marks the last one
+        expect(activeTocHref()).toBe('#einleitung');
+        expect(sidebarLink()?.classList.contains('active')).toBe(false);
 
-        // A stray "%" is not a percent-encoded sequence and must not stop the TOC from building
+        // A link that changes the fragment in place marks the matching TOC and sidebar entries
+        happyDOM.setURL('https://example.org/docs/guide.html#%C3%BCberblick');
+        window.dispatchEvent(new HashChangeEvent('hashchange'));
+        expect(activeTocHref()).toBe('#überblick');
+        expect(sidebarLink()?.classList.contains('active')).toBe(true);
+
+        // A stray "%" is not a percent-encoded sequence: it names no heading and must not throw
+        happyDOM.setURL('https://example.org/docs/guide.html#100%');
+        window.dispatchEvent(new HashChangeEvent('hashchange'));
+        expect(listenerErrors).toEqual([]);
+        expect(activeTocHref()).toBe('#überblick');
+
+        // ... nor stop the TOC from building on a page opened at that fragment
         expect(() => load('#100%')).not.toThrow();
         expect(document.querySelectorAll('#supaTocNav a').length).toBe(2);
         expect(scrolledTo).toHaveLength(2);
       } finally {
+        window.removeEventListener('error', recordError);
         scrollSpy.mockRestore();
         happyDOM.setURL(originalUrl);
+      }
+    });
+
+    it('adds the id Doxia writes into Markdown links to a non-ASCII heading as an anchor before it', () => {
+      const happyDOM = (window as unknown as { happyDOM: { setURL: (url: string) => void } })
+        .happyDOM;
+      const originalUrl = window.location.href;
+      // Doxia writes its own anchor (DoxiaUtils.encodeId of the heading text) before each heading
+      document.body.innerHTML = `
+        <main id="supa-main-content">
+          <h1>Handbuch</h1>
+          <a id="a.C3.9Cberblick"></a><h2>Überblick</h2>
+          <a id="a.E6.A6.82.E8.A6.81"></a><h2>概要</h2>
+          <h2>概要</h2>
+          <h2>Начало работы</h2>
+          <h2>Café-Menü</h2>
+          <h2>𝔘nicode</h2>
+          <h2>Getting Started</h2>
+          <h2>1. Install</h2>
+        </main>
+        <aside class="supa-toc-column"><nav id="supaTocNav"></nav></aside>
+      `;
+      const article = document.getElementById('supa-main-content')!;
+      prepareHeadings(article, true, '#');
+
+      const headings = Array.from(article.querySelectorAll('h2'));
+      expect(headings.map((h) => h.id)).toEqual([
+        'überblick',
+        '概要',
+        '概要-2',
+        'начало-работы',
+        'café-menü',
+        '𝔘nicode',
+        'getting-started',
+        '1-install'
+      ]);
+      // Doxia 2.2.0 passes the fragment of a relative Markdown link that is not a valid Doxia id
+      // through DoxiaUtils.encodeId, so [Überblick](#überblick) reaches the page as
+      // #a.C3.BCberblick. The expected ids below are that method's output for each slug.
+      // 概要 encodes to the heading's own Doxia anchor, and ASCII slugs are left alone.
+      expect(Array.from(article.querySelectorAll('a[id]')).map((a) => a.id)).toEqual([
+        'a.C3.BCberblick',
+        'a.C3.9Cberblick',
+        'a.E6.A6.82.E8.A6.81',
+        'a.E6.A6.82.E8.A6.81-2',
+        'a.D0.BD.D0.B0.D1.87.D0.B0.D0.BB.D0.BE-.D1.80.D0.B0.D0.B1.D0.BE.D1.82.D1.8B',
+        'caf.C3.A9-men.C3.BC',
+        'a.3F.3Fnicode'
+      ]);
+      // Each added anchor sits right before its heading's Doxia anchor, or the heading itself
+      const nextHeading = (id: string): string | undefined => {
+        let el = document.getElementById(id)?.nextElementSibling;
+        while (el && el.tagName === 'A') {
+          el = el.nextElementSibling;
+        }
+        return el?.id;
+      };
+      expect(nextHeading('a.C3.BCberblick')).toBe('überblick');
+      expect(nextHeading('a.E6.A6.82.E8.A6.81-2')).toBe('概要-2');
+      expect(nextHeading('a.3F.3Fnicode')).toBe('𝔘nicode');
+      expect(headings[0].getAttribute('data-doxia-id')).toBe('a.C3.9Cberblick');
+
+      // Running the enhancer again keeps one anchor per heading and the Doxia anchor on record
+      prepareHeadings(article, true, '#');
+      expect(article.querySelectorAll('a[id]').length).toBe(7);
+      expect(headings[0].getAttribute('data-doxia-id')).toBe('a.C3.9Cberblick');
+
+      // Following such a link in place marks the heading in the TOC
+      buildTableOfContents(article, document.getElementById('supaTocNav'), 4);
+      try {
+        happyDOM.setURL(`${window.location.origin}/docs/guide.html#a.C3.BCberblick`);
+        window.dispatchEvent(new HashChangeEvent('hashchange'));
+        expect(document.querySelector('#supaTocNav a.active')?.getAttribute('href')).toBe('#überblick');
+      } finally {
+        happyDOM.setURL(originalUrl);
+      }
+    });
+
+    it('declares the language of heading text on its TOC entry', () => {
+      const pageLang = document.documentElement.getAttribute('lang');
+      document.documentElement.setAttribute('lang', 'en');
+      document.body.innerHTML = `
+        <main id="supa-main-content">
+          <h2><span lang="ja">概要</span></h2>
+          <h2 lang="de">Überblick</h2>
+          <section lang="fr"><h2>Aperçu</h2></section>
+          <h2><span lang="de"><em lang="de-CH">Grüezi</em></span></h2>
+          <h2>API <span lang="ja">リファレンス</span></h2>
+          <h2><span lang="en">Overview</span></h2>
+          <h2>Details</h2>
+        </main>
+        <aside class="supa-toc-column"><nav id="supaTocNav"></nav></aside>
+      `;
+      try {
+        const article = document.getElementById('supa-main-content')!;
+        prepareHeadings(article, true, '#');
+        buildTableOfContents(article, document.getElementById('supaTocNav'), 4);
+
+        // Only an entry whose text is in another language than the TOC itself declares one;
+        // mixed-language text keeps the language the heading inherits (WCAG 2.2 SC 3.1.2)
+        const tocLinks = Array.from(document.querySelectorAll('#supaTocNav a'));
+        expect(tocLinks.map((link) => link.getAttribute('lang'))).toEqual([
+          'ja',
+          'de',
+          'fr',
+          'de-CH',
+          null,
+          null,
+          null
+        ]);
+        expect(tocLinks.map((link) => link.textContent)).toEqual([
+          '概要',
+          'Überblick',
+          'Aperçu',
+          'Grüezi',
+          'API リファレンス',
+          'Overview',
+          'Details'
+        ]);
+      } finally {
+        if (pageLang === null) {
+          document.documentElement.removeAttribute('lang');
+        } else {
+          document.documentElement.setAttribute('lang', pageLang);
+        }
       }
     });
   });
@@ -2167,6 +2317,72 @@ describe('Supa Maven Skin Frontend Modules', () => {
         ]);
         expect(document.getElementById('概要')?.tagName).toBe('H2');
         expect(document.getElementById('概要-2')?.tagName).toBe('H3');
+      } finally {
+        happyDOM.setURL(originalUrl);
+        vi.unstubAllGlobals();
+        window.sessionStorage.clear();
+      }
+    });
+
+    it('lists a sidebar link to a non-ASCII heading once, merged with the crawled section', async () => {
+      // URL parsing percent-encodes a fragment (#%C3%BCberblick), and crawled sections keep the
+      // id as the page assigns it (#überblick), so both must reach the index in one form
+      expect(toSiteRootHref('guide.html#überblick', 'https://example.org/docs/index.html', '.')).toBe(
+        'guide.html#überblick'
+      );
+      expect(
+        toSiteRootHref('guide.html#%C3%BCberblick', 'https://example.org/docs/index.html', '.')
+      ).toBe('guide.html#überblick');
+      expect(toSiteRootHref('guide.html#100%', 'https://example.org/docs/index.html', '.')).toBe(
+        'guide.html#100%'
+      );
+
+      const happyDOM = (window as unknown as { happyDOM: { setURL: (url: string) => void } })
+        .happyDOM;
+      const originalUrl = window.location.href;
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async () => ({
+          ok: true,
+          text: async () =>
+            '<title>Handbuch</title><main id="supa-main-content"><h1>Handbuch</h1>' +
+            '<h2>Überblick</h2><p>Erste Schritte.</p><h2>Overview</h2><p>First steps.</p>' +
+            '<h2>Details</h2><p>Only on the crawled page.</p></main>'
+        }) as unknown as Response)
+      );
+      window.sessionStorage.clear();
+      try {
+        happyDOM.setURL('https://example.org/docs/index.html');
+        document.body.innerHTML = `
+          <nav class="supa-sidebar-tree">
+            <a class="supa-nav-link" href="guide.html">Handbuch</a>
+            <a class="supa-nav-link" href="guide.html#überblick">Überblick</a>
+            <a class="supa-nav-link" href="guide.html#overview">Overview</a>
+          </nav>
+          <main id="supa-main-content"><h1>Start</h1></main>
+          <dialog id="supaSearchDialog">
+            <input id="supaSearchInput" />
+            <div id="supaSearchStatus"></div>
+            <div id="supaSearchResults"></div>
+          </dialog>`;
+        initSearch();
+        const resultHrefs = (): string[] =>
+          Array.from(document.querySelectorAll('.supa-search-result-item')).map(
+            (link) => link.getAttribute('href') || ''
+          );
+        const input = document.getElementById('supaSearchInput') as HTMLInputElement;
+        // Wait for the crawl, which adds the sections the sidebar does not link to
+        input.value = 'details';
+        input.dispatchEvent(new Event('input'));
+        await vi.waitFor(() => expect(resultHrefs()).toContain('guide.html#details'));
+
+        // As for the ASCII heading, the sidebar entry stands for the crawled section
+        input.value = 'overview';
+        input.dispatchEvent(new Event('input'));
+        expect(resultHrefs().filter((href) => href.includes('#'))).toEqual(['guide.html#overview']);
+        input.value = 'überblick';
+        input.dispatchEvent(new Event('input'));
+        expect(resultHrefs().filter((href) => href.includes('#'))).toEqual(['guide.html#überblick']);
       } finally {
         happyDOM.setURL(originalUrl);
         vi.unstubAllGlobals();

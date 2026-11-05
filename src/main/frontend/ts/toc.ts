@@ -23,12 +23,70 @@ export function slugifyHeading(text: string): string {
       .trim()
       // Variation selectors (U+FE0F after the warning sign U+26A0) and enclosing marks (the
       // keycap U+20E3) only change how a character is drawn. They are combining marks, so
-      // without this an emoji heading would leave an invisible mark behind as its slug.
-      .replace(/[\p{Variation_Selector}\p{Me}]/gu, '')
+      // without this an emoji heading would leave an invisible mark behind as its slug. The
+      // emoji ℹ (U+2139) is a letter (Ll), so pictographs are removed by name. No ASCII
+      // character is a pictograph, so ASCII slugs keep their pre-0.1.6 form.
+      .replace(/[\p{Variation_Selector}\p{Me}\p{Extended_Pictographic}]/gu, '')
       .replace(/[^\p{L}\p{M}\p{N}\s_-]/gu, '')
       .replace(/[\s_-]+/g, '-')
-      .replace(/^-+|-+$/g, '') || 'section'
+      .replace(/^-+|-+$/g, '')
+      // Lowercasing and the removals above can leave a decomposed sequence: J + U+030C has no
+      // precomposed form, but its lowercase j + U+030C composes to U+01F0. Normalize again.
+      .normalize('NFC') || 'section'
   );
+}
+
+/**
+ * Returns the id Doxia writes into a Markdown link to a heading id with non-ASCII characters.
+ * Doxia 2's `Xhtml5BaseParser` passes the fragment of every relative link that is not a valid
+ * Doxia id through `DoxiaUtils.encodeId`, so `[Überblick](#überblick)` reaches the page as
+ * `#a.C3.BCberblick`. This ports `encodeId`: ASCII letters, digits, `-`, `_`, and `.` stay, a
+ * space becomes `_`, every other UTF-16 code unit becomes its UTF-8 bytes as `.XX` (a lone
+ * surrogate encodes as `?`, `.3F`), and an `a` goes first when the id does not start with an
+ * ASCII letter or `_`. `src/it/sample-site/verify.bsh` checks Doxia's output for one link.
+ *
+ * @param id - Heading id.
+ * @returns The Doxia link form, or null when the id is ASCII-only and needs no alias.
+ */
+function doxiaLinkId(id: string): string | null {
+  if (!/[\u0080-\uffff]/.test(id)) {
+    return null;
+  }
+  const encoder = new TextEncoder();
+  let encoded = /^[A-Za-z_]/.test(id) ? '' : 'a';
+  for (let i = 0; i < id.length; i++) {
+    const unit = id.charAt(i);
+    if (unit === ' ') {
+      encoded += '_';
+    } else if (/[A-Za-z0-9._-]/.test(unit)) {
+      encoded += unit;
+    } else {
+      // Java encodes a lone surrogate as "?"; TextEncoder would give U+FFFD instead
+      const isSurrogate = unit.charCodeAt(0) >= 0xd800 && unit.charCodeAt(0) <= 0xdfff;
+      encoder.encode(isSurrogate ? '?' : unit).forEach((byte) => {
+        encoded += `.${byte.toString(16).toUpperCase().padStart(2, '0')}`;
+      });
+    }
+  }
+  return encoded;
+}
+
+/**
+ * Finds the language of a heading's text, so its TOC entry can declare the same language
+ * (WCAG 2.2 SC 3.1.2): the `lang` of the innermost element that holds all of the text, such as
+ * `<h2><span lang="ja">概要</span></h2>`, or else the language the heading inherits.
+ *
+ * @param heading - Heading in the article.
+ * @param textOnly - Copy of the heading without its permalink.
+ * @returns The language tag, or `''` when no language is declared.
+ */
+function headingTextLanguage(heading: HTMLElement, textOnly: HTMLElement): string {
+  const text = textOnly.textContent?.trim();
+  const wrappers = Array.from(textOnly.querySelectorAll('[lang]')).filter(
+    (el) => el.textContent?.trim() === text
+  );
+  const source = wrappers.length > 0 ? wrappers[wrappers.length - 1] : heading.closest('[lang]');
+  return source?.getAttribute('lang') ?? '';
 }
 
 /**
@@ -39,7 +97,7 @@ export function slugifyHeading(text: string): string {
  * @returns The decoded fragment, or the fragment as written when it is not valid
  *     percent-encoding (a stray `%`).
  */
-function decodeFragment(hash: string): string {
+export function decodeFragment(hash: string): string {
   const raw = hash.replace(/^#/, '');
   try {
     return decodeURIComponent(raw);
@@ -154,6 +212,16 @@ export function prepareHeadings(
     usedIds.add(id);
     heading.id = id;
 
+    // Doxia rewrites a Markdown link to #überblick as #a.C3.BCberblick, so give the heading an
+    // empty anchor with that id, as Doxia does for its own anchors. It holds `.XX` escapes, so
+    // it can never take a slug from a later heading.
+    const linkId = doxiaLinkId(id);
+    if (linkId && !document.getElementById(linkId)) {
+      const linkAnchor = document.createElement('a');
+      linkAnchor.id = linkId;
+      heading.parentNode?.insertBefore(linkAnchor, prevAnchor ?? heading);
+    }
+
     if (enablePermalinks && heading.tagName !== 'H1' && !heading.querySelector('.supa-headerlink')) {
       const anchor = document.createElement('a');
       anchor.className = 'supa-headerlink';
@@ -235,6 +303,7 @@ export function buildTableOfContents(
 
   const tocLinksById = new Map<string, HTMLAnchorElement>();
   const aliasToHeadingId = new Map<string, string>();
+  const tocLanguage = tocNav.closest('[lang]')?.getAttribute('lang') ?? '';
 
   headings.forEach((heading, idx) => {
     const level = Number.parseInt(heading.tagName.slice(1), 10);
@@ -246,6 +315,10 @@ export function buildTableOfContents(
     link.className = `nav-link supa-toc-level-${level}${idx === 0 ? ' active' : ''}`;
     link.href = `#${heading.id}`;
     link.textContent = text;
+    const language = headingTextLanguage(heading, clone);
+    if (language !== tocLanguage) {
+      link.lang = language;
+    }
     tocNav.appendChild(link);
     tocLinksById.set(heading.id, link);
     aliasToHeadingId.set(heading.id, heading.id);
@@ -253,6 +326,10 @@ export function buildTableOfContents(
     const doxiaId = heading.getAttribute('data-doxia-id');
     if (doxiaId) {
       aliasToHeadingId.set(doxiaId, heading.id);
+    }
+    const linkId = doxiaLinkId(heading.id);
+    if (linkId) {
+      aliasToHeadingId.set(linkId, heading.id);
     }
   });
 

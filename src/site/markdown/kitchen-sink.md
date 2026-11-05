@@ -230,7 +230,7 @@ $$
 
 ### Headings in Other Scripts
 
-Heading anchors keep the letters and digits of every script. The German and Japanese headings below get the anchors `#überblick` and `#概要`. Their `#` permalinks copy the percent-encoded form (`#%C3%BCberblick`), which browsers decode again.
+Heading anchors keep the letters and digits of every script. The German and Japanese headings below get the anchors `#überblick` and `#概要`, and a Markdown link names them as written: [<span lang="de">Überblick</span>](#überblick) and [<span lang="ja">概要</span>](#概要). Their `#` permalinks copy the percent-encoded form (`#%C3%BCberblick`), which browsers decode again.
 
 #### <span lang="de">Überblick</span>
 

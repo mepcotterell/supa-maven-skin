@@ -4,7 +4,7 @@
  */
 
 import Dialog from 'bootstrap/js/dist/dialog.js';
-import { slugifyHeading } from './toc';
+import { decodeFragment, slugifyHeading } from './toc';
 
 /**
  * What a search entry points at: a crawled site page (`page`), a heading on a page (`section`),
@@ -173,7 +173,10 @@ export function toSiteRootHref(href: string, pageUrl: string, relativePath: stri
   // The site root has an empty site-root-relative path. Keep it as "./": an empty href (or a
   // bare "#hash") would link to the page that renders the search results instead
   const path = target.pathname.slice(siteRoot.pathname.length) || './';
-  return `${path}${target.search}${target.hash}`;
+  // URL parsing percent-encodes the fragment (#%C3%BCberblick), while crawled sections keep the
+  // heading id as written (#überblick); one form lets the index drop the duplicate entry
+  const hash = target.hash ? `#${decodeFragment(target.hash)}` : '';
+  return `${path}${target.search}${hash}`;
 }
 
 /**
