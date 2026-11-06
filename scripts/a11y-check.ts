@@ -802,7 +802,7 @@ const PRINTED_FILLS: readonly PrintedFill[] = [
 
 /**
  * Throws unless every `PRINTED_FILLS` state computes `print-color-adjust: exact` and still has a
- * background after `dropPrintBackgrounds`.
+ * background after `dropPrintBackgrounds`, and an in-flow toast container still prints.
  *
  * @param page - Page under test, emulating print media with backgrounds dropped.
  */
@@ -810,6 +810,14 @@ async function expectPrintedFills(page: Page): Promise<void> {
   const problems = await page.evaluate((fills: readonly PrintedFill[]) => {
     const found = new Set<string>();
     const article = document.querySelector('#supa-main-content');
+    // Toasts shown in the flow of the article are content: only floating containers are hidden.
+    const inFlow = document.createElement('div');
+    inFlow.className = 'toast-container position-static';
+    article?.append(inFlow);
+    if (getComputedStyle(inFlow).display === 'none') {
+      found.add('a .toast-container.position-static in the article is not printed');
+    }
+    inFlow.remove();
     for (const { selector, paint, probe } of fills) {
       const host = document.createElement('div');
       if (probe !== undefined) {

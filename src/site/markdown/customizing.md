@@ -312,7 +312,7 @@ The announcement example reuses token pairs the skin already checks: the build v
 
 ## Adjusting the Printed Page
 
-When a reader prints a page or saves it as PDF, the skin's `@media print` styles print only the article. They leave out the sidebar, the "On this page" TOC, both drawers, the mobile header, the content header (breadcrumbs, source buttons, color-scheme and theme controls), the search box, the announcement banner, the skip link, the previous/next cards, the "Back to top" button, copy buttons, heading permalinks, tooltips, and toasts. The footer keeps only the copyright line, or your `<body><footer>`, so the printout still names who owns the text. The "Built with" credit, the "Last updated" date, and the footer icons are left out.
+When a reader prints a page or saves it as PDF, the skin's `@media print` styles print only the article. They leave out the sidebar, the "On this page" TOC, both drawers, the mobile header, the content header (breadcrumbs, source buttons, color-scheme and theme controls), the search box, the announcement banner, the skip link, the previous/next cards, the "Back to top" button, copy buttons, heading permalinks, tooltips, and floating toasts (a `.toast-container.position-static` in the article prints). The footer keeps only the copyright line, or your `<body><footer>`, so the printout still names who owns the text. The "Built with" credit, the "Last updated" date, and the footer icons are left out.
 
 Other changes on paper:
 

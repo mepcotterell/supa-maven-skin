@@ -3,7 +3,8 @@
 //
 // A printout keeps the article and the copyright line, which names the text's owner on paper. The
 // rest of the page is screen furniture: navigation, controls, floating tooltips and toasts (a
-// fixed toast would repeat on every sheet), the "Built with" credit, and footer icon links.
+// fixed toast would repeat on every sheet; a `.position-static` container, Bootstrap's in-flow
+// toasts, is content and prints), the "Built with" credit, and footer icon links.
 // Browsers leave backgrounds out of a printout by default, so surfaces print as white paper and
 // every text color must read on white.
 // ============================================================================
@@ -63,7 +64,7 @@
   .supa-code-lang,
   .supa-headerlink,
   .tooltip,
-  .toast-container {
+  .toast-container:not(.position-static) {
     display: none !important;
   }
 
