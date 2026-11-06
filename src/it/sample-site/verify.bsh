@@ -339,4 +339,55 @@ if ( !guideText.contains( "<a class=\"supa-next-page\" href=\"guides/install.htm
     throw new IllegalStateException( "guide.html must link its Next page card to guides/install.html" );
 }
 
+// <labels> overrides (site.xml): Velocity renders them HTML-escaped and fills their placeholders,
+// and keys the site leaves alone keep their English
+if ( !html.contains( "<span>Suivant</span>" ) || html.contains( "<span>Next</span>" ) ) {
+    throw new IllegalStateException( "<labels><pageNext> must replace \"Next\" on the Next page card" );
+}
+if ( !guideText.contains( "<span>Previous</span>" ) ) {
+    throw new IllegalStateException( "pagePrevious is not overridden, so the Previous page card must stay English" );
+}
+if ( !java.util.regex.Pattern.compile( "<span class=\"supa-last-updated\">Mis &agrave; jour le \\d{4}-\\d{2}-\\d{2}\\.</span>" ).matcher( html ).find() ) {
+    throw new IllegalStateException( "<labels><footerLastUpdated> must be escaped and have {date} filled with the yyyy-MM-dd date" );
+}
+// Without a project organization the {organization} placeholder and the space before it go away
+if ( !java.util.regex.Pattern.compile( "Copyright &copy; 2025&#x2013;\\d{4}\\.\\s*</div>" ).matcher( html ).find() ) {
+    throw new IllegalStateException( "Default footerCopyright must read \"Copyright © 2025–<year>.\" when the project has no organization" );
+}
+if ( !html.contains( "placeholder=\"Search documentation...\"" ) ) {
+    throw new IllegalStateException( "A misspelled <labels> key must not change the search placeholder" );
+}
+// The drawer <select> and the menus share the trigger's "Color scheme" wording
+if ( html.contains( "Accessible color scheme" ) || !drawerFooter.contains( "aria-label=\"Color scheme\">" )
+     || !html.contains( "class=\"menu supa-palette-menu\" role=\"menu\" aria-label=\"Color scheme\"" ) ) {
+    throw new IllegalStateException( "Color-scheme <select> and menus must be named by the colorScheme label (\"Color scheme\")" );
+}
+// The scripts receive only overridden labels they use, as data-supa-label-<kebab-key> on <body>.
+// An empty <backToTop> falls back to English, so it emits nothing; Velocity-only keys such as
+// pageNext are never emitted; misspelled keys are listed for one console warning.
+java.util.regex.Matcher bodyTag = java.util.regex.Pattern.compile( "<body\\b[^>]*>" ).matcher( html );
+if ( !bodyTag.find() ) {
+    throw new IllegalStateException( "Missing <body> tag" );
+}
+String bodyOpen = bodyTag.group( 0 );
+if ( !bodyOpen.contains( "data-supa-label-search-no-results=\"Aucun r&eacute;sultat pour &laquo; {query} &raquo;\"" ) ) {
+    throw new IllegalStateException( "<labels><searchNoResults> must reach the scripts escaped, with {query} left for them to fill: " + bodyOpen );
+}
+if ( bodyOpen.contains( "data-supa-label-back-to-top" ) || bodyOpen.contains( "data-supa-label-page-next" )
+     || bodyOpen.contains( "data-supa-label-toc-title" ) ) {
+    throw new IllegalStateException( "<body> must carry data-supa-label-* only for non-empty overrides the scripts use: " + bodyOpen );
+}
+if ( !bodyOpen.contains( "data-supa-unknown-labels=\"serchPlaceholder\"" ) ) {
+    throw new IllegalStateException( "Unknown <labels> keys must be listed in data-supa-unknown-labels: " + bodyOpen );
+}
+// alertDismiss is used by both sides: doxia.ts reads it from <body>, and #bsAlert in a .md.vm
+// page, which Doxia evaluates before site.vm, reads <labels> through $site itself
+if ( !bodyOpen.contains( "data-supa-label-alert-dismiss=\"Fermer\"" ) ) {
+    throw new IllegalStateException( "<labels><alertDismiss> must reach the scripts: " + bodyOpen );
+}
+String alertsText = Files.readString( new File( siteDir, "alerts.html" ).toPath(), StandardCharsets.UTF_8 );
+if ( !alertsText.contains( "data-bs-dismiss=\"alert\" aria-label=\"Fermer\"" ) ) {
+    throw new IllegalStateException( "#bsAlert in a .md.vm page must name its dismiss button with <labels><alertDismiss>" );
+}
+
 return true;

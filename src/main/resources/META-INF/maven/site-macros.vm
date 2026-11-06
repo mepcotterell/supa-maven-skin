@@ -5,6 +5,161 @@
 Apache Maven Doxia Site Renderer#if( $doxiaSiteRendererVersion ) $doxiaSiteRendererVersion#end##
 #end
 ##
+## Interface labels. Doxia Sitetools 2.0 gives a skin no message bundle of its own ($text reads
+## only the site renderer's bundle, and a bundle inside the skin jar fails the build), so a site
+## overrides the English below with <custom><supaSkin><labels><key>text</key></labels>. Keys are
+## flat camelCase names: Doxia cannot reach an element name that contains a dot. The key set and
+## the English defaults live only here (the scripts keep their own copies of the keys they use);
+## the reference table is "Labels" in src/site/markdown/configuration.md. Values are plain text,
+## always HTML-escaped, and {name} placeholders are filled in by the skin. A key marked true is
+## also read by the scripts, which receive an overridden value as data-supa-label-<kebab-key>.
+#macro( supaDefineLabel $key $english $script )
+#set( $_ = $supaLabelDefaults.put( $key, $english ) )
+#if( $script )
+#set( $_ = $supaScriptLabelKeys.add( $key ) )
+#end
+#end
+##
+#macro( supaLabelDefaults )
+#set( $supaLabelDefaults = {} )
+#set( $supaScriptLabelKeys = [] )
+#supaDefineLabel( 'skipToContent' 'Skip to content' false )
+#supaDefineLabel( 'announcementRegion' 'Announcement' false )
+#supaDefineLabel( 'brandFallback' 'Documentation' false )
+#supaDefineLabel( 'logoAlt' 'Logo' false )
+#supaDefineLabel( 'logoLightAlt' 'Light Logo' false )
+#supaDefineLabel( 'logoDarkAlt' 'Dark Logo' false )
+#supaDefineLabel( 'navSidebarToggle' 'Toggle navigation sidebar' false )
+#supaDefineLabel( 'navDrawerTitle' 'Navigation' false )
+#supaDefineLabel( 'navDrawerClose' 'Close navigation' false )
+#supaDefineLabel( 'navPrimary' 'Primary navigation' false )
+#supaDefineLabel( 'navSite' 'Site navigation' false )
+#supaDefineLabel( 'navSectionToggle' '{name} section' false )
+#supaDefineLabel( 'navAppearance' 'Appearance' false )
+#supaDefineLabel( 'breadcrumb' 'Breadcrumb' false )
+#supaDefineLabel( 'breadcrumbHome' 'Home' false )
+#supaDefineLabel( 'pageNav' 'Page navigation' false )
+#supaDefineLabel( 'pagePrevious' 'Previous' false )
+#supaDefineLabel( 'pageNext' 'Next' false )
+#supaDefineLabel( 'sourceView' 'View page source' false )
+#supaDefineLabel( 'sourceEdit' 'Edit this page' false )
+#supaDefineLabel( 'tocTitle' 'On this page' false )
+#supaDefineLabel( 'tocToggle' 'Toggle table of contents' false )
+#supaDefineLabel( 'tocDrawerClose' 'Close table of contents' false )
+#supaDefineLabel( 'permalink' 'Permalink to {heading}' true )
+#supaDefineLabel( 'search' 'Search' false )
+#supaDefineLabel( 'searchButton' 'Search documentation' false )
+#supaDefineLabel( 'searchPlaceholder' 'Search documentation...' false )
+#supaDefineLabel( 'searchClose' 'Close search' false )
+#supaDefineLabel( 'searchResults' 'Search results' false )
+#supaDefineLabel( 'searchHint' 'Type to search navigation, headings, and site pages.' true )
+#supaDefineLabel( 'searchResultCount' 'Results: {count}' true )
+#supaDefineLabel( 'searchNoResults' 'No results for “{query}”' true )
+#supaDefineLabel( 'searchKeysNavigate' '{keys} to navigate' false )
+#supaDefineLabel( 'searchKeysSelect' '{keys} to select' false )
+#supaDefineLabel( 'searchKeysClose' '{keys} to close' false )
+#supaDefineLabel( 'searchBadgePage' 'Page' true )
+#supaDefineLabel( 'searchBadgeNav' 'Nav' true )
+#supaDefineLabel( 'searchBadgeSection' 'Section' true )
+#supaDefineLabel( 'searchSectionPage' 'Site Page' true )
+#supaDefineLabel( 'searchSectionCurrent' 'Current Page' true )
+#supaDefineLabel( 'searchSectionNav' 'Navigation' true )
+#supaDefineLabel( 'themeTrigger' 'Color theme: {mode}' true )
+#supaDefineLabel( 'themeMenu' 'Color theme' false )
+#supaDefineLabel( 'themeLight' 'Light' true )
+#supaDefineLabel( 'themeDark' 'Dark' true )
+#supaDefineLabel( 'themeAuto' 'Auto' true )
+#supaDefineLabel( 'colorScheme' 'Color scheme' false )
+#supaDefineLabel( 'colorSchemeTrigger' 'Color scheme: {name}' true )
+#supaDefineLabel( 'colorSchemeStandard' 'WCAG 2.2 AA Standard' false )
+#supaDefineLabel( 'colorSchemeHighContrast' 'WCAG 2.2 AAA High Contrast' false )
+#supaDefineLabel( 'colorSchemeFuro' 'Furo' true )
+#supaDefineLabel( 'colorSchemeBootstrap' 'Bootstrap 6' true )
+#supaDefineLabel( 'colorSchemeModus' 'Modus' true )
+#supaDefineLabel( 'colorSchemeModusTinted' 'Modus Tinted' true )
+#supaDefineLabel( 'colorSchemeModusDeuteranopia' 'Modus Deuteranopia' true )
+#supaDefineLabel( 'colorSchemeModusTritanopia' 'Modus Tritanopia' true )
+#supaDefineLabel( 'footerCopyright' 'Copyright © {years} {organization}.' false )
+#supaDefineLabel( 'footerBuiltWith' 'Built with {maven} and {skin} (Bootstrap 6).' false )
+#supaDefineLabel( 'footerLastUpdated' 'Last updated on {date}.' false )
+#supaDefineLabel( 'copyCode' 'Copy code' true )
+#supaDefineLabel( 'copyCopied' 'Copied!' true )
+#supaDefineLabel( 'copyFailed' 'Copy failed' true )
+#supaDefineLabel( 'backToTop' 'Back to top' true )
+#supaDefineLabel( 'codeShow' 'Show code' true )
+#supaDefineLabel( 'codeHide' 'Hide code' true )
+#supaDefineLabel( 'alertDismiss' 'Close' true )
+#supaDefineLabel( 'tabFallback' 'Tab {n}' true )
+#supaDefineLabel( 'accordionFallback' 'Section {n}' true )
+#supaDefineLabel( 'admonition' 'Admonition' true )
+#supaDefineLabel( 'admonitionAttention' 'Attention' true )
+#supaDefineLabel( 'admonitionCaution' 'Caution' true )
+#supaDefineLabel( 'admonitionDanger' 'Danger' true )
+#supaDefineLabel( 'admonitionError' 'Error' true )
+#supaDefineLabel( 'admonitionHint' 'Hint' true )
+#supaDefineLabel( 'admonitionImportant' 'Important' true )
+#supaDefineLabel( 'admonitionNote' 'Note' true )
+#supaDefineLabel( 'admonitionSeeAlso' 'See also' true )
+#supaDefineLabel( 'admonitionTip' 'Tip' true )
+#supaDefineLabel( 'admonitionTodo' 'Todo' true )
+#supaDefineLabel( 'admonitionWarning' 'Warning' true )
+#end
+##
+## Build $supaLabels (key -> plain text) from the English defaults, then the <tocTitle> shorthand,
+## then each <labels> child, so a <labels><tocTitle> wins over <tocTitle>. An empty or blank value
+## keeps the English: an empty accessible name fails WCAG 4.1.2. Also sets $supaLabelOverrides
+## (the keys the site set, for the data-supa-label-* attributes) and $supaUnknownLabels (<labels>
+## children that name no key, such as a misspelled <serchPlaceholder>, for the console warning).
+## Reads <supaSkin>, or the legacy <furoSkin> block when <supaSkin> is absent, like site.vm. It
+## takes no arguments so the #bsAlert macro can also call it from a .md.vm page, where site.vm
+## has not run but $site is available.
+#macro( supaBuildLabels )
+#supaLabelDefaults()
+#if( $site.getCustomChild( 'supaSkin' ) )
+#set( $supaLabelCfg = 'supaSkin' )
+#else
+#set( $supaLabelCfg = 'furoSkin' )
+#end
+#set( $supaLabels = {} )
+#set( $_ = $supaLabels.putAll( $supaLabelDefaults ) )
+#set( $supaLabelOverrides = {} )
+#set( $supaUnknownLabels = [] )
+#set( $supaLabelRaw = $site.getCustomValue( "${supaLabelCfg}.tocTitle", '' ) )
+#set( $supaLabelValue = "$!supaLabelRaw" )
+#if( $supaLabelValue.trim() != '' )
+#set( $_ = $supaLabels.put( 'tocTitle', $supaLabelValue.trim() ) )
+#set( $_ = $supaLabelOverrides.put( 'tocTitle', $supaLabelValue.trim() ) )
+#end
+#set( $supaLabelNode = $site.getCustomChild( "${supaLabelCfg}.labels" ) )
+#if( $supaLabelNode )
+#foreach( $supaLabelChild in $supaLabelNode.getChildren() )
+#set( $supaLabelKey = $supaLabelChild.getName() )
+#set( $supaLabelRaw = $supaLabelChild.getValue() )
+#set( $supaLabelValue = "$!supaLabelRaw" )
+#if( !$supaLabelDefaults.containsKey( $supaLabelKey ) )
+#set( $_ = $supaUnknownLabels.add( $supaLabelKey ) )
+#elseif( $supaLabelValue.trim() != '' )
+#set( $_ = $supaLabels.put( $supaLabelKey, $supaLabelValue.trim() ) )
+#set( $_ = $supaLabelOverrides.put( $supaLabelKey, $supaLabelValue.trim() ) )
+#end
+#end
+#end
+#end
+##
+## Fill the {$placeholder} in an already HTML-escaped label $labelHtml with the HTML $valueHtml
+## into $supaFilled. An empty $valueHtml removes the placeholder and the whitespace before it, so
+## "Copyright © {years} {organization}." without an organization reads "Copyright © 2026."
+## The regex pieces are single-quoted so Velocity keeps their backslashes.
+#macro( supaFillLabel $labelHtml $placeholder $valueHtml )
+#if( "$!valueHtml" == '' )
+#set( $supaFillStart = '\s*\{' )
+#set( $supaFillEnd = '\}' )
+#set( $supaFilled = $labelHtml.replaceAll( "${supaFillStart}${placeholder}${supaFillEnd}", '' ).trim() )
+#else
+#set( $supaFilled = $labelHtml.replace( "{${placeholder}}", $valueHtml ) )
+#end
+#end
+##
 ## Doxia hands site.xml hrefs (menus, breadcrumbs, <bannerLeft>) to the template relative to the
 ## site root, and maven-site-plugin even turns same-site absolute URLs into root-relative ones when
 ## pom.xml sets <url>. The reports menu adds the synthetic root-relative /project-info.html and
@@ -91,7 +246,8 @@ Apache Maven Doxia Site Renderer#if( $doxiaSiteRendererVersion ) $doxiaSiteRende
 #end
         <details class="supa-nav-details"#if( $shouldOpen ) open="open"#end>
 #if( $currentItemHref )
-          <summary class="supa-nav-summary" aria-label="$esc.html( $item.name ) section">
+#supaFillLabel( $esc.html( $supaLabels.navSectionToggle ) 'name' $esc.html( $item.name ) )
+          <summary class="supa-nav-summary" aria-label="$supaFilled">
 #else
           <summary class="supa-nav-summary">
             <span class="supa-nav-link supa-nav-label">$esc.html( $item.name )</span>
@@ -180,14 +336,14 @@ Apache Maven Doxia Site Renderer#if( $doxiaSiteRendererVersion ) $doxiaSiteRende
 #set( $nextItem = $flatNavItems.get( $nextIndex ) )
 #end
 #if( $prevItem || $nextItem )
-    <nav class="supa-related-pages not-prose" aria-label="Page navigation">
+    <nav class="supa-related-pages not-prose" aria-label="$esc.html( $supaLabels.pageNav )">
 #if( $prevItem )
 #supaMenuItemHref( $prevItem.href )
       <a class="supa-prev-page" href="$itemHref">
         <svg class="supa-related-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"></polyline></svg>
         <div class="supa-page-info">
           <div class="supa-context">
-            <span>Previous</span>
+            <span>$esc.html( $supaLabels.pagePrevious )</span>
           </div>
           <div class="supa-title">$esc.html( $prevItem.name )</div>
         </div>
@@ -198,7 +354,7 @@ Apache Maven Doxia Site Renderer#if( $doxiaSiteRendererVersion ) $doxiaSiteRende
       <a class="supa-next-page" href="$itemHref">
         <div class="supa-page-info">
           <div class="supa-context">
-            <span>Next</span>
+            <span>$esc.html( $supaLabels.pageNext )</span>
           </div>
           <div class="supa-title">$esc.html( $nextItem.name )</div>
         </div>
@@ -212,26 +368,22 @@ Apache Maven Doxia Site Renderer#if( $doxiaSiteRendererVersion ) $doxiaSiteRende
 ## Resolve the configured <colorScheme> $palette into $paletteId and its short name $paletteName
 ## (SUPA_PALETTES shortLabel in theme.ts). An unknown ID falls back to furo, as theme.ts does. The
 ## picker and the drawer select both start on it, so before scripts run every control agrees.
+## $supaPaletteNames maps every ID, in menu order, to its plain-text short name: the scheme's
+## label followed by its WCAG level, which a site cannot change because the build audits it.
 #macro( supaResolvePalette $palette )
-#if( $palette == 'bootstrap' )
-#set( $paletteId = 'bootstrap' )
-#set( $paletteName = 'Bootstrap 6 (AA)' )
-#elseif( $palette == 'modus' )
-#set( $paletteId = 'modus' )
-#set( $paletteName = 'Modus (AAA)' )
-#elseif( $palette == 'modus-tinted' )
-#set( $paletteId = 'modus-tinted' )
-#set( $paletteName = 'Modus Tinted (AAA)' )
-#elseif( $palette == 'modus-deuteranopia' )
-#set( $paletteId = 'modus-deuteranopia' )
-#set( $paletteName = 'Modus Deuteranopia (AAA)' )
-#elseif( $palette == 'modus-tritanopia' )
-#set( $paletteId = 'modus-tritanopia' )
-#set( $paletteName = 'Modus Tritanopia (AAA)' )
+#set( $supaPaletteNames = {} )
+#set( $_ = $supaPaletteNames.put( 'furo', "$supaLabels.colorSchemeFuro (AA)" ) )
+#set( $_ = $supaPaletteNames.put( 'bootstrap', "$supaLabels.colorSchemeBootstrap (AA)" ) )
+#set( $_ = $supaPaletteNames.put( 'modus', "$supaLabels.colorSchemeModus (AAA)" ) )
+#set( $_ = $supaPaletteNames.put( 'modus-tinted', "$supaLabels.colorSchemeModusTinted (AAA)" ) )
+#set( $_ = $supaPaletteNames.put( 'modus-deuteranopia', "$supaLabels.colorSchemeModusDeuteranopia (AAA)" ) )
+#set( $_ = $supaPaletteNames.put( 'modus-tritanopia', "$supaLabels.colorSchemeModusTritanopia (AAA)" ) )
+#if( $palette && $supaPaletteNames.containsKey( $palette ) )
+#set( $paletteId = $palette )
 #else
 #set( $paletteId = 'furo' )
-#set( $paletteName = 'Furo (AA)' )
 #end
+#set( $paletteName = $supaPaletteNames.get( $paletteId ) )
 #end
 ##
 ## Render Accessible Color Scheme Menu Picker (Bootstrap 6 .menu) for the configured <colorScheme>
@@ -240,50 +392,35 @@ Apache Maven Doxia Site Renderer#if( $doxiaSiteRendererVersion ) $doxiaSiteRende
 ## before scripts run; theme.ts rewrites all three, and the checked item, on every change.
 #macro( supaPalettePicker $extraClasses $placement $palette )
 #supaResolvePalette( $palette )
+#supaFillLabel( $esc.html( $supaLabels.colorSchemeTrigger ) 'name' $esc.html( $paletteName ) )
         <div class="supa-palette-picker#if( $extraClasses && $extraClasses != '' ) $extraClasses#end">
           <button type="button"
                   class="supa-palette-btn"
                   data-bs-toggle="menu"
                   data-bs-placement="#if( $placement && $placement != '' )$placement#else bottom-end#end"
-                  data-bs-title="Color scheme: $paletteName"
+                  data-bs-title="$supaFilled"
                   data-supa-palette-trigger="true"
                   aria-expanded="false"
-                  aria-label="Color scheme: $paletteName">
-            <span class="supa-palette-btn-label" data-supa-palette-label="true">$paletteName</span>
+                  aria-label="$supaFilled">
+            <span class="supa-palette-btn-label" data-supa-palette-label="true">$esc.html( $paletteName )</span>
             <svg class="supa-palette-picker-chevron" viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="4 6 8 10 12 6"></polyline></svg>
           </button>
 ## A role="menu" may own only menu items, groups, and separators (axe aria-required-children), and
 ## Bootstrap's Menu arrow-key navigation only walks items that are direct children of .menu, so the
 ## headers cannot move into role="group" wrappers. They stay visual dividers hidden from assistive
 ## technology; every option name already states its WCAG level, such as "Modus (AAA)".
-          <div class="menu supa-palette-menu" role="menu" aria-label="Accessible color schemes">
-            <h6 class="menu-header" aria-hidden="true">WCAG 2.2 AA Standard</h6>
-            <button type="button" class="menu-item#if( $paletteId == 'furo' ) selected#end" role="menuitemradio" aria-checked="#if( $paletteId == 'furo' )true#{else}false#end" data-supa-palette-option="furo">
-              <span class="menu-item-content">Furo (AA)</span>
-              <svg class="menu-item-check" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="2.5 8.5 6.5 12.5 13.5 4.5"></polyline></svg>
-            </button>
-            <button type="button" class="menu-item#if( $paletteId == 'bootstrap' ) selected#end" role="menuitemradio" aria-checked="#if( $paletteId == 'bootstrap' )true#{else}false#end" data-supa-palette-option="bootstrap">
-              <span class="menu-item-content">Bootstrap 6 (AA)</span>
-              <svg class="menu-item-check" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="2.5 8.5 6.5 12.5 13.5 4.5"></polyline></svg>
-            </button>
+          <div class="menu supa-palette-menu" role="menu" aria-label="$esc.html( $supaLabels.colorScheme )">
+            <h6 class="menu-header" aria-hidden="true">$esc.html( $supaLabels.colorSchemeStandard )</h6>
+#foreach( $supaOptionId in $supaPaletteNames.keySet() )
+#if( $supaOptionId == 'modus' )
             <hr class="menu-divider" />
-            <h6 class="menu-header" aria-hidden="true">WCAG 2.2 AAA High Contrast</h6>
-            <button type="button" class="menu-item#if( $paletteId == 'modus' ) selected#end" role="menuitemradio" aria-checked="#if( $paletteId == 'modus' )true#{else}false#end" data-supa-palette-option="modus">
-              <span class="menu-item-content">Modus (AAA)</span>
+            <h6 class="menu-header" aria-hidden="true">$esc.html( $supaLabels.colorSchemeHighContrast )</h6>
+#end
+            <button type="button" class="menu-item#if( $paletteId == $supaOptionId ) selected#end" role="menuitemradio" aria-checked="#if( $paletteId == $supaOptionId )true#{else}false#end" data-supa-palette-option="$supaOptionId">
+              <span class="menu-item-content">$esc.html( $supaPaletteNames.get( $supaOptionId ) )</span>
               <svg class="menu-item-check" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="2.5 8.5 6.5 12.5 13.5 4.5"></polyline></svg>
             </button>
-            <button type="button" class="menu-item#if( $paletteId == 'modus-tinted' ) selected#end" role="menuitemradio" aria-checked="#if( $paletteId == 'modus-tinted' )true#{else}false#end" data-supa-palette-option="modus-tinted">
-              <span class="menu-item-content">Modus Tinted (AAA)</span>
-              <svg class="menu-item-check" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="2.5 8.5 6.5 12.5 13.5 4.5"></polyline></svg>
-            </button>
-            <button type="button" class="menu-item#if( $paletteId == 'modus-deuteranopia' ) selected#end" role="menuitemradio" aria-checked="#if( $paletteId == 'modus-deuteranopia' )true#{else}false#end" data-supa-palette-option="modus-deuteranopia">
-              <span class="menu-item-content">Modus Deuteranopia (AAA)</span>
-              <svg class="menu-item-check" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="2.5 8.5 6.5 12.5 13.5 4.5"></polyline></svg>
-            </button>
-            <button type="button" class="menu-item#if( $paletteId == 'modus-tritanopia' ) selected#end" role="menuitemradio" aria-checked="#if( $paletteId == 'modus-tritanopia' )true#{else}false#end" data-supa-palette-option="modus-tritanopia">
-              <span class="menu-item-content">Modus Tritanopia (AAA)</span>
-              <svg class="menu-item-check" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="2.5 8.5 6.5 12.5 13.5 4.5"></polyline></svg>
-            </button>
+#end
           </div>
         </div>
 #end
@@ -298,59 +435,72 @@ Apache Maven Doxia Site Renderer#if( $doxiaSiteRendererVersion ) $doxiaSiteRende
         <div class="supa-palette-picker#if( $extraClasses && $extraClasses != '' ) $extraClasses#end">
           <select class="supa-palette-select"
                   data-supa-palette-select="true"
-                  aria-label="Accessible color scheme">
-            <optgroup label="WCAG 2.2 AA Standard">
-              <option value="furo"#if( $paletteId == 'furo' ) selected#end>Furo (AA)</option>
-              <option value="bootstrap"#if( $paletteId == 'bootstrap' ) selected#end>Bootstrap 6 (AA)</option>
+                  aria-label="$esc.html( $supaLabels.colorScheme )">
+            <optgroup label="$esc.html( $supaLabels.colorSchemeStandard )">
+#foreach( $supaOptionId in $supaPaletteNames.keySet() )
+#if( $supaOptionId == 'modus' )
             </optgroup>
-            <optgroup label="WCAG 2.2 AAA High Contrast">
-              <option value="modus"#if( $paletteId == 'modus' ) selected#end>Modus (AAA)</option>
-              <option value="modus-tinted"#if( $paletteId == 'modus-tinted' ) selected#end>Modus Tinted (AAA)</option>
-              <option value="modus-deuteranopia"#if( $paletteId == 'modus-deuteranopia' ) selected#end>Modus Deuteranopia (AAA)</option>
-              <option value="modus-tritanopia"#if( $paletteId == 'modus-tritanopia' ) selected#end>Modus Tritanopia (AAA)</option>
+            <optgroup label="$esc.html( $supaLabels.colorSchemeHighContrast )">
+#end
+              <option value="$supaOptionId"#if( $paletteId == $supaOptionId ) selected#end>$esc.html( $supaPaletteNames.get( $supaOptionId ) )</option>
+#end
             </optgroup>
           </select>
           <svg class="supa-palette-picker-chevron" viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="4 6 8 10 12 6"></polyline></svg>
         </div>
 #end
 ##
-## Render Theme Mode Menu Picker (Bootstrap 6 .menu with mutually exclusive Light / Dark / Auto choices)
+## Render Theme Mode Menu Picker (Bootstrap 6 .menu with mutually exclusive Light / Dark / Auto
+## choices). The trigger's one label serves as its tooltip and accessible name; before scripts run
+## it names the configured <defaultTheme>, and theme.ts rewrites it for the mode in effect.
 #macro( supaThemeToggle $extraClasses $placement )
+#if( $defaultTheme == 'light' )
+#set( $supaThemeModeName = $supaLabels.themeLight )
+#elseif( $defaultTheme == 'dark' )
+#set( $supaThemeModeName = $supaLabels.themeDark )
+#else
+#set( $supaThemeModeName = $supaLabels.themeAuto )
+#end
+#supaFillLabel( $esc.html( $supaLabels.themeTrigger ) 'mode' $esc.html( $supaThemeModeName ) )
         <div class="supa-theme-toggle#if( $extraClasses && $extraClasses != '' ) $extraClasses#end">
           <button type="button"
                   class="supa-icon-btn supa-theme-toggle-btn"
                   data-bs-toggle="menu"
                   data-bs-placement="#if( $placement && $placement != '' )$placement#else bottom-end#end"
-                  data-bs-title="Select color theme (Light / Dark / Auto)"
+                  data-bs-title="$supaFilled"
                   data-supa-theme-trigger="true"
                   aria-expanded="false"
-                  aria-label="Select color theme (Light / Dark / Auto)">
+                  aria-label="$supaFilled">
             <i class="bi bi-sun supa-theme-icon supa-theme-icon-light" aria-hidden="true"></i>
             <i class="bi bi-moon-stars supa-theme-icon supa-theme-icon-dark" aria-hidden="true"></i>
             <i class="bi bi-circle-half supa-theme-icon supa-theme-icon-auto" aria-hidden="true"></i>
           </button>
-          <div class="menu supa-theme-menu" role="menu" aria-label="Color theme">
+          <div class="menu supa-theme-menu" role="menu" aria-label="$esc.html( $supaLabels.themeMenu )">
             <button type="button" class="menu-item" role="menuitemradio" aria-checked="false" data-supa-theme-option="light">
               <i class="bi bi-sun menu-item-icon" aria-hidden="true"></i>
-              <span class="menu-item-content">Light</span>
+              <span class="menu-item-content">$esc.html( $supaLabels.themeLight )</span>
               <i class="bi bi-check2 menu-item-check" aria-hidden="true"></i>
             </button>
             <button type="button" class="menu-item" role="menuitemradio" aria-checked="false" data-supa-theme-option="dark">
               <i class="bi bi-moon-stars menu-item-icon" aria-hidden="true"></i>
-              <span class="menu-item-content">Dark</span>
+              <span class="menu-item-content">$esc.html( $supaLabels.themeDark )</span>
               <i class="bi bi-check2 menu-item-check" aria-hidden="true"></i>
             </button>
             <button type="button" class="menu-item selected" role="menuitemradio" aria-checked="true" data-supa-theme-option="auto">
               <i class="bi bi-circle-half menu-item-icon" aria-hidden="true"></i>
-              <span class="menu-item-content">Auto</span>
+              <span class="menu-item-content">$esc.html( $supaLabels.themeAuto )</span>
               <i class="bi bi-check2 menu-item-check" aria-hidden="true"></i>
             </button>
           </div>
         </div>
 #end
 ##
-## Render Copyright statement
+## Resolve the copyright line's parts into $supaCopyrightYears (the inception year, an en dash, and
+## the build year) and $supaCopyrightOrg (the organization, linked when it has a URL), both HTML,
+## for the {years} and {organization} placeholders of the footerCopyright label
 #macro( supaCopyright )
+#set( $supaCopyrightYears = '' )
+#set( $supaCopyrightOrg = '' )
 #if( $project )
 #set( $currentYear = "" )
 #if( $date && $date.year )
@@ -360,17 +510,18 @@ Apache Maven Doxia Site Renderer#if( $doxiaSiteRendererVersion ) $doxiaSiteRende
 #set( $currentYear = "${currentYearInt}" )
 #end
 #if( ${project.inceptionYear} && $currentYear != "" && ( ${project.inceptionYear} != $currentYear ) )
-${project.inceptionYear}&#x2013;${currentYear}##
+#set( $supaCopyrightYears = "${project.inceptionYear}&#x2013;${currentYear}" )
 #elseif( ${project.inceptionYear} )
-${project.inceptionYear}##
+#set( $supaCopyrightYears = "${project.inceptionYear}" )
 #elseif( $currentYear != "" )
-${currentYear}##
+#set( $supaCopyrightYears = $currentYear )
 #end
 #if( ${project.organization} )
 #if( ${project.organization.name} && ${project.organization.url} )
- <a href="$project.organization.url">$esc.html( ${project.organization.name} )</a>##
+#set( $supaQuote = '"' )
+#set( $supaCopyrightOrg = "<a href=${supaQuote}${project.organization.url}${supaQuote}>$esc.html( ${project.organization.name} )</a>" )
 #elseif( ${project.organization.name} )
- $esc.html( ${project.organization.name} )##
+#set( $supaCopyrightOrg = $esc.html( ${project.organization.name} ) )
 #end
 #end
 #end
@@ -390,7 +541,11 @@ ${currentYear}##
     <div>$body</div>
   </div>
 #if( $dismissible )
-  <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
+## A .md.vm page is evaluated before site.vm runs, so the labels may not be built yet
+#if( !$supaLabels )
+#supaBuildLabels()
+#end
+  <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="$esc.html( $supaLabels.alertDismiss )"></button>
 #end
 </div>
 #end

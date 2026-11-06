@@ -20,6 +20,14 @@
       <sourceDirectory>src/site</sourceDirectory>
       <stickyContentHeader>true</stickyContentHeader>
       <tocTitle>Sur cette page</tocTitle>
+      <labels>
+        <pageNext>Suivant</pageNext>
+        <footerLastUpdated>Mis à jour le {date}.</footerLastUpdated>
+        <searchNoResults>Aucun résultat pour « {query} »</searchNoResults>
+        <alertDismiss>Fermer</alertDismiss>
+        <backToTop></backToTop>
+        <serchPlaceholder>Rechercher</serchPlaceholder>
+      </labels>
       <lightLogo>images/logo.svg</lightLogo>
       <navIcons>
         <icon>

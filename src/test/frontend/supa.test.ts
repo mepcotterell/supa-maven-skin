@@ -259,7 +259,7 @@ describe('Supa Maven Skin Frontend Modules', () => {
         </div>
         <div class="supa-sidebar-footer">
           <div class="supa-palette-picker">
-            <select class="supa-palette-select" data-supa-palette-select="true" aria-label="Accessible color scheme">
+            <select class="supa-palette-select" data-supa-palette-select="true" aria-label="Color scheme">
               <optgroup label="WCAG 2.2 AA Standard">
                 <option value="furo" selected>Furo (AA)</option>
                 <option value="bootstrap">Bootstrap 6 (AA)</option>

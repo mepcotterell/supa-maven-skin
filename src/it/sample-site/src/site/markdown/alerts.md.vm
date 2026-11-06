@@ -1,0 +1,6 @@
+# Alerts
+
+A Velocity page outside the menu. Doxia evaluates it before the skin's site.vm, so the alert
+macro below builds the labels itself to name its dismiss button.
+
+#bsAlert( "info" "Heads up" "This alert can be dismissed." true )

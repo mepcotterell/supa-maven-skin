@@ -7,6 +7,9 @@
 #else
 #set( $skinCfg = 'furoSkin' )
 #end
+## Interface labels: $supaLabels (English defaults merged with <tocTitle> and <labels>), plus
+## $supaLabelOverrides, $supaScriptLabelKeys, and $supaUnknownLabels for the body attributes
+#supaBuildLabels()
 #set( $defaultTheme = $site.getCustomValue( "${skinCfg}.defaultTheme", 'auto' ) )
 #set( $colorScheme = $site.getCustomValue( "${skinCfg}.colorScheme", 'furo' ) )
 #set( $colorSchemeSelector = $convert.toBoolean( $site.getCustomValue( "${skinCfg}.colorSchemeSelector", 'true' ) ) )
@@ -30,7 +33,7 @@
 #set( $showBreadcrumb = $convert.toBoolean( $site.getCustomValue( "${skinCfg}.breadcrumb", 'true' ) ) )
 #set( $stickyContentHeader = $convert.toBoolean( $site.getCustomValue( "${skinCfg}.stickyContentHeader", 'false' ) ) )
 #set( $tocSidebar = $convert.toBoolean( $site.getCustomValue( "${skinCfg}.tocSidebar", 'true' ) ) )
-#set( $tocTitle = $site.getCustomValue( "${skinCfg}.tocTitle", 'On this page' ) )
+## <tocTitle> is a shorthand for <labels><tocTitle>, merged by #supaBuildLabels
 #set( $tocMaxDepth = $convert.toNumber( $site.getCustomValue( "${skinCfg}.tocMaxDepth", '4' ) ) )
 #set( $prevNextBtns = $convert.toBoolean( $site.getCustomValue( "${skinCfg}.prevNextButtons", 'true' ) ) )
 #set( $sidebarCollapseDepth = $convert.toNumber( $site.getCustomValue( "${skinCfg}.sidebarCollapseDepth", '1' ) ) )
@@ -68,9 +71,17 @@
  | Rendered using Supa Maven Skin @project.version@ (Bootstrap 6.0.0-alpha.1)
 -->
 ## maven-site-plugin renders the default locale as Locale.ROOT, whose language is "" (an
-## empty lang fails WCAG 3.1.1). Its bundled skin messages are English, so fall back to "en".
+## empty lang fails WCAG 3.1.1). A locale Maven renders (<locales>default,fr</locales> renders
+## French under /fr/) names its own language. A site rendered only in the ROOT locale states its
+## language with <language>, a BCP 47 tag; the Java/Maven form pt_BR is accepted as pt-BR.
+## Without either, the skin's labels are English, so fall back to "en".
+#set( $supaLanguageRaw = $site.getCustomValue( "${skinCfg}.language", '' ) )
+#set( $supaLanguage = "$!supaLanguageRaw" )
+#set( $supaLanguage = $supaLanguage.trim().replace( '_', '-' ) )
 #if( $locale && "$!locale.language" != "" )
 #set( $supaHtmlLang = $locale.toLanguageTag() )
+#elseif( $supaLanguage != '' )
+#set( $supaHtmlLang = $supaLanguage )
 #else
 #set( $supaHtmlLang = 'en' )
 #end
@@ -192,14 +203,26 @@
 #if( "$!katexJsCdnUrl" != "" )
         data-supa-katex-js-url="$esc.html( $katexJsCdnUrl )"
 #end
+## Overridden labels the scripts use, as data-supa-label-<kebab-key> (searchNoResults becomes
+## data-supa-label-search-no-results). English sites emit none, and the scripts keep their own
+## English for a missing attribute. <labels> keys the skin does not know are listed, separated
+## by spaces, in data-supa-unknown-labels, which the scripts report in one console warning.
+#foreach( $supaLabelKey in $supaScriptLabelKeys )
+#if( $supaLabelOverrides.containsKey( $supaLabelKey ) )
+        data-supa-label-$supaLabelKey.replaceAll( '([A-Z])', '-$1' ).toLowerCase()="$esc.html( $supaLabelOverrides.get( $supaLabelKey ) )"
+#end
+#end
+#if( $supaUnknownLabels.size() > 0 )
+        data-supa-unknown-labels="$esc.html( $display.list( $supaUnknownLabels, ' ', ' ' ) )"
+#end
         data-supa-mermaid="$esc.html( $mermaidMode )"
         data-supa-katex="$esc.html( $katexMode )">
 
-    <a class="supa-skip-link visually-hidden-focusable" href="#supa-main-content">Skip to content</a>
+    <a class="supa-skip-link visually-hidden-focusable" href="#supa-main-content">$esc.html( $supaLabels.skipToContent )</a>
 
 #if( $announcement && $announcement != "" )
     <!-- Optional Top Announcement Banner -->
-    <div class="supa-announcement" role="region" aria-label="Announcement">
+    <div class="supa-announcement" role="region" aria-label="$esc.html( $supaLabels.announcementRegion )">
       <div class="supa-announcement-content">$announcement</div>
     </div>
 #end
@@ -212,9 +235,9 @@
                 data-bs-toggle="drawer"
                 data-bs-target="#supaSidebarDrawer"
                 data-bs-placement="bottom"
-                data-bs-title="Toggle navigation sidebar"
+                data-bs-title="$esc.html( $supaLabels.navSidebarToggle )"
                 aria-controls="supaSidebarDrawer"
-                aria-label="Toggle navigation sidebar">
+                aria-label="$esc.html( $supaLabels.navSidebarToggle )">
           <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <line x1="3" y1="6" x2="21" y2="6"></line>
             <line x1="3" y1="12" x2="21" y2="12"></line>
@@ -229,7 +252,7 @@
 #elseif( $project && $project.name )
           $esc.html( $project.name )
 #else
-          Documentation
+          $esc.html( $supaLabels.brandFallback )
 #end
         </a>
       </div>
@@ -244,8 +267,8 @@
                 data-bs-toggle="dialog"
                 data-bs-target="#supaSearchDialog"
                 data-bs-placement="bottom"
-                data-bs-title="Search documentation"
-                aria-label="Search documentation">
+                data-bs-title="$esc.html( $supaLabels.searchButton )"
+                aria-label="$esc.html( $supaLabels.searchButton )">
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
         </button>
 #end
@@ -255,9 +278,9 @@
                 data-bs-toggle="drawer"
                 data-bs-target="#supaTocDrawer"
                 data-bs-placement="bottom"
-                data-bs-title="$esc.html( $tocTitle )"
+                data-bs-title="$esc.html( $supaLabels.tocToggle )"
                 aria-controls="supaTocDrawer"
-                aria-label="Toggle table of contents">
+                aria-label="$esc.html( $supaLabels.tocToggle )">
           <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <line x1="3" y1="6" x2="21" y2="6"></line>
             <line x1="9" y1="12" x2="21" y2="12"></line>
@@ -271,7 +294,7 @@
     <!-- Main 3-Column Furo Page Grid -->
     <div class="supa-page">
       <!-- 1. Left Navigation Sidebar (Inline on lg+, Bootstrap 6 Left Drawer below lg) -->
-      <aside class="supa-sidebar-column" aria-label="Primary navigation">
+      <aside class="supa-sidebar-column" aria-label="$esc.html( $supaLabels.navPrimary )">
         <dialog class="lg:drawer drawer-start supa-sidebar-drawer"
                 id="supaSidebarDrawer"
                 data-bs-scroll="$esc.html( $sidebarDrawerScroll )"
@@ -279,8 +302,8 @@
                 tabindex="-1"
                 aria-labelledby="supaSidebarBrandText">
           <div class="drawer-header lg:d-none supa-drawer-header">
-            <span class="drawer-title fw-semibold">Navigation</span>
-            <button type="button" class="btn-close" data-bs-dismiss="drawer" aria-label="Close navigation"></button>
+            <span class="drawer-title fw-semibold">$esc.html( $supaLabels.navDrawerTitle )</span>
+            <button type="button" class="btn-close" data-bs-dismiss="drawer" aria-label="$esc.html( $supaLabels.navDrawerClose )"></button>
           </div>
 
           <div class="drawer-body supa-sidebar-container">
@@ -297,18 +320,18 @@
 #supaResolveHref( $darkLogo )
 #set( $darkLogoUrl = $resolvedHref )
               <div class="supa-sidebar-logo-container">
-                <img class="supa-sidebar-logo only-light" src="$lightLogoUrl" alt="Light Logo" />
-                <img class="supa-sidebar-logo only-dark" src="$darkLogoUrl" alt="Dark Logo" />
+                <img class="supa-sidebar-logo only-light" src="$lightLogoUrl" alt="$esc.html( $supaLabels.logoLightAlt )" />
+                <img class="supa-sidebar-logo only-dark" src="$darkLogoUrl" alt="$esc.html( $supaLabels.logoDarkAlt )" />
               </div>
 #elseif( $lightLogo != "" )
 #supaResolveHref( $lightLogo )
               <div class="supa-sidebar-logo-container">
-                <img class="supa-sidebar-logo" src="$resolvedHref" alt="Logo" />
+                <img class="supa-sidebar-logo" src="$resolvedHref" alt="$esc.html( $supaLabels.logoAlt )" />
               </div>
 #elseif( $site.bannerLeft && $site.bannerLeft.image && $site.bannerLeft.image.src )
 #supaResolveHref( $site.bannerLeft.image.src )
               <div class="supa-sidebar-logo-container">
-                <img class="supa-sidebar-logo" src="$resolvedHref" alt="#if( $site.bannerLeft.name )$esc.html( $site.bannerLeft.name )#else Logo#end" />
+                <img class="supa-sidebar-logo" src="$resolvedHref" alt="#if( $site.bannerLeft.name )$esc.html( $site.bannerLeft.name )#else$esc.html( $supaLabels.logoAlt )#end" />
               </div>
 #end
 #if( !$sidebarHideName )
@@ -321,7 +344,7 @@
 #elseif( $project && $project.name )
                   $esc.html( $project.name )
 #else
-                  Documentation
+                  $esc.html( $supaLabels.brandFallback )
 #end
                 </span>
 #if( $project && $project.version && $footerVersion )
@@ -338,29 +361,29 @@
                       class="supa-search-trigger"
                       data-bs-toggle="dialog"
                       data-bs-target="#supaSearchDialog"
-                      aria-label="Search documentation"
                       aria-keyshortcuts="/ Meta+K Control+K">
                 <svg class="supa-search-trigger-icon" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                   <circle cx="11" cy="11" r="8"></circle>
                   <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                 </svg>
-                <span class="supa-search-trigger-placeholder">Search</span>
-                ## The shortcut hint is drawn from data-supa-kbd via CSS so it is not part of the
-                ## visible label text; WCAG 2.5.3 (Label in Name) then sees "Search" inside the name.
+                <span class="supa-search-trigger-placeholder">$esc.html( $supaLabels.search )</span>
+## The button has no aria-label: its accessible name is its visible text, so the name contains
+## that text in every language (WCAG 2.5.3 Label in Name). The shortcut hint is drawn from
+## data-supa-kbd via CSS on an aria-hidden <kbd>, so it is part of neither the label nor the name.
                 <kbd class="supa-search-kbd" data-supa-kbd="&#x2318;K" aria-hidden="true"></kbd>
               </button>
             </div>
 #end
 
             <!-- Hierarchical Site Navigation Tree -->
-            <nav class="supa-sidebar-tree" aria-label="Site navigation">
+            <nav class="supa-sidebar-tree" aria-label="$esc.html( $supaLabels.navSite )">
 #supaSidebarMenus( $site.body.menus $sidebarCollapseDepth )
             </nav>
 
             <!-- Mobile / Tablet Drawer Appearance Footer (< lg) -->
             <div class="supa-sidebar-footer lg:d-none">
               <div class="supa-sidebar-footer-group">
-                <span class="supa-sidebar-footer-label">Appearance</span>
+                <span class="supa-sidebar-footer-label">$esc.html( $supaLabels.navAppearance )</span>
                 <div class="supa-sidebar-footer-controls">
 #if( $colorSchemeSelector )
 #supaPaletteSelect( "" $colorScheme )
@@ -381,10 +404,10 @@
             <div class="supa-content-header not-prose">
               <div class="supa-header-left">
 #if( $showBreadcrumb )
-                <nav aria-label="Breadcrumb" class="supa-breadcrumb-nav">
+                <nav aria-label="$esc.html( $supaLabels.breadcrumb )" class="supa-breadcrumb-nav">
                   <ol class="breadcrumb mb-0 supa-breadcrumb">
                     <li class="breadcrumb-item">
-                      <a href="$relativePath/index.html">#if( $site.name )$esc.html( $site.name )#elseif( $project && $project.name )$esc.html( $project.name )#else Home#end</a>
+                      <a href="$relativePath/index.html">#if( $site.name )$esc.html( $site.name )#elseif( $project && $project.name )$esc.html( $project.name )#else$esc.html( $supaLabels.breadcrumbHome )#end</a>
                     </li>
 #if( $site.body.breadcrumbs && $site.body.breadcrumbs.size() > 0 )
 #foreach( $crumb in $site.body.breadcrumbs )
@@ -423,8 +446,8 @@
                    rel="noopener noreferrer"
                    data-bs-toggle="tooltip"
                    data-bs-placement="bottom"
-                   data-bs-title="View page source"
-                   aria-label="View page source">
+                   data-bs-title="$esc.html( $supaLabels.sourceView )"
+                   aria-label="$esc.html( $supaLabels.sourceView )">
                   <i class="bi bi-file-earmark-code" aria-hidden="true"></i>
                 </a>
 #end
@@ -435,8 +458,8 @@
                    rel="noopener noreferrer"
                    data-bs-toggle="tooltip"
                    data-bs-placement="bottom"
-                   data-bs-title="Edit this page"
-                   aria-label="Edit this page">
+                   data-bs-title="$esc.html( $supaLabels.sourceEdit )"
+                   aria-label="$esc.html( $supaLabels.sourceEdit )">
                   <i class="bi bi-pencil-square" aria-hidden="true"></i>
                 </a>
 #end
@@ -451,9 +474,9 @@
                         data-bs-toggle="drawer"
                         data-bs-target="#supaTocDrawer"
                         data-bs-placement="bottom"
-                        data-bs-title="$esc.html( $tocTitle )"
+                        data-bs-title="$esc.html( $supaLabels.tocToggle )"
                         aria-controls="supaTocDrawer"
-                        aria-label="Toggle table of contents">
+                        aria-label="$esc.html( $supaLabels.tocToggle )">
                   <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                     <line x1="3" y1="6" x2="21" y2="6"></line>
                     <line x1="9" y1="12" x2="21" y2="12"></line>
@@ -485,17 +508,29 @@
 #if( $site.body.footer )
                   <div class="supa-custom-footer">$render.eval( $site.body.footer )</div>
 #else
+#supaCopyright()
+#supaFillLabel( $esc.html( $supaLabels.footerCopyright ) 'years' $supaCopyrightYears )
+#supaFillLabel( $supaFilled 'organization' $supaCopyrightOrg )
                   <div class="supa-copyright">
-                    Copyright &#169; #supaCopyright().
+                    $supaFilled
                   </div>
 #end
+## The two links stay the skin's own: a site translates only the sentence around them
+#supaFillLabel( $esc.html( $supaLabels.footerBuiltWith ) 'maven' '<a href="https://maven.apache.org/plugins/maven-site-plugin/">Maven Site</a>' )
+#supaFillLabel( $supaFilled 'skin' '<a href="https://github.com/mepcotterell/supa-maven-skin">Supa Maven Skin</a>' )
                   <div class="supa-built-with">
-                    Built with <a href="https://maven.apache.org/plugins/maven-site-plugin/">Maven Site</a> and <a href="https://github.com/mepcotterell/supa-maven-skin">Supa Maven Skin</a> (Bootstrap 6).
+                    $supaFilled
 #if( $footerTimestamp )
+## The date keeps the yyyy-MM-dd format in every language; only the sentence around it is a label
+#set( $supaLastUpdated = '' )
 #if( $date )
-                    <span class="supa-last-updated">Last updated on $date.get( 'yyyy-MM-dd' ).</span>
+#set( $supaLastUpdated = $date.get( 'yyyy-MM-dd' ) )
 #elseif( $dateFormat && $currentDate )
-                    <span class="supa-last-updated">Last updated on $dateFormat.format( $currentDate ).</span>
+#set( $supaLastUpdated = $dateFormat.format( $currentDate ) )
+#end
+#if( "$!supaLastUpdated" != '' )
+#supaFillLabel( $esc.html( $supaLabels.footerLastUpdated ) 'date' $esc.html( $supaLastUpdated ) )
+                    <span class="supa-last-updated">$supaFilled</span>
 #end
 #end
                   </div>
@@ -531,7 +566,7 @@
 
 #if( $tocSidebar )
         <!-- 3. Right Table of Contents Sidebar ("On this page" — Inline on xl+, Bootstrap 6 Right Drawer below xl) -->
-        <aside class="supa-toc-column" aria-label="$esc.html( $tocTitle )">
+        <aside class="supa-toc-column" aria-label="$esc.html( $supaLabels.tocTitle )">
           <dialog class="xl:drawer drawer-end supa-toc-drawer"
                   id="supaTocDrawer"
                   data-bs-scroll="$esc.html( $tocDrawerScroll )"
@@ -539,8 +574,8 @@
                   tabindex="-1"
                   aria-labelledby="supaTocDrawerTitle">
             <div class="drawer-header xl:d-none supa-drawer-header">
-              <span class="drawer-title fw-semibold" id="supaTocDrawerTitle">$esc.html( $tocTitle )</span>
-              <button type="button" class="btn-close" data-bs-dismiss="drawer" aria-label="Close table of contents"></button>
+              <span class="drawer-title fw-semibold" id="supaTocDrawerTitle">$esc.html( $supaLabels.tocTitle )</span>
+              <button type="button" class="btn-close" data-bs-dismiss="drawer" aria-label="$esc.html( $supaLabels.tocDrawerClose )"></button>
             </div>
             <div class="drawer-body supa-toc-container">
               <div class="supa-toc-title">
@@ -549,10 +584,10 @@
                   <line x1="9" y1="12" x2="21" y2="12"></line>
                   <line x1="6" y1="18" x2="21" y2="18"></line>
                 </svg>
-                <span>$esc.html( $tocTitle )</span>
+                <span>$esc.html( $supaLabels.tocTitle )</span>
               </div>
               <div class="supa-toc-scroll">
-                <nav id="supaTocNav" class="nav flex-column supa-toc-nav" aria-label="$esc.html( $tocTitle )">
+                <nav id="supaTocNav" class="nav flex-column supa-toc-nav" aria-label="$esc.html( $supaLabels.tocTitle )">
                   <!-- Populated dynamically from article headings + Bootstrap 6 ScrollSpy -->
                 </nav>
               </div>
@@ -575,22 +610,25 @@
           <input type="search"
                  id="supaSearchInput"
                  class="supa-search-input"
-                 placeholder="Search documentation..."
+                 placeholder="$esc.html( $supaLabels.searchPlaceholder )"
                  autocomplete="off"
-                 aria-label="Search documentation" />
+                 aria-label="$esc.html( $supaLabels.searchButton )" />
         </div>
-        <button type="button" class="btn-close" data-bs-dismiss="dialog" aria-label="Close search"></button>
+        <button type="button" class="btn-close" data-bs-dismiss="dialog" aria-label="$esc.html( $supaLabels.searchClose )"></button>
       </div>
       <div class="dialog-body supa-search-dialog-body">
         <div id="supaSearchStatus" class="supa-search-status" aria-live="polite">
-          Type to search navigation, headings, and site pages.
+          $esc.html( $supaLabels.searchHint )
         </div>
-        <div id="supaSearchResults" class="supa-search-results" role="listbox" aria-label="Search results"></div>
+        <div id="supaSearchResults" class="supa-search-results" role="listbox" aria-label="$esc.html( $supaLabels.searchResults )"></div>
       </div>
       <div class="dialog-footer supa-search-dialog-footer">
-        <span class="supa-search-hint"><kbd>&#x2191;</kbd> <kbd>&#x2193;</kbd> to navigate</span>
-        <span class="supa-search-hint"><kbd>&#x21B5;</kbd> to select</span>
-        <span class="supa-search-hint"><kbd>Esc</kbd> to close</span>
+#supaFillLabel( $esc.html( $supaLabels.searchKeysNavigate ) 'keys' '<kbd>&#x2191;</kbd> <kbd>&#x2193;</kbd>' )
+        <span class="supa-search-hint">$supaFilled</span>
+#supaFillLabel( $esc.html( $supaLabels.searchKeysSelect ) 'keys' '<kbd>&#x21B5;</kbd>' )
+        <span class="supa-search-hint">$supaFilled</span>
+#supaFillLabel( $esc.html( $supaLabels.searchKeysClose ) 'keys' '<kbd>Esc</kbd>' )
+        <span class="supa-search-hint">$supaFilled</span>
       </div>
     </dialog>
 #end
