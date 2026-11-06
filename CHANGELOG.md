@@ -6,6 +6,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Changed
+
+- **Accessibility Scan Coverage**: `npm run test:a11y` now fails when two elements on a page share an `id`, and adds scenarios for the fixes below: deep links on desktop and phone with and without reduced motion, a reader who scrolls before the page is ready or reloads after scrolling (`deep-link*`), a Markdown link to a heading that starts with a digit (`numbered-heading-link`), the Datepicker's month view (`datepicker-months`), and the printed component showcase (`print-components`). It now scans 151 variants.
+- **Shorter README**: The README is now a short introduction for site authors, with badges, screenshots, a brief feature list, the install snippet, and links to the published documentation. The build and test commands moved to a new `CONTRIBUTING.md`.
+
+### Fixed
+
+- **Deep Links Land on Their Heading**: A link to a heading far down a page landed up to about 550px short, because Mermaid diagrams, KaTeX styles, late images, and web fonts changed the layout above the heading after the skin had scrolled. The skin now scrolls to the heading once more after the page has settled, unless the reader has already scrolled, clicked, touched, or typed, and it leaves the browser's restored position alone after a reload or Back.
+- **Reduced Motion**: Page scrolls (in-page links, the table of contents, and the back-to-top button) are smooth only when the reader has not asked for reduced motion.
+- **Search Links to Repeated Headings**: Search results could link to the wrong heading, or to nothing, when a page repeated a heading text, for example in an `h5` above a repeated `h2`, or when another element already had the heading's ID. Search now computes the same IDs as the page itself. Results for headings marked with a different language (`<span lang="ja">`) now carry that language, as the table of contents already does.
+- **Markdown Links to Headings Starting With a Digit**: Doxia rewrites a Markdown link to `#1-install` as `#a1-install`, which no element had, so such links did nothing. The skin now adds that anchor too, after every heading has its ID, so no heading's ID changes.
+- **Datepicker Month Names (WCAG 2.5.3)**: The month buttons showed "Jan" but announced "January", so voice-control users could not pick a month by saying what they saw. They are now named by their visible text. A picker created with its own `vcpOptions` keeps the calendar's original labels; see the Datepicker notes in the components reference.
+- **State Kept in Printouts**: The active nav pill, the current and disabled pagination links, breadcrumb dividers, checked switches, checkboxes, and radios, range sliders, strength meters, placeholders, and active list-group items now keep the fills that show their state on paper. Dark mode no longer prints heavier shadows, and floating toasts are left out of printouts.
+- **Switch and Check Demo**: The forms demo in the components reference used the older `.form-check` and `.form-switch` markup, which Bootstrap 6 leaves as plain checkboxes; it now uses Bootstrap 6's `.switch` and `.check`.
+- **Themed Sections Documented**: The customizing guide now says that `data-bs-theme` on part of a page, or the Datepicker's `datepickerTheme` option, does not recolor the skin's or Bootstrap's colors there.
+
 ## [0.1.6] - 2026-11-05
 
 ### Fixed
