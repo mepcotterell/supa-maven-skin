@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- **Translatable Labels**: Every piece of text the skin writes, about 80 labels from "Skip to content" to the admonition titles, can now be replaced with `<custom><supaSkin><labels>` in `site.xml`, one flat camelCase key per label (`<searchPlaceholder>`, `<backToTop>`, `<admonitionNote>`, ...). Sentences with links or data use placeholders such as `{date}`, `{count}`, and `{query}`. Values are plain text; an empty value keeps the English, and an unknown key, or a label containing markup, is reported once in the browser console. A site rendered in several languages sets each language's labels in its `site_<lang>.xml`. The skin ships no translations of its own, and Bootstrap's own widget text stays English. The full key table is in the configuration reference, and the customizing guide has a how-to.
+- **Page Language**: The new `<language>` option (`de`, `pt-BR`, or `pt_BR`) sets `<html lang>` on sites built without Maven's `<locales>`, so screen readers pronounce a non-English site correctly. A locale Maven renders, such as `/fr/`, takes precedence, and a malformed value is ignored.
+- **Localized Site Test**: A second Maven Invoker project, `src/it/localized-site`, builds a German default site and a French `/fr/` site and checks their labels and page language.
+
+### Changed
+
+- **One Label per Control**: Each control now uses one text for both its tooltip and its accessible name, so a few English names changed. Examples: "Copy code" instead of "Copy code to clipboard", "Back to top" instead of "Scroll back to top", "Color theme: Auto" instead of "Select color theme (Light / Dark / Auto)", "Color scheme" for the color-scheme menu and the drawer's list, and "Permalink to …" as the permalink tooltip. The sidebar search button is now named by its visible text "Search". The component preview's Show/Hide code toggle no longer has a tooltip, since its text already names it.
+- **Search Status Wording**: The search dialog now says "Results: 3" and "No results for “query”", which read the same in any language without plural forms.
+- **TOC Toggle Tooltip**: The table of contents toggle's tooltip is now "Toggle table of contents", matching its accessible name, instead of `<tocTitle>`. Sites that translated `<tocTitle>` should also set `<labels><tocToggle>`.
+- **Datepicker Language**: Datepicker month and day names follow the page's `<html lang>` instead of the reader's browser language. An author's `data-bs-locale` still wins.
+
 ## [0.1.7] - 2026-11-06
 
 ### Changed
