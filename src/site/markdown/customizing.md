@@ -347,13 +347,13 @@ The skin's own interface text (search, navigation, the table of contents, the th
 The [Labels](configuration.html#labels) reference lists every key with its English text and placeholders. When you write a label:
 
 - **Keep the placeholders.** A `{name}` placeholder, such as `{count}` or `{query}`, is filled in by the skin, and you can move it anywhere in your sentence. In the footer, `{maven}` and `{skin}` become the skin's own links and `{date}` the build date as `yyyy-MM-dd`, so you translate only the words around them.
-- **Write plain text.** The skin escapes every label, so markup such as `<b>` shows up as text.
+- **Write plain text.** Labels take no markup. An element inside a label, such as `<pageNext>Nach <b>vorne</b></pageNext>`, empties it, so the label stays English and the browser console names it. To show a `<` or `&` character, write it as `&lt;` or `&amp;`; the skin escapes it again, so it shows as text.
 - **Leave out the WCAG level of a color scheme.** `<colorSchemeModus>` names the scheme; the skin always appends ` (AAA)`, because the build audits that level.
 - **One label serves each control.** A label is both a button's tooltip and its accessible name, so what a reader sees is what a screen reader announces.
 
 An empty element, such as `<backToTop></backToTop>`, keeps the English label, because a control without a name cannot be used with a screen reader. A key the skin does not know, such as a misspelled `<serchPlaceholder>`, changes nothing. The browser console then reports it once per page: `Supa Maven Skin: unknown <labels> keys in site.xml were ignored: serchPlaceholder`.
 
-The `<tocTitle>` option still sets the table of contents title. If you set both, `<labels><tocTitle>` wins.
+The `<tocTitle>` option still sets the table of contents title. If you set both, `<labels><tocTitle>` wins. The buttons that open the table of contents drawer have their own label, `tocToggle`, so a site that translated `<tocTitle>` should also set `<labels><tocToggle>`.
 
 ### Translating a Site Into Several Languages
 

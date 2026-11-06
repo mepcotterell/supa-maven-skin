@@ -221,7 +221,7 @@ Configures the top announcement banner, breadcrumbs, left sidebar menu tree, rig
 | `<stickyContentHeader>` | `false` | Pin the top content utility bar (breadcrumbs, source links, palette picker, theme toggle) to the top of the viewport on `lg+` (`1024px`) screens. Adds `.supa-sticky-content-header` to `<body>`; heading anchors and ScrollSpy offset by `--supa-content-header-height`. Below `lg`, the mobile header is already sticky. |
 | `<sidebarCollapseDepth>` | `1` | Menu nesting depth expanded by default in the left sidebar (`<details open>`). |
 | `<tocSidebar>` | `true` | Enable the right-hand "On this page" table of contents column and right drawer (`#supaTocDrawer`). |
-| `<tocTitle>` | `On this page` | Heading label for the right-hand table of contents. Also names the TOC landmark (`<aside>`) and its `<nav>` for screen readers. A shorthand for the `tocTitle` [label](#labels): when both are set, `<labels><tocTitle>` wins. |
+| `<tocTitle>` | `On this page` | Heading label for the right-hand table of contents. Also names the TOC landmark (`<aside>`) and its `<nav>` for screen readers. A shorthand for the `tocTitle` [label](#labels): when both are set, `<labels><tocTitle>` wins. The TOC drawer buttons are named by the separate `tocToggle` label, so a translated site sets that too. |
 | `<tocMaxDepth>` | `4` | Maximum heading level (`2`–`6`) included in the right-hand TOC. |
 | `<prevNextButtons>` | `true` | Render Furo-styled Previous / Next page navigation cards at the bottom of articles. |
 
@@ -231,7 +231,7 @@ Sets the page language and replaces the English text of the skin's own interface
 
 | Option | Default | Description |
 | :--- | :--- | :--- |
-| `<language>` | *(empty)* | Language of the site's pages as a BCP 47 tag (`de`, `pt-BR`; the Java form `pt_BR` is accepted and written as `pt-BR`), written to `<html lang>`. It applies only to pages Maven renders without a locale: when `<locales>` lists a language (`<locales>default,fr</locales>` renders French under `/fr/`), that locale names the language of its pages and `<language>` is ignored. With neither, `lang` is `en`. |
+| `<language>` | *(empty)* | Language of the site's pages as a BCP 47 tag (`de`, `pt-BR`; the Java form `pt_BR` is accepted and written as `pt-BR`), written to `<html lang>`. It applies only to pages Maven renders without a locale: when `<locales>` lists a language (`<locales>default,fr</locales>` renders French under `/fr/`), that locale names the language of its pages and `<language>` is ignored. With neither, `lang` is `en`. A value that is not shaped like a language tag (a 2- or 3-letter language, then `-`-separated subtags of up to 8 letters or digits; `de DE` is not) is ignored, and `lang` is `en`. |
 | `<labels>` | *(empty)* | One child element per label to override, named by its key: `<labels><search>Suche</search></labels>`. Values are plain text, always HTML-escaped (markup is shown as text). An empty element keeps the English label. A key the skin does not know, such as a misspelled `<serchPlaceholder>`, changes nothing and is reported in one browser-console warning. |
 
 ### Labels

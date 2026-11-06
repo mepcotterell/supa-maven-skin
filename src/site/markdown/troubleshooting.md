@@ -285,12 +285,14 @@ You translated the skin's labels in `site.xml`, but some of its text is still En
 **Cause:** One of the following:
 
 - **The key is misspelled or does not exist.** A `<labels>` child the skin does not know changes nothing. The browser console names it: `Supa Maven Skin: unknown <labels> keys in site.xml were ignored: serchPlaceholder`.
+- **The label contains markup.** An element inside a label, such as `<pageNext>Nach <b>vorne</b></pageNext>`, empties it. The console names it: `Supa Maven Skin: <labels> in site.xml that contain markup were ignored (write < as &lt;): pageNext`.
+- **The TOC drawer buttons are labelled separately.** `<tocTitle>` names the table of contents; its drawer buttons use the `tocToggle` label.
 - **The label is empty.** An empty element, such as `<backToTop></backToTop>`, keeps the English text, so that no control loses its accessible name.
 - **The page belongs to another locale.** With `<locales>default,fr</locales>`, Maven renders the `/fr/` pages from `site_fr.xml` **instead of** `site.xml`. The two are not merged, so the labels in `site.xml` do not reach the French pages.
 - **Bootstrap's own widget wrote the text.** A chip's "Remove" button, a Combobox's "{n} selected", and the Datepicker's buttons are Bootstrap's text, not the skin's labels.
 - **Maven wrote the page.** The menus and pages of Maven's reports, such as Project Information, come from Maven, which writes them in the locale it renders.
 
-**Fix:** Check the console for unknown keys and compare the names with the **[Labels](configuration.html#labels)** reference; keys are case-sensitive. Give each locale's `site_<lang>.xml` its own `<labels>`. For widget text, use the widget's own option where it has one, such as a strength meter's `data-bs-messages` or a nav overflow's `data-bs-more-text`. See **[Translating the Skin's Labels](customizing.html#translating-the-skins-labels)**.
+**Fix:** Check the console for unknown keys and labels with markup, and compare the names with the **[Labels](configuration.html#labels)** reference; keys are case-sensitive. Write labels as plain text. Give each locale's `site_<lang>.xml` its own `<labels>`. For widget text, use the widget's own option where it has one, such as a strength meter's `data-bs-messages` or a nav overflow's `data-bs-more-text`. See **[Translating the Skin's Labels](customizing.html#translating-the-skins-labels)**.
 
 ---
 
