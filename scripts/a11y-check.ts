@@ -786,6 +786,9 @@ const LANDING_TOLERANCE_PX = 2;
 /** How far the reader scrolls back up before the page is ready in `deep-link-reader-scrolled`. */
 const READER_SCROLL_PX = 600;
 
+/** How far the reader scrolls up from the heading before reloading in `deep-link-reader-reloaded`. */
+const RELOAD_SCROLL_PX = 1500;
+
 /**
  * Animation frames the scroll position must hold before a landing counts as finished. A smooth
  * scroll moves it on every frame.
@@ -1401,6 +1404,7 @@ const SCENARIOS: readonly InteractionScenario[] = [
   deepLinkScenario('deep-link', DESKTOP, 'reduce'),
   deepLinkScenario('deep-link-mobile', MOBILE, 'reduce'),
   deepLinkScenario('deep-link-smooth', DESKTOP, 'no-preference'),
+  deepLinkScenario('deep-link-smooth-mobile', MOBILE, 'no-preference'),
   {
     // A reader who scrolls before the page is ready keeps their place: the skin's second scroll to
     // the heading must not pull them back. The page is ready only once Mermaid and KaTeX have run,
@@ -1443,6 +1447,44 @@ const SCENARIOS: readonly InteractionScenario[] = [
         throw new Error(
           `expected the page to stay where the reader scrolled, about ${READER_SCROLL_PX}px above ` +
             `where #${DEEP_LINK_TARGET} landed (${landed}px from the top), but it is ${top}px from the top`
+        );
+      }
+    }
+  },
+  {
+    // A reader who scrolls away from the linked heading and reloads keeps their place: the browser
+    // restores it, and neither of the skin's scrolls to the heading may take it back. With motion
+    // allowed, the smooth first scroll is still under way when the browser restores the position.
+    name: 'deep-link-reader-reloaded',
+    page: DEEP_LINK_PAGE,
+    viewport: DESKTOP,
+    variants: [{ palette: 'furo', polarity: 'light' }],
+    setup: async (page) => {
+      await page.emulateMedia({ reducedMotion: 'no-preference' });
+      await openDeepLink(page, DEEP_LINK_TARGET);
+      await page.mouse.move(DESKTOP.width / 2, DESKTOP.height / 2);
+      await page.mouse.wheel(0, -RELOAD_SCROLL_PX);
+      await waitForScrollIdle(page);
+      deepLinkExpectations.set(page, await page.evaluate(() => window.scrollY));
+      const release = await holdCdnRequests(page);
+      try {
+        await page.reload({ waitUntil: 'domcontentloaded', timeout: READY_TIMEOUT_MS });
+      } finally {
+        release();
+      }
+      await waitForLanding(page);
+    },
+    assertState: async (page) => {
+      const kept = deepLinkExpectations.get(page);
+      if (kept === undefined) {
+        throw new Error('setup did not measure where the reader scrolled to');
+      }
+      await expectAttribute(page.locator('html'), 'data-supa-ready', 'true', '<html>');
+      const scrollY = await page.evaluate(() => Math.round(window.scrollY));
+      if (Math.abs(scrollY - kept) > RELOAD_SCROLL_PX / 2) {
+        throw new Error(
+          `expected the reloaded page to stay where the reader scrolled (scrollY ${kept}), ` +
+            `but it is at scrollY ${scrollY}, with #${DEEP_LINK_TARGET} ${await topOf(page, DEEP_LINK_TARGET)}px from the top`
         );
       }
     }

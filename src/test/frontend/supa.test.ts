@@ -2007,6 +2007,54 @@ describe('Supa Maven Skin Frontend Modules', () => {
         vi.unstubAllGlobals();
       }
     });
+
+    it('leaves the reader where the browser restores them on a reload or a Back, unless the site restores nothing', async () => {
+      const happyDOM = (window as unknown as { happyDOM: { setURL: (url: string) => void } })
+        .happyDOM;
+      const originalUrl = window.location.href;
+      const scrolledTo: string[] = [];
+      const scrollSpy = vi
+        .spyOn(Element.prototype, 'scrollIntoView')
+        .mockImplementation(function (this: Element) {
+          scrolledTo.push(this.id);
+        });
+      let navigationType: NavigationTimingType = 'navigate';
+      const entries = vi
+        .spyOn(performance, 'getEntriesByType')
+        .mockImplementation((type: string) =>
+          type === 'navigation' ? ([{ type: navigationType }] as unknown as PerformanceEntryList) : []
+        );
+      const restoration = history.scrollRestoration;
+      /**
+       * Opens the page at a fragment the way `type` names, and runs both scrolls to its heading.
+       *
+       * @param type - How the reader reached the page.
+       * @returns The headings scrolled to.
+       */
+      const open = async (type: NavigationTimingType): Promise<string[]> => {
+        scrolledTo.length = 0;
+        navigationType = type;
+        happyDOM.setURL('https://example.org/docs/guide.html#usage');
+        document.body.innerHTML =
+          '<main id="supa-main-content"><h1>Guide</h1><h2>Install</h2><h2>Usage</h2></main>';
+        await initTocAndScrollSpy()();
+        return [...scrolledTo];
+      };
+
+      try {
+        expect(await open('navigate')).toEqual(['usage', 'usage']);
+        expect(await open('reload')).toEqual([]);
+        expect(await open('back_forward')).toEqual([]);
+        // A site that restores scroll positions itself leaves the skin to land on the heading
+        history.scrollRestoration = 'manual';
+        expect(await open('reload')).toEqual(['usage', 'usage']);
+      } finally {
+        history.scrollRestoration = restoration;
+        entries.mockRestore();
+        scrollSpy.mockRestore();
+        happyDOM.setURL(originalUrl);
+      }
+    });
   });
 
   describe('Code Block Highlighting, Language Pill, and Copy Button', () => {

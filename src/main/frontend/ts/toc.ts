@@ -184,6 +184,26 @@ async function layoutSettled(): Promise<void> {
 }
 
 /**
+ * Tells whether the browser will put the page back where the reader left it: on a reload, or on a
+ * Back or Forward to a page not kept in the back/forward cache. The browser restores the position
+ * as the page loads, after the skin's scripts have run on a page still at the top, so the skin
+ * cannot see it coming from `scrollY`. A site that sets `history.scrollRestoration` to `'manual'`
+ * has turned that restoring off.
+ *
+ * @returns Whether this navigation restores a scroll position.
+ */
+function browserRestoresScroll(): boolean {
+  if (typeof history !== 'undefined' && history.scrollRestoration === 'manual') {
+    return false;
+  }
+  if (typeof performance === 'undefined' || typeof performance.getEntriesByType !== 'function') {
+    return false;
+  }
+  const [navigation] = performance.getEntriesByType('navigation') as PerformanceNavigationTiming[];
+  return navigation?.type === 'reload' || navigation?.type === 'back_forward';
+}
+
+/**
  * Scrolls to the element the URL's fragment names when the page opens, and returns a second scroll
  * to it. Doxia 2 writes no `id` on headings, so the browser cannot find the heading a link names
  * until `prepareHeadings()` gives it one, and this scroll stands in for the browser's. The content
@@ -191,7 +211,8 @@ async function layoutSettled(): Promise<void> {
  * load, and late images and fonts arrive, which left headings far down the kitchen sink hundreds
  * of pixels short. The returned function scrolls to the element again once that is over, unless the
  * reader has scrolled, clicked, touched, or pressed a key since the page opened, or the fragment
- * no longer names an element. Both scrolls are smooth only where the stylesheet makes them so.
+ * no longer names an element. Neither scroll runs when the browser restores the reader's place, on
+ * a reload or a Back or Forward. Both are smooth only where the stylesheet makes them so.
  *
  * @returns Function that scrolls to the fragment's element again once the page has loaded and its
  *     fonts are in, and resolves when it has done so or skipped it.
@@ -199,6 +220,11 @@ async function layoutSettled(): Promise<void> {
 function landOnFragment(): () => Promise<void> {
   const skip = (): Promise<void> => Promise.resolve();
   if (typeof window === 'undefined' || window.location.hash.length <= 1) {
+    return skip;
+  }
+  // On a reload or a Back without the back/forward cache, the browser puts the reader back where
+  // they were. Scrolling to the heading would fight that, and the second scroll would win it.
+  if (browserRestoresScroll()) {
     return skip;
   }
   const target = findFragmentTarget(window.location.hash);
