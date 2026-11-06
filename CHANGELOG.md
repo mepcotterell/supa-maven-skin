@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-06
+
 ### Added
 
 - **Translatable Labels**: Every piece of text the skin writes, about 80 labels from "Skip to content" to the admonition titles, can now be replaced with `<custom><supaSkin><labels>` in `site.xml`, one flat camelCase key per label (`<searchPlaceholder>`, `<backToTop>`, `<admonitionNote>`, ...). Sentences with links or data use placeholders such as `{date}`, `{count}`, and `{query}`. Values are plain text; an empty value keeps the English, and an unknown key, or a label containing markup, is reported once in the browser console. A site rendered in several languages sets each language's labels in its `site_<lang>.xml`. The skin ships no translations of its own, and Bootstrap's own widget text stays English. The full key table is in the configuration reference, and the customizing guide has a how-to.
@@ -183,7 +185,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   - Organized `src/site/markdown/` around the Diátaxis framework (`index.md.vm`, `getting-started.md`, `authoring-guide.md`, `configuration.md`, `components.md`, `kitchen-sink.md`, `architecture.md`) with custom dual-theme `rocket-takeoff` logos (`src/site/resources/images/logo-light.svg` and `logo-dark.svg`).
   - Added automated TypeScript linters for SCSS WCAG 2.2 AA/AAA contrast (`scripts/lint-scss.ts`), Velocity directive balance (`scripts/lint-velocity.ts`), and documentation version alignment + Keep a Changelog 1.1.0 compliance (`scripts/lint-docs.ts`), enforced alongside the Google TypeScript Style Guide and Google-style TSDoc (`supa/google-tsdoc`).
 
-[Unreleased]: https://github.com/mepcotterell/supa-maven-skin/compare/v0.1.7...HEAD
+[Unreleased]: https://github.com/mepcotterell/supa-maven-skin/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/mepcotterell/supa-maven-skin/compare/v0.1.7...v0.2.0
 [0.1.7]: https://github.com/mepcotterell/supa-maven-skin/compare/v0.1.6...v0.1.7
 [0.1.6]: https://github.com/mepcotterell/supa-maven-skin/compare/v0.1.5...v0.1.6
 [0.1.5]: https://github.com/mepcotterell/supa-maven-skin/compare/v0.1.4...v0.1.5

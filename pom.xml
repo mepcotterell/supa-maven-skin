@@ -6,7 +6,7 @@
 
   <groupId>io.github.mepcotterell</groupId>
   <artifactId>supa-maven-skin</artifactId>
-  <version>0.1.8-SNAPSHOT</version>
+  <version>0.2.0</version>
   <packaging>jar</packaging>
 
   <name>Supa Maven Skin</name>
@@ -108,7 +108,7 @@
     <!-- Latest version on Maven Central, shown in the self-site's install snippets (index.md.vm).
          Must equal the newest "## [x.y.z] - YYYY-MM-DD" heading in CHANGELOG.md (lint-docs.ts);
          bump it in the release commit. -->
-    <latest-release.version>0.1.7</latest-release.version>
+    <latest-release.version>0.2.0</latest-release.version>
     <node.version>v22.14.0</node.version>
     <npm.version>10.9.2</npm.version>
     <bootstrap.version>6.0.0-alpha.1</bootstrap.version>
