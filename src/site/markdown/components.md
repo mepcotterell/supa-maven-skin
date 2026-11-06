@@ -701,7 +701,7 @@ Wrap `<div title="Question Title">` items inside `<div class="supa-accordion">` 
 
 ## 6. Forms & Bootstrap 6 Rich Input Widgets
 
-Bootstrap 6 adds native interactive widgets for **Combobox** (`[data-bs-toggle="combobox"]`), **Datepicker** (`[data-bs-toggle="datepicker"]`), **OTP Input** (`[data-bs-otp]`), **Range Slider** (`.form-range`), and **Password Strength Meter** (`[data-bs-strength]`), alongside standard `.form-control`, `.form-select`, `.form-check`, `.form-switch`, and `.input-group`.
+Bootstrap 6 adds native interactive widgets for **Combobox** (`[data-bs-toggle="combobox"]`), **Datepicker** (`[data-bs-toggle="datepicker"]`), **OTP Input** (`[data-bs-otp]`), **Range Slider** (`.form-range`), and **Password Strength Meter** (`[data-bs-strength]`), alongside standard `.form-control`, `.form-select`, `.check`, `.radio`, `.switch`, and `.input-group`.
 
 <div class="supa-component-preview not-prose">
   <div class="row g-4">
@@ -723,14 +723,14 @@ Bootstrap 6 adds native interactive widgets for **Combobox** (`[data-bs-toggle="
       </div>
       <label class="form-label fw-semibold" for="demoDatepickerInput">Calendar Datepicker (data-bs-toggle="datepicker")</label>
       <input type="text" id="demoDatepickerInput" class="form-control mb-3" data-bs-toggle="datepicker" placeholder="Select release date..." value="2026-10-20" />
-      <label class="form-label fw-semibold">Switches &amp; Checks</label>
-      <div class="form-check form-switch mb-2">
-        <input class="form-check-input" type="checkbox" role="switch" id="switchCopyBtn" checked="checked" />
-        <label class="form-check-label" for="switchCopyBtn">Enable code block copy button</label>
+      <label class="form-label fw-semibold">Switches &amp; Checks (.switch / .check)</label>
+      <div class="form-field mb-2">
+        <div class="switch"><input type="checkbox" role="switch" id="switchCopyBtn" checked="checked" /></div>
+        <label for="switchCopyBtn">Enable code block copy button</label>
       </div>
-      <div class="form-check form-switch">
-        <input class="form-check-input" type="checkbox" role="switch" id="switchMermaid" checked="checked" />
-        <label class="form-check-label" for="switchMermaid">Lazy-load Mermaid &amp; KaTeX</label>
+      <div class="form-field">
+        <input class="check" type="checkbox" id="checkMermaid" checked="checked" />
+        <label for="checkMermaid">Lazy-load Mermaid &amp; KaTeX</label>
       </div>
     </div>
     <div class="md:col-6">
