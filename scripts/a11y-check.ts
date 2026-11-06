@@ -23,10 +23,9 @@
  * Markdown link followed to a heading whose id starts with a digit there, a
  * hovered themed chip, unthemed chip, and text button there, an opened
  * Combobox, whose script is a lazily loaded chunk, the opened Datepicker
- * calendar in every palette and polarity, again as a range picker opened
- * after a switch from `auto` to an explicit theme, and in its month view,
- * whose buttons must be named by the month names they show, and content
- * pages printed,
+ * calendar in every palette and polarity, in its month view, whose buttons
+ * must be named by the month names they show, and again as a range picker opened
+ * after a switch from `auto` to an explicit theme, and content pages printed,
  * with print media emulated and backgrounds dropped as browsers print them, so
  * text must read on white paper in every polarity, including the default
  * `auto` mode under a dark OS preference, the component showcase printed,
