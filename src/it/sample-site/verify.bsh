@@ -214,7 +214,7 @@ if ( html.contains( "${currentYear}" ) || html.contains( "$currentDate" ) ) {
 
 // Rendered-page accessibility invariants (also checked with axe-core by `npm run test:a11y`)
 if ( html.contains( "<html lang=\"\"" ) || !html.contains( "<html lang=\"en\"" ) ) {
-    throw new IllegalStateException( "<html lang> must fall back to \"en\" for Maven's default (ROOT) locale (WCAG 3.1.1)" );
+    throw new IllegalStateException( "<html lang> must fall back to \"en\" for Maven's default (ROOT) locale and a <language> that is not a language tag (WCAG 3.1.1)" );
 }
 if ( !html.contains( "supa-nav-has-children has-link" ) ) {
     throw new IllegalStateException( "Missing linked parent sidebar item for the Project Information reports menu" );
@@ -379,6 +379,10 @@ if ( bodyOpen.contains( "data-supa-label-back-to-top" ) || bodyOpen.contains( "d
 }
 if ( !bodyOpen.contains( "data-supa-unknown-labels=\"serchPlaceholder\"" ) ) {
     throw new IllegalStateException( "Unknown <labels> keys must be listed in data-supa-unknown-labels: " + bodyOpen );
+}
+// A label containing an element parses as empty: it stays English and is listed for a warning
+if ( !bodyOpen.contains( "data-supa-markup-labels=\"breadcrumb\"" ) || !html.contains( "aria-label=\"Breadcrumb\"" ) ) {
+    throw new IllegalStateException( "A <labels> value with markup must stay English and be listed in data-supa-markup-labels: " + bodyOpen );
 }
 // alertDismiss is used by both sides: doxia.ts reads it from <body>, and #bsAlert in a .md.vm
 // page, which Doxia evaluates before site.vm, reads <labels> through $site itself

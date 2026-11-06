@@ -64,8 +64,8 @@ export type LabelVars = Readonly<Record<string, string | number>>;
 /** Matches a `{name}` placeholder and the whitespace before it. */
 const PLACEHOLDER_PATTERN = /(\s*)\{(\w+)\}/g;
 
-/** `data-supa-unknown-labels` values already reported, so each page warns once. */
-const reportedUnknownLabels = new Set<string>();
+/** Ignored-label lists already reported, keyed by attribute and value, so each page warns once. */
+const reportedIgnoredLabels = new Set<string>();
 
 /**
  * Fills the `{name}` placeholders of `template` from `vars`, as `#supaFillLabel` does in
@@ -109,20 +109,40 @@ export function getLabel(key: LabelKey, vars?: LabelVars): string {
 
 /**
  * Logs one console warning naming the `<labels>` keys the skin does not know, which Velocity
- * lists in `data-supa-unknown-labels` on `<body>`. A misspelled key changes nothing on the page,
- * so the warning is the only sign of it. Each distinct list is reported once, so running the
- * enhancers again on the same page stays quiet.
+ * lists in `data-supa-unknown-labels` on `<body>`, and one naming the known keys whose value
+ * contains markup, listed in `data-supa-markup-labels`. Either label changes nothing on the page
+ * (an element inside a label leaves Doxia's parsed value empty, so it stays English), so the
+ * warning is the only sign of it. Each distinct list is reported once, so running the enhancers
+ * again on the same page stays quiet.
  *
  * @returns True if a warning was logged.
  */
 export function warnUnknownLabels(): boolean {
-  const raw = document.body?.getAttribute('data-supa-unknown-labels')?.trim();
-  if (!raw || reportedUnknownLabels.has(raw)) {
+  const unknown = warnIgnoredLabels(
+    'data-supa-unknown-labels',
+    'unknown <labels> keys in site.xml were ignored'
+  );
+  const markup = warnIgnoredLabels(
+    'data-supa-markup-labels',
+    '<labels> in site.xml that contain markup were ignored (write < as &lt;)'
+  );
+  return unknown || markup;
+}
+
+/**
+ * Logs one console warning for the space-separated label keys in a `<body>` attribute, unless
+ * the attribute is absent or the same list was already reported.
+ *
+ * @param attribute - The `<body>` attribute that lists the keys.
+ * @param message - What happened to the keys, written before the list.
+ * @returns True if a warning was logged.
+ */
+function warnIgnoredLabels(attribute: string, message: string): boolean {
+  const raw = document.body?.getAttribute(attribute)?.trim();
+  if (!raw || reportedIgnoredLabels.has(`${attribute}=${raw}`)) {
     return false;
   }
-  reportedUnknownLabels.add(raw);
-  console.warn(
-    `Supa Maven Skin: unknown <labels> keys in site.xml were ignored: ${raw.split(/\s+/).join(', ')}`
-  );
+  reportedIgnoredLabels.add(`${attribute}=${raw}`);
+  console.warn(`Supa Maven Skin: ${message}: ${raw.split(/\s+/).join(', ')}`);
   return true;
 }

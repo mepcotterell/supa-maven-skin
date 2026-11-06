@@ -20,6 +20,8 @@
       <sourceDirectory>src/site</sourceDirectory>
       <stickyContentHeader>true</stickyContentHeader>
       <tocTitle>Sur cette page</tocTitle>
+      <!-- Not a language tag, so <html lang> must stay "en" -->
+      <language>de DE</language>
       <labels>
         <pageNext>Suivant</pageNext>
         <footerLastUpdated>Mis à jour le {date}.</footerLastUpdated>
@@ -27,6 +29,7 @@
         <alertDismiss>Fermer</alertDismiss>
         <backToTop></backToTop>
         <serchPlaceholder>Rechercher</serchPlaceholder>
+        <breadcrumb>Fil <b>d'Ariane</b></breadcrumb>
       </labels>
       <lightLogo>images/logo.svg</lightLogo>
       <navIcons>

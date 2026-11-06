@@ -124,6 +124,7 @@ Apache Maven Doxia Site Renderer#if( $doxiaSiteRendererVersion ) $doxiaSiteRende
 #set( $_ = $supaLabels.putAll( $supaLabelDefaults ) )
 #set( $supaLabelOverrides = {} )
 #set( $supaUnknownLabels = [] )
+#set( $supaMarkupLabels = [] )
 #set( $supaLabelRaw = $site.getCustomValue( "${supaLabelCfg}.tocTitle", '' ) )
 #set( $supaLabelValue = "$!supaLabelRaw" )
 #if( $supaLabelValue.trim() != '' )
@@ -138,6 +139,10 @@ Apache Maven Doxia Site Renderer#if( $doxiaSiteRendererVersion ) $doxiaSiteRende
 #set( $supaLabelValue = "$!supaLabelRaw" )
 #if( !$supaLabelDefaults.containsKey( $supaLabelKey ) )
 #set( $_ = $supaUnknownLabels.add( $supaLabelKey ) )
+## An element inside a label (<pageNext>Nach <b>vorne</b></pageNext>) leaves the parsed node
+## without a value, so the label stays English; list it so the scripts can say why.
+#elseif( $supaLabelChild.getChildCount() > 0 )
+#set( $_ = $supaMarkupLabels.add( $supaLabelKey ) )
 #elseif( $supaLabelValue.trim() != '' )
 #set( $_ = $supaLabels.put( $supaLabelKey, $supaLabelValue.trim() ) )
 #set( $_ = $supaLabelOverrides.put( $supaLabelKey, $supaLabelValue.trim() ) )
@@ -366,7 +371,7 @@ Apache Maven Doxia Site Renderer#if( $doxiaSiteRendererVersion ) $doxiaSiteRende
 #end
 ##
 ## Resolve the configured <colorScheme> $palette into $paletteId and its short name $paletteName
-## (SUPA_PALETTES shortLabel in theme.ts). An unknown ID falls back to furo, as theme.ts does. The
+## (getPaletteName() in theme.ts). An unknown ID falls back to furo, as theme.ts does. The
 ## picker and the drawer select both start on it, so before scripts run every control agrees.
 ## $supaPaletteNames maps every ID, in menu order, to its plain-text short name: the scheme's
 ## label followed by its WCAG level, which a site cannot change because the build audits it.

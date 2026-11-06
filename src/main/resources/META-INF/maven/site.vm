@@ -8,7 +8,8 @@
 #set( $skinCfg = 'furoSkin' )
 #end
 ## Interface labels: $supaLabels (English defaults merged with <tocTitle> and <labels>), plus
-## $supaLabelOverrides, $supaScriptLabelKeys, and $supaUnknownLabels for the body attributes
+## $supaLabelOverrides, $supaScriptLabelKeys, $supaUnknownLabels, and $supaMarkupLabels for the
+## body attributes
 #supaBuildLabels()
 #set( $defaultTheme = $site.getCustomValue( "${skinCfg}.defaultTheme", 'auto' ) )
 #set( $colorScheme = $site.getCustomValue( "${skinCfg}.colorScheme", 'furo' ) )
@@ -74,10 +75,15 @@
 ## empty lang fails WCAG 3.1.1). A locale Maven renders (<locales>default,fr</locales> renders
 ## French under /fr/) names its own language. A site rendered only in the ROOT locale states its
 ## language with <language>, a BCP 47 tag; the Java/Maven form pt_BR is accepted as pt-BR.
-## Without either, the skin's labels are English, so fall back to "en".
+## Without either, the skin's labels are English, so fall back to "en". A value that is not
+## shaped like a language tag (such as "de DE") would be an invalid lang, which also fails 3.1.1,
+## so it falls back to "en" like an empty one.
 #set( $supaLanguageRaw = $site.getCustomValue( "${skinCfg}.language", '' ) )
 #set( $supaLanguage = "$!supaLanguageRaw" )
 #set( $supaLanguage = $supaLanguage.trim().replace( '_', '-' ) )
+#if( !$supaLanguage.matches( '[A-Za-z]{2,3}(-[A-Za-z0-9]{1,8})*' ) )
+#set( $supaLanguage = '' )
+#end
 #if( $locale && "$!locale.language" != "" )
 #set( $supaHtmlLang = $locale.toLanguageTag() )
 #elseif( $supaLanguage != '' )
@@ -207,6 +213,7 @@
 ## data-supa-label-search-no-results). English sites emit none, and the scripts keep their own
 ## English for a missing attribute. <labels> keys the skin does not know are listed, separated
 ## by spaces, in data-supa-unknown-labels, which the scripts report in one console warning.
+## Known keys whose value contains an element are listed in data-supa-markup-labels the same way.
 #foreach( $supaLabelKey in $supaScriptLabelKeys )
 #if( $supaLabelOverrides.containsKey( $supaLabelKey ) )
         data-supa-label-$supaLabelKey.replaceAll( '([A-Z])', '-$1' ).toLowerCase()="$esc.html( $supaLabelOverrides.get( $supaLabelKey ) )"
@@ -214,6 +221,9 @@
 #end
 #if( $supaUnknownLabels.size() > 0 )
         data-supa-unknown-labels="$esc.html( $display.list( $supaUnknownLabels, ' ', ' ' ) )"
+#end
+#if( $supaMarkupLabels.size() > 0 )
+        data-supa-markup-labels="$esc.html( $display.list( $supaMarkupLabels, ' ', ' ' ) )"
 #end
         data-supa-mermaid="$esc.html( $mermaidMode )"
         data-supa-katex="$esc.html( $katexMode )">

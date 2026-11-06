@@ -3775,7 +3775,11 @@ describe('Supa Maven Skin Frontend Modules', () => {
 
     afterEach(() => {
       for (const attr of Array.from(document.body.attributes)) {
-        if (attr.name.startsWith('data-supa-label-') || attr.name === 'data-supa-unknown-labels') {
+        if (
+          attr.name.startsWith('data-supa-label-') ||
+          attr.name === 'data-supa-unknown-labels' ||
+          attr.name === 'data-supa-markup-labels'
+        ) {
           document.body.removeAttribute(attr.name);
         }
       }
@@ -3783,24 +3787,51 @@ describe('Supa Maven Skin Frontend Modules', () => {
       vi.restoreAllMocks();
     });
 
-    it('keeps the same keys and English text as #supaLabelDefaults and the configuration.md table', () => {
+    it('keeps the same keys, English text, placeholders, and Set by as #supaLabelDefaults and the configuration.md table', () => {
       const macros = readFileSync(
         resolve(process.cwd(), 'src/main/resources/META-INF/maven/site-macros.vm'),
         'utf8'
       );
-      const scriptLabels = new Map<string, string>();
+      const velocity = new Map<string, { english: string; script: boolean }>();
       for (const [, key, english, script] of macros.matchAll(
         /^#supaDefineLabel\( '(\w+)' '([^']*)' (true|false) \)$/gm
       )) {
-        if (script === 'true') {
-          scriptLabels.set(key, english);
-        }
+        expect(velocity.has(key)).toBe(false);
+        velocity.set(key, { english, script: script === 'true' });
       }
-      expect(Object.fromEntries(scriptLabels)).toEqual({ ...LABEL_DEFAULTS });
+      // Every key the scripts read is marked true in Velocity, with the same English text
+      const scriptLabels = [...velocity].filter(([, label]) => label.script);
+      expect(Object.fromEntries(scriptLabels.map(([key, label]) => [key, label.english]))).toEqual({
+        ...LABEL_DEFAULTS
+      });
 
       const reference = readFileSync(resolve(process.cwd(), 'src/site/markdown/configuration.md'), 'utf8');
-      for (const [key, english] of Object.entries(LABEL_DEFAULTS)) {
-        expect(reference).toContain(`| \`${key}\` | \`${english}\` |`);
+      const start = reference.indexOf('\n### Labels\n');
+      const end = reference.indexOf('\n### ', start + 1);
+      expect(start).toBeGreaterThan(-1);
+      const rows = new Map<string, { english: string; placeholders: string; setBy: string }>();
+      for (const [, key, english, placeholders, setBy] of reference
+        .slice(start, end)
+        .matchAll(/^\| `(\w+)` \| `([^`]*)` \|(.*?)\|.*?\| (template|script|both) \|$/gm)) {
+        expect(rows.has(key)).toBe(false);
+        rows.set(key, { english, placeholders, setBy });
+      }
+      expect([...rows.keys()].sort()).toEqual([...velocity.keys()].sort());
+
+      /**
+       * Lists the distinct `{name}` placeholders in a string.
+       *
+       * @param text - A label or a table cell.
+       * @returns The placeholder names, sorted.
+       */
+      const placeholdersOf = (text: string): string[] =>
+        [...new Set(Array.from(text.matchAll(/\{(\w+)\}/g), (match) => match[1]))].sort();
+      for (const [key, { english, script }] of velocity) {
+        const row = rows.get(key)!;
+        expect(row.english, key).toBe(english);
+        // The Placeholders cell names each placeholder first, as `{name}`: its description
+        expect(placeholdersOf(row.placeholders.replace(/:[^;]*/g, '')), key).toEqual(placeholdersOf(english));
+        expect(row.setBy === 'template', key).toBe(!script);
       }
     });
 
@@ -4067,6 +4098,18 @@ describe('Supa Maven Skin Frontend Modules', () => {
       } finally {
         Datepicker.Default.locale = original;
       }
+    });
+
+    it('warns once about the labels site.vm lists in data-supa-markup-labels for containing markup', () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+      document.body.setAttribute('data-supa-markup-labels', 'pageNext backToTop');
+      expect(warnUnknownLabels()).toBe(true);
+      expect(warnUnknownLabels()).toBe(false);
+      expect(warn).toHaveBeenCalledTimes(1);
+      expect(warn.mock.calls[0][0]).toContain('contain markup were ignored');
+      expect(warn.mock.calls[0][0]).toContain('pageNext, backToTop');
+      // A key with markup never reaches the scripts, so its label stays English
+      expect(getLabel('backToTop')).toBe('Back to top');
     });
   });
 });
