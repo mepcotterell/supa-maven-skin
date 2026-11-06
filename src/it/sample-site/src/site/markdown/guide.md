@@ -15,3 +15,7 @@ Second page in the menu to verify Previous / Next navigation cards. Read the
 ## Überblick
 
 A Markdown link names a heading by its anchor as written: [back to Überblick](#überblick).
+
+## 1. Install
+
+A Markdown link names a heading whose anchor starts with a digit the same way: [back to 1. Install](#1-install).

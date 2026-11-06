@@ -215,16 +215,21 @@ After you upgrade Supa Maven Skin to 0.1.6, links to headings that contain accen
 
 **Fix:** Update the links to these headings, for example `guide.html#berblick` becomes `guide.html#überblick`, and check links to repeated ASCII headings on the same pages. The new ID follows the rules in the previous entry. Write it in the form that fits where the link lives:
 
-- **In a Markdown page**, write the ID in plain characters: `[Überblick](guide.html#überblick)`. Doxia rewrites the fragment of every relative link in a Markdown page into its own encoding (`guide.html#a.C3.BCberblick`), and Supa Maven Skin adds an anchor with that encoded ID before each heading whose ID has non-ASCII letters, so the link still lands on the heading. Do not paste the percent-encoded form there: Doxia encodes its `%` signs too (`#a.25C3.25BCberblick`), and no anchor has that ID.
+- **In a Markdown page**, write the ID in plain characters: `[Überblick](guide.html#überblick)`. Doxia rewrites the fragment of every relative link in a Markdown page into its own encoding (`guide.html#a.C3.BCberblick`), and Supa Maven Skin adds an anchor with that encoded ID before each heading whose ID Doxia rewrites, so the link still lands on the heading. Do not paste the percent-encoded form there: Doxia encodes its `%` signs too (`#a.25C3.25BCberblick`), and no anchor has that ID.
 - **In a `site.xml` menu item**, either form works (`guide.html#überblick` or `guide.html#%C3%BCberblick`), because the href reaches the page unchanged and browsers treat both forms the same.
 - **In email, chat, and other plain text**, paste the full URL the `#` permalink copies. It is percent-encoded (`https://example.org/guide.html#%C3%BCberblick`), so linkifiers keep it whole.
 
 Doxia's own anchor for the heading (`#a.C3.9Cberblick` for `Überblick`) did not change and still works.
 
-Two limits apply to Markdown links, because of how Doxia rewrites them:
+Doxia rewrites the fragment of a Markdown link whenever it is not a valid Doxia ID, one that starts with an ASCII letter or `_` and holds only ASCII letters, digits, `_`, `-`, and `.`. That includes the ID of every heading that starts with a digit: `[1. Install](#1-install)` is written as `#a1-install`, and Supa Maven Skin adds that anchor before the heading too. Before 0.1.7, such a link opened the page without jumping to the heading.
 
-- **Headings that differ only in case or separators** (`Überblick` and `überblick` on one page) can collide: a Markdown link to the first can open the second. Rename one of them.
-- **Headings that start with a digit** (`1. Install`, ID `1-install`) cannot be reached from a Markdown link: Doxia rewrites `#1-install` to `#a1-install`, which no element has. This was already the case before 0.1.6. Link from `site.xml` instead, or start the heading with a word.
+One limit remains: the rewritten ID can be an ID that another element on the page already has. Supa Maven Skin never changes a heading's ID to make room for its anchor, so the Markdown link then opens that element instead:
+
+- **Headings that differ only in case or separators** (`Überblick` and `überblick` on one page): a Markdown link to the first opens the second, whose Doxia anchor is `#a.C3.BCberblick`.
+- **A heading that starts with a digit and one that is `A` followed by the same text** (`1. Install`, ID `1-install`, and `A1 Install`, ID `a1-install`): a Markdown link to `#1-install` is written as `#a1-install` and opens `A1 Install`, wherever on the page it is.
+- **An `id` you wrote yourself** that equals the rewritten ID, such as `<div id="a1-install">`.
+
+Rename one of them, or link from `site.xml`, whose hrefs reach the page unchanged.
 
 ---
 

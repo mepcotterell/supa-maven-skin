@@ -86,6 +86,7 @@ import {
   assignHeadingIds,
   buildTableOfContents,
   findProseHeadings,
+  doxiaLinkId,
   getStickyContentHeaderOffset,
   initTocAndScrollSpy,
   prepareHeadings,
@@ -1456,7 +1457,8 @@ describe('Supa Maven Skin Frontend Modules', () => {
       // Doxia 2.2.0 passes the fragment of a relative Markdown link that is not a valid Doxia id
       // through DoxiaUtils.encodeId, so [Überblick](#überblick) reaches the page as
       // #a.C3.BCberblick. The expected ids below are that method's output for each slug.
-      // 概要 encodes to the heading's own Doxia anchor, and ASCII slugs are left alone.
+      // 概要 encodes to the heading's own Doxia anchor, and valid ASCII ids are left alone, but
+      // not 1-install, which starts with a digit.
       expect(Array.from(article.querySelectorAll('a[id]')).map((a) => a.id)).toEqual([
         'a.C3.BCberblick',
         'a.C3.9Cberblick',
@@ -1464,7 +1466,8 @@ describe('Supa Maven Skin Frontend Modules', () => {
         'a.E6.A6.82.E8.A6.81-2',
         'a.D0.BD.D0.B0.D1.87.D0.B0.D0.BB.D0.BE-.D1.80.D0.B0.D0.B1.D0.BE.D1.82.D1.8B',
         'caf.C3.A9-men.C3.BC',
-        'a.3F.3Fnicode'
+        'a.3F.3Fnicode',
+        'a1-install'
       ]);
       // Each added anchor sits right before its heading's Doxia anchor, or the heading itself
       const nextHeading = (id: string): string | undefined => {
@@ -1481,7 +1484,7 @@ describe('Supa Maven Skin Frontend Modules', () => {
 
       // Running the enhancer again keeps one anchor per heading and the Doxia anchor on record
       prepareHeadings(article, true, '#');
-      expect(article.querySelectorAll('a[id]').length).toBe(7);
+      expect(article.querySelectorAll('a[id]').length).toBe(8);
       expect(headings[0].getAttribute('data-doxia-id')).toBe('a.C3.9Cberblick');
 
       // Following such a link in place marks the heading in the TOC
@@ -1588,6 +1591,185 @@ describe('Supa Maven Skin Frontend Modules', () => {
       expect(document.getElementById('install')?.tagName).toBe('H2');
       expect(document.getElementById('setup')?.tagName).toBe('P');
       expect(document.getElementById('a.C3.BCberblick')?.nextElementSibling?.id).toBe('überblick');
+    });
+
+    it('names the id Doxia 2.2.0 writes into a Markdown link to any heading id it rewrites', () => {
+      // Computed with the real DoxiaUtils of doxia-core 2.2.0 (the Doxia that pom.xml pins), in
+      // `jshell --class-path ~/.m2/repository/org/apache/maven/doxia/doxia-core/2.2.0/doxia-core-2.2.0.jar`
+      // after `import org.apache.maven.doxia.util.DoxiaUtils;`, as
+      // `DoxiaUtils.isValidId(id) ? null : DoxiaUtils.encodeId(id)`: null where Doxia leaves a
+      // link to the id as written (Xhtml5BaseParser.handleAStart), else the id it writes instead.
+      const vectors: Array<[string, string | null]> = [
+        ['install', null],
+        ['getting-started', null],
+        ['section-2', null],
+        ['a1-install', null],
+        ['_private', null],
+        ['v2.0', null],
+        ['Getting_Started', null],
+        ['1-install', 'a1-install'],
+        ['1-actions-buttons', 'a1-actions-buttons'],
+        ['2026-roadmap', 'a2026-roadmap'],
+        ['3d-rendering', 'a3d-rendering'],
+        ['42', 'a42'],
+        ['1-install-2', 'a1-install-2'],
+        ['-intro', 'a-intro'],
+        ['.hidden', 'a.hidden'],
+        ['x:y', 'x.3Ay'],
+        ['a b', 'a_b'],
+        ['step/2', 'step.2F2'],
+        ['100%', 'a100.25'],
+        ['a+b', 'a.2Bb'],
+        ['überblick', 'a.C3.BCberblick'],
+        ['概要', 'a.E6.A6.82.E8.A6.81'],
+        ['café-menü', 'caf.C3.A9-men.C3.BC'],
+        ['𝔘nicode', 'a.3F.3Fnicode'],
+        ['1-überblick', 'a1-.C3.BCberblick'],
+        ['٣-مقدمة', 'a.D9.A3-.D9.85.D9.82.D8.AF.D9.85.D8.A9'],
+        ['²-squared', 'a.C2.B2-squared'],
+        ['3-alerts-overlays-dialogs-drawers-toasts', 'a3-alerts-overlays-dialogs-drawers-toasts']
+      ];
+      expect(vectors.map(([id]) => doxiaLinkId(id))).toEqual(vectors.map(([, linkId]) => linkId));
+
+      // Every printable ASCII character before and after an x, from the same jshell session: the
+      // characters isValidId accepts first and after the first, and encodeId of each other first
+      const printable = Array.from({ length: 94 }, (_, i) => String.fromCharCode(33 + i));
+      const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz';
+      expect(printable.filter((c) => doxiaLinkId(`${c}x`) === null).join('')).toBe(letters);
+      expect(printable.filter((c) => doxiaLinkId(`x${c}`) === null).join('')).toBe(
+        `-.0123456789${letters}`
+      );
+      const encodedFirsts = printable
+        .map((c) => doxiaLinkId(`${c}x`))
+        .filter((linkId) => linkId !== null);
+      expect(encodedFirsts.join(' ')).toBe(
+        'a.21x a.22x a.23x a.24x a.25x a.26x a.27x a.28x a.29x a.2Ax a.2Bx a.2Cx a-x a.x a.2Fx ' +
+          'a0x a1x a2x a3x a4x a5x a6x a7x a8x a9x a.3Ax a.3Bx a.3Cx a.3Dx a.3Ex a.3Fx a.40x ' +
+          'a.5Bx a.5Cx a.5Dx a.5Ex a.60x a.7Bx a.7Cx a.7Dx a.7Ex'
+      );
+      expect(doxiaLinkId(`x ${printable.join('')}`)).toBe(
+        'x_.21.22.23.24.25.26.27.28.29.2A.2B.2C-..2F0123456789.3A.3B.3C.3D.3E.3F.40' +
+          'ABCDEFGHIJKLMNOPQRSTUVWXYZ.5B.5C.5D.5E_.60abcdefghijklmnopqrstuvwxyz.7B.7C.7D.7E'
+      );
+    });
+
+    it('adds anchors for Markdown links to digit-first heading ids once every heading id is set', () => {
+      const happyDOM = (window as unknown as { happyDOM: { setURL: (url: string) => void } })
+        .happyDOM;
+      const originalUrl = window.location.href;
+      // Doxia writes its own anchor (DoxiaUtils.encodeId of the heading text) before some headings
+      document.body.innerHTML = `
+        <main id="supa-main-content">
+          <h1>Install Guide</h1>
+          <a id="a1._Install"></a><h2>1. Install</h2>
+          <a id="a2._Configure"></a><h2>2. Configure</h2>
+          <h3>2026 Roadmap</h3>
+          <h2>A1 Install</h2>
+          <h2 id="x:y">Namespaced</h2>
+          <h2>Überblick</h2>
+          <h2>1. Install</h2>
+        </main>
+        <aside class="supa-toc-column"><nav id="supaTocNav"></nav></aside>
+      `;
+      const article = document.getElementById('supa-main-content')!;
+      prepareHeadings(article, true, '#');
+
+      // The alias of 1-install is a1-install, the slug of the later "A1 Install". Aliases are added
+      // after every heading has its id, so that heading keeps its slug rather than a1-install-2.
+      expect(Array.from(article.querySelectorAll('h1, h2, h3')).map((h) => h.id)).toEqual([
+        'install-guide',
+        '1-install',
+        '2-configure',
+        '2026-roadmap',
+        'a1-install',
+        'x:y',
+        'überblick',
+        '1-install-2'
+      ]);
+      // Each heading whose id DoxiaUtils.isValidId rejects gets an anchor named by encodeId, unless
+      // an element already has that id: a1-install stays the "A1 Install" heading's.
+      expect(Array.from(article.querySelectorAll('a[id]')).map((a) => a.id)).toEqual([
+        'a1._Install',
+        'a2-configure',
+        'a2._Configure',
+        'a2026-roadmap',
+        'x.3Ay',
+        'a.C3.BCberblick',
+        'a1-install-2'
+      ]);
+      const ids = Array.from(document.querySelectorAll('[id]'), (el) => el.id);
+      expect(ids.filter((id, idx) => ids.indexOf(id) !== idx)).toEqual([]);
+
+      // Each added anchor sits right before its heading's Doxia anchor, or the heading itself
+      const nextHeading = (id: string): string | undefined => {
+        let el = document.getElementById(id)?.nextElementSibling;
+        while (el && el.tagName === 'A') {
+          el = el.nextElementSibling;
+        }
+        return el?.id;
+      };
+      expect(nextHeading('a2-configure')).toBe('2-configure');
+      expect(document.getElementById('a2-configure')?.nextElementSibling?.id).toBe('a2._Configure');
+      expect(nextHeading('a2026-roadmap')).toBe('2026-roadmap');
+      expect(nextHeading('x.3Ay')).toBe('x:y');
+      expect(nextHeading('a1-install-2')).toBe('1-install-2');
+
+      // Following such a link in place marks its heading in the TOC, and a1-install keeps naming
+      // "A1 Install", the heading the browser scrolls to
+      buildTableOfContents(article, document.getElementById('supaTocNav'), 4);
+      const followed = (hash: string): string | null | undefined => {
+        happyDOM.setURL(`${window.location.origin}/docs/guide.html${hash}`);
+        window.dispatchEvent(new HashChangeEvent('hashchange'));
+        return document.querySelector('#supaTocNav a.active')?.getAttribute('href');
+      };
+      try {
+        expect(followed('#a2026-roadmap')).toBe('#2026-roadmap');
+        expect(followed('#a2-configure')).toBe('#2-configure');
+        expect(followed('#x.3Ay')).toBe('#x:y');
+        expect(followed('#a1-install-2')).toBe('#1-install-2');
+        expect(followed('#a1-install')).toBe('#a1-install');
+      } finally {
+        happyDOM.setURL(originalUrl);
+      }
+    });
+
+    it('leaves a Doxia link id that an earlier heading has to that heading in the TOC', () => {
+      const happyDOM = (window as unknown as { happyDOM: { setURL: (url: string) => void } })
+        .happyDOM;
+      const originalUrl = window.location.href;
+      document.body.innerHTML = `
+        <main id="supa-main-content">
+          <h2>A1 Install</h2>
+          <h2>1. Install</h2>
+          <h2>Überblick</h2>
+          <h2>Configure</h2>
+          <h2 id=".C3.BCberblick">Escaped</h2>
+        </main>
+        <aside class="supa-toc-column"><nav id="supaTocNav"></nav></aside>
+      `;
+      const article = document.getElementById('supa-main-content')!;
+      prepareHeadings(article, true, '#');
+      buildTableOfContents(article, document.getElementById('supaTocNav'), 4);
+
+      // a1-install is the earlier heading's id, so 1-install gets no anchor. The author's
+      // .C3.BCberblick encodes to the alias überblick already has, so only überblick keeps it.
+      expect(Array.from(article.querySelectorAll('a[id]')).map((a) => a.id)).toEqual([
+        'a.C3.BCberblick'
+      ]);
+      const followed = (hash: string): string | null | undefined => {
+        happyDOM.setURL(`${window.location.origin}/docs/guide.html${hash}`);
+        window.dispatchEvent(new HashChangeEvent('hashchange'));
+        return document.querySelector('#supaTocNav a.active')?.getAttribute('href');
+      };
+      try {
+        // The TOC marks the heading the browser scrolls to, not the one the link was written for
+        expect(followed('#configure')).toBe('#configure');
+        expect(followed('#a1-install')).toBe('#a1-install');
+        expect(followed('#configure')).toBe('#configure');
+        expect(followed('#a.C3.BCberblick')).toBe('#überblick');
+      } finally {
+        happyDOM.setURL(originalUrl);
+      }
     });
   });
 

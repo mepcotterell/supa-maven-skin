@@ -4,6 +4,8 @@
 
 Site authors can use standard Bootstrap 6 HTML markup inside Markdown (`.md`), declarative Markdown shorthands (`> [!ALERT:theme]`, `.supa-accordion`, `.supa-stepper`), or Velocity helper macros (`#bsAlert`, `#bsBadge`, `#bsCard` in `.md.vm` pages). Every example below pairs the live interactive component with the exact syntax needed to render it.
 
+The numbered sections cover [buttons](#1-actions-buttons), [badges, avatars, and chips](#2-badges-avatars-chips-indicators), [alerts and overlays](#3-alerts-overlays-dialogs-drawers-toasts), [navigation](#4-navigation-menus-tabs-breadcrumbs-pagination-steppers), [accordions, cards, and list groups](#5-containers-disclosure-accordions-cards-list-groups-carousel), and [forms](#6-forms-bootstrap-6-rich-input-widgets).
+
 > [!IMPORTANT] Embedding HTML in Doxia 2.0 Markdown Pages
 > When placing multi-line Bootstrap 6 HTML directly inside a `.md` file, keep each top-level `<div>...</div>` block free of internal blank lines so Doxia's CommonMark parser treats the block as uninterrupted HTML.
 

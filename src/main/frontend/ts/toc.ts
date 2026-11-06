@@ -37,19 +37,22 @@ export function slugifyHeading(text: string): string {
 }
 
 /**
- * Returns the id Doxia writes into a Markdown link to a heading id with non-ASCII characters.
- * Doxia 2's `Xhtml5BaseParser` passes the fragment of every relative link that is not a valid
- * Doxia id through `DoxiaUtils.encodeId`, so `[Überblick](#überblick)` reaches the page as
- * `#a.C3.BCberblick`. This ports `encodeId`: ASCII letters, digits, `-`, `_`, and `.` stay, a
- * space becomes `_`, every other UTF-16 code unit becomes its UTF-8 bytes as `.XX` (a lone
- * surrogate encodes as `?`, `.3F`), and an `a` goes first when the id does not start with an
- * ASCII letter or `_`. `src/it/sample-site/verify.bsh` checks Doxia's output for one link.
+ * Returns the id Doxia writes into a Markdown link to a heading id. Doxia 2's `Xhtml5BaseParser`
+ * passes the fragment of every relative link that fails `DoxiaUtils.isValidId` through
+ * `DoxiaUtils.encodeId`, so `[Überblick](#überblick)` reaches the page as `#a.C3.BCberblick` and
+ * `[1. Install](#1-install)` as `#a1-install`. This ports both methods of Doxia 2.2.0. A valid id
+ * is an ASCII letter or `_` followed by ASCII letters, digits, `_`, `-`, and `.`, so every id with
+ * a non-ASCII character is invalid, and so is every slug that starts with a digit. `encodeId`
+ * keeps those characters, writes a space as `_` and every other UTF-16 code unit as its UTF-8
+ * bytes in `.XX` form (a lone surrogate encodes as `?`, `.3F`), and puts an `a` first when the id
+ * does not start with an ASCII letter or `_`. It also trims the id, which heading ids never need.
+ * `src/it/sample-site/verify.bsh` checks Doxia's output for a non-ASCII and a digit-first link.
  *
  * @param id - Heading id.
- * @returns The Doxia link form, or null when the id is ASCII-only and needs no alias.
+ * @returns The Doxia link form, or null when Doxia leaves a link to the id as written.
  */
-function doxiaLinkId(id: string): string | null {
-  if (!/[\u0080-\uffff]/.test(id)) {
+export function doxiaLinkId(id: string): string | null {
+  if (/^[A-Za-z_][A-Za-z0-9_.-]*$/.test(id)) {
     return null;
   }
   const encoder = new TextEncoder();
@@ -234,12 +237,9 @@ export function assignHeadingIds(
         id = `${slug}-${counter}`;
       }
     }
+    // No room is kept for the heading's Doxia link anchor (doxiaLinkId()): prepareHeadings()
+    // adds those only after every heading has its id, so a later "A1 Install" keeps a1-install.
     used.add(id);
-    const linkId = doxiaLinkId(id);
-    if (linkId) {
-      // prepareHeadings() adds an anchor with this id unless an element already holds it
-      holders.set(linkId, Math.max(holders.get(linkId) ?? 0, 1));
-    }
     return id;
   });
 }
@@ -247,7 +247,8 @@ export function assignHeadingIds(
 /**
  * Ensures every heading in the article has a deterministic clean slug `id`
  * (e.g. `#1-actions-buttons`) while preserving any preceding Doxia `<a id="...">`
- * anchor for backward compatibility, and attaches the optional Furo `#` permalink.
+ * anchor for backward compatibility, attaches the optional Furo `#` permalink, and adds an
+ * anchor for the id Doxia writes into Markdown links to the heading (`doxiaLinkId()`).
  *
  * @param article - Root article container (`#supa-main-content`).
  * @param enablePermalinks - Whether to append `.supa-headerlink` permalink anchors.
@@ -264,6 +265,8 @@ export function prepareHeadings(
     allHeadings,
     Array.from(article.ownerDocument.querySelectorAll('[id]'), (el) => el.id)
   );
+  // Where each heading's Doxia link anchor goes: before Doxia's own anchor, or the heading
+  const linkAnchorPlaces = new Map<HTMLHeadingElement, Element>();
 
   allHeadings.forEach((heading, index) => {
     const id = ids[index];
@@ -286,18 +289,7 @@ export function prepareHeadings(
     }
 
     heading.id = id;
-
-    // Doxia rewrites a Markdown link to #überblick as #a.C3.BCberblick, so give the heading an
-    // empty anchor with that id, as Doxia does for its own anchors. It holds `.XX` escapes, so
-    // it can never take a slug from a later heading. It can coincide with Doxia's own anchor for
-    // a later heading whose text is this slug (`## Überblick` then `## überblick`); that anchor
-    // already exists, so the alias is skipped and such links reach the later heading.
-    const linkId = doxiaLinkId(id);
-    if (linkId && !document.getElementById(linkId)) {
-      const linkAnchor = document.createElement('a');
-      linkAnchor.id = linkId;
-      heading.parentNode?.insertBefore(linkAnchor, prevAnchor ?? heading);
-    }
+    linkAnchorPlaces.set(heading, prevAnchor ?? heading);
 
     if (enablePermalinks && heading.tagName !== 'H1' && !heading.querySelector('.supa-headerlink')) {
       const anchor = document.createElement('a');
@@ -331,6 +323,22 @@ export function prepareHeadings(
       });
 
       heading.appendChild(anchor);
+    }
+  });
+
+  // Doxia rewrites a Markdown link to #1-install as #a1-install and one to #überblick as
+  // #a.C3.BCberblick, so give each such heading an empty anchor with that id, as Doxia does for
+  // its own anchors. The anchors go in only once every heading has its id: a1-install is also the
+  // slug of a heading "A1 Install", which must keep it rather than move to a1-install-2. An id
+  // that an element already has (a heading, Doxia's own anchor, or an author's id) is skipped, so
+  // such a link reaches that element: "A1 Install", or the later heading in `## Überblick` then
+  // `## überblick`, whose Doxia anchor is a.C3.BCberblick.
+  linkAnchorPlaces.forEach((place, heading) => {
+    const linkId = doxiaLinkId(heading.id);
+    if (linkId && !document.getElementById(linkId)) {
+      const linkAnchor = document.createElement('a');
+      linkAnchor.id = linkId;
+      heading.parentNode?.insertBefore(linkAnchor, place);
     }
   });
 
@@ -404,8 +412,13 @@ export function buildTableOfContents(
     if (doxiaId) {
       aliasToHeadingId.set(doxiaId, heading.id);
     }
+  });
+  // prepareHeadings() skips a Doxia link anchor whose id a heading or Doxia anchor already has,
+  // and of two headings whose ids Doxia encodes alike only the first gets one, so a link alias
+  // never takes an id from an earlier or later heading, nor from an earlier alias.
+  headings.forEach((heading) => {
     const linkId = doxiaLinkId(heading.id);
-    if (linkId) {
+    if (linkId && !aliasToHeadingId.has(linkId)) {
       aliasToHeadingId.set(linkId, heading.id);
     }
   });

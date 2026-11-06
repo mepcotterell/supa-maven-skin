@@ -197,10 +197,15 @@ if ( !java.util.regex.Pattern.compile( "<a [^>]*href=\"https://maven\\.apache\\.
 }
 // Doxia passes the fragment of a relative Markdown link that is not a valid Doxia ID through
 // DoxiaUtils.encodeId, so [..](#überblick) is written as #a.C3.BCberblick. prepareHeadings() in
-// toc.ts adds an anchor with that ID before each heading whose ID has non-ASCII letters; if Doxia
+// toc.ts adds an anchor with that ID before each heading whose ID is not a valid Doxia ID; if Doxia
 // changes this encoding, change doxiaLinkId() in toc.ts to match.
 if ( !guideText.contains( "href=\"#a.C3.BCberblick\"" ) ) {
     throw new IllegalStateException( "Expected Doxia to write the Markdown link to #überblick in guide.html as #a.C3.BCberblick" );
+}
+// The same holds for an ID that starts with a digit: Doxia prefixes an "a", so [..](#1-install)
+// is written as #a1-install, and prepareHeadings() adds that anchor too.
+if ( !guideText.contains( "href=\"#a1-install\"" ) || guideText.contains( "href=\"#1-install\"" ) ) {
+    throw new IllegalStateException( "Expected Doxia to write the Markdown link to #1-install in guide.html as #a1-install" );
 }
 
 if ( html.contains( "${currentYear}" ) || html.contains( "$currentDate" ) ) {

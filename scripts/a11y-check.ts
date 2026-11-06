@@ -7,8 +7,8 @@
  * WCAG 2.0/2.1/2.2 A and AA rule tags, plus the AAA `color-contrast-enhanced`
  * rule (7:1) on the `modus*` palettes that promise AAA, and checks that the
  * color-scheme trigger's accessible name contains the scheme name it shows
- * (WCAG 2.5.3 Label in Name). The SCSS token linter
- * (`npm run lint:scss`) proves palette pairs meet their contrast targets in
+ * (WCAG 2.5.3 Label in Name) and that no two elements share an `id`. The SCSS
+ * token linter (`npm run lint:scss`) proves palette pairs meet their contrast targets in
  * isolation; this script proves the rendered combination of Velocity markup,
  * CSS, and TypeScript enhancements does too.
  *
@@ -20,6 +20,7 @@
  * and theme menus in each header and drawer placement, a shown tooltip, a copy
  * button and its tooltip in the "Copied!" state, a re-expanded sidebar group,
  * an expanded accordion and switched content tab on `components.html`, a
+ * Markdown link followed to a heading whose id starts with a digit there, a
  * hovered themed chip, unthemed chip, and text button there, an opened
  * Combobox, whose script is a lazily loaded chunk, the opened Datepicker
  * calendar in every palette and polarity, and again as a range picker opened
@@ -173,6 +174,13 @@ const AAA_CONTRAST_RULE = 'color-contrast-enhanced';
  */
 const LABEL_IN_NAME_SELECTOR = '.supa-palette-btn';
 const LABEL_IN_NAME_RULE = 'label-in-name';
+/**
+ * Reported for an `id` that more than one element on a page carries once the skin has run. A
+ * fragment link and the TOC reach only the first of them, so a heading id or an anchor that
+ * `prepareHeadings()` adds and that repeats another id sends links to the wrong place. axe's own
+ * `duplicate-id` rule is deprecated and no longer runs under the WCAG tags.
+ */
+const UNIQUE_ID_RULE = 'unique-id';
 const DESKTOP: Viewport = { width: 1440, height: 900 };
 const MOBILE: Viewport = { width: 390, height: 844 };
 /**
@@ -362,6 +370,84 @@ async function checkLabelInName(page: Page, job: ScanJob): Promise<Finding[]> {
     });
   }
   return findings;
+}
+
+/**
+ * Checks that no two elements on the page share an `id` (`UNIQUE_ID_RULE`).
+ *
+ * @param page - Page in the job's state.
+ * @param job - Scan job, for the report.
+ * @returns One finding per repeated id.
+ */
+async function checkUniqueIds(page: Page, job: ScanJob): Promise<Finding[]> {
+  const repeated = await page.evaluate(() => {
+    const counts = new Map<string, number>();
+    for (const el of Array.from(document.querySelectorAll('[id]'))) {
+      if (el.id) {
+        counts.set(el.id, (counts.get(el.id) ?? 0) + 1);
+      }
+    }
+    return [...counts].filter(([, count]) => count > 1);
+  });
+  return repeated.map(([id, count]) => ({
+    page: job.page,
+    variant: variantLabel(job),
+    ruleId: UNIQUE_ID_RULE,
+    impact: 'serious',
+    target: `[id=${JSON.stringify(id)}]`,
+    summary: `Fix the following: ${count} elements have the id ${JSON.stringify(id)}`,
+    html: '',
+    helpUrl: 'https://html.spec.whatwg.org/multipage/dom.html#the-id-attribute'
+  }));
+}
+
+/**
+ * Throws unless following a link moved the page to the heading after `linkId`, to where a link to
+ * the heading's own id puts it. The page scrolls smoothly, so it is measured until it settles.
+ *
+ * @param page - Page under test, after the link was followed.
+ * @param linkId - Id the link names: an empty anchor before the heading.
+ * @param headingId - Id of the heading the anchor stands for.
+ */
+async function expectLandedOnHeading(page: Page, linkId: string, headingId: string): Promise<void> {
+  const deadline = Date.now() + STATE_TIMEOUT_MS;
+  let problems: string[];
+  do {
+    problems = await page.evaluate(
+      ([link, id]: [string, string]) => {
+        const found: string[] = [];
+        if (decodeURIComponent(window.location.hash.slice(1)) !== link) {
+          found.push(`the URL fragment is "${window.location.hash}"`);
+        }
+        // The anchor stands before the heading, or before Doxia's own anchor for it
+        const target = document.querySelector(':target');
+        let next = target?.nextElementSibling;
+        while (next && next.tagName === 'A' && !next.textContent?.trim()) {
+          next = next.nextElementSibling;
+        }
+        if (target?.id !== link || target.tagName !== 'A' || next?.id !== id) {
+          const named = target ? `<${target.tagName.toLowerCase()} id="${target.id}">` : 'no element';
+          found.push(`the link targets ${named}`);
+        }
+        const heading = document.getElementById(id);
+        // A link to the heading's own id puts its top below the scroll padding and its scroll margin
+        const landing =
+          (Number.parseFloat(getComputedStyle(document.documentElement).scrollPaddingTop) || 0) +
+          (heading ? Number.parseFloat(getComputedStyle(heading).scrollMarginTop) || 0 : 0);
+        const top = heading?.getBoundingClientRect().top;
+        if (top === undefined || Math.abs(top - landing) > 2) {
+          found.push(`the heading is ${top ?? '?'}px from the top instead of ${landing}px`);
+        }
+        return found;
+      },
+      [linkId, headingId] as [string, string]
+    );
+    if (problems.length === 0) {
+      return;
+    }
+    await page.waitForTimeout(100);
+  } while (Date.now() < deadline);
+  throw new Error(`expected to land on #${headingId} through #${linkId}, but ${problems.join('; ')}`);
 }
 
 /**
@@ -874,6 +960,26 @@ const SCENARIOS: readonly InteractionScenario[] = [
       await expectVisible(page.locator(`[id="${panelId}"][role="tabpanel"]`), 'the second tab panel');
     }
   },
+  {
+    // Doxia rewrites a Markdown link to a heading id that starts with a digit, such as
+    // [..](#3-alerts-overlays-dialogs-drawers-toasts) in components.md, to #a3-alerts-..., the id of
+    // the anchor prepareHeadings() adds before the heading. The scan itself repeats the page's
+    // load-time scan, so it runs in one variant.
+    name: 'numbered-heading-link',
+    page: 'components.html',
+    viewport: DESKTOP,
+    variants: [{ palette: 'furo', polarity: 'light' }],
+    setup: async (page) => {
+      await page.locator('.supa-article a[href="#a3-alerts-overlays-dialogs-drawers-toasts"]').click();
+    },
+    assertState: async (page) => {
+      await expectLandedOnHeading(
+        page,
+        'a3-alerts-overlays-dialogs-drawers-toasts',
+        '3-alerts-overlays-dialogs-drawers-toasts'
+      );
+    }
+  },
   // Hover fills that Bootstrap 6 derives from the theme tokens (`--<theme>-bg-muted`, darkened
   // `oklch(from ...)` text) or falls back to without a theme (`--bg-3`).
   hoverScenario('chip-hovered', '.supa-article .chip.theme-success', 'the success chip'),
@@ -1245,6 +1351,7 @@ async function scan(browser: Browser, baseUrl: string, job: ScanJob): Promise<Fi
     await settleTransitions(page);
     // A scoped scan covers only the regions its state changes; the load-time scans check the rest.
     const labelFindings = scenario?.scope ? [] : await checkLabelInName(page, job);
+    const idFindings = scenario?.scope ? [] : await checkUniqueIds(page, job);
     // `options()` replaces axe's run options, so it carries the AA tags itself. axe runs a rule
     // enabled under `rules` even when its tags are outside `runOnly`.
     const builder = new AxeBuilder({ page }).options({
@@ -1264,7 +1371,7 @@ async function scan(browser: Browser, baseUrl: string, job: ScanJob): Promise<Fi
         });
       }
     }
-    const findings: Finding[] = [...labelFindings];
+    const findings: Finding[] = [...labelFindings, ...idFindings];
     // No rule exclusions: every violation is either fixed in the skin or in demo content.
     for (const violation of results.violations) {
       for (const node of violation.nodes) {
@@ -1390,8 +1497,9 @@ async function main(): Promise<number> {
     console.log(
       `a11y: scanning ${jobs.length} page variants (${pages.length} pages, ` +
         `${scenarioJobs} in interactive states) with axe-core [${WCAG_TAGS.join(', ')}], ` +
-        `plus ${AAA_CONTRAST_RULE} on the ${aaaJobs} AAA-palette variants ` +
-        `and ${LABEL_IN_NAME_RULE} (WCAG 2.5.3) on every visible ${LABEL_IN_NAME_SELECTOR}`
+        `plus ${AAA_CONTRAST_RULE} on the ${aaaJobs} AAA-palette variants, ` +
+        `${LABEL_IN_NAME_RULE} (WCAG 2.5.3) on every visible ${LABEL_IN_NAME_SELECTOR}, ` +
+        `and ${UNIQUE_ID_RULE} on every page`
     );
     const errors: ScanError[] = [];
     const perJob = await mapLimit(jobs, CONCURRENCY, async (job) => {
@@ -1429,7 +1537,8 @@ async function main(): Promise<number> {
     console.log(
       `a11y: no WCAG A/AA violations across ${jobs.length} page variants, ` +
         `no AAA contrast violations across the ${aaaJobs} AAA-palette variants, ` +
-        `and no ${LABEL_IN_NAME_RULE} violations on ${LABEL_IN_NAME_SELECTOR}.`
+        `no ${LABEL_IN_NAME_RULE} violations on ${LABEL_IN_NAME_SELECTOR}, ` +
+        `and no repeated ids.`
     );
     return 0;
   } finally {
