@@ -4,7 +4,8 @@
  */
 
 import Dialog from 'bootstrap/js/dist/dialog.js';
-import { decodeFragment, slugifyHeading } from './toc';
+import { initDoxiaEnhancements } from './doxia';
+import { assignHeadingIds, decodeFragment, findProseHeadings, headingTextLanguage } from './toc';
 
 /**
  * What a search entry points at: a crawled site page (`page`), a heading on a page (`section`),
@@ -29,10 +30,20 @@ export interface SearchDocument {
   section?: string;
   kind?: SearchDocumentKind;
   content: string;
+  /**
+   * Language of a heading's text (`headingTextLanguage()`), present only when it differs from
+   * the language of the page the heading is on, such as `ja` for `<h2><span lang="ja">概要</span>`.
+   * Results declare it on the heading text (WCAG 2.2 SC 3.1.2). Entries cached by 0.1.6 and
+   * earlier have none; `entryLanguage()` reads it.
+   */
+  lang?: string;
 }
 
 /** Matches an href that starts with a URL scheme such as `https:` or `mailto:`. */
 const URL_SCHEME_PATTERN = /^[a-z][a-z\d+.-]*:/i;
+
+/** Tag names of the heading levels that search indexes on crawled pages. */
+const INDEXED_HEADING_TAG = /^H[1-4]$/;
 
 /**
  * Generic section names for entries whose section the site does not name. They are looked up
@@ -84,6 +95,44 @@ export function highlightQueryTerms(text: string, rawQuery: string): string {
   }
   const regex = new RegExp(`(${terms.join('|')})`, 'gi');
   return escapedText.replace(regex, '<mark class="supa-search-mark">$1</mark>');
+}
+
+/**
+ * Reads the language an entry records for its heading text. An entry cached by an older
+ * release, or one whose `lang` is not a string, records none.
+ *
+ * @param doc - Search entry.
+ * @returns The language tag, or null.
+ */
+function entryLanguage(doc: SearchDocument): string | null {
+  return typeof doc.lang === 'string' ? doc.lang : null;
+}
+
+/**
+ * Appends `text` with its query terms highlighted to `parent`, inside a `<span lang>` when the
+ * text is in another language than the results. Query terms hold no whitespace, so no match
+ * spans the space between two pieces of text appended one after the other, and the pieces are
+ * highlighted exactly as the whole text would be.
+ *
+ * @param parent - Element to append to.
+ * @param text - Raw text.
+ * @param rawQuery - Raw search query entered by the user.
+ * @param language - Language tag of the text, or null when it is in the results' language.
+ */
+function appendHighlighted(
+  parent: HTMLElement,
+  text: string,
+  rawQuery: string,
+  language: string | null = null
+): void {
+  if (language === null) {
+    parent.insertAdjacentHTML('beforeend', highlightQueryTerms(text, rawQuery));
+    return;
+  }
+  const span = document.createElement('span');
+  span.lang = language;
+  span.innerHTML = highlightQueryTerms(text, rawQuery);
+  parent.appendChild(span);
 }
 
 /**
@@ -302,6 +351,7 @@ export function collectLocalSearchDocuments(doc: Document = document): SearchDoc
   const article = doc.getElementById('supa-main-content');
   if (article) {
     const pageTitle = extractCleanDocumentTitle(doc, '');
+    const pageLanguage = doc.documentElement.getAttribute('lang') ?? '';
     const headings = article.querySelectorAll<HTMLHeadingElement>('h1[id], h2[id], h3[id], h4[id]');
     headings.forEach((h) => {
       const clone = h.cloneNode(true) as HTMLElement;
@@ -310,6 +360,7 @@ export function collectLocalSearchDocuments(doc: Document = document): SearchDoc
       if (!headingTitle) {
         return;
       }
+      const language = headingTextLanguage(h, clone);
       const nextEl = h.nextElementSibling;
       const isNextHeading = nextEl ? /^H[1-6]$/.test(nextEl.tagName) : false;
       const nextText = !isNextHeading && nextEl ? nextEl.textContent?.trim()?.slice(0, 220) || '' : '';
@@ -323,7 +374,8 @@ export function collectLocalSearchDocuments(doc: Document = document): SearchDoc
         href,
         section: pageTitle || undefined,
         kind: 'section',
-        content: `${headingTitle} ${nextText}`.trim()
+        content: `${headingTitle} ${nextText}`.trim(),
+        ...(language !== pageLanguage ? { lang: language } : {})
       });
     });
   }
@@ -502,27 +554,31 @@ async function fetchSiteIndex(
           content: `${pageTitle} ${bodySnippet}`
         });
 
-        // Also index h1-h4 sections on fetched pages & Maven reports
-        const usedSlugs = new Set<string>();
-        const headings = mainEl.querySelectorAll<HTMLHeadingElement>('h1, h2, h3, h4');
+        // Also index the h1-h4 sections of fetched pages & Maven reports, each linked by the id
+        // the page gives it when it opens: prepareHeadings() numbers repeated slugs over h1-h6
+        // and around ids the page's elements already hold, through the same assignHeadingIds().
+        // The page normalizes Doxia's output before that, which can move a heading into a
+        // .not-prose component (tabs or an alert: no id) or drop a :bi-*: shortcode from its text
+        // (another slug), so normalize this throwaway copy the same way first.
+        initDoxiaEnhancements(mainEl);
+        const pageLanguage = parsedDoc.documentElement.getAttribute('lang') ?? '';
+        const headings = findProseHeadings(mainEl);
+        const ids = assignHeadingIds(
+          headings,
+          Array.from(parsedDoc.querySelectorAll('[id]'), (el) => el.id)
+        );
+        const firstIndexed = headings.find((h) => INDEXED_HEADING_TAG.test(h.tagName));
         headings.forEach((h, idx) => {
-          if (h.closest('.not-prose')) {
+          if (!INDEXED_HEADING_TAG.test(h.tagName)) {
             return;
           }
           const headingTitle = h.textContent?.trim();
           if (!headingTitle) {
             return;
           }
-          const baseSlug = h.id?.trim() || slugifyHeading(headingTitle);
-          let slug = baseSlug;
-          let counter = 2;
-          while (usedSlugs.has(slug)) {
-            slug = `${baseSlug}-${counter++}`;
-          }
-          usedSlugs.add(slug);
 
           // Skip the primary page title h1 if it matches the page title itself
-          if (idx === 0 && h.tagName === 'H1' && headingTitle === pageTitle) {
+          if (h === firstIndexed && h.tagName === 'H1' && headingTitle === pageTitle) {
             return;
           }
 
@@ -530,13 +586,16 @@ async function fetchSiteIndex(
           const isNextHeading = nextEl ? /^H[1-6]$/.test(nextEl.tagName) : false;
           const nextText =
             !isNextHeading && nextEl ? nextEl.textContent?.trim()?.slice(0, 220) || '' : '';
+          // The fetched markup has no permalinks yet, so the heading is its own text-only copy
+          const language = headingTextLanguage(h, h);
 
           remoteDocs.push({
             title: headingTitle,
-            href: `${href}#${slug}`,
+            href: `${href}#${ids[idx]}`,
             section: pageTitle,
             kind: 'section',
-            content: `${headingTitle} ${nextText}`.trim()
+            content: `${headingTitle} ${nextText}`.trim(),
+            ...(language !== pageLanguage ? { lang: language } : {})
           });
         });
       } catch {
@@ -611,11 +670,15 @@ export function initSearch(): void {
       const topRow = document.createElement('div');
       topRow.className = 'supa-search-result-top';
 
+      // The heading text can be in another language than the page or section name around it
+      const language = entryLanguage(match);
       const titleDiv = document.createElement('div');
       titleDiv.className = 'supa-search-result-title';
       const section = resolveSearchSection(match);
-      const displayTitle = section ? `${section} \u203a ${match.title}` : match.title;
-      titleDiv.innerHTML = highlightQueryTerms(displayTitle, query);
+      if (section) {
+        appendHighlighted(titleDiv, `${section} \u203a `, query);
+      }
+      appendHighlighted(titleDiv, match.title, query, language);
 
       const badgeSpan = document.createElement('span');
       badgeSpan.className = `supa-search-result-badge is-${match.kind || 'section'}`;
@@ -627,7 +690,16 @@ export function initSearch(): void {
 
       const snippetDiv = document.createElement('div');
       snippetDiv.className = 'supa-search-result-snippet';
-      snippetDiv.innerHTML = highlightQueryTerms(match.content.slice(0, 140), query);
+      const snippet = match.content.slice(0, 140);
+      // A section entry's content starts with its heading text, followed by the text after it
+      const headingEnd =
+        language !== null && match.title && match.content.startsWith(match.title)
+          ? Math.min(match.title.length, snippet.length)
+          : 0;
+      if (headingEnd > 0) {
+        appendHighlighted(snippetDiv, snippet.slice(0, headingEnd), query, language);
+      }
+      appendHighlighted(snippetDiv, snippet.slice(headingEnd), query);
 
       link.appendChild(topRow);
       link.appendChild(snippetDiv);

@@ -43,6 +43,7 @@ import {
   initBootstrapAccordions,
   initBootstrapSteppers,
   initContentTabs,
+  initDoxiaEnhancements,
   initScrollRegions,
   labelReportAvatars,
   markDisabledPageLinks,
@@ -82,7 +83,9 @@ import {
   THEME_STORAGE_KEY
 } from '../../main/frontend/ts/theme';
 import {
+  assignHeadingIds,
   buildTableOfContents,
+  findProseHeadings,
   getStickyContentHeaderOffset,
   initTocAndScrollSpy,
   prepareHeadings,
@@ -1541,6 +1544,51 @@ describe('Supa Maven Skin Frontend Modules', () => {
         }
       }
     });
+
+    it('computes the ids prepareHeadings gives without changing the page', () => {
+      document.body.innerHTML = `
+        <main id="supa-main-content">
+          <h1>Guide</h1>
+          <h5>Notes</h5>
+          <p id="notes-2">An author id.</p>
+          <h2>Notes</h2>
+          <h2><a id="install"></a>Install</h2>
+          <p id="setup">An author id that a Doxia anchor repeats.</p>
+          <a id="setup"></a><h3>Setup</h3>
+          <h3>Later</h3>
+          <h3 id="later">Later on</h3>
+          <h4>Überblick</h4>
+          <div class="supa-tabs not-prose"><h2>Guide</h2></div>
+          <h6>Guide</h6>
+        </main>`;
+      const article = document.getElementById('supa-main-content')!;
+      const headings = findProseHeadings(article);
+      const ids = assignHeadingIds(
+        headings,
+        Array.from(document.querySelectorAll('[id]'), (el) => el.id)
+      );
+      expect(headings.map((h) => h.id)).toEqual(['', '', '', '', '', '', 'later', '', '']);
+      expect(document.getElementById('install')?.parentElement?.tagName).toBe('H2');
+
+      // The same ids as before 0.1.7: numbered over h1-h6, around ids already in the document
+      // (repeats included), and taking the slug a heading's own Doxia anchor holds
+      expect(ids).toEqual([
+        'guide',
+        'notes',
+        'notes-3',
+        'install',
+        'setup-2',
+        'later-2',
+        'later',
+        'überblick',
+        'guide-2'
+      ]);
+      prepareHeadings(article, true, '#');
+      expect(headings.map((h) => h.id)).toEqual(ids);
+      expect(document.getElementById('install')?.tagName).toBe('H2');
+      expect(document.getElementById('setup')?.tagName).toBe('P');
+      expect(document.getElementById('a.C3.BCberblick')?.nextElementSibling?.id).toBe('überblick');
+    });
   });
 
   describe('Code Block Highlighting, Language Pill, and Copy Button', () => {
@@ -2391,6 +2439,267 @@ describe('Supa Maven Skin Frontend Modules', () => {
         vi.unstubAllGlobals();
         window.sessionStorage.clear();
       }
+    });
+
+    describe('crawled headings, linked and labeled as their own page renders them', () => {
+      const happyDOM = (window as unknown as { happyDOM: { setURL: (url: string) => void } })
+        .happyDOM;
+      const originalUrl = window.location.href;
+      const pageLang = document.documentElement.getAttribute('lang');
+      let guideHtml = '';
+      const fetchMock = vi.fn(
+        async () => ({ ok: true, text: async () => guideHtml }) as unknown as Response
+      );
+
+      beforeEach(() => {
+        window.sessionStorage.clear();
+        fetchMock.mockClear();
+        vi.stubGlobal('fetch', fetchMock);
+        happyDOM.setURL('https://example.org/docs/index.html');
+        document.documentElement.setAttribute('lang', 'en');
+      });
+
+      afterEach(() => {
+        happyDOM.setURL(originalUrl);
+        vi.unstubAllGlobals();
+        window.sessionStorage.clear();
+        if (pageLang === null) {
+          document.documentElement.removeAttribute('lang');
+        } else {
+          document.documentElement.setAttribute('lang', pageLang);
+        }
+      });
+
+      /**
+       * Opens a search-enabled page at the site root whose sidebar links to `guide.html`, which
+       * serves `guideArticle`, lets the crawl finish, and then runs each query.
+       *
+       * @param guideArticle - Article markup of the crawled `guide.html`, as Doxia writes it.
+       * @param queries - Queries to type once the site index is complete.
+       * @param localArticle - Article markup of the page that runs the search.
+       * @returns The rendered result links for each query, in order.
+       */
+      const searchGuide = async (
+        guideArticle: string,
+        queries: string[],
+        localArticle = '<h1>Start</h1>'
+      ): Promise<HTMLAnchorElement[][]> => {
+        guideHtml =
+          '<!DOCTYPE html><html lang="en"><head><title>Guide</title></head><body>' +
+          `<main id="supa-main-content">${guideArticle}</main></body></html>`;
+        document.body.innerHTML = `
+          <nav class="supa-sidebar-tree"><a class="supa-nav-link" href="guide.html">Guide</a></nav>
+          <main id="supa-main-content">${localArticle}</main>
+          <dialog id="supaSearchDialog">
+            <input id="supaSearchInput" />
+            <div id="supaSearchStatus"></div>
+            <div id="supaSearchResults"></div>
+          </dialog>`;
+        initSearch();
+        const input = document.getElementById('supaSearchInput') as HTMLInputElement;
+        input.value = queries[0] ?? '';
+        input.dispatchEvent(new Event('input'));
+        // The crawl caches its entries just before they are merged into the index
+        await vi.waitFor(() =>
+          expect(window.sessionStorage.getItem(getSearchIndexCacheKey())).not.toBeNull()
+        );
+        await new Promise((resolveWait) => setTimeout(resolveWait, 0));
+        return queries.map((query) => {
+          input.value = query;
+          input.dispatchEvent(new Event('input'));
+          return Array.from(
+            document.querySelectorAll<HTMLAnchorElement>('.supa-search-result-item')
+          );
+        });
+      };
+
+      /**
+       * Renders `guideArticle` the way `guide.html` renders itself in the browser: Doxia
+       * normalization first, then heading ids, as `initSupaSkin()` orders them.
+       *
+       * @param guideArticle - Article markup of `guide.html`.
+       */
+      const openGuide = (guideArticle: string): void => {
+        document.body.innerHTML = `<main id="supa-main-content">${guideArticle}</main>`;
+        const article = document.getElementById('supa-main-content')!;
+        initDoxiaEnhancements(article);
+        prepareHeadings(article, false);
+      };
+
+      /**
+       * Lists the `#fragment` of every result link that points into `guide.html`.
+       *
+       * @param results - Rendered result links.
+       * @returns The fragments, in rendered order.
+       */
+      const guideFragments = (results: HTMLAnchorElement[]): string[] =>
+        results
+          .map((link) => link.getAttribute('href') || '')
+          .filter((href) => href.startsWith('guide.html#'))
+          .map((href) => href.slice('guide.html#'.length));
+
+      it('numbers repeated headings over h1-h6, as the page does, while indexing h1-h4', async () => {
+        const guide =
+          '<h1>Guide</h1>' +
+          '<h5>Example</h5><p>Fine print.</p><h5>Example</h5><p>Finer print.</p>' +
+          '<h2>Example</h2><p>First example.</p><h2>Example</h2><p>Second example.</p>';
+        const [results] = await searchGuide(guide, ['example']);
+        const fragments = guideFragments(results);
+        expect(fragments).toEqual(['example-3', 'example-4']);
+
+        openGuide(guide);
+        const targets = fragments.map((id) => document.getElementById(id));
+        expect(targets.map((el) => el?.tagName)).toEqual(['H2', 'H2']);
+        expect(targets.map((el) => el?.nextElementSibling?.textContent)).toEqual([
+          'First example.',
+          'Second example.'
+        ]);
+      });
+
+      it('skips ids already taken on the page, as the page does', async () => {
+        // An empty <a id> written by Doxia or the author before another heading, an author id on
+        // a paragraph, and a Doxia anchor that holds its own heading's slug, which the heading
+        // then takes over
+        const guide =
+          '<h1>Guide</h1>' +
+          '<a id="faq"></a><h2>Questions</h2><p>Asked often.</p>' +
+          '<h2>FAQ</h2><p>Answered here.</p>' +
+          '<p id="usage">Run it.</p><h2>Usage</h2><p>Options.</p>' +
+          '<section><a id="install"></a><h2>Install</h2><p>Download.</p></section>';
+        const results = await searchGuide(guide, ['faq', 'usage', 'install']);
+        const fragments = results.map(guideFragments);
+        expect(fragments).toEqual([['faq-2'], ['usage-2'], ['install']]);
+
+        openGuide(guide);
+        expect(fragments.flat().map((id) => document.getElementById(id)?.textContent)).toEqual([
+          'FAQ',
+          'Usage',
+          'Install'
+        ]);
+        expect(document.getElementById('faq')?.tagName).toBe('A');
+        expect(document.getElementById('usage')?.tagName).toBe('P');
+      });
+
+      it('links headings that the page transforms before it assigns ids', async () => {
+        // Synchronized tabs become .not-prose, so their headings get no id, and a :bi-*: shortcode
+        // becomes an icon, which leaves the heading text and its slug
+        const guide =
+          '<h1>Guide</h1>' +
+          '<div class="supa-tabs">' +
+          '<div data-tab="Maven"><h3>Setup</h3><p>Maven steps.</p></div>' +
+          '</div>' +
+          '<h2>Setup</h2><p>Shared steps.</p>' +
+          '<h2>:bi-star: Favorites</h2><p>Starred pages.</p>';
+        const results = await searchGuide(guide, ['setup', 'favorites']);
+        expect(results.map(guideFragments)).toEqual([['setup'], ['favorites']]);
+        expect(results[1][0]?.querySelector('.supa-search-result-title')?.textContent).toBe(
+          'Guide › Favorites'
+        );
+
+        openGuide(guide);
+        expect(document.getElementById('setup')?.nextElementSibling?.textContent).toBe(
+          'Shared steps.'
+        );
+        expect(document.getElementById('favorites')?.tagName).toBe('H2');
+      });
+
+      it('declares the language of heading text in result titles and snippets', async () => {
+        const guide =
+          '<h1>Guide</h1>' +
+          '<h2><span lang="ja">概要</span></h2><p>Short summary.</p>' +
+          '<h2>Overview</h2><p>Longer summary.</p>';
+        const [japanese, english, local] = await searchGuide(
+          guide,
+          ['概要', 'overview', 'überblick'],
+          '<h1>Start</h1><h2 id="überblick" lang="de">Überblick</h2><p>Erste Schritte.</p>'
+        );
+        expect(guideFragments(japanese)).toEqual(['概要']);
+        expect(
+          Array.from(japanese[0].querySelectorAll('[lang]')).map((el) => [
+            el.closest('.supa-search-result-title, .supa-search-result-snippet')?.className,
+            el.getAttribute('lang'),
+            el.textContent
+          ])
+        ).toEqual([
+          ['supa-search-result-title', 'ja', '概要'],
+          ['supa-search-result-snippet', 'ja', '概要']
+        ]);
+        // The section name stays in the page language, and so does the text after the heading
+        expect(japanese[0].querySelector('.supa-search-result-title')?.textContent).toBe(
+          'Guide › 概要'
+        );
+        expect(japanese[0].querySelector('.supa-search-result-snippet')?.textContent).toBe(
+          '概要 Short summary.'
+        );
+
+        // Text in the language of its page declares none
+        expect(guideFragments(english)).toEqual(['overview']);
+        expect(english[0].querySelector('[lang]')).toBeNull();
+
+        // Headings on the page that runs the search are indexed the same way
+        expect(local.map((link) => link.getAttribute('href'))).toEqual(['#überblick']);
+        expect(
+          local[0].querySelector('.supa-search-result-title [lang]')?.getAttribute('lang')
+        ).toBe('de');
+
+        const cached = JSON.parse(
+          window.sessionStorage.getItem(getSearchIndexCacheKey()) || '[]'
+        ) as Array<{ href: string; lang?: string }>;
+        expect(cached.filter((doc) => doc.lang).map((doc) => [doc.href, doc.lang])).toEqual([
+          ['guide.html#概要', 'ja']
+        ]);
+      });
+
+      it('renders cached entries without a language, as 0.1.6 stored them', async () => {
+        document.body.innerHTML = `
+          <nav class="supa-sidebar-tree"><a class="supa-nav-link" href="guide.html">Guide</a></nav>
+          <main id="supa-main-content"><h1>Start</h1></main>
+          <dialog id="supaSearchDialog">
+            <input id="supaSearchInput" />
+            <div id="supaSearchStatus"></div>
+            <div id="supaSearchResults"></div>
+          </dialog>`;
+        window.sessionStorage.setItem(
+          getSearchIndexCacheKey(),
+          JSON.stringify([
+            { title: 'Guide', href: 'guide.html', kind: 'page', content: 'Guide 概要' },
+            {
+              title: '概要',
+              href: 'guide.html#概要',
+              section: 'Guide',
+              kind: 'section',
+              content: '概要 Short.'
+            },
+            // Not a language tag: rendered as if absent
+            {
+              title: 'Overview',
+              href: 'guide.html#overview',
+              section: 'Guide',
+              kind: 'section',
+              content: 'Overview',
+              lang: 7
+            }
+          ])
+        );
+        initSearch();
+        const input = document.getElementById('supaSearchInput') as HTMLInputElement;
+        input.value = 'guide';
+        input.dispatchEvent(new Event('input'));
+        await vi.waitFor(() =>
+          expect(document.querySelectorAll('.supa-search-result-item').length).toBe(3)
+        );
+        expect(fetchMock).not.toHaveBeenCalled();
+        const results = Array.from(document.querySelectorAll('.supa-search-result-item'));
+        const titles = results.map(
+          (link) => link.querySelector('.supa-search-result-title')?.textContent
+        );
+        expect(titles).toEqual([
+          'Navigation › Guide',
+          'Guide › 概要',
+          'Guide › Overview'
+        ]);
+        expect(document.querySelector('#supaSearchResults [lang]')).toBeNull();
+      });
     });
   });
 

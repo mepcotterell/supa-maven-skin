@@ -72,15 +72,15 @@ function doxiaLinkId(id: string): string | null {
 }
 
 /**
- * Finds the language of a heading's text, so its TOC entry can declare the same language
- * (WCAG 2.2 SC 3.1.2): the `lang` of the innermost element that holds all of the text, such as
- * `<h2><span lang="ja">概要</span></h2>`, or else the language the heading inherits.
+ * Finds the language of a heading's text, so its TOC entry and search results can declare the
+ * same language (WCAG 2.2 SC 3.1.2): the `lang` of the innermost element that holds all of the
+ * text, such as `<h2><span lang="ja">概要</span></h2>`, or else the language the heading inherits.
  *
  * @param heading - Heading in the article.
  * @param textOnly - Copy of the heading without its permalink.
  * @returns The language tag, or `''` when no language is declared.
  */
-function headingTextLanguage(heading: HTMLElement, textOnly: HTMLElement): string {
+export function headingTextLanguage(heading: HTMLElement, textOnly: HTMLElement): string {
   const text = textOnly.textContent?.trim();
   const wrappers = Array.from(textOnly.querySelectorAll('[lang]')).filter(
     (el) => el.textContent?.trim() === text
@@ -153,6 +153,98 @@ export function getStickyContentHeaderOffset(doc: Document = document): number {
 }
 
 /**
+ * Lists the headings of an article that get an id and a permalink: every `h1`–`h6` outside
+ * `.not-prose` components, in document order.
+ *
+ * @param article - Root article container (`#supa-main-content`).
+ * @returns The prose headings.
+ */
+export function findProseHeadings(article: ParentNode): HTMLHeadingElement[] {
+  return Array.from(
+    article.querySelectorAll<HTMLHeadingElement>('h1, h2, h3, h4, h5, h6')
+  ).filter((h) => !h.closest('.not-prose'));
+}
+
+/**
+ * Finds the empty `<a id="...">` or `<a name="...">` anchor that Doxia writes for a heading:
+ * inside the heading, which `prepareHeadings()` then moves before it, or right before it.
+ *
+ * @param heading - Heading in the article.
+ * @returns The anchor, or null.
+ */
+function findDoxiaAnchor(heading: HTMLElement): HTMLAnchorElement | null {
+  const inner = heading.querySelector<HTMLAnchorElement>('a[id], a[name]');
+  if (inner && !inner.textContent?.trim()) {
+    return inner;
+  }
+  const prev = heading.previousElementSibling;
+  return prev && prev.tagName === 'A' && !prev.textContent?.trim()
+    ? (prev as HTMLAnchorElement)
+    : null;
+}
+
+/**
+ * Slugs a heading's text, leaving out its permalink.
+ *
+ * @param heading - Heading in the article.
+ * @returns The slug (`slugifyHeading()`).
+ */
+function headingSlug(heading: HTMLElement): string {
+  const clone = heading.cloneNode(true) as HTMLElement;
+  clone.querySelectorAll('.supa-headerlink').forEach((el) => el.remove());
+  return slugifyHeading(clone.textContent || 'section');
+}
+
+/**
+ * Computes the id `prepareHeadings()` gives each heading. The search crawler computes the ids of
+ * the pages it fetches with it too, so that a result links to the id the page later gives itself.
+ * A heading keeps an id it already has. Any other heading gets its slug, or the slug numbered
+ * `-2`, `-3`, ... when an earlier heading of any level took it or another element of the
+ * document holds it: a Doxia anchor, an id the author wrote, the skin's own markup, or the anchor
+ * `prepareHeadings()` adds for Doxia's link form of an earlier heading's id. A Doxia anchor that
+ * holds exactly its own heading's slug gives the slug up first.
+ *
+ * @param headings - The prose headings of one document, in document order
+ *     (`findProseHeadings()`).
+ * @param takenIds - Ids of that document's elements before any heading gets one, repeats
+ *     included.
+ * @returns The id of each heading, in the order of `headings`.
+ */
+export function assignHeadingIds(
+  headings: readonly HTMLElement[],
+  takenIds: Iterable<string>
+): string[] {
+  // How many elements hold each id: an id can repeat, and getElementById() still finds it after
+  // one of them gives it up
+  const holders = new Map<string, number>();
+  for (const id of takenIds) {
+    holders.set(id, (holders.get(id) ?? 0) + 1);
+  }
+  const used = new Set<string>();
+  return headings.map((heading) => {
+    let id = heading.id.trim();
+    if (!id) {
+      const slug = headingSlug(heading);
+      // prepareHeadings() removes the id of a Doxia anchor that holds its heading's slug
+      if (findDoxiaAnchor(heading)?.id === slug) {
+        holders.set(slug, (holders.get(slug) ?? 0) - 1);
+      }
+      id = slug;
+      for (let counter = 2; used.has(id) || (holders.get(id) ?? 0) > 0; counter++) {
+        id = `${slug}-${counter}`;
+      }
+    }
+    used.add(id);
+    const linkId = doxiaLinkId(id);
+    if (linkId) {
+      // prepareHeadings() adds an anchor with this id unless an element already holds it
+      holders.set(linkId, Math.max(holders.get(linkId) ?? 0, 1));
+    }
+    return id;
+  });
+}
+
+/**
  * Ensures every heading in the article has a deterministic clean slug `id`
  * (e.g. `#1-actions-buttons`) while preserving any preceding Doxia `<a id="...">`
  * anchor for backward compatibility, and attaches the optional Furo `#` permalink.
@@ -167,51 +259,32 @@ export function prepareHeadings(
   enablePermalinks = true,
   permalinkSymbol = '#'
 ): HTMLHeadingElement[] {
-  const usedIds = new Set<string>();
-  const allHeadings = Array.from(
-    article.querySelectorAll<HTMLHeadingElement>('h1, h2, h3, h4, h5, h6')
-  ).filter((h) => !h.closest('.not-prose'));
+  const allHeadings = findProseHeadings(article);
+  const ids = assignHeadingIds(
+    allHeadings,
+    Array.from(article.ownerDocument.querySelectorAll('[id]'), (el) => el.id)
+  );
 
-  allHeadings.forEach((heading) => {
-    let id = heading.id?.trim();
+  allHeadings.forEach((heading, index) => {
+    const id = ids[index];
+    const hadId = heading.id.trim() !== '';
 
-    // If Doxia placed an empty <a id="..."> inside the heading, move it before the heading
-    const innerAnchor = heading.querySelector<HTMLAnchorElement>('a[id], a[name]');
-    if (innerAnchor && !innerAnchor.textContent?.trim()) {
-      heading.parentNode?.insertBefore(innerAnchor, heading);
+    // Doxia's empty anchor stays in place, or moves out of the heading to just before it
+    const prevAnchor = findDoxiaAnchor(heading);
+    if (prevAnchor && heading.contains(prevAnchor)) {
+      heading.parentNode?.insertBefore(prevAnchor, heading);
     }
-
-    // Check if Doxia placed an empty <a id="..."> or <a name="..."> right before the heading
-    const prev = heading.previousElementSibling;
-    const prevAnchor =
-      prev && prev.tagName === 'A' && !prev.textContent?.trim()
-        ? (prev as HTMLAnchorElement)
-        : null;
     const doxiaId = prevAnchor ? prevAnchor.id || prevAnchor.getAttribute('name') || '' : '';
     if (doxiaId) {
       heading.setAttribute('data-doxia-id', doxiaId);
     }
 
-    if (!id) {
-      const clone = heading.cloneNode(true) as HTMLElement;
-      clone.querySelectorAll('.supa-headerlink').forEach((el) => el.remove());
-      const baseSlug = slugifyHeading(clone.textContent || 'section');
-
-      // If the preceding Doxia anchor already uses the exact same lowercase slug,
-      // remove its id so the heading itself owns that id without DOM duplication.
-      if (prevAnchor && prevAnchor.id === baseSlug) {
-        prevAnchor.removeAttribute('id');
-      }
-
-      let candidate = baseSlug;
-      let counter = 2;
-      while (usedIds.has(candidate) || document.getElementById(candidate)) {
-        candidate = `${baseSlug}-${counter++}`;
-      }
-      id = candidate;
+    // If the Doxia anchor already uses the exact same lowercase slug, remove its id so the
+    // heading itself owns that id without DOM duplication (assignHeadingIds() counts on it)
+    if (!hadId && prevAnchor && prevAnchor.id === headingSlug(heading)) {
+      prevAnchor.removeAttribute('id');
     }
 
-    usedIds.add(id);
     heading.id = id;
 
     // Doxia rewrites a Markdown link to #überblick as #a.C3.BCberblick, so give the heading an
