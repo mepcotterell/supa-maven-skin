@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.1.7] - 2026-11-06
+
 ### Changed
 
 - **Accessibility Scan Coverage**: `npm run test:a11y` now fails when two elements on a page share an `id`, and adds scenarios for the fixes below: deep links on desktop and phone with and without reduced motion, a reader who scrolls before the page is ready or reloads after scrolling (`deep-link*`), a Markdown link to a heading that starts with a digit (`numbered-heading-link`), the Datepicker's month view (`datepicker-months`), and the printed component showcase (`print-components`). It now scans 151 variants.
@@ -168,7 +170,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   - Organized `src/site/markdown/` around the Diátaxis framework (`index.md.vm`, `getting-started.md`, `authoring-guide.md`, `configuration.md`, `components.md`, `kitchen-sink.md`, `architecture.md`) with custom dual-theme `rocket-takeoff` logos (`src/site/resources/images/logo-light.svg` and `logo-dark.svg`).
   - Added automated TypeScript linters for SCSS WCAG 2.2 AA/AAA contrast (`scripts/lint-scss.ts`), Velocity directive balance (`scripts/lint-velocity.ts`), and documentation version alignment + Keep a Changelog 1.1.0 compliance (`scripts/lint-docs.ts`), enforced alongside the Google TypeScript Style Guide and Google-style TSDoc (`supa/google-tsdoc`).
 
-[Unreleased]: https://github.com/mepcotterell/supa-maven-skin/compare/v0.1.6...HEAD
+[Unreleased]: https://github.com/mepcotterell/supa-maven-skin/compare/v0.1.7...HEAD
+[0.1.7]: https://github.com/mepcotterell/supa-maven-skin/compare/v0.1.6...v0.1.7
 [0.1.6]: https://github.com/mepcotterell/supa-maven-skin/compare/v0.1.5...v0.1.6
 [0.1.5]: https://github.com/mepcotterell/supa-maven-skin/compare/v0.1.4...v0.1.5
 [0.1.4]: https://github.com/mepcotterell/supa-maven-skin/compare/v0.1.3...v0.1.4

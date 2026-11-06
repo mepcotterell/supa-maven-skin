@@ -42,7 +42,7 @@ Requires `maven-site-plugin` 3.21.0 or later. Add the skin to `src/site/site.xml
 <skin>
   <groupId>io.github.mepcotterell</groupId>
   <artifactId>supa-maven-skin</artifactId>
-  <version>0.1.6</version>
+  <version>0.1.7</version>
 </skin>
 ```
 
