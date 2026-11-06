@@ -132,6 +132,93 @@ function findFragmentTarget(hash: string): HTMLElement | null {
 }
 
 /**
+ * Reader input after which the skin does not scroll to the URL's heading again: the reader owns
+ * the scroll position from then on. Scroll events cannot tell the reader's scrolling from the
+ * skin's own scroll to the heading or from the browser's scroll anchoring, so the input that
+ * scrolls the page, moves focus, or follows a link is watched instead: the wheel, a touch, a
+ * pointer press (which starts every click), and a key.
+ */
+const READER_INPUT_EVENTS: readonly string[] = ['wheel', 'touchstart', 'pointerdown', 'keydown'];
+
+/**
+ * Starts listening for `READER_INPUT_EVENTS` on the window, in the capture phase so a handler that
+ * stops propagation cannot hide them.
+ *
+ * @returns Function that stops listening and reports whether any such input arrived.
+ */
+function watchReaderInput(): () => boolean {
+  let seen = false;
+  const onInput = (): void => {
+    seen = true;
+  };
+  READER_INPUT_EVENTS.forEach((type) => {
+    window.addEventListener(type, onInput, { capture: true, passive: true });
+  });
+  return () => {
+    READER_INPUT_EVENTS.forEach((type) => {
+      window.removeEventListener(type, onInput, true);
+    });
+    return seen;
+  };
+}
+
+/**
+ * Waits until the content above a heading has stopped reshaping. `data-supa-ready` can come before
+ * the load event, and what still arrives then moves the content: a late stylesheet (KaTeX's moved
+ * the kitchen sink's lower headings 63px) and images without dimensions, which grow when they
+ * load. Both hold the load event. Fonts that only such a stylesheet uses start loading when text
+ * is laid out in them, so the page is laid out before `document.fonts.ready` is read.
+ *
+ * @returns Promise that resolves once the page has loaded and its fonts are in.
+ */
+async function layoutSettled(): Promise<void> {
+  if (document.readyState !== 'complete') {
+    await new Promise<void>((resolve) => {
+      window.addEventListener('load', () => resolve(), { once: true });
+    });
+  }
+  if ('fonts' in document) {
+    document.body.getBoundingClientRect();
+    await document.fonts.ready;
+  }
+}
+
+/**
+ * Scrolls to the element the URL's fragment names when the page opens, and returns a second scroll
+ * to it. Doxia 2 writes no `id` on headings, so the browser cannot find the heading a link names
+ * until `prepareHeadings()` gives it one, and this scroll stands in for the browser's. The content
+ * above the heading reshapes after it, as code is highlighted, widget chunks, Mermaid, and KaTeX
+ * load, and late images and fonts arrive, which left headings far down the kitchen sink hundreds
+ * of pixels short. The returned function scrolls to the element again once that is over, unless the
+ * reader has scrolled, clicked, touched, or pressed a key since the page opened, or the fragment
+ * no longer names an element. Both scrolls are smooth only where the stylesheet makes them so.
+ *
+ * @returns Function that scrolls to the fragment's element again once the page has loaded and its
+ *     fonts are in, and resolves when it has done so or skipped it.
+ */
+function landOnFragment(): () => Promise<void> {
+  const skip = (): Promise<void> => Promise.resolve();
+  if (typeof window === 'undefined' || window.location.hash.length <= 1) {
+    return skip;
+  }
+  const target = findFragmentTarget(window.location.hash);
+  // A page no longer at the top was scrolled before this ran: by the reader, or by the browser, to
+  // an element the HTML itself names or back to the reader's place before a reload.
+  if (!target || window.scrollY !== 0) {
+    return skip;
+  }
+  target.scrollIntoView();
+  const readerMoved = watchReaderInput();
+  return async () => {
+    await layoutSettled();
+    if (readerMoved()) {
+      return;
+    }
+    findFragmentTarget(window.location.hash)?.scrollIntoView();
+  };
+}
+
+/**
  * Measures the pinned `.supa-content-header` when `<stickyContentHeader>` is
  * enabled, so ScrollSpy and the active-heading threshold do not treat headings
  * hidden beneath the bar as visible. Returns 0 when the option is off or the
@@ -526,6 +613,9 @@ export function buildTableOfContents(
     new ScrollSpy(document.body, {
       target: '#supaTocNav',
       rootMargin: `-${getStickyContentHeaderOffset()}px 0px -70%`,
+      // On each TOC click, Bootstrap 6 asks matchMedia whether the reader prefers reduced motion,
+      // and if so scrolls with `behavior: 'auto'`, which leaves it to <html>'s `scroll-behavior`.
+      // That is smooth only under `prefers-reduced-motion: no-preference` (_layout.scss).
       smoothScroll: true
     });
   } catch {
@@ -570,12 +660,15 @@ export function buildTableOfContents(
 }
 
 /**
- * Prepares article headings, handles initial hash scrolling, and builds the sticky ScrollSpy TOC.
+ * Prepares article headings, scrolls to the URL's heading, and builds the sticky ScrollSpy TOC.
+ *
+ * @returns Function that scrolls to the URL's heading again once the page has settled (see
+ *     `landOnFragment()`); `initSupaSkin()` calls it once the skin is ready.
  */
-export function initTocAndScrollSpy(): void {
+export function initTocAndScrollSpy(): () => Promise<void> {
   const article = document.getElementById('supa-main-content');
   if (!article) {
-    return;
+    return () => Promise.resolve();
   }
 
   const body = document.body;
@@ -590,13 +683,9 @@ export function initTocAndScrollSpy(): void {
   // If the page loaded with a #hash pointing to a slugified heading id that was assigned
   // dynamically by prepareHeadings(), scroll to it before building the TOC so initial
   // active state reflects the scrolled position.
-  if (typeof window !== 'undefined' && window.location.hash.length > 1) {
-    const targetEl = findFragmentTarget(window.location.hash);
-    if (targetEl && window.scrollY === 0) {
-      targetEl.scrollIntoView();
-    }
-  }
+  const landAgain = landOnFragment();
 
   const tocNav = document.getElementById('supaTocNav');
   buildTableOfContents(article, tocNav, Number.isNaN(tocMaxDepth) ? 4 : tocMaxDepth);
+  return landAgain;
 }

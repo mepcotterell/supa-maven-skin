@@ -103,6 +103,21 @@ export function initDrawers(): void {
 }
 
 /**
+ * Picks the behavior of a scroll the skin starts in script: smooth only when the reader has not
+ * asked to reduce motion. The preference is read as the scroll starts, so a change to it applies
+ * without a reload. `'instant'` rather than `'auto'`, which would defer to a stylesheet that a
+ * site's own CSS may set to smooth.
+ *
+ * @returns `'smooth'` under `prefers-reduced-motion: no-preference`, else `'instant'`.
+ */
+function motionScrollBehavior(): ScrollBehavior {
+  return typeof window.matchMedia === 'function' &&
+    window.matchMedia('(prefers-reduced-motion: no-preference)').matches
+    ? 'smooth'
+    : 'instant';
+}
+
+/**
  * Creates and mounts the floating "Back to top" button and binds scroll visibility.
  */
 export function initBackToTop(): void {
@@ -119,7 +134,7 @@ export function initBackToTop(): void {
     '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="18 15 12 9 6 15"></polyline></svg><span>Back to top</span>';
 
   btn.addEventListener('click', () => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: motionScrollBehavior() });
   });
 
   document.body.appendChild(btn);
@@ -147,12 +162,13 @@ export const SUPA_READY_ATTRIBUTE = 'data-supa-ready';
  * Boots all Supa Maven Skin frontend modules in deterministic order.
  *
  * @returns Promise that resolves once optional libraries and lazily loaded
- *     widgets have settled and `data-supa-ready` has been set on `<html>`.
+ *     widgets have settled, `data-supa-ready` has been set on `<html>`, and the
+ *     page has scrolled to its URL's heading again (or had no reason to).
  */
 export function initSupaSkin(): Promise<void> {
   initTheme();
   initDoxiaEnhancements();
-  initTocAndScrollSpy();
+  const landOnFragmentAgain = initTocAndScrollSpy();
   initCodeBlocks();
   initSearch();
   initDrawers();
@@ -165,6 +181,9 @@ export function initSupaSkin(): Promise<void> {
   // once every widget on the page has initialized.
   return Promise.allSettled([initOptionalLibraries(), widgetsSettled]).then(() => {
     document.documentElement.setAttribute(SUPA_READY_ATTRIBUTE, 'true');
+    // Highlighting, the widgets, Mermaid, and KaTeX have reshaped the article since the TOC
+    // enhancer scrolled to the URL's heading, so scroll to it again once the page has settled.
+    return landOnFragmentAgain();
   });
 }
 

@@ -55,6 +55,7 @@ import {
 } from '../../main/frontend/ts/doxia';
 import {
   Drawer,
+  initBackToTop,
   initDrawers,
   initSupaSkin,
   SUPA_READY_ATTRIBUTE
@@ -1061,6 +1062,55 @@ describe('Supa Maven Skin Frontend Modules', () => {
       expect(playground.getAttribute('data-supa-playground-ready')).toBe('true');
       expect(playground.querySelector('[data-playground-stage] .btn')).not.toBeNull();
     });
+
+    it('scrolls back to the top smoothly only while the reader allows motion, asking at each click', () => {
+      const motion = { allowed: false };
+      vi.stubGlobal(
+        'matchMedia',
+        (query: string): MediaQueryList =>
+          ({
+            matches: query === '(prefers-reduced-motion: no-preference)' && motion.allowed,
+            media: query
+          }) as MediaQueryList
+      );
+      const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => undefined);
+      try {
+        initBackToTop();
+        const button = document.querySelector<HTMLButtonElement>('.supa-back-to-top')!;
+        button.click();
+        // The reader turns the reduced-motion setting off while the page is open
+        motion.allowed = true;
+        button.click();
+        expect(scrollTo.mock.calls).toEqual([
+          [{ top: 0, behavior: 'instant' }],
+          [{ top: 0, behavior: 'smooth' }]
+        ]);
+      } finally {
+        scrollTo.mockRestore();
+        vi.unstubAllGlobals();
+      }
+    });
+
+    it('scrolls to the URL heading again only after setting html[data-supa-ready]', async () => {
+      const happyDOM = (window as unknown as { happyDOM: { setURL: (url: string) => void } })
+        .happyDOM;
+      const originalUrl = window.location.href;
+      const readyAtEachScroll: boolean[] = [];
+      const scrollSpy = vi.spyOn(Element.prototype, 'scrollIntoView').mockImplementation(() => {
+        readyAtEachScroll.push(document.documentElement.hasAttribute(SUPA_READY_ATTRIBUTE));
+      });
+      happyDOM.setURL('https://example.org/docs/guide.html#usage');
+      document.body.innerHTML =
+        '<main id="supa-main-content"><h1>Guide</h1><h2>Install</h2><h2>Usage</h2></main>';
+      document.documentElement.removeAttribute(SUPA_READY_ATTRIBUTE);
+      try {
+        await initSupaSkin();
+        expect(readyAtEachScroll).toEqual([false, true]);
+      } finally {
+        scrollSpy.mockRestore();
+        happyDOM.setURL(originalUrl);
+      }
+    });
   });
 
   describe('Headings, Permalinks, and Table of Contents', () => {
@@ -1804,6 +1854,157 @@ describe('Supa Maven Skin Frontend Modules', () => {
         expect(followed('#a2-install')).toBe('#configure');
       } finally {
         happyDOM.setURL(originalUrl);
+      }
+    });
+
+    it('scrolls to the URL heading again once settled, unless the reader moved or the fragment names nothing', async () => {
+      const happyDOM = (window as unknown as { happyDOM: { setURL: (url: string) => void } })
+        .happyDOM;
+      const originalUrl = window.location.href;
+      const scrolledTo: string[] = [];
+      const scrollSpy = vi
+        .spyOn(Element.prototype, 'scrollIntoView')
+        .mockImplementation(function (this: Element) {
+          scrolledTo.push(this.id);
+        });
+      /**
+       * Opens a page at `hash`, as a link from another page would, and runs the TOC enhancer.
+       *
+       * @param hash - URL fragment, including the leading `#`, or `''` for none.
+       * @returns The second scroll to the fragment's heading, which initSupaSkin() runs once ready.
+       */
+      const open = (hash: string): (() => Promise<void>) => {
+        scrolledTo.length = 0;
+        happyDOM.setURL(`https://example.org/docs/guide.html${hash}`);
+        document.body.innerHTML = `
+          <main id="supa-main-content"><h1>Handbuch</h1><h2>Einleitung</h2><h2>Überblick</h2></main>
+          <aside class="supa-toc-column"><nav id="supaTocNav"></nav></aside>
+        `;
+        return initTocAndScrollSpy();
+      };
+
+      try {
+        // Nothing interrupted: the same lookup as the first scroll finds the heading again
+        let landAgain = open('#%C3%BCberblick');
+        expect(scrolledTo).toEqual(['überblick']);
+        await landAgain();
+        expect(scrolledTo).toEqual(['überblick', 'überblick']);
+
+        // A reader who scrolled, touched, clicked, or pressed a key since the page opened stays put
+        for (const type of ['wheel', 'touchstart', 'pointerdown', 'keydown']) {
+          landAgain = open('#einleitung');
+          document.querySelector('main h2')!.dispatchEvent(new Event(type, { bubbles: true }));
+          await landAgain();
+          expect(scrolledTo, type).toEqual(['einleitung']);
+        }
+
+        // A fragment changed in place to one that names nothing, or whose heading is gone
+        landAgain = open('#einleitung');
+        happyDOM.setURL('https://example.org/docs/guide.html#gone');
+        await landAgain();
+        expect(scrolledTo).toEqual(['einleitung']);
+        landAgain = open('#einleitung');
+        document.getElementById('einleitung')!.remove();
+        await landAgain();
+        expect(scrolledTo).toEqual(['einleitung']);
+
+        // A page opened without a fragment is not scrolled at all
+        landAgain = open('');
+        await landAgain();
+        expect(scrolledTo).toEqual([]);
+      } finally {
+        scrollSpy.mockRestore();
+        happyDOM.setURL(originalUrl);
+      }
+    });
+
+    it('waits for the load event and web fonts before scrolling to the URL heading again', async () => {
+      const happyDOM = (window as unknown as { happyDOM: { setURL: (url: string) => void } })
+        .happyDOM;
+      const originalUrl = window.location.href;
+      const scrolledTo: string[] = [];
+      const scrollSpy = vi
+        .spyOn(Element.prototype, 'scrollIntoView')
+        .mockImplementation(function (this: Element) {
+          scrolledTo.push(this.id);
+        });
+      // happy-dom has finished loading and has no FontFaceSet; stand in for a browser whose page
+      // is ready before its images, a late stylesheet, and that stylesheet's fonts have loaded
+      let readyState: DocumentReadyState = 'interactive';
+      Object.defineProperty(document, 'readyState', { get: () => readyState, configurable: true });
+      let fontsLoaded = (): void => undefined;
+      const fontsReady = new Promise<void>((resolveFonts) => {
+        fontsLoaded = resolveFonts;
+      });
+      Object.defineProperty(document, 'fonts', { value: { ready: fontsReady }, configurable: true });
+      const tick = (): Promise<void> => new Promise((resolveTick) => setTimeout(resolveTick, 0));
+
+      try {
+        happyDOM.setURL('https://example.org/docs/guide.html#usage');
+        document.body.innerHTML =
+          '<main id="supa-main-content"><h1>Guide</h1><h2>Install</h2><h2>Usage</h2></main>';
+        const landed = initTocAndScrollSpy()();
+        await tick();
+        expect(scrolledTo).toEqual(['usage']);
+
+        readyState = 'complete';
+        window.dispatchEvent(new Event('load'));
+        await tick();
+        expect(scrolledTo).toEqual(['usage']);
+
+        fontsLoaded();
+        await landed;
+        expect(scrolledTo).toEqual(['usage', 'usage']);
+      } finally {
+        Reflect.deleteProperty(document, 'readyState');
+        Reflect.deleteProperty(document, 'fonts');
+        scrollSpy.mockRestore();
+        happyDOM.setURL(originalUrl);
+      }
+    });
+
+    it('leaves TOC link scrolls to the stylesheet under reduced motion, asking at each click', () => {
+      // happy-dom computes no default styles, so state the ones ScrollSpy reads: visible headings,
+      // and a <body> that does not scroll itself, which makes the window the scroller
+      document.body.innerHTML = `
+        <main id="supa-main-content">
+          <h1>Guide</h1><h2 style="visibility: visible">Install</h2><h2 style="visibility: visible">Usage</h2>
+        </main>
+        <aside class="supa-toc-column"><nav id="supaTocNav"></nav></aside>
+      `;
+      document.body.style.overflowY = 'visible';
+      const motion = { allowed: false };
+      // Bootstrap's ScrollSpy asks the global matchMedia, as the browser's own is
+      vi.stubGlobal(
+        'matchMedia',
+        (query: string): MediaQueryList =>
+          ({ matches: query === '(prefers-reduced-motion: reduce)' && !motion.allowed, media: query }) as MediaQueryList
+      );
+      // happy-dom lays nothing out: give the headings a box so ScrollSpy tracks them
+      const rects = vi
+        .spyOn(Element.prototype, 'getClientRects')
+        .mockReturnValue([new DOMRect(0, 0, 100, 20)] as unknown as DOMRectList);
+      const behaviors: Array<ScrollBehavior | undefined> = [];
+      const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation((options?: ScrollToOptions | number) => {
+        behaviors.push(typeof options === 'object' ? options.behavior : undefined);
+      });
+
+      try {
+        initTocAndScrollSpy();
+        // ...and a place further down the page, so a click has somewhere to scroll
+        Object.defineProperty(document.getElementById('usage'), 'offsetTop', { value: 800 });
+        const link = document.querySelector<HTMLAnchorElement>('#supaTocNav a[href="#usage"]')!;
+        link.click();
+        // The reader turns the reduced-motion setting off while the page is open
+        motion.allowed = true;
+        link.click();
+        // 'auto' takes <html>'s scroll-behavior, which is smooth only without reduced motion
+        expect(behaviors).toEqual(['auto', 'smooth']);
+      } finally {
+        document.body.removeAttribute('style');
+        scrollTo.mockRestore();
+        rects.mockRestore();
+        vi.unstubAllGlobals();
       }
     });
   });

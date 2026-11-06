@@ -4,10 +4,16 @@
 // ============================================================================
 
 html {
-  scroll-behavior: smooth;
   scroll-padding-top: 4.5rem;
   max-width: 100%;
   overflow-x: clip;
+
+  // Smooth scrolling is motion, so only readers who have not asked to reduce motion get it. It
+  // covers links within the page and every scroll the skin leaves to CSS (`behavior: 'auto'`),
+  // such as ScrollSpy's TOC links under reduced motion and the scroll to the URL's heading.
+  @media (prefers-reduced-motion: no-preference) {
+    scroll-behavior: smooth;
+  }
 }
 
 body.supa-body {

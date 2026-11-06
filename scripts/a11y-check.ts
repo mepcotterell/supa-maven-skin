@@ -27,7 +27,10 @@
  * after a switch from `auto` to an explicit theme, and content pages printed,
  * with print media emulated and backgrounds dropped as browsers print them, so
  * text must read on white paper in every polarity, including the default
- * `auto` mode under a dark OS preference), asserts the
+ * `auto` mode under a dark OS preference, and a page opened from a link to a
+ * heading far down it, which must land under the headers with or without
+ * reduced motion, and leave a reader who scrolls before the page is ready
+ * where they scrolled to), asserts the
  * state was reached, scans it in `furo` light and dark and `modus` dark (AAA)
  * unless the scenario lists its own variants, and asserts the state still held
  * after the scan, so a broken selector fails the run instead of quietly
@@ -762,6 +765,231 @@ interface DatepickerStatics {
   getOrCreateInstance: (element: Element, config: Record<string, unknown>) => unknown;
 }
 
+/** The page the deep-link scenarios open from a link to one of its headings. */
+const DEEP_LINK_PAGE = 'kitchen-sink.html';
+
+/**
+ * A heading far down `DEEP_LINK_PAGE`. Above it, the Bootstrap component examples, the Mermaid
+ * diagram, and the KaTeX math reshape the page after the skin first scrolls to the heading.
+ */
+const DEEP_LINK_TARGET = 'definition-lists';
+
+/**
+ * The page's first heading. Nothing above it reshapes, so where a link to it lands is the gap
+ * under the headers that a link to any heading should get.
+ */
+const DEEP_LINK_REFERENCE = 'admonitions';
+
+/** How far a heading may land from the reference gap, for sub-pixel layout. */
+const LANDING_TOLERANCE_PX = 2;
+
+/** How far the reader scrolls back up before the page is ready in `deep-link-reader-scrolled`. */
+const READER_SCROLL_PX = 600;
+
+/**
+ * Animation frames the scroll position must hold before a landing counts as finished. A smooth
+ * scroll moves it on every frame.
+ */
+const SCROLL_IDLE_FRAMES = 30;
+
+/**
+ * The CDN that `optional.ts` loads Mermaid and KaTeX from. The page is not ready until they have
+ * run, and they reshape the page above `DEEP_LINK_TARGET` when they do.
+ */
+const CDN_REQUEST = /^https:\/\/cdn\.jsdelivr\.net\//;
+
+/**
+ * Where each deep-link job's heading should be measured from: the reference gap, or where the
+ * heading landed before the reader scrolled. Keyed by page, because jobs run concurrently.
+ */
+const deepLinkExpectations = new WeakMap<Page, number>();
+
+/**
+ * Opens `DEEP_LINK_PAGE` at a fragment as a new document, as a link from another page does. The
+ * query string, which differs per fragment, makes it a new document: a URL that differs from the
+ * open one only in its fragment would scroll the open page instead.
+ *
+ * @param page - Page under test.
+ * @param fragment - Heading id, without `#`.
+ * @param waitUntil - Load state to wait for.
+ */
+async function openAtFragment(
+  page: Page,
+  fragment: string,
+  waitUntil: 'load' | 'domcontentloaded' = 'load'
+): Promise<void> {
+  const url = new URL(`${DEEP_LINK_PAGE}?deep-link=${fragment}#${fragment}`, page.url());
+  await page.goto(url.href, { waitUntil, timeout: READY_TIMEOUT_MS });
+}
+
+/**
+ * Waits until the scroll position has held for `SCROLL_IDLE_FRAMES` frames, so a smooth scroll
+ * has ended. Gives up after 10 seconds, leaving the caller's assertion to report the position.
+ *
+ * @param page - Page under test.
+ */
+async function waitForScrollIdle(page: Page): Promise<void> {
+  await page.evaluate(
+    (frames: number) =>
+      new Promise<void>((resolveIdle) => {
+        const deadline = performance.now() + 10_000;
+        let last = window.scrollY;
+        let still = 0;
+        const tick = (): void => {
+          still = window.scrollY === last ? still + 1 : 0;
+          last = window.scrollY;
+          if (still >= frames || performance.now() > deadline) {
+            resolveIdle();
+          } else {
+            requestAnimationFrame(tick);
+          }
+        };
+        requestAnimationFrame(tick);
+      }),
+    SCROLL_IDLE_FRAMES
+  );
+}
+
+/**
+ * Waits until the page has done all of its own scrolling to the URL fragment: the skin is ready,
+ * the load event has fired, the fonts are loaded, and the scroll position has stopped moving.
+ * These are the conditions under which the skin scrolls to the fragment a second time.
+ *
+ * @param page - Page under test.
+ */
+async function waitForLanding(page: Page): Promise<void> {
+  await page.waitForSelector('html[data-supa-ready="true"]', {
+    state: 'attached',
+    timeout: READY_TIMEOUT_MS
+  });
+  await page.waitForFunction(() => document.readyState === 'complete', undefined, {
+    timeout: READY_TIMEOUT_MS
+  });
+  await page.evaluate(async () => {
+    // Lay the page out so fonts that a late stylesheet (KaTeX's) uses have started loading.
+    document.body.getBoundingClientRect();
+    await document.fonts.ready;
+  });
+  await waitForScrollIdle(page);
+}
+
+/**
+ * Holds the page's CDN requests until the returned function is called. Routing also turns off the
+ * HTTP cache, so every later load fetches Mermaid and KaTeX again, as a first visit does.
+ *
+ * @param page - Page under test.
+ * @returns Function that lets the held requests through.
+ */
+async function holdCdnRequests(page: Page): Promise<() => void> {
+  let release = (): void => undefined;
+  const held = new Promise<void>((resolveHeld) => {
+    release = resolveHeld;
+  });
+  await page.route(CDN_REQUEST, async (route) => {
+    await held;
+    await route.continue();
+  });
+  return release;
+}
+
+/**
+ * Opens `DEEP_LINK_PAGE` at a fragment as a first visit does, and waits until it has landed. Mermaid
+ * and KaTeX arrive only after the skin has begun scrolling to the fragment, as on any network
+ * slower than a frame. With a warm cache they would reshape the page before the scroll began, and
+ * hide the problem.
+ *
+ * @param page - Page under test.
+ * @param fragment - Heading id, without `#`.
+ */
+async function openDeepLink(page: Page, fragment: string): Promise<void> {
+  const release = await holdCdnRequests(page);
+  try {
+    await openAtFragment(page, fragment, 'domcontentloaded');
+    try {
+      await page.waitForFunction(() => window.scrollY > 0, undefined, { timeout: STATE_TIMEOUT_MS });
+    } catch (error: unknown) {
+      throw new Error(`the skin did not scroll to #${fragment} when the page opened`, { cause: error });
+    }
+  } finally {
+    release();
+  }
+  await waitForLanding(page);
+}
+
+/**
+ * Measures how far below the top of the viewport an element is.
+ *
+ * @param page - Page under test.
+ * @param id - Element id.
+ * @returns The element's top edge in CSS pixels, relative to the viewport.
+ */
+async function topOf(page: Page, id: string): Promise<number> {
+  const top = await page.evaluate(
+    (elementId: string) => document.getElementById(elementId)?.getBoundingClientRect().top ?? null,
+    id
+  );
+  if (top === null) {
+    throw new Error(`expected an element with id "${id}" on ${DEEP_LINK_PAGE}`);
+  }
+  return Math.round(top);
+}
+
+/**
+ * Builds the scenario that opens `DEEP_LINK_PAGE` from a link to a heading far down it. The heading
+ * must land with the gap under the headers that a link to the page's first heading gets, though
+ * code highlighting, the widget chunks, Mermaid, and KaTeX reshape the page above it after the
+ * skin first scrolls to it. `<html>` must scroll smoothly only when the reader allows motion. The
+ * scan sees the page scrolled deep, with the "Back to top" button shown and a deep TOC entry
+ * active.
+ *
+ * @param name - Scenario name.
+ * @param viewport - Viewport.
+ * @param motion - The reader's motion preference: the run's `reduce`, or `no-preference`, under
+ *     which the scrolls to the heading are smooth.
+ * @returns The scenario.
+ */
+function deepLinkScenario(
+  name: string,
+  viewport: Viewport,
+  motion: 'reduce' | 'no-preference'
+): InteractionScenario {
+  return {
+    name,
+    page: DEEP_LINK_PAGE,
+    viewport,
+    // The default variants cover the deep-scrolled state's colors; this one tests only scrolling.
+    ...(motion === 'reduce' ? {} : { variants: [{ palette: 'furo', polarity: 'light' }] }),
+    setup: async (page) => {
+      await page.emulateMedia({ reducedMotion: motion });
+      await openDeepLink(page, DEEP_LINK_REFERENCE);
+      deepLinkExpectations.set(page, await topOf(page, DEEP_LINK_REFERENCE));
+      await openDeepLink(page, DEEP_LINK_TARGET);
+    },
+    assertState: async (page) => {
+      const gap = deepLinkExpectations.get(page);
+      if (gap === undefined) {
+        throw new Error(`setup did not measure where #${DEEP_LINK_REFERENCE} lands`);
+      }
+      const problems: string[] = [];
+      const top = await topOf(page, DEEP_LINK_TARGET);
+      if (Math.abs(top - gap) > LANDING_TOLERANCE_PX) {
+        problems.push(
+          `#${DEEP_LINK_TARGET} landed ${top}px from the top, ${top - gap}px off the ${gap}px ` +
+            `that #${DEEP_LINK_REFERENCE} lands at`
+        );
+      }
+      const behavior = await page.evaluate(() => getComputedStyle(document.documentElement).scrollBehavior);
+      const expected = motion === 'reduce' ? 'auto' : 'smooth';
+      if (behavior !== expected) {
+        problems.push(`<html> has scroll-behavior "${behavior}" under prefers-reduced-motion: ${motion}`);
+      }
+      if (problems.length > 0) {
+        throw new Error(`expected the deep link to land under the headers: ${problems.join('; ')}`);
+      }
+    }
+  };
+}
+
 /**
  * Interactive states scanned on top of the load-time matrix, each in its
  * `variants` (by default every `SCENARIO_VARIANTS` entry). Selectors target the
@@ -1167,7 +1395,58 @@ const SCENARIOS: readonly InteractionScenario[] = [
   printScenario('index.html', DESKTOP, '-wide'),
   // The same pages printed in the default `auto` mode while the OS prefers dark.
   autoPrintScenario('index.html'),
-  autoPrintScenario('kitchen-sink.html')
+  autoPrintScenario('kitchen-sink.html'),
+  // A link to a heading far down a page, on a desktop and a phone, under the run's reduced motion,
+  // and once with motion allowed, where both of the skin's scrolls to the heading are smooth.
+  deepLinkScenario('deep-link', DESKTOP, 'reduce'),
+  deepLinkScenario('deep-link-mobile', MOBILE, 'reduce'),
+  deepLinkScenario('deep-link-smooth', DESKTOP, 'no-preference'),
+  {
+    // A reader who scrolls before the page is ready keeps their place: the skin's second scroll to
+    // the heading must not pull them back. The page is ready only once Mermaid and KaTeX have run,
+    // so holding them keeps the page short of ready while the reader scrolls back up with the wheel.
+    name: 'deep-link-reader-scrolled',
+    page: DEEP_LINK_PAGE,
+    viewport: DESKTOP,
+    variants: [{ palette: 'furo', polarity: 'light' }],
+    setup: async (page) => {
+      const release = await holdCdnRequests(page);
+      try {
+        await openAtFragment(page, DEEP_LINK_TARGET, 'domcontentloaded');
+        await waitForScrollIdle(page);
+        const landed = await topOf(page, DEEP_LINK_TARGET);
+        if ((await page.locator('html[data-supa-ready]').count()) > 0) {
+          throw new Error('the page was ready before the reader scrolled: Mermaid was not held');
+        }
+        await page.mouse.move(DESKTOP.width / 2, DESKTOP.height / 2);
+        await page.mouse.wheel(0, -READER_SCROLL_PX);
+        await page.waitForFunction(
+          ([id, from, by]: [string, number, number]) =>
+            (document.getElementById(id)?.getBoundingClientRect().top ?? from) - from > by / 2,
+          [DEEP_LINK_TARGET, landed, READER_SCROLL_PX] as [string, number, number],
+          { timeout: STATE_TIMEOUT_MS }
+        );
+        deepLinkExpectations.set(page, landed);
+      } finally {
+        release();
+      }
+      await waitForLanding(page);
+    },
+    assertState: async (page) => {
+      const landed = deepLinkExpectations.get(page);
+      if (landed === undefined) {
+        throw new Error(`setup did not measure where #${DEEP_LINK_TARGET} landed`);
+      }
+      await expectAttribute(page.locator('html'), 'data-supa-ready', 'true', '<html>');
+      const top = await topOf(page, DEEP_LINK_TARGET);
+      if (top - landed < READER_SCROLL_PX / 2) {
+        throw new Error(
+          `expected the page to stay where the reader scrolled, about ${READER_SCROLL_PX}px above ` +
+            `where #${DEEP_LINK_TARGET} landed (${landed}px from the top), but it is ${top}px from the top`
+        );
+      }
+    }
+  }
 ];
 
 /**
