@@ -794,3 +794,5 @@ new bootstrap.Datepicker(field, {
   vcpOptions: { ...bootstrap.Datepicker.Default.vcpOptions, disableWeekdays: [0, 6] }
 });
 ```
+
+A `vcpOptions` set in markup, through a `data-bs-vcp-options` or `data-bs-config` attribute, replaces the defaults too, and JSON cannot spread them, so such a picker keeps vanilla-calendar-pro's long-name labels. Create that picker in script with the spread shown above instead.
