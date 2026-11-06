@@ -248,7 +248,8 @@ export function assignHeadingIds(
  * Ensures every heading in the article has a deterministic clean slug `id`
  * (e.g. `#1-actions-buttons`) while preserving any preceding Doxia `<a id="...">`
  * anchor for backward compatibility, attaches the optional Furo `#` permalink, and adds an
- * anchor for the id Doxia writes into Markdown links to the heading (`doxiaLinkId()`).
+ * anchor for the id Doxia writes into Markdown links to the heading (`doxiaLinkId()`),
+ * recording that anchor's id on the heading as `data-doxia-link-id`.
  *
  * @param article - Root article container (`#supa-main-content`).
  * @param enablePermalinks - Whether to append `.supa-headerlink` permalink anchors.
@@ -339,6 +340,8 @@ export function prepareHeadings(
       const linkAnchor = document.createElement('a');
       linkAnchor.id = linkId;
       heading.parentNode?.insertBefore(linkAnchor, place);
+      // buildTableOfContents() maps only the anchors that went in to their heading
+      heading.setAttribute('data-doxia-link-id', linkId);
     }
   });
 
@@ -413,11 +416,11 @@ export function buildTableOfContents(
       aliasToHeadingId.set(doxiaId, heading.id);
     }
   });
-  // prepareHeadings() skips a Doxia link anchor whose id a heading or Doxia anchor already has,
-  // and of two headings whose ids Doxia encodes alike only the first gets one, so a link alias
-  // never takes an id from an earlier or later heading, nor from an earlier alias.
+  // Only the Doxia link anchors prepareHeadings() inserted are mapped to their heading. It skips
+  // one whose id any element already has, including an h1 or a heading deeper than the TOC that
+  // this list never sees, so a link to that id marks the element the browser scrolls to.
   headings.forEach((heading) => {
-    const linkId = doxiaLinkId(heading.id);
+    const linkId = heading.getAttribute('data-doxia-link-id');
     if (linkId && !aliasToHeadingId.has(linkId)) {
       aliasToHeadingId.set(linkId, heading.id);
     }

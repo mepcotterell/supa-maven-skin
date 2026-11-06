@@ -1771,6 +1771,41 @@ describe('Supa Maven Skin Frontend Modules', () => {
         happyDOM.setURL(originalUrl);
       }
     });
+
+    it('leaves a Doxia link id that a heading outside the TOC has to that heading', () => {
+      const happyDOM = (window as unknown as { happyDOM: { setURL: (url: string) => void } })
+        .happyDOM;
+      const originalUrl = window.location.href;
+      // The h1 and the h5 (deeper than the TOC's default depth of 4) own a1-install and
+      // a2-install, so neither digit-first h2 gets an anchor, and neither alias may name it.
+      document.body.innerHTML = `
+        <main id="supa-main-content">
+          <h1>A1 Install</h1>
+          <h2>1. Install</h2>
+          <h2>2. Install</h2>
+          <h5>A2 Install</h5>
+          <h2>Configure</h2>
+        </main>
+        <aside class="supa-toc-column"><nav id="supaTocNav"></nav></aside>
+      `;
+      const article = document.getElementById('supa-main-content')!;
+      prepareHeadings(article, true, '#');
+      buildTableOfContents(article, document.getElementById('supaTocNav'), 4);
+
+      expect(article.querySelectorAll('a[id]').length).toBe(0);
+      const followed = (hash: string): string | null | undefined => {
+        happyDOM.setURL(`${window.location.origin}/docs/guide.html${hash}`);
+        window.dispatchEvent(new HashChangeEvent('hashchange'));
+        return document.querySelector('#supaTocNav a.active')?.getAttribute('href');
+      };
+      try {
+        expect(followed('#configure')).toBe('#configure');
+        expect(followed('#a1-install')).toBe('#configure');
+        expect(followed('#a2-install')).toBe('#configure');
+      } finally {
+        happyDOM.setURL(originalUrl);
+      }
+    });
   });
 
   describe('Code Block Highlighting, Language Pill, and Copy Button', () => {
