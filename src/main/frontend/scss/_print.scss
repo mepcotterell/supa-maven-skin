@@ -2,9 +2,10 @@
 // Print Stylesheet: the article on paper
 //
 // A printout keeps the article and the copyright line, which names the text's owner on paper. The
-// rest of the page is screen furniture: navigation, controls, the "Built with" credit, and footer
-// icon links. Browsers leave backgrounds out of a printout by default, so surfaces print as white
-// paper and every text color must read on white.
+// rest of the page is screen furniture: navigation, controls, floating tooltips and toasts (a
+// fixed toast would repeat on every sheet), the "Built with" credit, and footer icon links.
+// Browsers leave backgrounds out of a printout by default, so surfaces print as white paper and
+// every text color must read on white.
 // ============================================================================
 @media print {
   // Every palette token is a `light-dark()` pair (polyfilled with `--lightningcss-*` switches that
@@ -13,21 +14,37 @@
   // surfaces. Tokens resolve on <html>, which in `auto` mode has no `data-bs-theme`: `:root` beats
   // Bootstrap's earlier `@media (prefers-color-scheme: dark) { :root { ... } }` there.
   // `[data-bs-theme]` beats the skin's own polarity rules, and `*` Bootstrap's layered
-  // `.color-scheme-*` utilities. A dark page background is never forced onto paper.
+  // `.color-scheme-*` utilities. A dark page background is never forced onto paper. Bootstrap
+  // deepens dark-polarity shadows with a plain number that `color-scheme` cannot switch.
   :root,
   *,
   [data-bs-theme] {
     color-scheme: light;
+    --shadow-strength: 1;
   }
 
-  // Components that draw their text or state on a solid fill (white on the brand color) would
-  // print white on white, so they keep the light polarity's fills, which meet the same contrast.
+  // Components that show their text or state only on a fill (white on the brand color, a checked
+  // box, the current page, a meter, a breadcrumb chevron) would print it white on white or not at
+  // all, so they keep the light polarity's fills, which meet the same contrast. Page and surface
+  // fills still drop: tabs and underlines are borders, which print anyway, and an active tab's fill
+  // is the page color.
   .badge,
   .btn,
   .chip,
   .avatar,
   .progress,
-  .stepper {
+  .stepper,
+  .strength,
+  .form-range,
+  .check,
+  .radio,
+  .switch,
+  .placeholder,
+  .breadcrumb-divider,
+  .nav-link.active:not(.nav-tabs *),
+  .list-group-item.active,
+  .pagination :is(.active, .disabled),
+  .supa-playground-pill.active {
     print-color-adjust: exact;
   }
 
@@ -45,7 +62,8 @@
   .supa-copy-btn,
   .supa-code-lang,
   .supa-headerlink,
-  .tooltip {
+  .tooltip,
+  .toast-container {
     display: none !important;
   }
 

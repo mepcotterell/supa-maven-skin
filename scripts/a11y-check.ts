@@ -27,10 +27,11 @@
  * after a switch from `auto` to an explicit theme, and content pages printed,
  * with print media emulated and backgrounds dropped as browsers print them, so
  * text must read on white paper in every polarity, including the default
- * `auto` mode under a dark OS preference, and a page opened from a link to a
- * heading far down it, which must land under the headers with or without
- * reduced motion, and leave a reader who scrolls before the page is ready
- * where they scrolled to), asserts the
+ * `auto` mode under a dark OS preference, the component showcase printed,
+ * where a state drawn only by a fill must keep it, and a page opened from a
+ * link to a heading far down it, which must land under the headers with or
+ * without reduced motion, and leave a reader who scrolls before the page is
+ * ready where they scrolled to), asserts the
  * state was reached, scans it in `furo` light and dark and `modus` dark (AAA)
  * unless the scenario lists its own variants, and asserts the state still held
  * after the scan, so a broken selector fails the run instead of quietly
@@ -637,8 +638,9 @@ async function dropPrintBackgrounds(page: Page): Promise<void> {
 }
 
 /**
- * Throws unless the page lays out for print: the furniture is not rendered, the article spans the
- * page, nothing is fixed or sticky, and no code block or table scrolls (clips) its content.
+ * Throws unless the page lays out for print: `<html>` takes the light polarity's color scheme and
+ * shadow strength, the furniture is not rendered, the article spans the page, nothing is fixed or
+ * sticky, and no code block or table scrolls (clips) its content.
  *
  * @param page - Page under test, emulating print media.
  */
@@ -653,6 +655,11 @@ async function expectPrintLayout(page: Page): Promise<void> {
     const scheme = getComputedStyle(document.documentElement).getPropertyValue('color-scheme');
     if (scheme !== 'light') {
       found.push(`<html> has color-scheme "${scheme}" instead of the light polarity`);
+    }
+    // Bootstrap deepens dark-polarity shadows with this number, which `color-scheme` does not switch.
+    const strength = getComputedStyle(document.documentElement).getPropertyValue('--shadow-strength').trim();
+    if (strength !== '1') {
+      found.push(`<html> has --shadow-strength ${strength} instead of the light polarity's 1`);
     }
     for (const selector of hidden) {
       const matches = Array.from(document.querySelectorAll(selector));
@@ -744,6 +751,107 @@ function autoPrintScenario(page: string): InteractionScenario {
       await expectAttribute(root(p), 'data-bs-theme', null, '<html>');
       await expectAttribute(root(p), 'data-supa-resolved-theme', 'dark', '<html>');
       await printed.assertState(p);
+    }
+  };
+}
+
+/** A component state that only a fill shows, which `_print.scss` keeps on paper. */
+interface PrintedFill {
+  /** Elements in the state, inside the article; at least one must match. */
+  selector: string;
+  /**
+   * What paints the fill: the element (`''`) or a pseudo-element. `null` stands for a range
+   * input's `::-webkit-slider-*` track and thumb, whose styles Chromium does not compute; they
+   * inherit `print-color-adjust` from the input, so only that is checked.
+   */
+  paint: string | null;
+  /**
+   * Markup of the state, added to the article only while it is measured, for a state the
+   * showcase does not render: it has no radio, and an active item of its list group would put
+   * that item's secondary text on the fill.
+   */
+  probe?: string;
+}
+
+/**
+ * The component states on `components.html` that a print without background graphics would lose
+ * with their fill: white text on a dropped fill prints white on white (the current page, the
+ * active pill), and a mark or a meter drawn by a fill vanishes. `_print.scss` gives each
+ * `print-color-adjust: exact`, which keeps the light polarity's fill. Tabs and underlines, drawn
+ * with borders, print without it. Every selector must match, so a renamed class or a changed
+ * demo fails the run instead of passing unseen.
+ */
+const PRINTED_FILLS: readonly PrintedFill[] = [
+  { selector: '.nav-pills .nav-link.active', paint: '' },
+  { selector: '.page-item.active > .page-link', paint: '' },
+  { selector: '.page-item.disabled > .page-link', paint: '' },
+  { selector: '.breadcrumb-divider', paint: '::before' },
+  { selector: '.switch:has(input:checked)', paint: '' },
+  { selector: '.check:checked', paint: '' },
+  { selector: '.radio:checked', paint: '', probe: '<input class="radio" type="radio" checked>' },
+  {
+    selector: '.list-group-item.active',
+    paint: '',
+    probe: '<div class="list-group"><span class="list-group-item active">Item</span></div>'
+  },
+  { selector: '.form-range-input', paint: null },
+  { selector: '.strength-segment.active', paint: '' },
+  { selector: '.placeholder', paint: '' },
+  { selector: '.supa-playground-pill.active', paint: '' }
+];
+
+/**
+ * Throws unless every `PRINTED_FILLS` state computes `print-color-adjust: exact` and still has a
+ * background after `dropPrintBackgrounds`.
+ *
+ * @param page - Page under test, emulating print media with backgrounds dropped.
+ */
+async function expectPrintedFills(page: Page): Promise<void> {
+  const problems = await page.evaluate((fills: readonly PrintedFill[]) => {
+    const found = new Set<string>();
+    const article = document.querySelector('#supa-main-content');
+    for (const { selector, paint, probe } of fills) {
+      const host = document.createElement('div');
+      if (probe !== undefined) {
+        host.innerHTML = probe;
+        article?.append(host);
+      }
+      const matches = Array.from(article?.querySelectorAll(selector) ?? []);
+      if (matches.length === 0) {
+        found.add(`nothing matches ${selector}`);
+      }
+      for (const el of matches) {
+        const style = getComputedStyle(el, paint || null);
+        // Chromium writes a transparent color with a zero alpha last: `rgba(0, 0, 0, 0)`, `oklch(… / 0)`.
+        const bare = style.backgroundImage === 'none' && /^rgba\(.*, 0\)$|\/ 0\)$/.test(style.backgroundColor);
+        if (getComputedStyle(el).getPropertyValue('print-color-adjust') !== 'exact') {
+          found.add(`${selector} prints without its fill (print-color-adjust is not exact)`);
+        } else if (paint !== null && bare) {
+          found.add(`${selector}${paint} has no background on paper`);
+        }
+      }
+      host.remove();
+    }
+    return [...found];
+  }, PRINTED_FILLS);
+  if (problems.length > 0) {
+    throw new Error(`expected component states to keep their fills on paper, but ${problems.join('; ')}`);
+  }
+}
+
+/**
+ * Builds the scenario that prints `components.html` and checks that its `PRINTED_FILLS` states
+ * keep their fills, on top of the print layout.
+ *
+ * @returns The scenario.
+ */
+function printComponentsScenario(): InteractionScenario {
+  const printed = printScenario('components.html', PRINT_PAGE);
+  return {
+    ...printed,
+    assertState: async (p) => {
+      await printed.assertState(p);
+      await expectPrintedFills(p);
     }
   };
 }
@@ -1488,7 +1596,9 @@ const SCENARIOS: readonly InteractionScenario[] = [
         );
       }
     }
-  }
+  },
+  // The component showcase printed: the states only a fill shows keep it (`PRINTED_FILLS`).
+  printComponentsScenario()
 ];
 
 /**
