@@ -18,6 +18,7 @@ Reach for the lightest layer that does the job. Built-in options are tested with
 | Restyle elements, tune tokens per polarity or per color scheme, change widths and fonts | A custom stylesheet | `src/site/resources/css/site.css` |
 | Add a favicon, web fonts, analytics, or extra scripts | `<body><head>` | `src/site/site.xml` |
 | Replace the copyright line in the footer | `<body><footer>` | `src/site/site.xml` |
+| Translate the skin's own text, or set the page language | `<language>` and `<labels>` | `src/site/site.xml`, or `src/site/site_<lang>.xml` for each locale |
 | Change what a printed page shows | `@media print` rules in a custom stylesheet | `src/site/resources/css/site.css` |
 
 > [!TIP] Check the Options First
@@ -307,6 +308,81 @@ For elements without an option, or to restyle one, use `site.css`:
 ```
 
 The announcement example reuses token pairs the skin already checks: the build verifies that `--color-foreground-primary` and `--color-brand-content` meet the scheme's contrast minimum on `--color-background-secondary` in every built-in scheme. Inventing new color pairs would bypass that check.
+
+---
+
+## Translating the Skin's Labels
+
+The skin's own interface text (search, navigation, the table of contents, the theme and color-scheme controls, copy buttons, the footer, and the default titles of admonitions) is English. Supa Maven Skin ships no translations: your site supplies the text for each label it wants to change in `site.xml`, and every label it leaves out stays English. Your own pages, menus, and page titles are already in whatever language you write them.
+
+### Translating a Single-Language Site
+
+1. Name your pages' language with `<language>`, a BCP 47 tag such as `de` or `pt-BR` (the Java form `pt_BR` also works). The skin writes it to `<html lang>`, so screen readers pronounce the page in that language and browsers offer the right hyphenation and translation. Without it, `lang` is `en`.
+2. Add a `<labels>` element with one child per label to translate, named by its key:
+
+   ```xml
+   <custom>
+     <supaSkin>
+       <language>de</language>
+       <labels>
+         <skipToContent>Zum Inhalt springen</skipToContent>
+         <tocTitle>Auf dieser Seite</tocTitle>
+         <search>Suche</search>
+         <searchPlaceholder>Dokumentation durchsuchen …</searchPlaceholder>
+         <searchResultCount>Ergebnisse: {count}</searchResultCount>
+         <searchNoResults>Keine Ergebnisse für „{query}“</searchNoResults>
+         <copyCode>Code kopieren</copyCode>
+         <backToTop>Nach oben</backToTop>
+         <admonitionNote>Hinweis</admonitionNote>
+         <admonitionWarning>Warnung</admonitionWarning>
+         <footerBuiltWith>Erstellt mit {maven} und {skin}.</footerBuiltWith>
+         <footerLastUpdated>Zuletzt aktualisiert am {date}.</footerLastUpdated>
+       </labels>
+     </supaSkin>
+   </custom>
+   ```
+
+3. Rebuild with `mvn site` and check the pages, including the search dialog, a code block's copy button, and the theme and color-scheme menus.
+
+The [Labels](configuration.html#labels) reference lists every key with its English text and placeholders. When you write a label:
+
+- **Keep the placeholders.** A `{name}` placeholder, such as `{count}` or `{query}`, is filled in by the skin, and you can move it anywhere in your sentence. In the footer, `{maven}` and `{skin}` become the skin's own links and `{date}` the build date as `yyyy-MM-dd`, so you translate only the words around them.
+- **Write plain text.** The skin escapes every label, so markup such as `<b>` shows up as text.
+- **Leave out the WCAG level of a color scheme.** `<colorSchemeModus>` names the scheme; the skin always appends ` (AAA)`, because the build audits that level.
+- **One label serves each control.** A label is both a button's tooltip and its accessible name, so what a reader sees is what a screen reader announces.
+
+An empty element, such as `<backToTop></backToTop>`, keeps the English label, because a control without a name cannot be used with a screen reader. A key the skin does not know, such as a misspelled `<serchPlaceholder>`, changes nothing. The browser console then reports it once per page: `Supa Maven Skin: unknown <labels> keys in site.xml were ignored: serchPlaceholder`.
+
+The `<tocTitle>` option still sets the table of contents title. If you set both, `<labels><tocTitle>` wins.
+
+### Translating a Site Into Several Languages
+
+`maven-site-plugin` renders one copy of the site per locale. List the locales in its configuration in `pom.xml`:
+
+```xml
+<plugin>
+  <groupId>org.apache.maven.plugins</groupId>
+  <artifactId>maven-site-plugin</artifactId>
+  <configuration>
+    <locales>default,fr</locales>
+  </configuration>
+</plugin>
+```
+
+`default` renders `src/site/site.xml` and the pages in `src/site/markdown/` at the site root. `fr` renders `src/site/site_fr.xml` and the pages in `src/site/fr/markdown/` under `/fr/`.
+
+1. Copy `src/site/site.xml` to `src/site/site_fr.xml`. Maven reads `site_fr.xml` **instead of** `site.xml` for the French pages; it does not merge the two. So `site_fr.xml` needs its own `<skin>`, menus, and `<supaSkin>` options, and the labels in `site.xml` do not apply to the French pages.
+2. In `site_fr.xml`, translate the menus and replace the `<labels>` with French ones.
+3. Put the French pages in `src/site/fr/markdown/`.
+
+On a locale's pages, `<html lang>` names that locale (`fr`), and `<language>` is ignored. Keep `<language>` in `site.xml` to name the language of the `default` pages, which Maven renders without a language of its own.
+
+### What Stays English
+
+- **Text that Bootstrap's own widgets write:** a chip's "Remove" button, a Combobox's "{n} selected", and the Datepicker's buttons. A widget with a text option takes the translation in its own markup, such as a strength meter's `data-bs-messages` (`weak`, `fair`, `good`, `strong`) or a nav overflow's `data-bs-more-text`. The Datepicker's month and day names follow `<html lang>`, unless the widget sets its own `data-bs-locale`.
+- **The menus and pages of Maven's reports,** such as Project Information. Maven writes them in the locale it renders, with its own translations where it has them, and `<labels>` does not change them.
+- **Browser-console messages** and the language names on code blocks.
+- **Right-to-left layout.** The skin does not mirror its layout for languages such as Arabic or Hebrew.
 
 ---
 

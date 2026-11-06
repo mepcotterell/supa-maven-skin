@@ -197,6 +197,10 @@ Since `maven-site-plugin` 3.5, HTML inside `<body><head>` must be escaped, for e
 </body>
 ```
 
+### Translated Text
+
+Fluido translates only a few strings of its own: "Last Published", "Version", "Built by", "Edit", and "External Links". It reads them with `$text` from Doxia's site-renderer `template.*` messages, in the locale Maven renders. **Supa Maven Skin** does not read those messages. Translate its text with `<labels>` inside `<supaSkin>` instead, for example `<footerLastUpdated>` for "Last Published", `<footerBuiltWith>` for "Built by", and `<sourceEdit>` for "Edit". The version badge shows only the number and the skin adds no "External Links" heading, so neither needs a label. On a site with several `<locales>`, give each `site_<lang>.xml` its own `<labels>`, and set `<language>` in `site.xml` to name the language of the default pages. See [Translating the Skin's Labels](customizing.html#translating-the-skins-labels).
+
 ---
 
 ## How Site Descriptor Elements Render

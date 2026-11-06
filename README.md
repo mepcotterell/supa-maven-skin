@@ -31,6 +31,7 @@ The six color schemes:
 - Light, dark, and auto themes, and six color schemes checked for WCAG 2.2 AA or AAA contrast.
 - Admonitions from `> [!NOTE]`-style blockquotes, synchronized tabs, Bootstrap Icons, and code blocks with copy buttons.
 - Built-in search (`/` or `⌘K`).
+- Interface text and page language you can translate in `site.xml`.
 - Opt-in Mermaid diagrams and KaTeX math, loaded only on pages that use them.
 - Clean printouts and PDFs.
 

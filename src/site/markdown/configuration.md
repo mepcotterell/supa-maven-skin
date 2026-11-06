@@ -321,7 +321,7 @@ The **Set by** column tells where a label is written: `template` labels are in t
 
 | Key | English default | Placeholders | Where it shows | Set by |
 | :--- | :--- | :--- | :--- | :--- |
-| `footerCopyright` | `Copyright © {years} {organization}.` | `{years}`: `<inceptionYear>`&ndash;build year; `{organization}`: the `pom.xml` organization, linked when it has a URL | Copyright line, unless `site.xml` has its own `<footer>`. An empty placeholder is removed with the space before it. | template |
+| `footerCopyright` | `Copyright © {years} {organization}.` | `{years}`: `<inceptionYear>`&ndash;build year, or one year when they match or `<inceptionYear>` is unset; `{organization}`: the `pom.xml` organization, linked when it has a URL | Copyright line, unless `site.xml` has its own `<footer>`. An empty placeholder is removed with the space before it. | template |
 | `footerBuiltWith` | `Built with {maven} and {skin} (Bootstrap 6).` | `{maven}`: a link to Maven Site; `{skin}`: a link to Supa Maven Skin | Credit line. | template |
 | `footerLastUpdated` | `Last updated on {date}.` | `{date}`: the build date as `yyyy-MM-dd` | Date line, shown with `<footerTimestamp>`. | template |
 
