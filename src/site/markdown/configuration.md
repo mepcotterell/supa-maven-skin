@@ -140,6 +140,12 @@ Click any color scheme card below (or use the palette selector in the top header
     <footerTimestamp>true</footerTimestamp>
     <footerVersion>true</footerVersion>
 
+    <!-- Language & Labels (see "Labels" below; a label left out stays English) -->
+    <language>en</language>
+    <labels>
+      <searchPlaceholder>Search the guides...</searchPlaceholder>
+    </labels>
+
     <!-- Footer Icon Links -->
     <navIcons>
       <icon>
@@ -215,9 +221,138 @@ Configures the top announcement banner, breadcrumbs, left sidebar menu tree, rig
 | `<stickyContentHeader>` | `false` | Pin the top content utility bar (breadcrumbs, source links, palette picker, theme toggle) to the top of the viewport on `lg+` (`1024px`) screens. Adds `.supa-sticky-content-header` to `<body>`; heading anchors and ScrollSpy offset by `--supa-content-header-height`. Below `lg`, the mobile header is already sticky. |
 | `<sidebarCollapseDepth>` | `1` | Menu nesting depth expanded by default in the left sidebar (`<details open>`). |
 | `<tocSidebar>` | `true` | Enable the right-hand "On this page" table of contents column and right drawer (`#supaTocDrawer`). |
-| `<tocTitle>` | `On this page` | Heading label for the right-hand table of contents. Also names the TOC landmark (`<aside>`) and its `<nav>` for screen readers. |
+| `<tocTitle>` | `On this page` | Heading label for the right-hand table of contents. Also names the TOC landmark (`<aside>`) and its `<nav>` for screen readers. A shorthand for the `tocTitle` [label](#labels): when both are set, `<labels><tocTitle>` wins. |
 | `<tocMaxDepth>` | `4` | Maximum heading level (`2`–`6`) included in the right-hand TOC. |
 | `<prevNextButtons>` | `true` | Render Furo-styled Previous / Next page navigation cards at the bottom of articles. |
+
+### Language & Labels
+
+Sets the page language and replaces the English text of the skin's own interface. Supa Maven Skin ships no translations: a site supplies its own text for any [label](#labels) it wants to change, and every other label stays English.
+
+| Option | Default | Description |
+| :--- | :--- | :--- |
+| `<language>` | *(empty)* | Language of the site's pages as a BCP 47 tag (`de`, `pt-BR`; the Java form `pt_BR` is accepted and written as `pt-BR`), written to `<html lang>`. It applies only to pages Maven renders without a locale: when `<locales>` lists a language (`<locales>default,fr</locales>` renders French under `/fr/`), that locale names the language of its pages and `<language>` is ignored. With neither, `lang` is `en`. |
+| `<labels>` | *(empty)* | One child element per label to override, named by its key: `<labels><search>Suche</search></labels>`. Values are plain text, always HTML-escaped (markup is shown as text). An empty element keeps the English label. A key the skin does not know, such as a misspelled `<serchPlaceholder>`, changes nothing and is reported in one browser-console warning. |
+
+### Labels
+
+Each key below is a `<labels>` child element. `{name}` placeholders are filled in by the skin, and a translation can move them anywhere in its sentence: the links in the footer and the date stay the skin's own, so a site translates only the words around them. The color-scheme names never carry their WCAG level: the skin always appends ` (AA)` or ` (AAA)`, which a site cannot change because the build audits it. Each control has one label, used for both its tooltip and its accessible name, so the name always contains the text a reader sees (WCAG 2.5.3 Label in Name).
+
+The **Set by** column tells where a label is written: `template` labels are in the HTML Maven renders; `script` labels are added in the browser, where an overridden value reaches the scripts as a `data-supa-label-<key>` attribute on `<body>`, with the key in kebab case (`searchNoResults` becomes `data-supa-label-search-no-results`); `both` labels are rendered first and then rewritten by the scripts.
+
+#### Page Chrome & Navigation
+
+| Key | English default | Placeholders | Where it shows | Set by |
+| :--- | :--- | :--- | :--- | :--- |
+| `skipToContent` | `Skip to content` | | Skip link, the first stop of the keyboard tab order. | template |
+| `announcementRegion` | `Announcement` | | Accessible name of the `<announcement>` banner region. | template |
+| `brandFallback` | `Documentation` | | Sidebar and mobile-header brand text when neither `site.xml` nor `pom.xml` names the site. | template |
+| `logoAlt` | `Logo` | | Alternative text of a single `<lightLogo>`, and of a `<bannerLeft>` image without a `name`. | template |
+| `logoLightAlt` | `Light Logo` | | Alternative text of `<lightLogo>` when `<darkLogo>` is also set. | template |
+| `logoDarkAlt` | `Dark Logo` | | Alternative text of `<darkLogo>`. | template |
+| `navSidebarToggle` | `Toggle navigation sidebar` | | Mobile-header button that opens the navigation drawer (tooltip and name). | template |
+| `navDrawerTitle` | `Navigation` | | Title of the navigation drawer below `lg`. | template |
+| `navDrawerClose` | `Close navigation` | | Close button of the navigation drawer. | template |
+| `navPrimary` | `Primary navigation` | | Accessible name of the left sidebar landmark. | template |
+| `navSite` | `Site navigation` | | Accessible name of the sidebar menu tree. | template |
+| `navSectionToggle` | `{name} section` | `{name}`: the menu item's name | Expand/collapse toggle of a linked sidebar menu item with children. | template |
+| `navAppearance` | `Appearance` | | Heading of the theme and color-scheme controls in the navigation drawer. | template |
+| `breadcrumb` | `Breadcrumb` | | Accessible name of the breadcrumb trail. | template |
+| `breadcrumbHome` | `Home` | | First breadcrumb when neither `site.xml` nor `pom.xml` names the site. | template |
+| `pageNav` | `Page navigation` | | Accessible name of the Previous / Next cards. | template |
+| `pagePrevious` | `Previous` | | Previous page card. | template |
+| `pageNext` | `Next` | | Next page card. | template |
+| `sourceView` | `View page source` | | Source button in the content header (tooltip and name). | template |
+| `sourceEdit` | `Edit this page` | | Edit button in the content header (tooltip and name). | template |
+| `backToTop` | `Back to top` | | Floating back-to-top button (visible text, tooltip, and name). | script |
+
+#### Table of Contents & Permalinks
+
+| Key | English default | Placeholders | Where it shows | Set by |
+| :--- | :--- | :--- | :--- | :--- |
+| `tocTitle` | `On this page` | | TOC heading, drawer title, and the names of the TOC landmark and its `<nav>`. Also settable with `<tocTitle>`. | template |
+| `tocToggle` | `Toggle table of contents` | | Buttons that open the TOC drawer below `xl` (tooltip and name). | template |
+| `tocDrawerClose` | `Close table of contents` | | Close button of the TOC drawer. | template |
+| `permalink` | `Permalink to {heading}` | `{heading}`: the heading's text | Heading permalink anchors (tooltip and name). | script |
+
+#### Search
+
+| Key | English default | Placeholders | Where it shows | Set by |
+| :--- | :--- | :--- | :--- | :--- |
+| `search` | `Search` | | Sidebar search box (visible text, which is also its name). | template |
+| `searchButton` | `Search documentation` | | Mobile-header search button (tooltip and name) and the name of the search field. | template |
+| `searchPlaceholder` | `Search documentation...` | | Placeholder of the search field. | template |
+| `searchClose` | `Close search` | | Close button of the search dialog. | template |
+| `searchResults` | `Search results` | | Accessible name of the result list. | template |
+| `searchHint` | `Type to search navigation, headings, and site pages.` | | Search status before anything is typed. | both |
+| `searchResultCount` | `Results: {count}` | `{count}`: the number of results | Search status when results are found. | script |
+| `searchNoResults` | `No results for “{query}”` | `{query}`: the search text | Search status when nothing matches. | script |
+| `searchKeysNavigate` | `{keys} to navigate` | `{keys}`: the arrow keys | Keyboard hint in the search dialog footer. | template |
+| `searchKeysSelect` | `{keys} to select` | `{keys}`: the Enter key | Keyboard hint in the search dialog footer. | template |
+| `searchKeysClose` | `{keys} to close` | `{keys}`: the Esc key | Keyboard hint in the search dialog footer. | template |
+| `searchBadgePage` | `Page` | | Badge of a result that is a whole page. | script |
+| `searchBadgeNav` | `Nav` | | Badge of a result from the sidebar menu. | script |
+| `searchBadgeSection` | `Section` | | Badge of a result that is a heading. | script |
+| `searchSectionPage` | `Site Page` | | Section name of a page result the site does not name. | script |
+| `searchSectionCurrent` | `Current Page` | | Section name of a heading on a page without a title. | script |
+| `searchSectionNav` | `Navigation` | | Section name of a menu result outside a named menu. | script |
+
+#### Theme & Color Scheme
+
+| Key | English default | Placeholders | Where it shows | Set by |
+| :--- | :--- | :--- | :--- | :--- |
+| `themeTrigger` | `Color theme: {mode}` | `{mode}`: `themeLight`, `themeDark`, or `themeAuto`; in the browser, Auto is followed by the theme in effect, as in `Auto (Dark)` | Theme menu button (tooltip and name). | both |
+| `themeMenu` | `Color theme` | | Accessible name of the theme menu. | template |
+| `themeLight` | `Light` | | Theme menu item, and `{mode}` of `themeTrigger`. | both |
+| `themeDark` | `Dark` | | Theme menu item, and `{mode}` of `themeTrigger`. | both |
+| `themeAuto` | `Auto` | | Theme menu item, and `{mode}` of `themeTrigger`. | both |
+| `colorScheme` | `Color scheme` | | Accessible name of the color-scheme menu and of the drawer's color-scheme `<select>`. | template |
+| `colorSchemeTrigger` | `Color scheme: {name}` | `{name}`: the active scheme's name with its WCAG level, such as `Furo (AA)` | Color-scheme menu button (tooltip and name; the button shows `{name}`). | both |
+| `colorSchemeStandard` | `WCAG 2.2 AA Standard` | | Group heading of the AA schemes in the menu and the `<select>`. | template |
+| `colorSchemeHighContrast` | `WCAG 2.2 AAA High Contrast` | | Group heading of the AAA schemes in the menu and the `<select>`. | template |
+| `colorSchemeFuro` | `Furo` | | Name of the `furo` scheme (` (AA)` is appended). | both |
+| `colorSchemeBootstrap` | `Bootstrap 6` | | Name of the `bootstrap` scheme (` (AA)` is appended). | both |
+| `colorSchemeModus` | `Modus` | | Name of the `modus` scheme (` (AAA)` is appended). | both |
+| `colorSchemeModusTinted` | `Modus Tinted` | | Name of the `modus-tinted` scheme (` (AAA)` is appended). | both |
+| `colorSchemeModusDeuteranopia` | `Modus Deuteranopia` | | Name of the `modus-deuteranopia` scheme (` (AAA)` is appended). | both |
+| `colorSchemeModusTritanopia` | `Modus Tritanopia` | | Name of the `modus-tritanopia` scheme (` (AAA)` is appended). | both |
+
+#### Footer
+
+| Key | English default | Placeholders | Where it shows | Set by |
+| :--- | :--- | :--- | :--- | :--- |
+| `footerCopyright` | `Copyright © {years} {organization}.` | `{years}`: `<inceptionYear>`&ndash;build year; `{organization}`: the `pom.xml` organization, linked when it has a URL | Copyright line, unless `site.xml` has its own `<footer>`. An empty placeholder is removed with the space before it. | template |
+| `footerBuiltWith` | `Built with {maven} and {skin} (Bootstrap 6).` | `{maven}`: a link to Maven Site; `{skin}`: a link to Supa Maven Skin | Credit line. | template |
+| `footerLastUpdated` | `Last updated on {date}.` | `{date}`: the build date as `yyyy-MM-dd` | Date line, shown with `<footerTimestamp>`. | template |
+
+#### Code, Copy & Content
+
+These labels are the defaults authors see in their own content: they apply only where the content does not set its own text, such as an admonition without a custom title.
+
+| Key | English default | Placeholders | Where it shows | Set by |
+| :--- | :--- | :--- | :--- | :--- |
+| `copyCode` | `Copy code` | | Copy button on code blocks (tooltip and name). | script |
+| `copyCopied` | `Copied!` | | Copy button and heading permalink after a successful copy. | script |
+| `copyFailed` | `Copy failed` | | Copy button after a failed copy. | script |
+| `codeShow` | `Show code` | | Code toggle of a `.supa-component-preview` example while its code is hidden. | script |
+| `codeHide` | `Hide code` | | Code toggle of a `.supa-component-preview` example while its code is shown. | script |
+| `alertDismiss` | `Close` | | Dismiss button of a `> [!ALERT:theme dismissible]` alert and of `#bsAlert`. | both |
+| `tabFallback` | `Tab {n}` | `{n}`: the tab's position, from 1 | Tab of a `.supa-tabs` panel without `data-tab`, `title`, or a recognized code fence. | script |
+| `accordionFallback` | `Section {n}` | `{n}`: the item's position, from 1 | Header of a `.supa-accordion` item without `data-accordion` or `title`. | script |
+| `admonition` | `Admonition` | | Default title of `> [!ADMONITION]`. | script |
+| `admonitionAttention` | `Attention` | | Default title of `> [!ATTENTION]`. | script |
+| `admonitionCaution` | `Caution` | | Default title of `> [!CAUTION]`. | script |
+| `admonitionDanger` | `Danger` | | Default title of `> [!DANGER]`. | script |
+| `admonitionError` | `Error` | | Default title of `> [!ERROR]`. | script |
+| `admonitionHint` | `Hint` | | Default title of `> [!HINT]`. | script |
+| `admonitionImportant` | `Important` | | Default title of `> [!IMPORTANT]`. | script |
+| `admonitionNote` | `Note` | | Default title of `> [!NOTE]`. | script |
+| `admonitionSeeAlso` | `See also` | | Default title of `> [!SEEALSO]`. | script |
+| `admonitionTip` | `Tip` | | Default title of `> [!TIP]`. | script |
+| `admonitionTodo` | `Todo` | | Default title of `> [!TODO]`. | script |
+| `admonitionWarning` | `Warning` | | Default title of `> [!WARNING]`. | script |
+
+Text that stays English: the text Bootstrap's own widgets write (a chip's "Remove" button, a Combobox's "{n} selected", and the Datepicker's buttons; the Datepicker's month and day names follow `<html lang>` unless the widget sets its own `data-bs-locale`, and widgets with text options, such as a strength meter's `messages` or a nav overflow's `moreText`, take them in their own markup), the language names on code blocks, browser-console messages, and the menus and pages of Maven's own reports.
 
 ### Responsive Drawers
 
