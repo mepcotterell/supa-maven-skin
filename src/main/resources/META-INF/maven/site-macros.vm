@@ -393,6 +393,11 @@ Apache Maven Doxia Site Renderer#if( $doxiaSiteRendererVersion ) $doxiaSiteRende
 #macro( supaPalettePicker $extraClasses $placement $palette )
 #supaResolvePalette( $palette )
 #supaFillLabel( $esc.html( $supaLabels.colorSchemeTrigger ) 'name' $esc.html( $paletteName ) )
+## A translated colorSchemeTrigger without {name} would drop the shown name, so append it (as
+## theme.ts does) to keep the name containing the visible text
+#if( !$supaFilled.contains( $esc.html( $paletteName ) ) )
+#set( $supaFilled = "$supaFilled $esc.html( $paletteName )" )
+#end
         <div class="supa-palette-picker#if( $extraClasses && $extraClasses != '' ) $extraClasses#end">
           <button type="button"
                   class="supa-palette-btn"
