@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- The fr locale (/fr/). Maven reads this file instead of site.xml, not merged with it, so it
+     repeats the skin and sets its own labels. Its <language> is ignored: the fr locale wins. -->
+<site xmlns="http://maven.apache.org/SITE/2.0.0"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:schemaLocation="http://maven.apache.org/SITE/2.0.0 https://maven.apache.org/xsd/site-2.0.0.xsd"
+      name="Site localisé">
+
+  <skin>
+    <groupId>${skinGroupId}</groupId>
+    <artifactId>${skinArtifactId}</artifactId>
+    <version>${skinVersion}</version>
+  </skin>
+
+  <custom>
+    <supaSkin>
+      <language>de</language>
+      <labels>
+        <tocTitle>Sur cette page</tocTitle>
+        <pageNext>Suivant</pageNext>
+        <skipToContent>Aller au contenu</skipToContent>
+        <searchResultCount>Résultats : {count}</searchResultCount>
+        <admonitionNote>Remarque</admonitionNote>
+      </labels>
+    </supaSkin>
+  </custom>
+
+  <body>
+    <menu name="Documentation">
+      <item name="Accueil" href="index.html" />
+      <item name="Guide" href="guide.html" />
+    </menu>
+  </body>
+</site>

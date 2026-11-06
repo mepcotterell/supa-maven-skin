@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- The default locale (the site root). Labels left out here stay English. -->
+<site xmlns="http://maven.apache.org/SITE/2.0.0"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:schemaLocation="http://maven.apache.org/SITE/2.0.0 https://maven.apache.org/xsd/site-2.0.0.xsd"
+      name="Lokalisierte Seite">
+
+  <skin>
+    <groupId>${skinGroupId}</groupId>
+    <artifactId>${skinArtifactId}</artifactId>
+    <version>${skinVersion}</version>
+  </skin>
+
+  <custom>
+    <supaSkin>
+      <language>de</language>
+      <!-- <labels><tocTitle> wins over the <tocTitle> shorthand -->
+      <tocTitle>Shorthand loses</tocTitle>
+      <labels>
+        <tocTitle>Auf dieser Seite</tocTitle>
+        <pageNext>Weiter</pageNext>
+        <skipToContent>Zum Inhalt springen</skipToContent>
+        <footerBuiltWith>Erstellt mit {maven} und {skin}.</footerBuiltWith>
+        <footerLastUpdated>Zuletzt aktualisiert am {date}.</footerLastUpdated>
+        <!-- No {name}: the skin still appends the scheme name it shows -->
+        <colorSchemeTrigger>Farbschema</colorSchemeTrigger>
+        <colorSchemeFuro>Furo-Farben</colorSchemeFuro>
+        <searchNoResults>Keine Ergebnisse für „{query}“</searchNoResults>
+        <backToTop>Nach oben</backToTop>
+      </labels>
+    </supaSkin>
+  </custom>
+
+  <body>
+    <menu name="Dokumentation">
+      <item name="Willkommen" href="index.html" />
+      <item name="Anleitung" href="guide.html" />
+    </menu>
+  </body>
+</site>
