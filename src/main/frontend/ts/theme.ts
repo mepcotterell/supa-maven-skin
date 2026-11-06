@@ -4,6 +4,7 @@
  * state management, `localStorage` persistence, and UI synchronization.
  */
 import { setTooltipTitle } from './bootstrap-components';
+import { getLabel, type LabelKey } from './labels';
 
 export type ThemeMode = 'light' | 'dark' | 'auto';
 export type ResolvedTheme = 'light' | 'dark';
@@ -17,8 +18,11 @@ export type SupaPaletteId =
 
 export interface SupaPaletteMeta {
   id: SupaPaletteId;
-  /** Name the color-scheme trigger, menu items, and drawer `<select>` show, such as "Furo (AA)". */
-  shortLabel: string;
+  /**
+   * Label of the scheme's name, such as "Furo". {@link getPaletteName} appends the WCAG level
+   * for the name the trigger, menu items, and drawer `<select>` show, such as "Furo (AA)".
+   */
+  labelKey: LabelKey;
   wcag: 'AA' | 'AAA';
   description: string;
 }
@@ -29,47 +33,57 @@ export const PALETTE_STORAGE_KEY = 'supa-palette';
 export const SUPA_PALETTES: readonly SupaPaletteMeta[] = [
   {
     id: 'furo',
-    shortLabel: 'Furo (AA)',
+    labelKey: 'colorSchemeFuro',
     wcag: 'AA',
     description: 'Sphinx Furo default documentation palette (WCAG 2.2 AA >= 4.5:1).'
   },
   {
     id: 'bootstrap',
-    shortLabel: 'Bootstrap 6 (AA)',
+    labelKey: 'colorSchemeBootstrap',
     wcag: 'AA',
     description: 'Perceptually uniform Bootstrap 6 OKLCH semantic palette (WCAG 2.2 AA >= 4.5:1).'
   },
   {
     id: 'modus',
-    shortLabel: 'Modus (AAA)',
+    labelKey: 'colorSchemeModus',
     wcag: 'AAA',
     description: 'Emacs Modus Operandi & Modus Vivendi strict high-contrast palette (WCAG 2.2 AAA >= 7:1).'
   },
   {
     id: 'modus-tinted',
-    shortLabel: 'Modus Tinted (AAA)',
+    labelKey: 'colorSchemeModusTinted',
     wcag: 'AAA',
     description: 'Low-glare warm cream paper & deep night-sky surfaces (WCAG 2.2 AAA >= 7:1).'
   },
   {
     id: 'modus-deuteranopia',
-    shortLabel: 'Modus Deuteranopia (AAA)',
+    labelKey: 'colorSchemeModusDeuteranopia',
     wcag: 'AAA',
     description: 'Red-green colorblind-safe Blue / Gold / Warm Amber palette (WCAG 2.2 AAA >= 7:1).'
   },
   {
     id: 'modus-tritanopia',
-    shortLabel: 'Modus Tritanopia (AAA)',
+    labelKey: 'colorSchemeModusTritanopia',
     wcag: 'AAA',
     description: 'Blue-yellow colorblind-safe Teal / Magenta / Crimson palette (WCAG 2.2 AAA >= 7:1).'
   }
 ] as const;
 
 const VALID_PALETTE_IDS = new Set<string>(SUPA_PALETTES.map((p) => p.id));
-const PALETTE_SHORT_LABEL_MAP = new Map<SupaPaletteId, string>(
-  SUPA_PALETTES.map((p) => [p.id, p.shortLabel])
-);
 const THEME_CYCLE: ThemeMode[] = ['light', 'dark', 'auto'];
+
+/**
+ * Returns the name a color scheme's controls show: its label, which a site may translate, and
+ * the WCAG level it meets, which the skin always appends and a site cannot change. Velocity's
+ * `#supaResolvePalette` builds the same name for the HTML it renders.
+ *
+ * @param palette - Palette identifier; an unknown one names `furo`, as `applyPalette` falls back.
+ * @returns Name such as "Furo (AA)".
+ */
+export function getPaletteName(palette: SupaPaletteId): string {
+  const meta = SUPA_PALETTES.find((p) => p.id === palette) ?? SUPA_PALETTES[0];
+  return `${getLabel(meta.labelKey)} (${meta.wcag})`;
+}
 
 /**
  * Safely retrieves `window.localStorage` when available and accessible.
@@ -158,7 +172,7 @@ export function applyPalette(palette: SupaPaletteId, persist = true): SupaPalett
  * @param palette - Active palette identifier.
  */
 function updatePaletteControls(palette: SupaPaletteId): void {
-  const shortLabel = PALETTE_SHORT_LABEL_MAP.get(palette) ?? 'Furo (AA)';
+  const shortLabel = getPaletteName(palette);
   const labels = document.querySelectorAll<HTMLElement>('[data-supa-palette-label]');
   labels.forEach((labelEl) => {
     labelEl.textContent = shortLabel;
@@ -166,8 +180,12 @@ function updatePaletteControls(palette: SupaPaletteId): void {
 
   // Voice-control users activate the trigger by saying the name it shows, so its accessible name
   // and tooltip must contain `shortLabel` (WCAG 2.5.3 Label in Name). site-macros.vm
-  // #supaPalettePicker renders the same string for the configured palette before this runs.
-  const triggerLabel = `Color scheme: ${shortLabel}`;
+  // #supaPalettePicker renders the same string for the configured palette before this runs. A
+  // translated colorSchemeTrigger without {name} would drop the shown name, so it is appended.
+  const filledTrigger = getLabel('colorSchemeTrigger', { name: shortLabel });
+  const triggerLabel = filledTrigger.includes(shortLabel)
+    ? filledTrigger
+    : `${filledTrigger} ${shortLabel}`;
   const paletteBtns = document.querySelectorAll<HTMLButtonElement>('.supa-palette-btn');
   paletteBtns.forEach((btn) => {
     btn.setAttribute('aria-label', triggerLabel);
@@ -306,12 +324,14 @@ export function cycleThemeMode(current?: ThemeMode): ThemeMode {
  * @param resolved - Concrete resolved polarity (`light` or `dark`).
  */
 function updateThemeControls(mode: ThemeMode, resolved: ResolvedTheme): void {
-  const triggerLabelMap: Record<ThemeMode, string> = {
-    light: 'Color theme: Light',
-    dark: 'Color theme: Dark',
-    auto: `Color theme: Auto (${resolved === 'dark' ? 'Dark' : 'Light'})`
-  };
-  const triggerLabel = triggerLabelMap[mode];
+  // In auto mode the trigger also names the polarity the OS resolves to: "Auto (Dark)"
+  const modeName =
+    mode === 'light'
+      ? getLabel('themeLight')
+      : mode === 'dark'
+        ? getLabel('themeDark')
+        : `${getLabel('themeAuto')} (${getLabel(resolved === 'dark' ? 'themeDark' : 'themeLight')})`;
+  const triggerLabel = getLabel('themeTrigger', { mode: modeName });
   const triggers = document.querySelectorAll<HTMLButtonElement>('[data-supa-theme-trigger]');
   triggers.forEach((btn) => {
     btn.setAttribute('aria-label', triggerLabel);
@@ -327,16 +347,12 @@ function updateThemeControls(mode: ThemeMode, resolved: ResolvedTheme): void {
     optionEl.setAttribute('aria-checked', isActive ? 'true' : 'false');
   });
 
-  const toggleLabelMap: Record<ThemeMode, string> = {
-    light: 'Color theme: Light (click for Dark)',
-    dark: 'Color theme: Dark (click for Auto)',
-    auto: `Color theme: Auto (${resolved === 'dark' ? 'Dark' : 'Light'}) (click for Light)`
-  };
-  const toggleLabel = toggleLabelMap[mode];
+  // A [data-supa-theme-toggle] button (no skin markup emits one; a site's own markup may)
+  // cycles the mode on click. It shares the menu trigger's label, so it needs no extra key.
   const buttons = document.querySelectorAll<HTMLButtonElement>('[data-supa-theme-toggle]');
   buttons.forEach((btn) => {
-    btn.setAttribute('aria-label', toggleLabel);
-    setTooltipTitle(btn, toggleLabel, 'bottom');
+    btn.setAttribute('aria-label', triggerLabel);
+    setTooltipTitle(btn, triggerLabel, 'bottom');
     btn.setAttribute('data-supa-current-mode', mode);
   });
 }

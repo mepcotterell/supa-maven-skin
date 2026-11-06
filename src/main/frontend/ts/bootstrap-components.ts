@@ -32,6 +32,7 @@ import Toast from 'bootstrap/js/dist/toast.js';
 import Toggler from 'bootstrap/js/dist/toggler.js';
 import Tooltip from 'bootstrap/js/dist/tooltip.js';
 import { initContentTabs } from './doxia';
+import { getLabel } from './labels';
 
 /**
  * Bootstrap 6.0.0-alpha.1's `dom/data.js` still carries a Bootstrap 5 guard in `Data.set`
@@ -406,15 +407,20 @@ export function initComponentExamples(root: ParentNode = document): void {
       toggleBtn.type = 'button';
       toggleBtn.className = 'supa-component-code-toggle';
       toggleBtn.setAttribute('aria-expanded', 'true');
-      toggleBtn.innerHTML = `<span class="supa-code-toggle-text">Hide code</span>${CHEVRON_ICON_SVG}`;
-      setTooltipTitle(toggleBtn, 'Collapse or expand code snippet', 'top');
+      // The visible "Hide code"/"Show code" names the button, so it has no tooltip: one label per
+      // control, and a tooltip repeating the text would add nothing.
+      toggleBtn.innerHTML = `<span class="supa-code-toggle-text"></span>${CHEVRON_ICON_SVG}`;
+      const textEl = toggleBtn.querySelector('.supa-code-toggle-text');
+      if (textEl) {
+        textEl.textContent = getLabel('codeHide');
+      }
 
       toggleBtn.addEventListener('click', () => {
         const isCollapsed = wrapper.classList.toggle('is-code-collapsed');
         toggleBtn.setAttribute('aria-expanded', isCollapsed ? 'false' : 'true');
         const labelSpan = toggleBtn.querySelector('.supa-code-toggle-text');
         if (labelSpan) {
-          labelSpan.textContent = isCollapsed ? 'Show code' : 'Hide code';
+          labelSpan.textContent = getLabel(isCollapsed ? 'codeShow' : 'codeHide');
         }
         onToggle(isCollapsed, toggleBtn);
       });
@@ -480,7 +486,7 @@ export function initComponentExamples(root: ParentNode = document): void {
               toggleBtn.setAttribute('aria-expanded', 'true');
               const labelSpan = toggleBtn.querySelector('.supa-code-toggle-text');
               if (labelSpan) {
-                labelSpan.textContent = 'Hide code';
+                labelSpan.textContent = getLabel('codeHide');
               }
               nextEl.querySelectorAll<HTMLElement>('.supa-tab-panel').forEach((panel) => {
                 panel.hidden = !panel.classList.contains('active');
@@ -529,6 +535,26 @@ export function nameMonthButtonByText(monthEl: HTMLElement): void {
     : monthEl.querySelector<HTMLElement>(CALENDAR_MONTH_BUTTON);
   if (button?.textContent?.trim()) {
     button.removeAttribute('aria-label');
+  }
+}
+
+/**
+ * Returns the page's `<html lang>` as a locale the Datepicker can format dates in, so a
+ * translated site's calendar speaks its language. `Intl` throws on a malformed tag, which would
+ * break every picker on the page, so such a tag is ignored.
+ *
+ * @returns The page's language tag, or null when it has none or `Intl` rejects it.
+ */
+export function pageDateLocale(): string | null {
+  const lang = document.documentElement.lang.trim();
+  if (!lang) {
+    return null;
+  }
+  try {
+    Intl.DateTimeFormat.supportedLocalesOf(lang);
+    return lang;
+  } catch {
+    return null;
   }
 }
 
@@ -587,6 +613,13 @@ export const LAZY_WIDGETS: readonly LazyWidget[] = [
         ...Datepicker.Default.vcpOptions,
         onCreateMonthEls: (_calendar, monthEl) => nameMonthButtonByText(monthEl)
       };
+      // The calendar's month and day names follow the page's <html lang> (a translated site's
+      // language) rather than the browser's. An author's data-bs-locale or script option still
+      // wins, as both override this default.
+      const pageLocale = pageDateLocale();
+      if (pageLocale) {
+        Datepicker.Default.locale = pageLocale;
+      }
       BootstrapPlugins.Datepicker = Datepicker;
       return (el) => {
         Datepicker.getOrCreateInstance(el);

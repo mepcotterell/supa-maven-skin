@@ -4,6 +4,7 @@
  */
 import ScrollSpy from 'bootstrap/js/dist/scrollspy.js';
 import { setTooltipTitle } from './bootstrap-components';
+import { getLabel } from './labels';
 
 /**
  * Converts a heading text string into a lowercase hyphenated slug. Doxia 2 writes no `id` on
@@ -409,8 +410,10 @@ export function prepareHeadings(
       const anchor = document.createElement('a');
       anchor.className = 'supa-headerlink';
       anchor.href = `#${id}`;
-      anchor.setAttribute('aria-label', `Permalink to ${heading.textContent?.trim() || 'heading'}`);
-      setTooltipTitle(anchor, 'Copy permalink to this heading', 'top');
+      // One label for the name and the tooltip, filled before the symbol is appended
+      const permalinkLabel = getLabel('permalink', { heading: heading.textContent?.trim() ?? '' });
+      anchor.setAttribute('aria-label', permalinkLabel);
+      setTooltipTitle(anchor, permalinkLabel, 'top');
       anchor.textContent = permalinkSymbol;
 
       anchor.addEventListener('click', async () => {
@@ -424,11 +427,12 @@ export function prepareHeadings(
             url.hash = id;
             await navigator.clipboard.writeText(url.toString());
             anchor.classList.add('is-copied');
-            anchor.setAttribute('data-copied-label', 'Copied!');
-            setTooltipTitle(anchor, 'Copied!', 'top');
+            const copiedLabel = getLabel('copyCopied');
+            anchor.setAttribute('data-copied-label', copiedLabel);
+            setTooltipTitle(anchor, copiedLabel, 'top');
             window.setTimeout(() => {
               anchor.classList.remove('is-copied');
-              setTooltipTitle(anchor, 'Copy permalink to this heading', 'top');
+              setTooltipTitle(anchor, permalinkLabel, 'top');
             }, 1500);
           }
         } catch {

@@ -22,6 +22,7 @@ import typescript from 'highlight.js/lib/languages/typescript';
 import xml from 'highlight.js/lib/languages/xml';
 import yaml from 'highlight.js/lib/languages/yaml';
 import { setTooltipTitle } from './bootstrap-components';
+import { getLabel, type LabelKey } from './labels';
 
 let languagesRegistered = false;
 
@@ -156,13 +157,12 @@ const COPY_RESULT_DURATION_MS = 1800;
 
 type CopyButtonState = 'idle' | 'copied' | 'failed';
 
-const COPY_BUTTON_STATES: Record<
-  CopyButtonState,
-  { icon: string; label: string; tooltip: string }
-> = {
-  idle: { icon: COPY_ICON_SVG, label: 'Copy code to clipboard', tooltip: 'Copy code' },
-  copied: { icon: CHECK_ICON_SVG, label: 'Copied!', tooltip: 'Copied!' },
-  failed: { icon: FAILED_ICON_SVG, label: 'Copy failed', tooltip: 'Copy failed' }
+// One label per state names the button and fills its tooltip, so translators write one string
+// for each and the tooltip a sighted reader sees is the name a screen reader announces.
+const COPY_BUTTON_STATES: Record<CopyButtonState, { icon: string; labelKey: LabelKey }> = {
+  idle: { icon: COPY_ICON_SVG, labelKey: 'copyCode' },
+  copied: { icon: CHECK_ICON_SVG, labelKey: 'copyCopied' },
+  failed: { icon: FAILED_ICON_SVG, labelKey: 'copyFailed' }
 };
 
 /**
@@ -172,12 +172,13 @@ const COPY_BUTTON_STATES: Record<
  * @param state - State to show.
  */
 function setCopyButtonState(btn: HTMLButtonElement, state: CopyButtonState): void {
-  const { icon, label, tooltip } = COPY_BUTTON_STATES[state];
+  const { icon, labelKey } = COPY_BUTTON_STATES[state];
+  const label = getLabel(labelKey);
   btn.classList.toggle('is-copied', state === 'copied');
   btn.classList.toggle('is-copy-failed', state === 'failed');
   btn.innerHTML = icon;
   btn.setAttribute('aria-label', label);
-  setTooltipTitle(btn, tooltip, 'left');
+  setTooltipTitle(btn, label, 'left');
 }
 
 /**

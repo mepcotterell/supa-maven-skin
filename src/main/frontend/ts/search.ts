@@ -5,6 +5,7 @@
 
 import Dialog from 'bootstrap/js/dist/dialog.js';
 import { initDoxiaEnhancements } from './doxia';
+import { getLabel, type LabelKey } from './labels';
 import { assignHeadingIds, decodeFragment, findProseHeadings, headingTextLanguage } from './toc';
 
 /**
@@ -46,16 +47,17 @@ const URL_SCHEME_PATTERN = /^[a-z][a-z\d+.-]*:/i;
 const INDEXED_HEADING_TAG = /^H[1-4]$/;
 
 /**
- * Generic section names for entries whose section the site does not name. They are looked up
- * when results are ranked and rendered instead of being stored in the entries, so the
- * `sessionStorage` index holds only the site's own text and never goes stale when these change.
+ * Labels of the generic section names for entries whose section the site does not name. They
+ * are looked up when results are ranked and rendered instead of being stored in the entries, so
+ * the `sessionStorage` index holds only the site's own text and never goes stale when these or
+ * the site's translations of them change.
  * A `section` entry lacks a section only on the current page, when it has neither a `<title>`
  * nor an `<h1>`; headings on crawled pages fall back to the page's sidebar link text or href.
  */
-const GENERIC_SECTION_NAMES: Record<SearchDocumentKind, string> = {
-  page: 'Site Page',
-  section: 'Current Page',
-  nav: 'Navigation'
+const GENERIC_SECTION_NAMES: Record<SearchDocumentKind, LabelKey> = {
+  page: 'searchSectionPage',
+  section: 'searchSectionCurrent',
+  nav: 'searchSectionNav'
 };
 
 /** Prefix of the `sessionStorage` key that caches the crawled search index. */
@@ -69,7 +71,7 @@ const SEARCH_INDEX_KEY_PREFIX = 'supa-search-index-';
  * @returns Section name, or `''` for an entry with neither a section nor a kind.
  */
 function resolveSearchSection(doc: SearchDocument): string {
-  return doc.section || (doc.kind ? GENERIC_SECTION_NAMES[doc.kind] : '');
+  return doc.section || (doc.kind ? getLabel(GENERIC_SECTION_NAMES[doc.kind]) : '');
 }
 
 /**
@@ -649,17 +651,18 @@ export function initSearch(): void {
     activeIndex = -1;
 
     if (!query.trim()) {
-      statusEl.textContent = 'Type to search navigation, headings, and site pages.';
+      statusEl.textContent = getLabel('searchHint');
       return;
     }
 
     const matches = filterSearchDocuments(searchDocs, query);
     if (matches.length === 0) {
-      statusEl.textContent = `No results found for "${query.trim()}".`;
+      statusEl.textContent = getLabel('searchNoResults', { query: query.trim() });
       return;
     }
 
-    statusEl.textContent = `${matches.length} result${matches.length === 1 ? '' : 's'} found`;
+    // Plural-free, so one translation fits every count in every language
+    statusEl.textContent = getLabel('searchResultCount', { count: matches.length });
 
     matches.forEach((match, idx) => {
       const link = document.createElement('a');
@@ -682,8 +685,13 @@ export function initSearch(): void {
 
       const badgeSpan = document.createElement('span');
       badgeSpan.className = `supa-search-result-badge is-${match.kind || 'section'}`;
-      badgeSpan.textContent =
-        match.kind === 'page' ? 'Page' : match.kind === 'nav' ? 'Nav' : 'Section';
+      badgeSpan.textContent = getLabel(
+        match.kind === 'page'
+          ? 'searchBadgePage'
+          : match.kind === 'nav'
+            ? 'searchBadgeNav'
+            : 'searchBadgeSection'
+      );
 
       topRow.appendChild(titleDiv);
       topRow.appendChild(badgeSpan);

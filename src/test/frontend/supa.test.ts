@@ -61,6 +61,7 @@ import {
   initSupaSkin,
   SUPA_READY_ATTRIBUTE
 } from '../../main/frontend/ts/index';
+import { fillLabel, getLabel, LABEL_DEFAULTS, warnUnknownLabels } from '../../main/frontend/ts/labels';
 import { initOptionalLibraries, isModuleUrl, PINNED_ASSETS, pinnedIntegrity } from '../../main/frontend/ts/optional';
 import { initComponentPlayground } from '../../main/frontend/ts/playground';
 import {
@@ -77,6 +78,7 @@ import {
   applyPalette,
   applyThemeMode,
   cycleThemeMode,
+  getPaletteName,
   getStoredPalette,
   getStoredThemeMode,
   initTheme,
@@ -304,10 +306,10 @@ describe('Supa Maven Skin Frontend Modules', () => {
       initTheme();
       const trigger = document.querySelector<HTMLButtonElement>('.supa-palette-btn')!;
       expect(SUPA_PALETTES.length).toBe(6);
-      for (const { id, shortLabel } of SUPA_PALETTES) {
+      for (const { id } of SUPA_PALETTES) {
         applyPalette(id);
         const visibleText = trigger.textContent!.replace(/\s+/g, ' ').trim();
-        expect(visibleText).toBe(shortLabel);
+        expect(visibleText).toBe(getPaletteName(id));
         expect(trigger.getAttribute('aria-label')).toBe(`Color scheme: ${visibleText}`);
         expect(trigger.getAttribute('data-bs-title')).toBe(`Color scheme: ${visibleText}`);
       }
@@ -400,7 +402,7 @@ describe('Supa Maven Skin Frontend Modules', () => {
         const el = admonitions[idx];
         expect(el.classList.contains(`admonition-${type}`)).toBe(true);
         expect(el.querySelector('.supa-admonition-title span')?.textContent).toBe(
-          meta.defaultTitle
+          LABEL_DEFAULTS[meta.titleKey]
         );
         const iconEl = el.querySelector<HTMLElement>('.supa-admonition-title i.bi')!;
         expect(iconEl).not.toBeNull();
@@ -857,7 +859,7 @@ describe('Supa Maven Skin Frontend Modules', () => {
       expect(Tooltip.getInstance(paletteBtn)).not.toBeNull();
 
       expect(permalink.getAttribute('data-bs-toggle')).toBe('tooltip');
-      expect(permalink.getAttribute('data-bs-title')).toBe('Copy permalink to this heading');
+      expect(permalink.getAttribute('data-bs-title')).toBe('Permalink to Section Heading');
       expect(Tooltip.getInstance(permalink)).not.toBeNull();
 
       expect(copyBtn.getAttribute('data-bs-toggle')).toBe('tooltip');
@@ -2327,7 +2329,7 @@ describe('Supa Maven Skin Frontend Modules', () => {
         const btn = renderCopyButton();
         btn.click();
         await vi.waitFor(() => {
-          expect(btn.getAttribute('aria-label')).not.toBe('Copy code to clipboard');
+          expect(btn.getAttribute('aria-label')).not.toBe('Copy code');
         });
         return btn;
       };
@@ -2462,7 +2464,7 @@ describe('Supa Maven Skin Frontend Modules', () => {
         vi.advanceTimersByTime(1);
         expect(btn.classList.contains('is-copy-failed')).toBe(false);
         expect(btn.classList.contains('is-copied')).toBe(false);
-        expect(btn.getAttribute('aria-label')).toBe('Copy code to clipboard');
+        expect(btn.getAttribute('aria-label')).toBe('Copy code');
         expect(btn.getAttribute('data-bs-title')).toBe('Copy code');
       });
 
@@ -2535,7 +2537,7 @@ describe('Supa Maven Skin Frontend Modules', () => {
 
         btn.click();
         await vi.waitFor(() => {
-          expect(btn.getAttribute('aria-label')).not.toBe('Copy code to clipboard');
+          expect(btn.getAttribute('aria-label')).not.toBe('Copy code');
         });
 
         expectCopiedState(btn);
@@ -3755,6 +3757,315 @@ describe('Supa Maven Skin Frontend Modules', () => {
       for (const entry of BUNDLED_LICENSES) {
         expect(entry.outputFileName).toMatch(/^LICENSE-[a-z0-9.-]+\.txt$/);
         expect(existsSync(resolve(process.cwd(), 'node_modules', entry.name, 'LICENSE'))).toBe(true);
+      }
+    });
+  });
+
+  describe('Translatable Interface Labels', () => {
+    /**
+     * Sets the `data-supa-label-*` attributes site.vm emits on `<body>` for overridden labels.
+     *
+     * @param labels - Kebab-case key (without the prefix) to value.
+     */
+    const setLabels = (labels: Record<string, string>): void => {
+      for (const [key, value] of Object.entries(labels)) {
+        document.body.setAttribute(`data-supa-label-${key}`, value);
+      }
+    };
+
+    afterEach(() => {
+      for (const attr of Array.from(document.body.attributes)) {
+        if (attr.name.startsWith('data-supa-label-') || attr.name === 'data-supa-unknown-labels') {
+          document.body.removeAttribute(attr.name);
+        }
+      }
+      document.documentElement.removeAttribute('lang');
+      vi.restoreAllMocks();
+    });
+
+    it('keeps the same keys and English text as #supaLabelDefaults and the configuration.md table', () => {
+      const macros = readFileSync(
+        resolve(process.cwd(), 'src/main/resources/META-INF/maven/site-macros.vm'),
+        'utf8'
+      );
+      const scriptLabels = new Map<string, string>();
+      for (const [, key, english, script] of macros.matchAll(
+        /^#supaDefineLabel\( '(\w+)' '([^']*)' (true|false) \)$/gm
+      )) {
+        if (script === 'true') {
+          scriptLabels.set(key, english);
+        }
+      }
+      expect(Object.fromEntries(scriptLabels)).toEqual({ ...LABEL_DEFAULTS });
+
+      const reference = readFileSync(resolve(process.cwd(), 'src/site/markdown/configuration.md'), 'utf8');
+      for (const [key, english] of Object.entries(LABEL_DEFAULTS)) {
+        expect(reference).toContain(`| \`${key}\` | \`${english}\` |`);
+      }
+    });
+
+    it('returns the English default with its placeholders filled when the page overrides nothing', () => {
+      expect(getLabel('copyCode')).toBe('Copy code');
+      expect(getLabel('searchResultCount', { count: 3 })).toBe('Results: 3');
+      expect(getLabel('searchNoResults', { query: 'maven' })).toBe('No results for “maven”');
+      expect(getLabel('tabFallback', { n: 1 })).toBe('Tab 1');
+    });
+
+    it('reads an override from its kebab-case data-supa-label-* attribute and fills its placeholders', () => {
+      setLabels({
+        'search-no-results': 'Keine Treffer für „{query}“',
+        'color-scheme-modus-tinted': 'Modus getönt',
+        'admonition-see-also': 'Siehe auch'
+      });
+      expect(getLabel('searchNoResults', { query: 'maven' })).toBe('Keine Treffer für „maven“');
+      expect(getLabel('colorSchemeModusTinted')).toBe('Modus getönt');
+      expect(getLabel('admonitionSeeAlso')).toBe('Siehe auch');
+      // A key the page does not override stays English
+      expect(getLabel('searchHint')).toBe(LABEL_DEFAULTS.searchHint);
+    });
+
+    it('falls back to English for an empty or blank override, so no control loses its name', () => {
+      setLabels({ 'back-to-top': '', 'copy-code': '   ' });
+      expect(getLabel('backToTop')).toBe('Back to top');
+      expect(getLabel('copyCode')).toBe('Copy code');
+    });
+
+    it('fills placeholders like #supaFillLabel: an empty value drops it with the space before it', () => {
+      expect(fillLabel('Permalink to {heading}', { heading: '' })).toBe('Permalink to');
+      expect(fillLabel('{count} Treffer', { count: 0 })).toBe('0 Treffer');
+      expect(fillLabel('A {x} and {x}', { x: 'b' })).toBe('A b and b');
+      // A placeholder without a value stays visible, so a translator's typo is noticed
+      expect(fillLabel('Results: {cuont}', { count: 2 })).toBe('Results: {cuont}');
+      expect(fillLabel('{constructor}', {})).toBe('{constructor}');
+      // A value is inserted as written, never re-scanned for placeholders
+      expect(fillLabel('Search: {query}', { query: '{count}' })).toBe('Search: {count}');
+    });
+
+    it('warns once about the unknown <labels> keys site.vm lists in data-supa-unknown-labels', async () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+      expect(warnUnknownLabels()).toBe(false);
+      expect(warn).not.toHaveBeenCalled();
+
+      document.body.setAttribute('data-supa-unknown-labels', 'serchPlaceholder otherTypo');
+      expect(warnUnknownLabels()).toBe(true);
+      expect(warnUnknownLabels()).toBe(false);
+      await initSupaSkin();
+      const labelWarnings = warn.mock.calls.filter((call) => String(call[0]).includes('<labels>'));
+      expect(labelWarnings).toHaveLength(1);
+      expect(labelWarnings[0][0]).toContain('serchPlaceholder, otherTypo');
+    });
+
+    it('sets overridden labels as text, never as HTML', () => {
+      const markup = '<img src="x" onerror="window.__supaXss = true">';
+      setLabels({ 'back-to-top': markup, 'code-hide': markup });
+      initBackToTop();
+      const backToTop = document.querySelector<HTMLButtonElement>('.supa-back-to-top')!;
+      expect(backToTop.querySelector('img')).toBeNull();
+      expect(backToTop.querySelector('span')!.textContent).toBe(markup);
+      expect(backToTop.getAttribute('aria-label')).toBe(markup);
+      expect(backToTop.getAttribute('data-bs-title')).toBe(markup);
+
+      const container = document.createElement('div');
+      container.innerHTML = `
+        <div class="supa-component-preview"><button class="btn">Demo</button></div>
+        <pre><code class="language-html">&lt;button&gt;Demo&lt;/button&gt;</code></pre>`;
+      document.body.appendChild(container);
+      enhanceCodeBlocks(container, false, true);
+      initComponentExamples(container);
+      const toggle = container.querySelector<HTMLButtonElement>('.supa-component-code-toggle')!;
+      expect(toggle.querySelector('img')).toBeNull();
+      expect(toggle.textContent).toBe(markup);
+    });
+
+    it('uses one label per control for its visible text, name, and tooltip', () => {
+      setLabels({ 'back-to-top': 'Nach oben', 'code-show': 'Code zeigen', 'code-hide': 'Code verbergen' });
+      initBackToTop();
+      const backToTop = document.querySelector<HTMLButtonElement>('.supa-back-to-top')!;
+      expect(backToTop.textContent).toBe('Nach oben');
+      expect(backToTop.getAttribute('aria-label')).toBe('Nach oben');
+      expect(backToTop.getAttribute('data-bs-title')).toBe('Nach oben');
+
+      const container = document.createElement('div');
+      container.innerHTML = `
+        <div class="supa-component-preview"><button class="btn">Demo</button></div>
+        <pre><code class="language-html">&lt;button&gt;Demo&lt;/button&gt;</code></pre>`;
+      document.body.appendChild(container);
+      enhanceCodeBlocks(container, false, true);
+      initComponentExamples(container);
+      const toggle = container.querySelector<HTMLButtonElement>('.supa-component-code-toggle')!;
+      // The visible text names the toggle, so it carries no tooltip that could disagree with it
+      expect(toggle.textContent).toBe('Code verbergen');
+      expect(toggle.hasAttribute('data-bs-title')).toBe(false);
+      toggle.click();
+      expect(toggle.textContent).toBe('Code zeigen');
+    });
+
+    it('translates the color-scheme and theme triggers and keeps the shown scheme name in the trigger name', () => {
+      document.body.innerHTML = `
+        <button type="button" class="supa-palette-btn" data-bs-toggle="menu">
+          <span data-supa-palette-label="true">Furo (AA)</span>
+        </button>
+        <button type="button" class="supa-theme-toggle-btn" data-bs-toggle="menu" data-supa-theme-trigger="true"></button>
+        <button type="button" data-supa-theme-toggle="true"></button>`;
+      setLabels({
+        'color-scheme-trigger': 'Farbschema: {name}',
+        'color-scheme-modus-tinted': 'Modus getönt',
+        'theme-trigger': 'Farbmodus: {mode}',
+        'theme-auto': 'Automatisch',
+        'theme-dark': 'Dunkel'
+      });
+      vi.spyOn(window, 'matchMedia').mockImplementation(
+        (query: string) =>
+          ({ matches: query.includes('dark'), media: query, addEventListener: () => undefined }) as unknown as MediaQueryList
+      );
+
+      initTheme();
+      applyPalette('modus-tinted');
+      const palette = document.querySelector<HTMLButtonElement>('.supa-palette-btn')!;
+      // The skin appends the WCAG level; sites cannot change it
+      expect(palette.textContent!.trim()).toBe('Modus getönt (AAA)');
+      expect(palette.getAttribute('aria-label')).toBe('Farbschema: Modus getönt (AAA)');
+      expect(palette.getAttribute('data-bs-title')).toBe('Farbschema: Modus getönt (AAA)');
+
+      // A translation without {name} still names the trigger with the text it shows (WCAG 2.5.3)
+      setLabels({ 'color-scheme-trigger': 'Farbschema' });
+      applyPalette('furo');
+      expect(palette.getAttribute('aria-label')).toBe('Farbschema Furo (AA)');
+
+      applyThemeMode('auto');
+      const theme = document.querySelector<HTMLButtonElement>('[data-supa-theme-trigger]')!;
+      expect(theme.getAttribute('aria-label')).toBe('Farbmodus: Automatisch (Dunkel)');
+      expect(theme.getAttribute('data-bs-title')).toBe('Farbmodus: Automatisch (Dunkel)');
+      applyThemeMode('light');
+      expect(theme.getAttribute('aria-label')).toBe('Farbmodus: Light');
+      // A site's own [data-supa-theme-toggle] button shares the trigger's label
+      const toggle = document.querySelector<HTMLButtonElement>('[data-supa-theme-toggle]')!;
+      expect(toggle.getAttribute('aria-label')).toBe('Farbmodus: Light');
+    });
+
+    it('translates admonition titles, the dismiss button, and the tab and accordion fallbacks', () => {
+      setLabels({
+        'admonition-note': 'Hinweis',
+        'alert-dismiss': 'Schließen',
+        'tab-fallback': 'Reiter {n}',
+        'accordion-fallback': 'Abschnitt {n}'
+      });
+      const container = document.createElement('div');
+      container.innerHTML = `
+        <blockquote><p>[!NOTE]\nBody</p></blockquote>
+        <blockquote><p>[!TIP] Own title\nBody</p></blockquote>
+        <blockquote><p>[!WARNING]\nBody</p></blockquote>
+        <blockquote><p>[!ALERT:primary dismissible] Heads up</p><p>Body</p></blockquote>
+        <div class="supa-tabs"><div><p>One</p></div><div><p>Two</p></div></div>
+        <div class="supa-accordion"><div data-accordion=""><p>One</p></div><div title="Named"><p>Two</p></div></div>`;
+      transformGfmAdmonitions(container);
+      initContentTabs(container);
+      initBootstrapAccordions(container);
+
+      const titles = Array.from(container.querySelectorAll('.supa-admonition-title span')).map(
+        (span) => span.textContent
+      );
+      expect(titles).toEqual(['Hinweis', 'Own title', 'Warning']);
+      expect(container.querySelector('.btn-close')!.getAttribute('aria-label')).toBe('Schließen');
+      expect(
+        Array.from(container.querySelectorAll('.supa-tab-btn')).map((btn) => btn.textContent)
+      ).toEqual(['Reiter 1', 'Reiter 2']);
+      expect(container.querySelector('.supa-accordion')!.textContent).toContain('Abschnitt 1');
+      expect(container.querySelector('.supa-accordion')!.textContent).not.toContain('Section 1');
+    });
+
+    it('translates the copy button states and heading permalinks', async () => {
+      setLabels({ 'copy-code': 'Code kopieren', 'copy-copied': 'Kopiert!', permalink: 'Link zu „{heading}“' });
+      const article = document.createElement('article');
+      article.innerHTML = '<h2>Einführung</h2><pre><code class="language-bash">mvn site</code></pre>';
+      document.body.appendChild(article);
+
+      prepareHeadings(article, true, '#');
+      const permalink = article.querySelector<HTMLAnchorElement>('.supa-headerlink')!;
+      expect(permalink.getAttribute('aria-label')).toBe('Link zu „Einführung“');
+      expect(permalink.getAttribute('data-bs-title')).toBe('Link zu „Einführung“');
+
+      enhanceCodeBlocks(article, false, true);
+      const copy = article.querySelector<HTMLButtonElement>('.supa-copy-btn')!;
+      expect(copy.getAttribute('aria-label')).toBe('Code kopieren');
+      expect(copy.getAttribute('data-bs-title')).toBe('Code kopieren');
+      Object.defineProperty(navigator, 'clipboard', {
+        value: { writeText: vi.fn().mockResolvedValue(undefined) },
+        configurable: true
+      });
+      copy.click();
+      await vi.waitFor(() => expect(copy.getAttribute('aria-label')).toBe('Kopiert!'));
+      expect(copy.getAttribute('data-bs-title')).toBe('Kopiert!');
+    });
+
+    it('translates the search status, badges, and generic section names', () => {
+      setLabels({
+        'search-hint': 'Tippen, um zu suchen.',
+        'search-result-count': 'Treffer: {count}',
+        'search-no-results': 'Nichts gefunden für „{query}“',
+        'search-badge-section': 'Abschnitt',
+        'search-section-current': 'Diese Seite'
+      });
+      document.body.innerHTML = `
+        <main id="supa-main-content"><h2 id="installation">Installation</h2></main>
+        <dialog id="supaSearchDialog">
+          <input id="supaSearchInput" />
+          <div id="supaSearchStatus"></div>
+          <div id="supaSearchResults"></div>
+        </dialog>`;
+      initSearch();
+      const input = document.getElementById('supaSearchInput') as HTMLInputElement;
+      const status = document.getElementById('supaSearchStatus')!;
+      const type = (query: string): void => {
+        input.value = query;
+        input.dispatchEvent(new Event('input'));
+      };
+
+      type('installation');
+      expect(status.textContent).toBe('Treffer: 1');
+      const result = document.querySelector('.supa-search-result-item')!;
+      expect(result.querySelector('.supa-search-result-badge')!.textContent).toBe('Abschnitt');
+      expect(result.querySelector('.supa-search-result-title')!.textContent).toBe(
+        'Diese Seite › Installation'
+      );
+
+      type('  zzz  ');
+      expect(status.textContent).toBe('Nichts gefunden für „zzz“');
+      type('');
+      expect(status.textContent).toBe('Tippen, um zu suchen.');
+    });
+
+    it('defaults the Datepicker locale to <html lang>, which data-bs-locale still overrides', async () => {
+      const widget = LAZY_WIDGETS.find((candidate) => candidate.name === 'Datepicker')!;
+      await widget.load();
+      const Datepicker = BootstrapPlugins.Datepicker!;
+      const original = Datepicker.Default.locale;
+      try {
+        document.documentElement.lang = 'pt-BR';
+        await widget.load();
+        expect(Datepicker.Default.locale).toBe('pt-BR');
+
+        // A malformed tag would make Intl throw in every picker, so it is ignored
+        Datepicker.Default.locale = original;
+        document.documentElement.lang = 'pt_BR!';
+        await widget.load();
+        expect(Datepicker.Default.locale).toBe(original);
+
+        document.documentElement.lang = 'fr';
+        await widget.load();
+        document.body.innerHTML = `
+          <input type="text" id="dpPage" data-bs-toggle="datepicker" />
+          <input type="text" id="dpOwn" data-bs-toggle="datepicker" data-bs-locale="de-DE" />`;
+        const config = (id: string): { locale: string } =>
+          (
+            Datepicker.getOrCreateInstance(document.getElementById(id)!) as unknown as {
+              _config: { locale: string };
+            }
+          )._config;
+        expect(config('dpPage').locale).toBe('fr');
+        expect(config('dpOwn').locale).toBe('de-DE');
+      } finally {
+        Datepicker.Default.locale = original;
       }
     });
   });

@@ -24,6 +24,7 @@ import {
 } from './bootstrap-components';
 import { initCodeBlocks } from './code';
 import { initDoxiaEnhancements, initScrollRegions } from './doxia';
+import { getLabel, warnUnknownLabels } from './labels';
 import { initOptionalLibraries } from './optional';
 import { initSearch } from './search';
 import { initTheme } from './theme';
@@ -128,10 +129,16 @@ export function initBackToTop(): void {
   const btn = document.createElement('button');
   btn.type = 'button';
   btn.className = 'supa-back-to-top not-prose';
-  btn.setAttribute('aria-label', 'Back to top');
-  setTooltipTitle(btn, 'Scroll back to top', 'top');
+  // One label for the visible text, the name, and the tooltip, set as text, never as HTML
+  const label = getLabel('backToTop');
+  btn.setAttribute('aria-label', label);
+  setTooltipTitle(btn, label, 'top');
   btn.innerHTML =
-    '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="18 15 12 9 6 15"></polyline></svg><span>Back to top</span>';
+    '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="18 15 12 9 6 15"></polyline></svg><span></span>';
+  const textEl = btn.querySelector('span');
+  if (textEl) {
+    textEl.textContent = label;
+  }
 
   btn.addEventListener('click', () => {
     window.scrollTo({ top: 0, behavior: motionScrollBehavior() });
@@ -166,6 +173,7 @@ export const SUPA_READY_ATTRIBUTE = 'data-supa-ready';
  *     page has scrolled to its URL's heading again (or had no reason to).
  */
 export function initSupaSkin(): Promise<void> {
+  warnUnknownLabels();
   initTheme();
   initDoxiaEnhancements();
   const landOnFragmentAgain = initTocAndScrollSpy();

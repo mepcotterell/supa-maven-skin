@@ -2,6 +2,7 @@
  * @fileoverview Doxia 2.0 HTML normalization, GitHub-Flavored Markdown admonition transforms,
  * synchronized content tabs, declarative accordions/steppers, and Bootstrap Icon shortcodes.
  */
+import { getLabel, type LabelKey } from './labels';
 
 export type AdmonitionType =
   | 'admonition'
@@ -29,69 +30,70 @@ export type BootstrapThemeName =
 
 interface AdmonitionMeta {
   type: AdmonitionType;
-  defaultTitle: string;
+  /** Label of the title shown when the author gives none, such as "Note". */
+  titleKey: LabelKey;
   iconClass: string;
 }
 
 export const ADMONITION_META: Record<AdmonitionType, AdmonitionMeta> = {
   admonition: {
     type: 'admonition',
-    defaultTitle: 'Admonition',
+    titleKey: 'admonition',
     iconClass: 'bi-card-text'
   },
   attention: {
     type: 'attention',
-    defaultTitle: 'Attention',
+    titleKey: 'admonitionAttention',
     iconClass: 'bi-exclamation-diamond'
   },
   caution: {
     type: 'caution',
-    defaultTitle: 'Caution',
+    titleKey: 'admonitionCaution',
     iconClass: 'bi-lightning-charge'
   },
   danger: {
     type: 'danger',
-    defaultTitle: 'Danger',
+    titleKey: 'admonitionDanger',
     iconClass: 'bi-lightning-charge-fill'
   },
   error: {
     type: 'error',
-    defaultTitle: 'Error',
+    titleKey: 'admonitionError',
     iconClass: 'bi-x-octagon'
   },
   hint: {
     type: 'hint',
-    defaultTitle: 'Hint',
+    titleKey: 'admonitionHint',
     iconClass: 'bi-question-circle'
   },
   important: {
     type: 'important',
-    defaultTitle: 'Important',
+    titleKey: 'admonitionImportant',
     iconClass: 'bi-fire'
   },
   note: {
     type: 'note',
-    defaultTitle: 'Note',
+    titleKey: 'admonitionNote',
     iconClass: 'bi-info-circle'
   },
   seealso: {
     type: 'seealso',
-    defaultTitle: 'See also',
+    titleKey: 'admonitionSeeAlso',
     iconClass: 'bi-arrow-up-right-circle'
   },
   tip: {
     type: 'tip',
-    defaultTitle: 'Tip',
+    titleKey: 'admonitionTip',
     iconClass: 'bi-lightbulb'
   },
   todo: {
     type: 'todo',
-    defaultTitle: 'Todo',
+    titleKey: 'admonitionTodo',
     iconClass: 'bi-check2-square'
   },
   warning: {
     type: 'warning',
-    defaultTitle: 'Warning',
+    titleKey: 'admonitionWarning',
     iconClass: 'bi-exclamation-triangle'
   }
 };
@@ -316,7 +318,7 @@ export function transformGfmAdmonitions(container: HTMLElement): void {
         closeBtn.type = 'button';
         closeBtn.className = 'btn-close ms-auto';
         closeBtn.setAttribute('data-bs-dismiss', 'alert');
-        closeBtn.setAttribute('aria-label', 'Close');
+        closeBtn.setAttribute('aria-label', getLabel('alertDismiss'));
         alertEl.appendChild(closeBtn);
       }
 
@@ -360,7 +362,7 @@ export function transformGfmAdmonitions(container: HTMLElement): void {
     if (customTitle) {
       spanEl.appendChild(parseTitleHtml(customTitle));
     } else {
-      spanEl.textContent = meta.defaultTitle;
+      spanEl.textContent = getLabel(meta.titleKey);
     }
 
     titleEl.appendChild(iconEl);
@@ -406,7 +408,7 @@ function inferPanelTabLabel(panel: HTMLElement, index: number): string {
       return 'Markdown + HTML';
     }
   }
-  return `Tab ${index + 1}`;
+  return getLabel('tabFallback', { n: index + 1 });
 }
 
 /**
@@ -618,7 +620,7 @@ export function initBootstrapAccordions(container: HTMLElement): void {
     rawItems.forEach((itemEl, itemIdx) => {
       const title =
         (itemEl.getAttribute('data-accordion') || itemEl.getAttribute('title'))?.trim() ||
-        `Section ${itemIdx + 1}`;
+        getLabel('accordionFallback', { n: itemIdx + 1 });
       itemEl.removeAttribute('title');
       const isOpen =
         itemEl.getAttribute('data-open') === 'true' ||
