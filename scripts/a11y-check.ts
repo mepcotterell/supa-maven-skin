@@ -32,7 +32,7 @@
  * where a state drawn only by a fill must keep it, and a page opened from a
  * link to a heading far down it, which must land under the headers with or
  * without reduced motion, and leave a reader who scrolls before the page is
- * ready where they scrolled to), asserts the
+ * ready, or who scrolls away and reloads, where they are), asserts the
  * state was reached, scans it in `furo` light and dark and `modus` dark (AAA)
  * unless the scenario lists its own variants, and asserts the state still held
  * after the scan, so a broken selector fails the run instead of quietly
