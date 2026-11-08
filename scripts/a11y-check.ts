@@ -861,6 +861,9 @@ function printComponentsScenario(): InteractionScenario {
     assertState: async (p) => {
       await printed.assertState(p);
       await expectPrintedFills(p);
+      if (await p.locator('.documentation-channels').isVisible()) {
+        throw new Error('Documentation navigation is rendered in print');
+      }
     }
   };
 }
@@ -1118,6 +1121,54 @@ function deepLinkScenario(
  * toggled, so a state left open elsewhere on the page cannot stand in for it.
  */
 const SCENARIOS: readonly InteractionScenario[] = [
+  ...[1440, 390, 320].flatMap((width): InteractionScenario[] =>
+    [false, true].map((open): InteractionScenario => ({
+      name: `documentation-channels-${width}-${open ? 'open' : 'closed'}`,
+      page: 'components.html',
+      viewport: { width, height: 900 },
+      variants: ALL_VARIANTS,
+      scope: ['.documentation-channels'],
+      setup: async (page) => {
+        // Closed scans follow the OS; open scans retain explicit polarity against the OS.
+        const polarity = await page.locator('html').getAttribute('data-bs-theme');
+        if (open) {
+          await page.emulateMedia({ colorScheme: polarity === 'dark' ? 'light' : 'dark' });
+        } else {
+          await page.locator('html').evaluate((el) => el.removeAttribute('data-bs-theme'));
+        }
+        // Exercise the tracer's placement outside prose and the canonical alias too.
+        if (width === 1440) {
+          await page.locator('.documentation-channels').evaluate((el) => {
+            document.querySelector('main')?.before(el);
+            el.classList.add('supa-documentation-channels');
+          });
+        }
+        const summary = page.locator('.documentation-version-picker > summary');
+        await summary.focus();
+        if (open) {
+          await page.keyboard.press('Enter');
+          await page.keyboard.press('Tab');
+          await page.locator('.documentation-version-picker li a').last().hover();
+        }
+      },
+      assertState: async (page) => {
+        const picker = page.locator('.documentation-version-picker');
+        if (await picker.evaluate((el) => el.hasAttribute('open')) !== open) {
+          throw new Error('Version disclosure did not reach the expected state');
+        }
+        await expectFocused(page, page.locator(open
+          ? '.documentation-version-picker li a:first-child'
+          : '.documentation-version-picker > summary').first(), 'version navigation');
+        const fits = await page.locator('.documentation-channels').evaluate((el) => {
+          const rect = el.getBoundingClientRect();
+          return rect.left >= 0 && rect.right <= window.innerWidth && el.scrollWidth <= el.clientWidth;
+        });
+        if (!fits) {
+          throw new Error('Documentation channels overflow the viewport');
+        }
+      }
+    }))
+  ),
   {
     name: 'search-dialog-empty',
     page: 'index.html',

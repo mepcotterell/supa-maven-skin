@@ -173,7 +173,7 @@
     }
   }
 
-  a:not(.btn):not(.supa-headerlink):not(.nav-link):not(.page-link):not(.menu-item):not(.breadcrumb-link):not(.list-group-item):not(.card-link):not(.badge):not(.chip):not(.supa-prev-page):not(.supa-next-page) {
+  a:not(:where(.documentation-channels a, .supa-documentation-channels a)):not(.btn):not(.supa-headerlink):not(.nav-link):not(.page-link):not(.menu-item):not(.breadcrumb-link):not(.list-group-item):not(.card-link):not(.badge):not(.chip):not(.supa-prev-page):not(.supa-next-page) {
     color: var(--color-brand-content);
     text-decoration: underline;
     text-underline-offset: 0.18em;

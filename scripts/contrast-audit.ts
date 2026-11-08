@@ -328,6 +328,16 @@ function forTheme(expr: string, theme: string): string {
  * component, with and without a theme, at rest, hovered, and toggled on.
  */
 export const SURFACE_AUDITS: readonly SurfaceSpec[] = [
+  ...['--color-background-primary', '--color-background-secondary', '--color-background-hover'].map(
+    (surface): SurfaceSpec => ({
+      surface: `documentation channels ${surface}`,
+      layers: [PAGE, `var(${surface})`],
+      foregrounds: [
+        { label: 'links, summary, and current link', color: 'var(--color-foreground-primary)', role: 'text' },
+        { label: 'control border and focus outline', color: 'var(--color-foreground-primary)', role: 'non-text' }
+      ]
+    })
+  ),
   {
     surface: '--color-background-primary',
     layers: [PAGE],

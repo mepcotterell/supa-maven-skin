@@ -394,4 +394,10 @@ if ( !alertsText.contains( "data-bs-dismiss=\"alert\" aria-label=\"Fermer\"" ) )
     throw new IllegalStateException( "#bsAlert in a .md.vm page must name its dismiss button with <labels><alertDismiss>" );
 }
 
+String channels = Files.readString( new File( siteDir, "documentation-channels.html" ).toPath(), StandardCharsets.UTF_8 );
+if ( !channels.contains( "class=\"documentation-channels\"" )
+     || !channels.contains( "<details class=\"documentation-version-picker\"" )
+     || !channels.contains( "<summary>Version: Current release</summary>" ) ) {
+    throw new IllegalStateException( "Documentation channel markup was not preserved" );
+}
 return true;

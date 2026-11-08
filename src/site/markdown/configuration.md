@@ -469,3 +469,15 @@ When authoring Velocity-preprocessed pages (`.md.vm`, `.apt.vm`, `.xhtml.vm`), *
 | `#bsCardGridStart( $extraClasses )` | `$extraClasses`: Optional grid utility classes (`""`) | Opens a `<div class="row g-3 not-prose my-3 ...">` card grid container without trailing blank lines so Doxia's CommonMark parser keeps the HTML block contiguous. |
 | `#bsCardGridEnd()` | *(none)* | Closes the `</div>` opened by `#bsCardGridStart`. |
 | `#bsGuideCard( $colClass $icon $theme $href $title $badge $description )` | `$colClass`: Column classes (`"col-12 md:col-6"` default)<br>`$icon`: Bootstrap Icon slug (`"rocket-takeoff"`)<br>`$theme`: Semantic theme (`"primary"`, `"success"`, `"info"`, `"warning"`)<br>`$href`: Link target (`"getting-started.html"`)<br>`$title`: Card link title<br>`$badge`: Optional right-aligned subtle badge label<br>`$description`: Card description HTML/text | Renders a responsive navigation/guide card column inside a `#bsCardGridStart` / `#bsCardGridEnd` block. |
+
+## Documentation channel classes
+
+| Class | Contract |
+| --- | --- |
+| `.supa-documentation-channels` | Named navigation container for consumer-provided links and a version disclosure. |
+| `.documentation-channels` | Equivalent compatibility alias for existing markup. |
+| `.documentation-version-picker` | Native `details` inside the container, containing a `summary` and a `ul` of version links. |
+
+All palettes and polarities are supported. Use `aria-current="page"` for the
+current destination. Labels and URLs belong to the consumer. No script or
+configuration option is required. See the [authoring recipe](authoring-guide.html#documentation-channels).

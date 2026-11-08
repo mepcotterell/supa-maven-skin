@@ -425,3 +425,35 @@ Serve both libraries from your own site when you cannot depend on jsDelivr, for 
 > Avoid document-relative values such as `vendor/mermaid/mermaid.min.js`. Classic `<script src>` and `<link href>` URLs resolve against the current page, so they break on pages in subdirectories (for example, pages from `src/site/markdown/guides/*.md`). `.mjs` URLs loaded with `import()` resolve against `js/supa-maven-skin.min.js` instead and must start with `./`, `../`, or `/`. Root-relative and absolute URLs resolve the same way in all three cases.
 
 Self-hosted URLs load without Subresource Integrity, because the skin only knows the hashes of its pinned defaults. The [Configuration Reference](configuration.html#code-search-diagrams-math) lists every loading option, and [Content Security Policy](configuration.html#content-security-policy) lists the origins to allow when you keep the jsDelivr defaults.
+
+## Documentation channels
+
+Group project, version, and API links in a named navigation landmark. The native
+version disclosure works without JavaScript:
+
+```html
+<nav class="supa-documentation-channels" aria-label="Documentation channels">
+<a href="index.html" aria-current="page">Project home</a>
+<a href="https://example.org/versions/">All versions</a>
+<a href="api/index.html">API Reference</a>
+<details class="documentation-version-picker">
+<summary>Version: Current release</summary>
+<ul>
+<li><a href="dev/index.html">Development</a></li>
+<li><a href="release/index.html">Current release</a></li>
+</ul>
+</details>
+</nav>
+```
+
+Replace destinations and labels with your own. Set `aria-current="page"` only
+on a link to the current page. The skin does not discover versions or rewrite
+links. The component works inside or outside article prose, inherits all six
+palettes and light, dark, or automatic polarity, and is hidden when printed.
+On phones, the version list expands in the page flow; long labels wrap.
+
+The existing `.documentation-channels` class is an equivalent alias. When
+adopting this in a site such as the tracer, remove the old channel and
+version-picker rules from consumer CSS (including `dependencies.css`). Keep
+unrelated dependency-table styles. Later consumer CSS can otherwise override
+the skin's layout and colors.

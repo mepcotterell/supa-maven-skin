@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- **Documentation Channels**: Palette-aware channel navigation and a native version disclosure, with responsive wrapping, keyboard focus, current-page cues, and print suppression. Supports `.supa-documentation-channels` and existing `.documentation-channels` markup.
+
 ## [0.2.0] - 2026-11-06
 
 ### Added
