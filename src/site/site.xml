@@ -51,6 +51,7 @@
         <item name="Synchronized Content Tabs" href="authoring-guide.html#creating-synchronized-content-tabs" />
         <item name="Accordions &amp; Steppers" href="authoring-guide.html#building-accordions-and-steppers" />
         <item name="Diagrams &amp; Math" href="authoring-guide.html#rendering-mermaid-diagrams-and-katex-math" />
+        <item name="Documentation Channels" href="authoring-guide.html#documentation-channels" />
       </item>
       <item name="Customizing the Skin" href="customizing.html">
         <item name="Choosing a Layer" href="customizing.html#choosing-a-customization-layer" />
@@ -59,6 +60,8 @@
         <item name="Design Tokens" href="customizing.html#overriding-design-tokens" />
         <item name="Logos &amp; Favicon" href="customizing.html#adding-logos-and-a-favicon" />
         <item name="Page Furniture" href="customizing.html#adjusting-page-furniture" />
+        <item name="Translating Labels" href="customizing.html#translating-the-skins-labels" />
+        <item name="Printed Page" href="customizing.html#adjusting-the-printed-page" />
         <item name="Stable Selectors" href="customizing.html#choosing-selectors-that-survive-upgrades" />
         <item name="Caveats" href="customizing.html#caveats" />
       </item>
@@ -81,6 +84,7 @@
         <item name="Code Blocks" href="troubleshooting.html#code-blocks" />
         <item name="Links &amp; Anchors" href="troubleshooting.html#links-and-anchors" />
         <item name="Theme &amp; Color Scheme" href="troubleshooting.html#theme-and-color-scheme" />
+        <item name="Translated Sites" href="troubleshooting.html#translated-sites" />
         <item name="Diagrams &amp; Math" href="troubleshooting.html#diagrams-and-math" />
         <item name="Layout &amp; Navigation" href="troubleshooting.html#layout-and-navigation" />
         <item name="Custom Styles" href="troubleshooting.html#custom-styles" />
@@ -101,6 +105,7 @@
         <item name="Accessible Color Schemes" href="configuration.html#built-in-accessible-color-schemes" />
         <item name="CSS Variables" href="configuration.html#extending-palettes-via-lightcssvariables-darkcssvariables" />
         <item name="Velocity Macros" href="configuration.html#velocity-helper-macros-reference-site-macrosvm" />
+        <item name="Documentation Channels" href="configuration.html#documentation-channel-classes" />
       </item>
       <item name="Components" href="components.html">
         <item name="Interactive Playground" href="components.html#interactive-component-playground" />
@@ -110,6 +115,7 @@
         <item name="4. Navigation &amp; Steppers" href="components.html#4-navigation-menus-tabs-breadcrumbs-pagination-steppers" />
         <item name="5. Accordions &amp; Cards" href="components.html#5-containers-disclosure-accordions-cards-list-groups-carousel" />
         <item name="6. Forms &amp; Rich Inputs" href="components.html#6-forms-bootstrap-6-rich-input-widgets" />
+        <item name="Documentation Channels" href="components.html#documentation-channels" />
       </item>
       <item name="Kitchen Sink Showcase" href="kitchen-sink.html">
         <item name="Admonitions" href="kitchen-sink.html#admonitions" />
@@ -121,7 +127,15 @@
       </item>
     </menu>
     <menu name="Explanation">
-      <item name="Architecture &amp; Color System" href="architecture.html" />
+      <item name="Architecture &amp; Color System" href="architecture.html">
+        <item name="Build Pipeline" href="architecture.html#build-rendering-pipeline" />
+        <item name="Three-Column Layout" href="architecture.html#responsive-3-column-furo-layout" />
+        <item name="Doxia Normalization" href="architecture.html#doxia-20-normalization-prose-isolation" />
+        <item name="Accessible Color System" href="architecture.html#wcag-22-aa-aaa-accessible-color-system" />
+        <item name="Labels &amp; Page Language" href="architecture.html#interface-labels-page-language" />
+        <item name="Mermaid &amp; KaTeX Loading" href="architecture.html#pinned-integrity-checked-mermaid-katex" />
+        <item name="Client-Side Search" href="architecture.html#zero-config-client-side-search" />
+      </item>
     </menu>
     <menu ref="reports" inherit="bottom" />
   </body>

@@ -291,6 +291,12 @@ const UNIQUE_ID_RULE = 'unique-id';
  * not checked: `sample-site` repeats `index.html` on purpose, to test the "About" report item.
  */
 const NAV_DUPLICATE_RULE = 'nav-duplicate-destination';
+/**
+ * Reported when a sidebar item links a `#fragment` of the page it is on and no element on the
+ * page, once the skin has given the headings their ids, has that id. Every page is scanned, so
+ * every `site.xml` section link is followed on its own page.
+ */
+const NAV_FRAGMENT_RULE = 'nav-fragment-target';
 const DESKTOP: Viewport = { width: 1440, height: 900 };
 const MOBILE: Viewport = { width: 390, height: 844 };
 /**
@@ -659,6 +665,48 @@ async function checkNavDestinations(page: Page, job: ScanJob): Promise<Finding[]
     impact: 'moderate',
     target: `.supa-sidebar-tree a[href=${JSON.stringify(href)}]`,
     summary: `Fix the following: ${count} sidebar items link to ${JSON.stringify(href)}`,
+    html: '',
+    helpUrl: 'src/site/site.xml'
+  }));
+}
+
+/**
+ * Checks that every sidebar item linking a `#fragment` of the current page reaches an element with
+ * that id (`NAV_FRAGMENT_RULE`). Doxia gives headings no ids; `prepareHeadings()` does, after the
+ * build, so a `site.xml` section link can only be checked on the hydrated page.
+ *
+ * @param page - Page in the job's state.
+ * @param job - Scan job, for the report.
+ * @returns One finding per sidebar fragment that names no element on the page.
+ */
+async function checkNavFragments(page: Page, job: ScanJob): Promise<Finding[]> {
+  const missing = await page.evaluate(() => {
+    const found: string[] = [];
+    for (const link of Array.from(document.querySelectorAll<HTMLAnchorElement>('.supa-sidebar-tree a.supa-nav-link'))) {
+      const href = link.getAttribute('href') ?? '';
+      const url = new URL(href, window.location.href);
+      if (!href.includes('#') || url.pathname !== window.location.pathname || url.hash.length < 2) {
+        continue;
+      }
+      let id = url.hash.slice(1);
+      try {
+        id = decodeURIComponent(id);
+      } catch {
+        // A malformed escape is looked up as written, as toc.ts does.
+      }
+      if (!document.getElementById(id)) {
+        found.push(href);
+      }
+    }
+    return found;
+  });
+  return missing.map((href) => ({
+    page: pageLabel(job),
+    variant: variantLabel(job),
+    ruleId: NAV_FRAGMENT_RULE,
+    impact: 'moderate',
+    target: `.supa-sidebar-tree a[href=${JSON.stringify(href)}]`,
+    summary: `Fix the following: the sidebar links ${JSON.stringify(href)}, but no element on the page has that id`,
     html: '',
     helpUrl: 'src/site/site.xml'
   }));
@@ -4849,7 +4897,9 @@ async function scan(context: BrowserContext, baseUrl: string, job: ScanJob): Pro
   // A scoped scan covers only the regions its state changes; the load-time scans check the rest.
   const labelFindings = scenario?.scope ? [] : await checkLabelInName(page, job);
   const idFindings = scenario?.scope ? [] : await checkUniqueIds(page, job);
-  const navFindings = scenario?.scope ? [] : await checkNavDestinations(page, job);
+  const navFindings = scenario?.scope
+    ? []
+    : [...(await checkNavDestinations(page, job)), ...(await checkNavFragments(page, job))];
   // `options()` replaces axe's run options, so it carries the AA tags itself. axe runs a rule
   // enabled under `rules` even when its tags are outside `runOnly`.
   const builder = new AxeBuilder({ page }).options({
@@ -5150,7 +5200,8 @@ async function main(): Promise<number> {
         `${scenarioJobs} in interactive states) with axe-core [${WCAG_TAGS.join(', ')}], ` +
         `plus ${AAA_CONTRAST_RULE} on the ${aaaJobs} AAA-palette variants, ` +
         `${LABEL_IN_NAME_RULE} (WCAG 2.5.3) on every visible ${LABEL_IN_NAME_SELECTOR}, ` +
-        `${UNIQUE_ID_RULE} on every page, and ${NAV_DUPLICATE_RULE} on every page of the documentation site`
+        `${UNIQUE_ID_RULE} and ${NAV_FRAGMENT_RULE} on every page, ` +
+        `and ${NAV_DUPLICATE_RULE} on every page of the documentation site`
     );
     const errors: ScanError[] = [];
     const perJob = await mapLimit(jobs, CONCURRENCY, async (job) => {
@@ -5191,7 +5242,7 @@ async function main(): Promise<number> {
       `a11y: no WCAG A/AA violations across ${jobs.length} page variants in ${engine}, ` +
         `no AAA contrast violations across the ${aaaJobs} AAA-palette variants, ` +
         `no ${LABEL_IN_NAME_RULE} violations on ${LABEL_IN_NAME_SELECTOR}, ` +
-        `and no repeated ids${skippedNote}.`
+        `no repeated ids, and no sidebar fragment without its target${skippedNote}.`
     );
     return 0;
   } finally {
