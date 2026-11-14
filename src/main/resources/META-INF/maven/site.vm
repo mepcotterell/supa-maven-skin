@@ -11,8 +11,16 @@
 ## $supaLabelOverrides, $supaScriptLabelKeys, $supaUnknownLabels, and $supaMarkupLabels for the
 ## body attributes
 #supaBuildLabels()
+## <defaultTheme> and <colorScheme> reach <html>, where the anti-FOUC script and theme.ts read
+## them, and choose the checked item of each menu. A value that names no mode starts in auto, and
+## one that names no scheme starts on furo, as theme.ts treats them, so every control agrees.
 #set( $defaultTheme = $site.getCustomValue( "${skinCfg}.defaultTheme", 'auto' ) )
+#if( $defaultTheme != 'light' && $defaultTheme != 'dark' )
+#set( $defaultTheme = 'auto' )
+#end
 #set( $colorScheme = $site.getCustomValue( "${skinCfg}.colorScheme", 'furo' ) )
+#supaResolvePalette( $colorScheme )
+#set( $colorScheme = $paletteId )
 #set( $colorSchemeSelector = $convert.toBoolean( $site.getCustomValue( "${skinCfg}.colorSchemeSelector", 'true' ) ) )
 #set( $sidebarHideName = $convert.toBoolean( $site.getCustomValue( "${skinCfg}.sidebarHideName", 'false' ) ) )
 #set( $sidebarBrandAlignRaw = $site.getCustomValue( "${skinCfg}.sidebarBrandAlign", 'center' ).toLowerCase() )

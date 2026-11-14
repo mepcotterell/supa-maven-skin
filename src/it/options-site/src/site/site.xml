@@ -16,6 +16,8 @@
   <custom>
     <supaSkin>
       <defaultTheme>dark</defaultTheme>
+      <!-- Not a color scheme, so the skin starts on furo -->
+      <colorScheme>neon</colorScheme>
       <!-- An alias of "left" -->
       <sidebarBrandAlign>start</sidebarBrandAlign>
       <sidebarHideName>true</sidebarHideName>

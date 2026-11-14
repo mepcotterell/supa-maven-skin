@@ -43,7 +43,13 @@ for ( int p = 0; p < pages.length; p++ ) {
     expectTags( path, html, "button", new String[] {
         "class~", "supa-theme-toggle-btn", "aria-label", "Color theme: Light", "data-bs-title", "Color theme: Light" },
         3, "every theme trigger must name the configured light default" );
-    // R-43: asserted when fixed in N15 (the theme menus still mark Auto as the selected item)
+    expectTags( path, html, "button", new String[] {
+        "class", "menu-item selected", "role", "menuitemradio", "aria-checked", "true", "data-supa-theme-option", "light" },
+        3, "every theme menu must mark the configured light default as checked" );
+    expectTags( path, html, "button", new String[] { "aria-checked", "true", "data-supa-theme-option", "auto" }, 0,
+        "no theme menu may mark auto as checked when the default is light" );
+    expectTags( path, html, "button", new String[] { "class~", "selected", "data-supa-theme-option", "auto" }, 0,
+        "no theme menu may select auto when the default is light" );
 
     // <sidebarBrandAlign>right</sidebarBrandAlign>, linked to the <bannerLeft> href, escaped
     expectTag( path, html, "a", new String[] {

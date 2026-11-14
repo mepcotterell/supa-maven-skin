@@ -245,6 +245,23 @@ if ( !html.contains( "supa-next-page" ) || !html.contains( "guide.html" ) ) {
     throw new IllegalStateException( "Missing Next page navigation card on index.html" );
 }
 
+// <defaultTheme>sepia</defaultTheme> names no polarity, so the page starts in auto, as theme.ts
+// does: the anti-FOUC script reads it from <html>, and each theme menu marks auto as checked
+String sampleHtmlTag = expectTag( "index.html", html, "html", new String[] {}, "page must have one <html>" );
+if ( !tagHas( sampleHtmlTag, new String[] { "data-supa-default-theme", "auto" } ) ) {
+    throw new IllegalStateException( "An unknown <defaultTheme> must fall back to auto on <html>: " + sampleHtmlTag );
+}
+expectTags( "index.html", html, "button", new String[] {
+    "class", "menu-item selected", "role", "menuitemradio", "aria-checked", "true", "data-supa-theme-option", "auto" },
+    3, "every theme menu must mark auto as checked" );
+expectTags( "index.html", html, "button", new String[] { "aria-checked", "true", "data-supa-theme-option", "light" }, 0,
+    "no theme menu may mark light as checked" );
+expectTags( "index.html", html, "button", new String[] { "aria-checked", "true", "data-supa-theme-option", "dark" }, 0,
+    "no theme menu may mark dark as checked" );
+expectTags( "index.html", html, "button", new String[] {
+    "class~", "supa-theme-toggle-btn", "aria-label", "Color theme: Auto", "data-bs-title", "Color theme: Auto" },
+    3, "every theme trigger must name auto" );
+
 File guideHtml = new File( siteDir, "guide.html" );
 if ( !guideHtml.isFile() ) {
     throw new IllegalStateException( "guide.html was not generated" );

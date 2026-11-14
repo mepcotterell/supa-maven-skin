@@ -472,13 +472,17 @@ Apache Maven Doxia Site Renderer#if( $doxiaSiteRendererVersion ) $doxiaSiteRende
 ##
 ## Render Theme Mode Menu Picker (Bootstrap 6 .menu with mutually exclusive Light / Dark / Auto
 ## choices). The trigger's one label serves as its tooltip and accessible name; before scripts run
-## it names the configured <defaultTheme>, and theme.ts rewrites it for the mode in effect.
+## it names the configured <defaultTheme>, which the menu marks as checked, and theme.ts rewrites
+## both for the mode in effect.
 #macro( supaThemeToggle $extraClasses $placement )
 #if( $defaultTheme == 'light' )
+#set( $supaThemeModeId = 'light' )
 #set( $supaThemeModeName = $supaLabels.themeLight )
 #elseif( $defaultTheme == 'dark' )
+#set( $supaThemeModeId = 'dark' )
 #set( $supaThemeModeName = $supaLabels.themeDark )
 #else
+#set( $supaThemeModeId = 'auto' )
 #set( $supaThemeModeName = $supaLabels.themeAuto )
 #end
 #supaFillLabel( $esc.html( $supaLabels.themeTrigger ) 'mode' $esc.html( $supaThemeModeName ) )
@@ -496,17 +500,17 @@ Apache Maven Doxia Site Renderer#if( $doxiaSiteRendererVersion ) $doxiaSiteRende
             <i class="bi bi-circle-half supa-theme-icon supa-theme-icon-auto" aria-hidden="true"></i>
           </button>
           <div class="menu supa-theme-menu" role="menu" aria-label="$esc.html( $supaLabels.themeMenu )">
-            <button type="button" class="menu-item" role="menuitemradio" aria-checked="false" data-supa-theme-option="light">
+            <button type="button" class="menu-item#if( $supaThemeModeId == 'light' ) selected#end" role="menuitemradio" aria-checked="#if( $supaThemeModeId == 'light' )true#{else}false#end" data-supa-theme-option="light">
               <i class="bi bi-sun menu-item-icon" aria-hidden="true"></i>
               <span class="menu-item-content">$esc.html( $supaLabels.themeLight )</span>
               <i class="bi bi-check2 menu-item-check" aria-hidden="true"></i>
             </button>
-            <button type="button" class="menu-item" role="menuitemradio" aria-checked="false" data-supa-theme-option="dark">
+            <button type="button" class="menu-item#if( $supaThemeModeId == 'dark' ) selected#end" role="menuitemradio" aria-checked="#if( $supaThemeModeId == 'dark' )true#{else}false#end" data-supa-theme-option="dark">
               <i class="bi bi-moon-stars menu-item-icon" aria-hidden="true"></i>
               <span class="menu-item-content">$esc.html( $supaLabels.themeDark )</span>
               <i class="bi bi-check2 menu-item-check" aria-hidden="true"></i>
             </button>
-            <button type="button" class="menu-item selected" role="menuitemradio" aria-checked="true" data-supa-theme-option="auto">
+            <button type="button" class="menu-item#if( $supaThemeModeId == 'auto' ) selected#end" role="menuitemradio" aria-checked="#if( $supaThemeModeId == 'auto' )true#{else}false#end" data-supa-theme-option="auto">
               <i class="bi bi-circle-half menu-item-icon" aria-hidden="true"></i>
               <span class="menu-item-content">$esc.html( $supaLabels.themeAuto )</span>
               <i class="bi bi-check2 menu-item-check" aria-hidden="true"></i>

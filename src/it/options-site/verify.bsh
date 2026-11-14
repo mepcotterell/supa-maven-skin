@@ -1,7 +1,7 @@
 // Renders <supaSkin> with every feature that can be turned off turned off (except the edit button
-// and the version badge, which legacy-site turns off), an explicit dark default, start-aligned
-// brand, light and dark logos with the name hidden, a quote and an ampersand in configured URLs, a
-// footer icon, <body><head> and <footer> content, custom KaTeX URLs, and a
+// and the version badge, which legacy-site turns off), an explicit dark default, an unknown color
+// scheme, start-aligned brand, light and dark logos with the name hidden, a quote and an ampersand
+// in configured URLs, a footer icon, <body><head> and <footer> content, custom KaTeX URLs, and a
 // .md.vm page that calls the author macros. Each feature that is off is checked absent
 // next to something that stays, so a page that failed to render at all cannot pass.
 
@@ -38,7 +38,21 @@ for ( int p = 0; p < pages.length; p++ ) {
     expectTags( path, html, "button", new String[] {
         "class~", "supa-theme-toggle-btn", "aria-label", "Color theme: Dark", "data-bs-title", "Color theme: Dark" },
         3, "every theme trigger must name the configured dark default" );
-    // R-43: asserted when fixed in N15 (the theme menus still mark Auto as the selected item)
+    // ... and each of the three theme menus marks it as the checked mode
+    expectTags( path, html, "button", new String[] {
+        "class", "menu-item selected", "role", "menuitemradio", "aria-checked", "true", "data-supa-theme-option", "dark" },
+        3, "every theme menu must mark the configured dark default as checked" );
+    expectTags( path, html, "button", new String[] { "aria-checked", "true", "data-supa-theme-option", "auto" }, 0,
+        "no theme menu may mark auto as checked when the default is dark" );
+    expectTags( path, html, "button", new String[] { "class~", "selected", "data-supa-theme-option", "auto" }, 0,
+        "no theme menu may select auto when the default is dark" );
+    expectTags( path, html, "button", new String[] { "class", "menu-item", "aria-checked", "false", "data-supa-theme-option", "light" }, 3,
+        "light must be an unchecked item in every theme menu" );
+
+    // <colorScheme>neon</colorScheme> names no scheme, so the page starts on furo, as theme.ts does
+    if ( !tagHas( htmlTag, new String[] { "data-supa-default-palette", "furo", "data-supa-palette", "furo" } ) ) {
+        throw new IllegalStateException( path + ": an unknown <colorScheme> must fall back to furo on <html>: " + htmlTag );
+    }
 
     // <sidebarBrandAlign>start</sidebarBrandAlign> is an alias of left
     expectTag( path, html, "a", new String[] { "class", "supa-sidebar-brand", "data-supa-brand-align", "left" },
