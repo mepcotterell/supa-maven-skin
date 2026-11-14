@@ -4404,6 +4404,38 @@ async function scanWithDeadline(
 }
 
 /**
+ * Matches the message Chromium logs for a request that failed or was blocked ("Failed to load
+ * resource: ..."). Those say nothing about the skin's scripts: a scan may hold back or abort the
+ * Mermaid and KaTeX CDN requests, and an unreachable CDN is a network matter.
+ */
+const RESOURCE_LOAD_ERROR = /^Failed to load resource\b/;
+
+/**
+ * Starts recording the script errors a page raises: an uncaught exception or unhandled rejection
+ * (`pageerror`) and any `console.error`, other than a failed resource load. `initSupaSkin()` logs
+ * `console.error("Supa Maven Skin: <enhancer> failed", error)` when one of its enhancers throws and
+ * carries on, so `data-supa-ready` is set even then, and only this listener notices the failure.
+ * The current site logs no `console.error` in a Chromium run, so the check takes them all: it also
+ * catches errors from Bootstrap's plugins and the lazily loaded chunks. Its warnings, such as the
+ * unknown-label notices the fixture sites trigger on purpose, are not errors and are not recorded.
+ *
+ * @param page - Page to listen to, before it navigates.
+ * @returns The array the listeners append a description of each error to.
+ */
+function collectScriptErrors(page: Page): string[] {
+  const errors: string[] = [];
+  page.on('pageerror', (error) => {
+    errors.push(`uncaught ${error.message}`);
+  });
+  page.on('console', (message) => {
+    if (message.type() === 'error' && !RESOURCE_LOAD_ERROR.test(message.text())) {
+      errors.push(message.text());
+    }
+  });
+  return errors;
+}
+
+/**
  * Opens one page variant, waits for the skin to finish initialising, drives it
  * into the job's interaction scenario (if any), and runs axe.
  *
@@ -4432,6 +4464,7 @@ async function scan(context: BrowserContext, baseUrl: string, job: ScanJob): Pro
   );
   await context.addInitScript(installColorHelper, WCAG_MINIMUMS);
   const page = await context.newPage();
+  const scriptErrors = collectScriptErrors(page);
   await scenario?.prepare?.(page);
   await page.goto(`${baseUrl}/${job.page}`, { waitUntil: 'load' });
   await page.waitForSelector('html[data-supa-ready="true"]', {
@@ -4496,7 +4529,20 @@ async function scan(context: BrowserContext, baseUrl: string, job: ScanJob): Pro
       });
     }
   }
-  const findings: Finding[] = [...labelFindings, ...idFindings];
+  const engine = page.context().browser()?.browserType().name() ?? 'unknown';
+  const errorFindings = scriptErrors.map(
+    (text): Finding => ({
+      page: pageLabel(job),
+      variant: variantLabel(job),
+      ruleId: 'script-error',
+      impact: 'critical',
+      target: 'console',
+      summary: `A page script failed in ${engine}: ${text.replace(/\s+/g, ' ').trim().slice(0, 300)}`,
+      html: '',
+      helpUrl: 'src/main/frontend/ts/index.ts'
+    })
+  );
+  const findings: Finding[] = [...labelFindings, ...idFindings, ...errorFindings];
   // No rule exclusions: every violation is either fixed in the skin or in demo content.
   for (const violation of results.violations) {
     for (const node of violation.nodes) {
