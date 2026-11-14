@@ -31,25 +31,76 @@ import { initTheme } from './theme';
 import { findFragmentTarget, initTocAndScrollSpy } from './toc';
 
 /**
+ * Finds the element a link leads to on the current page.
+ *
+ * @param link - Navigation link.
+ * @returns The element its fragment names, or null for another page or a missing target.
+ */
+function samePageTarget(link: HTMLAnchorElement): HTMLElement | null {
+  const url = new URL(link.href, window.location.href);
+  const here = window.location;
+  return url.origin === here.origin && url.pathname === here.pathname &&
+    url.search === here.search ? findFragmentTarget(url.hash) : null;
+}
+
+/**
+ * Makes a link's destination focusable as ScrollSpy does, keeping an author-supplied tabindex.
+ *
+ * @param target - Destination element, usually a heading.
+ */
+function makeFocusable(target: HTMLElement): void {
+  if (!target.hasAttribute('tabindex')) {
+    target.setAttribute('tabindex', '-1');
+  }
+}
+
+/**
+ * Moves keyboard focus to the section an inline sidebar link leads to on the same page, as the
+ * drawers and the TOC do. The browser still follows the link (fragment, `:target`, history, and
+ * scroll), but a heading cannot take focus, so it focuses the viewport instead, and focus fell to
+ * `<body>`. Making the heading focusable
+ * before the browser follows the link lets it focus the heading itself, and the timer covers an
+ * engine that does not. A modified click, a link to another page or window, or a click another
+ * handler cancels moves nothing.
+ *
+ * @param event - Click on the link, before the browser follows it.
+ * @param link - Activated sidebar link.
+ */
+function focusInlineLinkTarget(event: MouseEvent, link: HTMLAnchorElement): void {
+  if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey ||
+      (link.target !== '' && link.target !== '_self')) {
+    return;
+  }
+  const target = samePageTarget(link);
+  if (!target) {
+    return;
+  }
+  makeFocusable(target);
+  setTimeout(() => {
+    const active = document.activeElement;
+    // Only where the browser left focus; a reader who already moved on keeps their place.
+    if (!event.defaultPrevented && target.isConnected &&
+        (active === null || active === document.body || active === link)) {
+      target.focus({ preventScroll: true });
+    }
+  }, 0);
+}
+
+/**
  * Closes a link's drawer and restores same-page destination focus after Bootstrap's opener focus.
  *
  * @param drawer - Open navigation drawer.
  * @param link - Activated section link.
  */
 function closeDrawerForLink(drawer: HTMLDialogElement, link: HTMLAnchorElement): void {
-  const url = new URL(link.href, window.location.href);
-  const here = window.location;
-  const target = url.origin === here.origin && url.pathname === here.pathname &&
-    url.search === here.search ? findFragmentTarget(url.hash) : null;
+  const target = samePageTarget(link);
   const focusTarget = (): void => {
     // Bootstrap's data API restores the opener during hidden.bs.drawer. A microtask runs after
     // every listener, regardless of registration order, without waiting for smooth scrollend.
     queueMicrotask(() => {
       if (target?.isConnected) {
         // Match ScrollSpy's focus behavior, preserving author-supplied tabindex and scroll position.
-        if (!target.hasAttribute('tabindex')) {
-          target.setAttribute('tabindex', '-1');
-        }
+        makeFocusable(target);
         target.focus({ preventScroll: true });
       }
     });
@@ -108,8 +159,13 @@ export function initDrawers(): void {
     sidebarDrawer.setAttribute('data-supa-drawer-bound', 'true');
     sidebarDrawer.addEventListener('click', (e) => {
       const link = (e.target as HTMLElement | null)?.closest<HTMLAnchorElement>('a.supa-nav-link[href*="#"]');
-      if (link && window.innerWidth < 1024 && sidebarDrawer.open) {
+      if (!link) {
+        return;
+      }
+      if (window.innerWidth < 1024 && sidebarDrawer.open) {
         closeDrawerForLink(sidebarDrawer, link);
+      } else {
+        focusInlineLinkTarget(e, link);
       }
     });
   }

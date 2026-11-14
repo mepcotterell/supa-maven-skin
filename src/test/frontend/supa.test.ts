@@ -1138,6 +1138,82 @@ describe('Supa Maven Skin Frontend Modules', () => {
           instance.dispose();
         });
       });
+
+      describe('inline sidebar links', () => {
+        const restoration = history.scrollRestoration;
+
+        // happy-dom sets history.scrollRestoration to 'manual' when it follows a fragment link,
+        // and the TOC tests that follow read it.
+        afterEach(() => {
+          history.scrollRestoration = restoration;
+        });
+
+        /**
+         * Renders the inline sidebar (from `lg` up) with one link to a heading of this page and
+         * lets the browser follow the link, unlike `mount()`.
+         *
+         * @param href - Link `href` as authored.
+         * @returns The link, the heading, and a later control.
+         */
+        const mountInline = (href: string) => {
+          document.body.innerHTML = `
+            <dialog id="supaSidebarDrawer" class="lg:drawer" open><a class="supa-nav-link" href="${href}">Usage</a></dialog>
+            <main id="supa-main-content"><h2 id="usage">Usage</h2><a id="later" href="#next">Later</a></main>`;
+          vi.stubGlobal('innerWidth', 1440);
+          initDrawers();
+          return {
+            link: document.querySelector<HTMLAnchorElement>('#supaSidebarDrawer a')!,
+            heading: document.getElementById('usage')!,
+            later: document.getElementById('later')!
+          };
+        };
+
+        /** Waits for the timer that runs after the browser has followed the link. */
+        const afterNavigation = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 0));
+
+        it('moves focus to the heading a same-page link leads to, where the browser would leave <body>', async () => {
+          const { link, heading } = mountInline('guide.html#usage');
+          link.focus();
+          link.click();
+          // Focusable before the browser follows the link, so the browser can focus it itself
+          expect(heading.getAttribute('tabindex')).toBe('-1');
+          (document.activeElement as HTMLElement | null)?.blur();
+          await afterNavigation();
+          expect(document.activeElement).toBe(heading);
+        });
+
+        it('leaves focus alone after a modified click, a cancelled click, or a link to another page', async () => {
+          let { link, heading } = mountInline('#usage');
+          link.focus();
+          link.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, ctrlKey: true }));
+          await afterNavigation();
+          expect(document.activeElement).toBe(link);
+          expect(heading.hasAttribute('tabindex')).toBe(false);
+
+          ({ link } = mountInline('#usage'));
+          link.addEventListener('click', (event) => event.preventDefault());
+          link.focus();
+          link.click();
+          await afterNavigation();
+          expect(document.activeElement).toBe(link);
+
+          ({ link, heading } = mountInline('other.html#usage'));
+          link.focus();
+          link.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+          await afterNavigation();
+          expect(heading.hasAttribute('tabindex')).toBe(false);
+        });
+
+        it('keeps focus a reader moved before the timer ran', async () => {
+          const { link, heading, later } = mountInline('#usage');
+          link.focus();
+          link.click();
+          later.focus();
+          await afterNavigation();
+          expect(document.activeElement).toBe(later);
+          expect(heading.getAttribute('tabindex')).toBe('-1');
+        });
+      });
     });
 
     it('configures left #supaSidebarDrawer (.drawer-start) and right #supaTocDrawer (.drawer-end) with body scrolling and backdrop options', () => {
