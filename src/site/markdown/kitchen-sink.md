@@ -107,13 +107,13 @@ export function openSearchModal(dialogEl: HTMLDialogElement): void {
 
 ## Responsive Doxia Tables
 
-Standard Markdown and Doxia `table.bodyTable` elements are automatically normalized into responsive Bootstrap 6 tables:
+Standard Markdown and Doxia `table.bodyTable` elements are automatically normalized into responsive Bootstrap 6 tables. The layout's breakpoints are in `em` and its columns in `rem`, so both grow with the browser's default font size. The px values are those at the default 16px font:
 
-| Component | Desktop (`xl+` / 1280px+) | Laptop (`lg` / 1024px–1279px) | Tablet & Mobile (`< 1024px`) |
+| Component | Desktop (`xl+` / `80em`+, 1280px+) | Laptop (`lg` / `64em`–`80em`, 1024px–1279px) | Tablet & Mobile (`< 64em`, `< 1024px`) |
 | :--- | :--- | :--- | :--- |
-| **Left Navigation Sidebar** | Sticky `256px` column | Sticky `256px` column | Off-canvas `<dialog class="drawer drawer-start">` |
+| **Left Navigation Sidebar** | Sticky `16rem` (`256px`) column | Sticky `16rem` (`256px`) column | Off-canvas `<dialog class="drawer drawer-start">` |
 | **Center Prose Article** | Centered `56rem` (`896px`) max measure | Centered `56rem` (`896px`) max measure | Centered `47.5rem` (`760px`) max container |
-| **Right "On this page" TOC** | Sticky `224px` ScrollSpy column | Off-canvas `<dialog class="drawer drawer-end">` | Off-canvas `<dialog class="drawer drawer-end">` |
+| **Right "On this page" TOC** | Sticky `14rem` (`224px`) ScrollSpy column | Off-canvas `<dialog class="drawer drawer-end">` | Off-canvas `<dialog class="drawer drawer-end">` |
 | **Documentation Search** | `<dialog class="dialog">` modal | `<dialog class="dialog">` modal | `<dialog class="dialog">` modal |
 
 ## Bootstrap 6 UI Components
