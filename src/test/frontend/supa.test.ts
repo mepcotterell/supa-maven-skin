@@ -940,6 +940,206 @@ describe('Supa Maven Skin Frontend Modules', () => {
       }
     });
 
+    describe('drawer link focus edge cases', () => {
+      const happyDOM = (window as unknown as { happyDOM: { setURL: (url: string) => void } })
+        .happyDOM;
+      const originalUrl = window.location.href;
+
+      beforeEach(() => {
+        happyDOM.setURL('https://example.org/docs/guide.html');
+      });
+
+      afterEach(() => {
+        happyDOM.setURL(originalUrl);
+        vi.unstubAllGlobals();
+        vi.restoreAllMocks();
+      });
+
+      /**
+       * Renders a drawer holding one link, plus an opener and a destination heading, and initializes
+       * the drawers with `hide()` replaced by a stub that closes the dialog.
+       *
+       * @param id - Drawer ID, `supaTocDrawer` or `supaSidebarDrawer`.
+       * @param href - Link `href` as authored.
+       * @param innerWidth - Viewport width to simulate.
+       * @param headingAttributes - Extra attributes for the destination heading.
+       * @returns The elements involved and the `hide()` stub.
+       */
+      const mount = (id: string, href: string, innerWidth = 390, headingAttributes = '') => {
+        document.body.innerHTML = `
+          <button id="trigger">Open</button>
+          <dialog id="${id}" class="drawer"><a class="nav-link supa-nav-link" href="${href}">Usage</a></dialog>
+          <main id="supa-main-content"><h2 id="usage" ${headingAttributes}>Usage</h2></main>`;
+        vi.stubGlobal('innerWidth', innerWidth);
+        initDrawers();
+        const drawer = document.getElementById(id) as HTMLDialogElement;
+        const link = drawer.querySelector('a') as HTMLAnchorElement;
+        const instance = Drawer.getOrCreateInstance(drawer);
+        const hide = vi.spyOn(instance, 'hide').mockImplementation(() => {
+          drawer.removeAttribute('open');
+          return Promise.resolve();
+        });
+        // Bootstrap's data API restores the opener once the drawer has hidden.
+        const trigger = document.getElementById('trigger')!;
+        drawer.addEventListener('hidden.bs.drawer', () => trigger.focus());
+        link.addEventListener('click', (event) => event.preventDefault());
+        return { drawer, link, trigger, heading: document.getElementById('usage')!, hide, instance };
+      };
+
+      /**
+       * Opens the drawer, activates its link, and lets the drawer finish hiding.
+       *
+       * @param drawer - Drawer under test.
+       * @param link - Link inside it.
+       */
+      const activateAndHide = async (drawer: HTMLDialogElement, link: HTMLAnchorElement): Promise<void> => {
+        drawer.setAttribute('open', '');
+        link.click();
+        drawer.dispatchEvent(new Event('hidden.bs.drawer'));
+        await Promise.resolve();
+      };
+
+      it('keeps an authored tabindex on the destination while moving focus to it', async () => {
+        const { drawer, link, heading, instance } = mount('supaTocDrawer', '#usage', 390, 'tabindex="0"');
+        await activateAndHide(drawer, link);
+        expect(document.activeElement).toBe(heading);
+        expect(heading.getAttribute('tabindex')).toBe('0');
+        instance.dispose();
+      });
+
+      it('focuses a same-page destination named by an absolute URL with a fragment', async () => {
+        const { drawer, link, heading, instance } = mount(
+          'supaTocDrawer',
+          'https://example.org/docs/guide.html#usage'
+        );
+        await activateAndHide(drawer, link);
+        expect(document.activeElement).toBe(heading);
+        instance.dispose();
+      });
+
+      it.each([
+        ['another page of the site', 'other.html#usage'],
+        ['another origin', 'https://elsewhere.example/docs/guide.html#usage'],
+        ['the same page with another query', 'guide.html?lang=fr#usage']
+      ])('leaves focus on the opener for a link to %s', async (_label, href) => {
+        const { drawer, link, trigger, heading, hide, instance } = mount('supaTocDrawer', href);
+        await activateAndHide(drawer, link);
+        expect(hide).toHaveBeenCalledOnce();
+        expect(document.activeElement).toBe(trigger);
+        expect(heading.hasAttribute('tabindex')).toBe(false);
+        instance.dispose();
+      });
+
+      it('closes the drawer and leaves focus alone when the destination does not exist', async () => {
+        const { drawer, link, trigger, hide, instance } = mount('supaSidebarDrawer', '#missing');
+        await activateAndHide(drawer, link);
+        expect(hide).toHaveBeenCalledOnce();
+        expect(document.activeElement).toBe(trigger);
+        instance.dispose();
+      });
+
+      it('does not focus a destination that left the document before the drawer hid', async () => {
+        const { drawer, link, trigger, heading, instance } = mount('supaTocDrawer', '#usage');
+        const focus = vi.spyOn(heading, 'focus');
+        drawer.setAttribute('open', '');
+        link.click();
+        heading.remove();
+        drawer.dispatchEvent(new Event('hidden.bs.drawer'));
+        await Promise.resolve();
+        expect(focus).not.toHaveBeenCalled();
+        expect(heading.hasAttribute('tabindex')).toBe(false);
+        expect(document.activeElement).toBe(trigger);
+        instance.dispose();
+      });
+
+      describe('when Bootstrap throws while hiding', () => {
+        /**
+         * Mounts a drawer whose `hide()` throws synchronously and whose `close()` is observable.
+         *
+         * @param href - Link `href` as authored.
+         * @returns The mounted elements and the `close()` stub.
+         */
+        const mountThrowing = (href: string) => {
+          const mounted = mount('supaTocDrawer', href);
+          mounted.hide.mockImplementation(() => {
+            throw new Error('Bootstrap Drawer unavailable');
+          });
+          const close = vi.fn(() => mounted.drawer.removeAttribute('open'));
+          mounted.drawer.close = close;
+          return { ...mounted, close };
+        };
+
+        it('closes the dialog natively and focuses the destination without waiting for hidden', async () => {
+          const { drawer, link, heading, close, instance } = mountThrowing('#usage');
+          drawer.setAttribute('open', '');
+          link.click();
+          expect(close).toHaveBeenCalledOnce();
+          await Promise.resolve();
+          expect(document.activeElement).toBe(heading);
+          expect(heading.getAttribute('tabindex')).toBe('-1');
+          instance.dispose();
+        });
+
+        it('removes the pending listener so a later dismissal does not refocus the destination', async () => {
+          const { drawer, link, trigger, close, instance } = mountThrowing('#usage');
+          drawer.setAttribute('open', '');
+          link.click();
+          await Promise.resolve();
+          expect(close).toHaveBeenCalledOnce();
+          trigger.focus();
+          drawer.dispatchEvent(new Event('hidden.bs.drawer'));
+          await Promise.resolve();
+          expect(document.activeElement).toBe(trigger);
+          instance.dispose();
+        });
+
+        it('still focuses the destination when the dialog has no close()', async () => {
+          const { drawer, link, heading } = mountThrowing('#usage');
+          // Bootstrap's dispose() needs close(), so this test leaves its instance to the next reset.
+          (drawer as { close?: unknown }).close = undefined;
+          drawer.setAttribute('open', '');
+          link.click();
+          await Promise.resolve();
+          expect(document.activeElement).toBe(heading);
+        });
+
+        it('focuses nothing for a cross-page link', async () => {
+          const { drawer, link, trigger, heading, close, instance } = mountThrowing('other.html#usage');
+          drawer.setAttribute('open', '');
+          link.click();
+          await Promise.resolve();
+          expect(close).toHaveBeenCalledOnce();
+          expect(document.activeElement).not.toBe(heading);
+          expect(heading.hasAttribute('tabindex')).toBe(false);
+          expect(trigger.isConnected).toBe(true);
+          instance.dispose();
+        });
+      });
+
+      describe('viewport breakpoints', () => {
+        it.each([
+          ['supaTocDrawer', 1279, true],
+          ['supaTocDrawer', 1280, false],
+          ['supaSidebarDrawer', 1023, true],
+          ['supaSidebarDrawer', 1024, false]
+        ])('%s at innerWidth %i closes on link activation: %s', async (id, width, closes) => {
+          const { drawer, link, hide, instance } = mount(id, '#usage', width);
+          drawer.setAttribute('open', '');
+          link.click();
+          expect(hide).toHaveBeenCalledTimes(closes ? 1 : 0);
+          await Promise.resolve();
+          instance.dispose();
+        });
+
+        it.each(['supaTocDrawer', 'supaSidebarDrawer'])('%s does not hide a drawer that is not open', (id) => {
+          const { link, hide, instance } = mount(id, '#usage', 390);
+          link.click();
+          expect(hide).not.toHaveBeenCalled();
+          instance.dispose();
+        });
+      });
+    });
+
     it('configures left #supaSidebarDrawer (.drawer-start) and right #supaTocDrawer (.drawer-end) with body scrolling and backdrop options', () => {
       document.body.innerHTML = `
         <dialog class="lg:drawer drawer-start supa-sidebar-drawer"
