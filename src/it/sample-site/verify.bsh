@@ -210,10 +210,10 @@ if ( html.contains( "data-supa-katex-css-url=" ) || html.contains( "data-supa-ka
 if ( !html.contains( "Integration Test Announcement" ) ) {
     throw new IllegalStateException( "Missing custom announcement banner" );
 }
-if ( !html.contains( "--color-brand-primary: #0055ff;" ) ) {
+if ( !html.contains( "--color-brand-primary: #0047cc;" ) ) {
     throw new IllegalStateException( "Missing custom lightCssVariables" );
 }
-if ( !html.contains( "--color-brand-primary: #6699ff;" ) ) {
+if ( !html.contains( "--color-brand-primary: #80aaff;" ) ) {
     throw new IllegalStateException( "Missing custom darkCssVariables" );
 }
 // A printout uses the light polarity on white paper, so dark overrides must not apply in print

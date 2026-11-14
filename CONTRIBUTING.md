@@ -12,12 +12,14 @@ npm run lint && npm test && npm run build
 mvn -B -ntp clean verify site
 
 # Rendered-page WCAG 2.2 A/AA checks, plus AAA contrast on the modus palettes (axe-core +
-# Playwright Chromium) on target/site/.
-# Not part of npm test or mvn verify; needs the site built above and a one-time browser install.
-# CI runs them in their own job on the site the JDK 21 build renders, and a SNAPSHOT publish
-# and the Pages deploy wait for them.
+# Playwright Chromium) on target/site/ and on each Invoker fixture's target/it/<name>/target/site/.
+# Not part of npm test or mvn verify; needs the sites built above and a one-time browser install.
+# CI runs them in their own job on the sites the JDK 21 build renders, with --require-fixtures so
+# a missing fixture site fails instead of being skipped, and a SNAPSHOT publish and the Pages
+# deploy wait for them. Name a fixture or a fixture page to scan only that.
 npx playwright install chromium
 npm run test:a11y
+npm run test:a11y -- sample-site localized-site/fr/index.html
 
 # The same checks in Firefox or WebKit (Chromium is the default, and CI's), here over the
 # variants interaction scenarios use by default. --engine overrides the A11Y_ENGINE variable.

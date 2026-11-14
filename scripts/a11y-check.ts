@@ -1,5 +1,6 @@
 /**
- * @fileoverview Rendered-page accessibility checks for the generated self-site.
+ * @fileoverview Rendered-page accessibility checks for the generated self-site and the
+ * Invoker fixture sites.
  *
  * Serves `target/site/` from an in-process Node static file server, opens every
  * top-level page in a headless Playwright browser (Chromium unless `--engine` or
@@ -62,11 +63,16 @@
  * Every scan first waits for running CSS transitions to finish, so axe
  * measures settled colors, not a fade.
  *
+ * Each Invoker fixture site that `mvn verify` rendered (`target/it/<name>/target/site/`) is
+ * served on its own origin too, and every page in it, subdirectories included, is scanned in
+ * `furo` light and dark, with its `index.html` also at a phone viewport. A fixture without a
+ * rendered site is skipped with a note, or fails the run under `--require-fixtures`, as in CI.
+ *
  * `--list` prints the scenario names and exits without a site or a browser;
  * `scripts/lint-docs.ts` compares them with the `architecture.md` scenario table.
  *
  * Run `mvn -B -ntp clean verify site` first, then `npm run test:a11y`; append
- * page or scenario names (`npm run test:a11y -- team.html palette-menu`) to
+ * page, scenario, or fixture names (`npm run test:a11y -- team.html palette-menu sample-site`) to
  * narrow the matrix while iterating, and `--variants furo/light,modus/dark` to
  * keep only those palette × polarity variants. `--engine firefox` or
  * `--engine webkit` (or `A11Y_ENGINE`) runs the same matrix in that engine; a
@@ -189,8 +195,21 @@ interface InteractionScenario {
 
 /** One page × theme × viewport combination to scan, optionally in an interactive state. */
 interface ScanJob extends Variant, Viewport {
+  /** Invoker fixture whose rendered site holds the page (`sample-site`), or `''` for the self-site. */
+  site: string;
+  /** Page path inside its site, such as `index.html` or `fr/guide.html`. */
   page: string;
   scenario?: InteractionScenario;
+}
+
+/** A rendered site the runner serves on its own origin and scans. */
+interface SiteRoot {
+  /** Invoker fixture project name, or `''` for the self-site. */
+  name: string;
+  /** Absolute directory holding the rendered site. */
+  dir: string;
+  /** HTML pages to scan, relative to `dir`. */
+  pages: string[];
 }
 
 /** One axe violation node flattened for reporting. */
@@ -214,6 +233,15 @@ interface ScanError {
 
 const ROOT_DIR: string = resolve(import.meta.dirname, '..');
 const SITE_DIR: string = join(ROOT_DIR, 'target', 'site');
+/** Invoker fixture projects, each `src/it/<name>/pom.xml`. */
+const FIXTURE_SOURCE_DIR: string = join(ROOT_DIR, 'src', 'it');
+/** Where `maven-invoker-plugin` renders them: `target/it/<name>/target/site/`. */
+const FIXTURE_BUILD_DIR: string = join(ROOT_DIR, 'target', 'it');
+/**
+ * Flag that turns a fixture project without a rendered site into an error instead of a skip, so a
+ * CI artifact that lost the fixture sites cannot pass by scanning only the self-site.
+ */
+const REQUIRE_FIXTURES_FLAG = 'require-fixtures';
 const WCAG_TAGS: string[] = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 
 /**
@@ -491,8 +519,11 @@ async function checkLabelInName(page: Page, job: ScanJob): Promise<Finding[]> {
   const findings: Finding[] = [];
   const controls = await page.locator(LABEL_IN_NAME_SELECTOR).filter({ visible: true }).all();
   // The content header shows the trigger at every desktop page load, so finding none there means
-  // the selector broke, and the check would otherwise pass without checking anything.
-  if (controls.length === 0 && !job.scenario && job.width >= DESKTOP.width) {
+  // the selector broke, and the check would otherwise pass without checking anything. A fixture
+  // may turn the picker off (<colorSchemeSelector>false</colorSchemeSelector>), which drops its
+  // `.supa-palette-picker` container too; the self-site never does.
+  const pickerOff = job.site !== '' && (await page.locator('.supa-palette-picker').count()) === 0;
+  if (controls.length === 0 && !job.scenario && job.width >= DESKTOP.width && !pickerOff) {
     throw new Error(`no visible ${LABEL_IN_NAME_SELECTOR} to check for WCAG 2.5.3 label in name.`);
   }
   for (const [index, control] of controls.entries()) {
@@ -502,7 +533,7 @@ async function checkLabelInName(page: Page, job: ScanJob): Promise<Finding[]> {
     }
     const name = await control.getAttribute('aria-label');
     findings.push({
-      page: job.page,
+      page: pageLabel(job),
       variant: variantLabel(job),
       ruleId: LABEL_IN_NAME_RULE,
       impact: 'serious',
@@ -535,7 +566,7 @@ async function checkUniqueIds(page: Page, job: ScanJob): Promise<Finding[]> {
     return [...counts].filter(([, count]) => count > 1);
   });
   return repeated.map(([id, count]) => ({
-    page: job.page,
+    page: pageLabel(job),
     variant: variantLabel(job),
     ruleId: UNIQUE_ID_RULE,
     impact: 'serious',
@@ -3677,19 +3708,58 @@ async function startServer(siteDir: string): Promise<{ server: Server; baseUrl: 
 }
 
 /**
+ * Lists the HTML pages under a rendered site, including those in subdirectories.
+ *
+ * @param dir - Absolute site directory.
+ * @returns Page paths relative to `dir`, with `/` separators, sorted.
+ */
+function listPagesDeep(dir: string): string[] {
+  return readdirSync(dir, { recursive: true, encoding: 'utf8' })
+    .filter((path) => path.endsWith('.html'))
+    .map((path) => path.split(sep).join('/'))
+    .sort();
+}
+
+/**
+ * Finds the rendered site of every Invoker fixture project in `src/it/`.
+ *
+ * @returns The fixture sites Maven rendered, and the names of the projects it has not.
+ */
+function findFixtureSites(): { sites: SiteRoot[]; missing: string[] } {
+  const sites: SiteRoot[] = [];
+  const missing: string[] = [];
+  const projects = readdirSync(FIXTURE_SOURCE_DIR, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory() && existsSync(join(FIXTURE_SOURCE_DIR, entry.name, 'pom.xml')))
+    .map((entry) => entry.name)
+    .sort();
+  for (const name of projects) {
+    const dir = join(FIXTURE_BUILD_DIR, name, 'target', 'site');
+    if (existsSync(join(dir, 'index.html'))) {
+      sites.push({ name, dir, pages: listPagesDeep(dir) });
+    } else {
+      missing.push(name);
+    }
+  }
+  return { sites, missing };
+}
+
+/**
  * Builds the scan matrix required by the a11y lane.
  *
  * @param pages - Top-level HTML file names found in `target/site`.
- * @returns Every page in furo light/dark at desktop size, `index.html` in all
+ * @param fixtures - Rendered Invoker fixture sites to scan as further page sets.
+ * @returns Every self-site page in furo light/dark at desktop size, `index.html` in all
  *     12 palette × polarity variants, `index.html` at a mobile viewport, and
  *     every interaction scenario in each of its variants (`SCENARIO_VARIANTS`
- *     unless the scenario lists its own).
+ *     unless the scenario lists its own); then every page of each fixture site, in
+ *     subdirectories too, in furo light/dark at desktop size, and its `index.html` at the
+ *     mobile viewport.
  */
-function buildJobs(pages: string[]): ScanJob[] {
+function buildJobs(pages: string[], fixtures: readonly SiteRoot[]): ScanJob[] {
   const jobs: ScanJob[] = [];
   for (const page of pages) {
     for (const polarity of ['light', 'dark'] as const) {
-      jobs.push({ page, palette: 'furo', polarity, ...DESKTOP });
+      jobs.push({ site: '', page, palette: 'furo', polarity, ...DESKTOP });
     }
   }
   for (const palette of PALETTES) {
@@ -3697,18 +3767,41 @@ function buildJobs(pages: string[]): ScanJob[] {
       continue; // Already covered by the per-page furo light/dark pass above.
     }
     for (const polarity of ['light', 'dark'] as const) {
-      jobs.push({ page: 'index.html', palette, polarity, ...DESKTOP });
+      jobs.push({ site: '', page: 'index.html', palette, polarity, ...DESKTOP });
     }
   }
   for (const polarity of ['light', 'dark'] as const) {
-    jobs.push({ page: 'index.html', palette: 'furo', polarity, ...MOBILE });
+    jobs.push({ site: '', page: 'index.html', palette: 'furo', polarity, ...MOBILE });
   }
   for (const scenario of [...SCENARIOS, ...pages.map(forcedColorsPageScenario)]) {
     for (const variant of scenario.variants ?? SCENARIO_VARIANTS) {
-      jobs.push({ page: scenario.page, ...variant, ...scenario.viewport, scenario });
+      jobs.push({ site: '', page: scenario.page, ...variant, ...scenario.viewport, scenario });
+    }
+  }
+  // The fixtures render the template branches the self-site's own configuration never takes
+  // (a hidden brand name, footer icons, author colors, a second locale, the legacy furoSkin block).
+  for (const fixture of fixtures) {
+    for (const page of fixture.pages) {
+      for (const polarity of ['light', 'dark'] as const) {
+        jobs.push({ site: fixture.name, page, palette: 'furo', polarity, ...DESKTOP });
+      }
+    }
+    for (const polarity of ['light', 'dark'] as const) {
+      jobs.push({ site: fixture.name, page: 'index.html', palette: 'furo', polarity, ...MOBILE });
     }
   }
   return jobs;
+}
+
+/**
+ * Names a job's page for the report and for narrowing the run.
+ *
+ * @param job - Scan job.
+ * @returns The page path, prefixed with its fixture's name for a fixture page
+ *     (`sample-site/guides/install.html`).
+ */
+function pageLabel(job: ScanJob): string {
+  return job.site ? `${job.site}/${job.page}` : job.page;
 }
 
 /**
@@ -3784,7 +3877,7 @@ async function scanWithDeadline(
       expired = true;
       reject(
         new Error(
-          `${job.page} [${variantLabel(job)}] did not finish within the ` +
+          `${pageLabel(job)} [${variantLabel(job)}] did not finish within the ` +
             `${JOB_DEADLINE_MS / 1000} s job deadline in ${engine}`
         )
       );
@@ -3899,7 +3992,7 @@ async function scan(context: BrowserContext, baseUrl: string, job: ScanJob): Pro
   for (const violation of results.violations) {
     for (const node of violation.nodes) {
       findings.push({
-        page: job.page,
+        page: pageLabel(job),
         variant: variantLabel(job),
         ruleId: violation.id,
         impact: node.impact ?? violation.impact ?? 'unknown',
@@ -3976,13 +4069,15 @@ interface RunOptions {
   engine: Engine;
   /** Palette × polarity variants `--variants` keeps, or null for every variant. */
   variants: readonly Variant[] | null;
-  /** Page and scenario names that narrow the matrix; empty for the whole matrix. */
+  /** Page, scenario, and fixture names that narrow the matrix; empty for the whole matrix. */
   names: readonly string[];
+  /** `--require-fixtures`: fail when a fixture project has no rendered site, instead of skipping it. */
+  requireFixtures: boolean;
 }
 
 /**
- * Parses `--engine <name>`, `--variants <palette/polarity,...>`, and the positional page and
- * scenario names.
+ * Parses `--engine <name>`, `--variants <palette/polarity,...>`, `--require-fixtures`, and the
+ * positional page, scenario, and fixture names.
  *
  * @param args - Command-line arguments after the script path.
  * @param env - Environment, for `A11Y_ENGINE`.
@@ -3991,7 +4086,11 @@ interface RunOptions {
 function parseRunOptions(args: string[], env: NodeJS.ProcessEnv): RunOptions {
   const { values, positionals } = parseArgs({
     args,
-    options: { engine: { type: 'string' }, variants: { type: 'string' } },
+    options: {
+      engine: { type: 'string' },
+      variants: { type: 'string' },
+      [REQUIRE_FIXTURES_FLAG]: { type: 'boolean', default: false }
+    },
     allowPositionals: true
   });
   const engine = values.engine ?? (env[ENGINE_ENV] || 'chromium');
@@ -4014,7 +4113,12 @@ function parseRunOptions(args: string[], env: NodeJS.ProcessEnv): RunOptions {
       return { palette: palette as Palette, polarity };
     });
   }
-  return { engine: engine as Engine, variants, names: positionals };
+  return {
+    engine: engine as Engine,
+    variants,
+    names: positionals,
+    requireFixtures: values[REQUIRE_FIXTURES_FLAG] === true
+  };
 }
 
 /**
@@ -4046,6 +4150,23 @@ async function main(): Promise<number> {
   const pages = readdirSync(SITE_DIR)
     .filter((name) => name.endsWith('.html'))
     .sort();
+  // `mvn verify` renders each Invoker fixture's site under target/it/; scan the ones it rendered.
+  const { sites: fixtures, missing: unbuilt } = findFixtureSites();
+  if (unbuilt.length > 0) {
+    if (options.requireFixtures) {
+      console.error(
+        `a11y: --${REQUIRE_FIXTURES_FLAG}: no rendered site for the fixture projects ` +
+          `${unbuilt.join(', ')} under ${FIXTURE_BUILD_DIR}. Run mvn -B -ntp clean verify site first.`
+      );
+      return 1;
+    }
+    console.log(
+      `a11y: skipping fixture projects with no rendered site under ${FIXTURE_BUILD_DIR}: ` +
+        `${unbuilt.join(', ')} (mvn -B -ntp clean verify renders them)`
+    );
+  }
+  const fixtureNames = fixtures.map((fixture) => fixture.name);
+  const fixturePages = fixtures.flatMap((fixture) => fixture.pages.map((page) => `${fixture.name}/${page}`));
   // A scenario whose page is gone would otherwise fail every variant with a 404-shaped
   // "state not reached"; name the real cause up front.
   const missing = SCENARIOS.filter((s) => !pages.includes(s.page));
@@ -4057,24 +4178,36 @@ async function main(): Promise<number> {
     return 1;
   }
   const scenarioNames = listScenarioNames();
-  // Optional positional page or scenario names (`npm run test:a11y -- team.html`,
-  // `npm run test:a11y -- search-dialog-results`) narrow the matrix while iterating
+  // Optional positional page, scenario, or fixture names (`npm run test:a11y -- team.html`,
+  // `npm run test:a11y -- search-dialog-results`, `npm run test:a11y -- sample-site`, or
+  // `npm run test:a11y -- localized-site/fr/index.html`) narrow the matrix while iterating
   // on a fix; CI always runs the full matrix.
   const only = new Set(options.names);
   // A mistyped name would otherwise scan nothing and report success, which
   // reads like a clean result; reject unknown names before starting a browser.
-  const unknown = [...only].filter((name) => !pages.includes(name) && !scenarioNames.includes(name));
+  const unknown = [...only].filter(
+    (name) =>
+      !pages.includes(name) &&
+      !scenarioNames.includes(name) &&
+      !fixtureNames.includes(name) &&
+      !fixturePages.includes(name)
+  );
   if (unknown.length > 0) {
     console.error(
-      `a11y: no such page or scenario in ${SITE_DIR}: ${unknown.join(', ')}\n` +
+      `a11y: no such page, scenario, or fixture: ${unknown.join(', ')}\n` +
         `a11y: available pages: ${pages.join(', ')}\n` +
-        `a11y: available scenarios: ${scenarioNames.join(', ')}`
+        `a11y: available scenarios: ${scenarioNames.join(', ')}\n` +
+        `a11y: available fixtures: ${fixtureNames.join(', ') || '(none rendered)'}\n` +
+        `a11y: available fixture pages: ${fixturePages.join(', ') || '(none rendered)'}`
     );
     return 1;
   }
-  const matched = buildJobs(pages).filter(
+  const matched = buildJobs(pages, fixtures).filter(
     (job) =>
-      (only.size === 0 || only.has(job.page) || (job.scenario !== undefined && only.has(job.scenario.name))) &&
+      (only.size === 0 ||
+        only.has(pageLabel(job)) ||
+        only.has(job.site) ||
+        (job.scenario !== undefined && only.has(job.scenario.name))) &&
       (options.variants === null ||
         options.variants.some((v) => v.palette === job.palette && v.polarity === job.polarity))
   );
@@ -4101,7 +4234,15 @@ async function main(): Promise<number> {
     console.log(`a11y: nothing left to scan in ${engine}; every matched scenario is skipped there.`);
     return 0;
   }
-  const { server, baseUrl } = await startServer(SITE_DIR);
+  // Each site gets its own origin, at its root, as the self-site always had.
+  const roots = new Map<string, string>([['', SITE_DIR], ...fixtures.map((f): [string, string] => [f.name, f.dir])]);
+  const servers: Server[] = [];
+  const baseUrls = new Map<string, string>();
+  for (const site of new Set(jobs.map((job) => job.site))) {
+    const { server, baseUrl } = await startServer(roots.get(site)!);
+    servers.push(server);
+    baseUrls.set(site, baseUrl);
+  }
   let browser: Browser | null = null;
   try {
     browser = await BROWSER_TYPES[engine].launch();
@@ -4110,6 +4251,7 @@ async function main(): Promise<number> {
     const aaaJobs = jobs.filter((job) => AAA_PALETTES.has(job.palette)).length;
     console.log(
       `a11y: scanning ${jobs.length} page variants in ${engine} (${pages.length} pages, ` +
+        `${fixturePages.length} pages of ${fixtures.length} fixture sites, ` +
         `${scenarioJobs} in interactive states) with axe-core [${WCAG_TAGS.join(', ')}], ` +
         `plus ${AAA_CONTRAST_RULE} on the ${aaaJobs} AAA-palette variants, ` +
         `${LABEL_IN_NAME_RULE} (WCAG 2.5.3) on every visible ${LABEL_IN_NAME_SELECTOR}, ` +
@@ -4117,9 +4259,9 @@ async function main(): Promise<number> {
     );
     const errors: ScanError[] = [];
     const perJob = await mapLimit(jobs, CONCURRENCY, async (job) => {
-      const label = `${job.page} [${variantLabel(job)}]`;
+      const label = `${pageLabel(job)} [${variantLabel(job)}]`;
       try {
-        const findings = await scanWithDeadline(activeBrowser, engine, baseUrl, job);
+        const findings = await scanWithDeadline(activeBrowser, engine, baseUrls.get(job.site)!, job);
         console.log(
           `  ${findings.length === 0 ? 'ok  ' : 'FAIL'} ${label}` +
             (findings.length > 0 ? ` (${findings.length} violation nodes)` : '')
@@ -4128,7 +4270,7 @@ async function main(): Promise<number> {
       } catch (error: unknown) {
         // Keep scanning the rest so one broken scenario does not hide other results.
         const message = firstLine(error);
-        errors.push({ page: job.page, variant: variantLabel(job), message });
+        errors.push({ page: pageLabel(job), variant: variantLabel(job), message });
         console.log(`  ERR  ${label}: ${message}`);
         return [];
       }
@@ -4161,7 +4303,9 @@ async function main(): Promise<number> {
     if (browser) {
       await settleWithin(browser.close(), CLOSE_DEADLINE_MS);
     }
-    await new Promise<void>((resolveClose) => server.close(() => resolveClose()));
+    await Promise.all(
+      servers.map((server) => new Promise<void>((resolveClose) => server.close(() => resolveClose())))
+    );
   }
 }
 

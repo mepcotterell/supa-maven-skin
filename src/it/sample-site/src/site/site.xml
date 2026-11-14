@@ -45,11 +45,13 @@
         </icon>
       </navIcons>
       <mermaidCdnUrl>https://example.org/vendor/mermaid/mermaid.min.js</mermaidCdnUrl>
+      <!-- npm run test:a11y scans this site too, so the author colors must meet 4.5:1 on the
+           page and on the brand-tinted current-page fill -->
       <lightCssVariables>
-        <color-brand-primary>#0055ff</color-brand-primary>
+        <color-brand-primary>#0047cc</color-brand-primary>
       </lightCssVariables>
       <darkCssVariables>
-        <color-brand-primary>#6699ff</color-brand-primary>
+        <color-brand-primary>#80aaff</color-brand-primary>
       </darkCssVariables>
     </supaSkin>
   </custom>
