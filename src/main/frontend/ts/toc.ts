@@ -114,13 +114,13 @@ export function decodeFragment(hash: string): string {
  * Finds the element a URL fragment names. Like the browser, it tries the fragment as written,
  * then percent-decoded, and finally in NFC, the form `slugifyHeading()` produces, so a page
  * opened with a hand-typed decomposed `#u%CC%88berblick` still scrolls to the `überblick`
- * heading. Only the load-time scroll uses it; a decomposed fragment followed on an open page
+ * heading. The load-time scroll and drawer link focus use it; ordinary in-page navigation
  * is left to the browser, which does not normalize it.
  *
  * @param hash - Fragment with or without its leading `#`.
  * @returns The named element, or null.
  */
-function findFragmentTarget(hash: string): HTMLElement | null {
+export function findFragmentTarget(hash: string): HTMLElement | null {
   const decoded = decodeFragment(hash);
   const candidates = [hash.replace(/^#/, ''), decoded, decoded.normalize('NFC')];
   for (const id of candidates) {

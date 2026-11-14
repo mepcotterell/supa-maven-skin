@@ -44,6 +44,9 @@
  * range track boundaries, thumb and fill contrast, preserved disabled range and OTP paint,
  * unthemed and themed switch knobs, checked contrast and disabled fading, and a focused pill in
  * all 12 variants.
+ * `toc-link-focus-mobile`, `toc-link-focus-tablet`, `toc-link-focus-smooth-mobile`,
+ * and `toc-link-focus-smooth-tablet` check destination focus and Tab continuation.
+ * Search results also assert the combobox's active descendant matches selection.
  * Every scan first waits for running CSS transitions to finish, so axe
  * measures settled colors, not a fade.
  *
@@ -503,7 +506,8 @@ function menuScenario(placement: MenuPlacement, kind: MenuKind): InteractionScen
   const what = kind === 'palette' ? 'color-scheme' : 'theme';
   return {
     name: `${placement.prefix}${kind}-menu`,
-    page: 'index.html',
+    page: kind === 'palette' && placement.prefix === '' ? 'configuration.html' : 'index.html',
+    variants: kind === 'palette' && placement.prefix === '' ? ALL_VARIANTS : undefined,
     viewport: placement.viewport,
     setup: async (page) => {
       await placement.reveal?.(page);
@@ -512,6 +516,9 @@ function menuScenario(placement: MenuPlacement, kind: MenuKind): InteractionScen
       await page.keyboard.press('ArrowDown');
     },
     assertState: async (page) => {
+      if (kind === 'palette' && placement.prefix === '') {
+        await expectPaletteFocus(page);
+      }
       if (placement.reveal) {
         await expectVisible(page.locator(`${placement.region}[open]`), `the open ${placement.region}`);
       }
@@ -1579,6 +1586,186 @@ async function expectControlValidationBorders(page: Page): Promise<void> {
 }
 
 /**
+ * Exercises keyboard continuation after Bootstrap restores a closed drawer's opener focus.
+ *
+ * @param name - CLI scenario name.
+ * @param viewport - Drawer viewport.
+ * @param motion - Reader motion preference.
+ * @returns Scenario that tabs immediately after the drawer has closed.
+ */
+function tocLinkFocusScenario(
+  name: string,
+  viewport: Viewport,
+  motion: 'reduce' | 'no-preference'
+): InteractionScenario {
+  return {
+    name,
+    page: 'configuration.html',
+    viewport,
+    variants: [{ palette: 'furo', polarity: 'light' }],
+    setup: async (page) => {
+      await page.emulateMedia({ reducedMotion: motion });
+      await page.evaluate(() => {
+        document.getElementById('supaTocDrawer')!.addEventListener('shown.bs.drawer', () => {
+          document.documentElement.setAttribute('data-test-toc-shown', 'true');
+        }, { once: true });
+      });
+      await page.locator('.supa-toc-drawer-trigger:visible').first().click();
+      await page.waitForFunction(() => document.documentElement.hasAttribute('data-test-toc-shown'));
+      await expectVisible(page.locator('#supaTocDrawer[open]'), 'the open TOC drawer');
+      await page.locator('#supaTocNav a[href="#theme-branding"]').focus();
+      // Observe the lifecycle itself, not scrollend: waiting for smooth scrolling would hide R-04.
+      await page.evaluate(() => {
+        document.getElementById('supaTocDrawer')!.addEventListener('hidden.bs.drawer', () => {
+          document.documentElement.setAttribute('data-test-toc-hidden', 'true');
+        }, { once: true });
+      });
+      await page.keyboard.press('Enter');
+      await page.waitForFunction(() => document.documentElement.hasAttribute('data-test-toc-hidden'));
+      const focused = await page.evaluate(() => document.activeElement?.id);
+      if (focused !== 'theme-branding') {
+        throw new Error(`expected heading focus after drawer close, got ${focused}`);
+      }
+      await page.keyboard.press('Tab');
+    },
+    assertState: async (page) => {
+      const continues = await page.evaluate(() => {
+        const heading = document.getElementById('theme-branding')!;
+        const active = document.activeElement;
+        return !document.getElementById('supaTocDrawer')!.hasAttribute('open') &&
+          active !== null && (heading.contains(active) ||
+            !!(heading.compareDocumentPosition(active) & Node.DOCUMENT_POSITION_FOLLOWING));
+      });
+      if (!continues) {
+        throw new Error('Tab must continue inside or after the destination section');
+      }
+    }
+  };
+}
+
+/**
+ * Audits selected and unselected picker outlines through real keyboard navigation.
+ *
+ * @param page - Configuration page with the header palette menu open.
+ */
+async function expectPaletteFocus(page: Page): Promise<void> {
+  for (const [selector, attribute] of [
+    ['.supa-palette-card', 'aria-pressed'],
+    ['.supa-content-header [data-supa-palette-option]', 'aria-checked']
+  ]) {
+    for (const selected of ['true', 'false']) {
+      const item = page.locator(`${selector}[${attribute}="${selected}"]:visible`).first();
+      const menu = selector.includes('palette-option');
+      if (menu) {
+        const trigger = page.locator('.supa-content-header .supa-palette-btn');
+        if (await trigger.getAttribute('aria-expanded') !== 'true') {
+          await trigger.focus();
+          await page.keyboard.press('ArrowDown');
+        }
+      }
+      await item.blur();
+      const resting = await item.evaluate((el) => {
+        const style = getComputedStyle(el);
+        return `${style.outlineStyle}/${style.outlineWidth}/${style.outlineColor}/${style.outlineOffset}`;
+      });
+      if (menu) {
+        await page.locator('.supa-content-header .supa-palette-btn').focus();
+        for (let step = 0; step < 7; step++) {
+          await page.keyboard.press('ArrowDown');
+          if (await item.evaluate((el) => el === document.activeElement)) {
+            break;
+          }
+        }
+      } else {
+        await item.focus();
+        await page.keyboard.press('Shift+Tab');
+        await page.keyboard.press('Tab');
+      }
+      await expectFocused(page, item, `${selector} selected=${selected}`);
+      await settleTransitions(page);
+      const failures = await item.evaluate((element, rest) => {
+        const canvas = document.createElement('canvas');
+        canvas.width = canvas.height = 1;
+        const context = canvas.getContext('2d', { willReadFrequently: true });
+        if (!context) {
+          throw new Error('Canvas color conversion is unavailable');
+        }
+        /**
+         * Converts a browser-resolved color to straight sRGB and alpha.
+         * @param color - Computed CSS color.
+         * @returns RGBA channels in [0, 1].
+         */
+        function rgba(color: string): number[] {
+          context!.clearRect(0, 0, 1, 1);
+          context!.fillStyle = color;
+          context!.fillRect(0, 0, 1, 1);
+          return Array.from(context!.getImageData(0, 0, 1, 1).data, (channel) => channel / 255);
+        }
+        /**
+         * Composites a color over an opaque background.
+         * @param top - Foreground RGBA.
+         * @param bottom - Opaque background RGBA.
+         * @returns Composited opaque RGBA.
+         */
+        function over(top: number[], bottom: number[]): number[] {
+          return [0, 1, 2].map((i) => top[i] * top[3] + bottom[i] * (1 - top[3])).concat(1);
+        }
+        /**
+         * Resolves the actual fill through all transparent ancestors.
+         * @param element - Element whose background is needed.
+         * @returns Opaque composited sRGB background.
+         */
+        function background(element: Element | null): number[] {
+          if (!element) {
+            return [1, 1, 1, 1];
+          }
+          return over(rgba(getComputedStyle(element).backgroundColor), background(element.parentElement));
+        }
+        /**
+         * Calculates WCAG relative luminance.
+         * @param color - Opaque sRGB color.
+         * @returns Relative luminance.
+         */
+        function luminance(color: number[]): number {
+          return color.slice(0, 3).map((v) => v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4)
+            .reduce((sum, v, i) => sum + v * [0.2126, 0.7152, 0.0722][i], 0);
+        }
+
+        const found: string[] = [];
+        const style = getComputedStyle(element);
+        const focused = `${style.outlineStyle}/${style.outlineWidth}/${style.outlineColor}/${style.outlineOffset}`;
+        if (!element.matches(':focus-visible') || style.outlineStyle !== 'solid' ||
+            parseFloat(style.outlineWidth) < 2 || focused === rest) {
+          found.push('keyboard outline must be visible and distinct from rest');
+        }
+        const minimum = getComputedStyle(document.documentElement)
+          .getPropertyValue('--supa-wcag-level').includes('AAA') ? 4.5 : 3;
+        for (const [name, fill] of [
+          ['item', background(element)], ['surround', background(element.parentElement)]
+        ] as Array<[string, number[]]>) {
+          const ink = luminance(over(rgba(style.outlineColor), fill));
+          const bg = luminance(fill);
+          const ratio = (Math.max(ink, bg) + 0.05) / (Math.min(ink, bg) + 0.05);
+          if (ratio < minimum) {
+            found.push(`${name}: ${ratio.toFixed(3)}:1, minimum ${minimum}:1`);
+          }
+        }
+        return found;
+      }, resting);
+      if (failures.length) {
+        throw new Error(`${selector} selected=${selected}: ${failures.join('; ')}`);
+      }
+      await item.blur();
+    }
+  }
+  // Card navigation closes the menu; restore it for the scenario's axe scan.
+  const trigger = page.locator('.supa-content-header .supa-palette-btn');
+  await trigger.focus();
+  await page.keyboard.press('ArrowDown');
+  await page.mouse.move(0, 0);
+}
+
+/**
  * Interactive states scanned on top of the load-time matrix, each in its
  * `variants` (by default every `SCENARIO_VARIANTS` entry). Selectors target the
  * skin's own markup from `site.vm`, `site-macros.vm`, and the TypeScript
@@ -1586,6 +1773,10 @@ async function expectControlValidationBorders(page: Page): Promise<void> {
  * toggled, so a state left open elsewhere on the page cannot stand in for it.
  */
 const SCENARIOS: readonly InteractionScenario[] = [
+  tocLinkFocusScenario('toc-link-focus-mobile', MOBILE, 'reduce'),
+  tocLinkFocusScenario('toc-link-focus-tablet', { width: 1024, height: 768 }, 'reduce'),
+  tocLinkFocusScenario('toc-link-focus-smooth-mobile', MOBILE, 'no-preference'),
+  tocLinkFocusScenario('toc-link-focus-smooth-tablet', { width: 1024, height: 768 }, 'no-preference'),
   {
     name: 'control-boundaries-focus',
     page: 'components.html',
@@ -1735,6 +1926,19 @@ const SCENARIOS: readonly InteractionScenario[] = [
       await expectVisible(
         page.locator('#supaSearchResults > .supa-search-result-item.is-active:nth-child(2)'),
         'the second search result as the active option'
+      );
+      const active = page.locator('#supaSearchResults > .is-active');
+      const activeId = await active.getAttribute('id');
+      if (!activeId) {
+        throw new Error('Active search option must have an id');
+      }
+      await expectAttribute(active, 'aria-selected', 'true', 'the active search option');
+      await expectVisible(
+        page.locator('#supaSearchResults > [aria-selected="true"]'),
+        'the single selected search option'
+      );
+      await expectAttribute(
+        page.locator('#supaSearchInput'), 'aria-activedescendant', activeId, 'the search input'
       );
       await expectVisible(
         page.locator('#supaSearchResults > .is-active .supa-search-result-title mark').first(),

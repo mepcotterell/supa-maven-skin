@@ -165,6 +165,13 @@ if ( !html.contains( "data-bs-scroll=" ) || !html.contains( "data-bs-backdrop=" 
 if ( !html.contains( "id=\"supaSearchDialog\"" ) ) {
     throw new IllegalStateException( "Missing Bootstrap 6 search dialog" );
 }
+java.util.regex.Matcher searchCombobox = java.util.regex.Pattern.compile( "<input[^>]*id=\"supaSearchInput\"[^>]*>" ).matcher( html );
+if ( !searchCombobox.find() || !searchCombobox.group().contains( "role=\"combobox\"" )
+     || !searchCombobox.group().contains( "aria-controls=\"supaSearchResults\"" )
+     || !searchCombobox.group().contains( "aria-autocomplete=\"list\"" )
+     || !searchCombobox.group().contains( "aria-expanded=\"false\"" ) ) {
+    throw new IllegalStateException( "Search input must control the results listbox as a collapsed combobox" );
+}
 if ( !html.contains( "bi-file-earmark-code" ) || !html.contains( "bi-pencil-square" ) ) {
     throw new IllegalStateException( "Missing Bootstrap Icons for View page source or Edit this page buttons" );
 }

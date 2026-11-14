@@ -245,6 +245,12 @@ body.supa-body {
   --menu-min-width: 14rem;
 }
 
+// Bootstrap marks focus with a fill only; keep a separate keyboard outline.
+[data-supa-palette-option]:focus-visible {
+  outline: var(--focus-ring-width, 2px) solid var(--color-brand-content);
+  outline-offset: var(--focus-ring-offset, 2px);
+}
+
 // Interactive Palette Preview Cards (for documentation & showcase pages)
 .supa-palette-grid {
   display: grid;

@@ -358,6 +358,13 @@ export const SURFACE_AUDITS: readonly SurfaceSpec[] = [
       foregrounds: [{ label: 'range track boundary', color: 'var(--supa-control-border)', role: 'non-text' }]
     })
   ),
+  ...['var(--bg-body)', 'var(--bg-1)'].map(
+    (surface): SurfaceSpec => ({
+      surface: `palette menu focus on ${surface}`,
+      layers: [PAGE, 'var(--bg-body)', surface],
+      foregrounds: [{ label: 'keyboard outline', color: 'var(--color-brand-content)', role: 'non-text' }]
+    })
+  ),
   ...['--color-background-primary', '--color-background-secondary'].map(
     (surface): SurfaceSpec => ({
       surface: `Bootstrap control boundaries ${surface}`,

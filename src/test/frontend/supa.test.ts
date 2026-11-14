@@ -885,6 +885,59 @@ describe('Supa Maven Skin Frontend Modules', () => {
       expect(document.documentElement.getAttribute(SUPA_READY_ATTRIBUTE)).toBe('true');
     });
 
+    it.each(['supaTocDrawer', 'supaSidebarDrawer'])('keeps section focus after %s link closes, leaving dismissal focus alone', async (id) => {
+      document.body.innerHTML = `
+        <button id="trigger">Open</button>
+        <dialog id="${id}" class="drawer"><a class="nav-link supa-nav-link" href="#usage">Usage</a></dialog>
+        <main id="supa-main-content"><h2 id="usage">Usage</h2><a href="#next">Continue</a></main>`;
+      vi.stubGlobal('innerWidth', 390);
+      initDrawers();
+      const drawer = document.getElementById(id) as HTMLDialogElement;
+      const trigger = document.getElementById('trigger')!;
+      const heading = document.getElementById('usage')!;
+      const instance = Drawer.getOrCreateInstance(drawer);
+      const hide = vi.spyOn(instance, 'hide').mockImplementation(() => {
+        drawer.removeAttribute('open');
+        return Promise.resolve();
+      });
+      // Bootstrap installs its restoration callback when the trigger opens the drawer.
+      drawer.addEventListener('hidden.bs.drawer', () => trigger.focus());
+      drawer.querySelector('a')!.addEventListener('click', (event) => event.preventDefault());
+      try {
+        drawer.setAttribute('open', '');
+        drawer.querySelector<HTMLAnchorElement>('a')!.click();
+        expect(hide).toHaveBeenCalledOnce();
+        drawer.dispatchEvent(new Event('hidden.bs.drawer'));
+        await Promise.resolve();
+        expect(document.activeElement).toBe(heading);
+        expect(heading.getAttribute('tabindex')).toBe('-1');
+        // A later Escape/backdrop dismissal must not reuse the previous destination.
+        drawer.setAttribute('open', '');
+        instance.hide();
+        drawer.dispatchEvent(new Event('hidden.bs.drawer'));
+        await Promise.resolve();
+        expect(document.activeElement).toBe(trigger);
+        // Bootstrap can decline a close during its opening transition or on a prevented hide.
+        hide.mockResolvedValue(undefined);
+        drawer.setAttribute('open', '');
+        drawer.querySelector<HTMLAnchorElement>('a')!.click();
+        await Promise.resolve();
+        drawer.dispatchEvent(new Event('hidden.bs.drawer'));
+        await Promise.resolve();
+        expect(document.activeElement).toBe(trigger);
+        hide.mockRejectedValue(new Error('Hide rejected'));
+        drawer.querySelector<HTMLAnchorElement>('a')!.click();
+        await Promise.resolve();
+        drawer.dispatchEvent(new Event('hidden.bs.drawer'));
+        await Promise.resolve();
+        expect(document.activeElement).toBe(trigger);
+      } finally {
+        hide.mockRestore();
+        instance.dispose();
+        vi.unstubAllGlobals();
+      }
+    });
+
     it('configures left #supaSidebarDrawer (.drawer-start) and right #supaTocDrawer (.drawer-end) with body scrolling and backdrop options', () => {
       document.body.innerHTML = `
         <dialog class="lg:drawer drawer-start supa-sidebar-drawer"
@@ -2548,6 +2601,112 @@ describe('Supa Maven Skin Frontend Modules', () => {
   });
 
   describe('Client-Side Search Indexing, Filtering & Highlighting', () => {
+    describe('search combobox active result', () => {
+      beforeEach(() => {
+        vi.stubGlobal('fetch', vi.fn(async () => ({ ok: false })));
+        document.body.innerHTML = `
+          <nav class="supa-sidebar-tree">
+            <a class="supa-nav-link" href="alpha.html">Guide Alpha</a>
+            <a class="supa-nav-link" href="beta.html">Guide Beta</a>
+          </nav>
+          <dialog id="supaSearchDialog" open>
+            <input id="supaSearchInput" role="combobox" aria-controls="supaSearchResults"
+                   aria-autocomplete="list" aria-expanded="false" />
+            <div id="supaSearchStatus"></div>
+            <div id="supaSearchResults" role="listbox"></div>
+          </dialog>`;
+        initSearch();
+      });
+
+      afterEach(() => vi.unstubAllGlobals());
+
+      /**
+       * Types a query through the search input's public event interface.
+       * @param query - Query to render.
+       * @returns The focused search input.
+       */
+      const search = (query: string): HTMLInputElement => {
+        const input = document.getElementById('supaSearchInput') as HTMLInputElement;
+        input.focus();
+        input.value = query;
+        input.dispatchEvent(new Event('input'));
+        return input;
+      };
+
+      /**
+       * Checks that visual selection and the input describe the same option.
+       * @param input - Search input retaining keyboard focus.
+       * @param index - Expected active option position.
+       */
+      const expectActive = (input: HTMLInputElement, index: number): void => {
+        const options = Array.from(document.querySelectorAll<HTMLAnchorElement>('[role="option"]'));
+        const active = options[index];
+        expect(active.id).not.toBe('');
+        expect(new Set(options.map((option) => option.id)).size).toBe(options.length);
+        expect(input.getAttribute('aria-activedescendant')).toBe(active.id);
+        expect(input.getAttribute('aria-expanded')).toBe('true');
+        expect(options.filter((option) => option.getAttribute('aria-selected') === 'true')).toEqual([active]);
+        expect(options.filter((option) => option.classList.contains('is-active'))).toEqual([active]);
+        expect(options.every((option) => option.tabIndex === 0)).toBe(true);
+        expect(document.activeElement).toBe(input);
+      };
+
+      it('exposes initial selection and wraps ArrowDown and ArrowUp without moving focus', () => {
+        const input = search('guide');
+        expectActive(input, 0);
+        for (const [key, index] of [['ArrowDown', 1], ['ArrowDown', 0], ['ArrowUp', 1]] as const) {
+          input.dispatchEvent(new KeyboardEvent('keydown', { key }));
+          expectActive(input, index);
+        }
+        const click = vi.fn((event: Event) => event.preventDefault());
+        document.querySelectorAll('[role="option"]')[1].addEventListener('click', click);
+        input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+        expect(click).toHaveBeenCalledOnce();
+      });
+
+      it('resynchronizes expanded state when a dialog with retained results reopens', () => {
+        const input = search('guide');
+        expectActive(input, 0);
+        const dialog = document.getElementById('supaSearchDialog')!;
+        dialog.dispatchEvent(new Event('close'));
+        expect(input.getAttribute('aria-expanded')).toBe('false');
+        expect(dialog.querySelectorAll('[role="option"]')).toHaveLength(2);
+        dialog.dispatchEvent(new Event('shown.bs.dialog'));
+        expectActive(input, 0);
+        dialog.dispatchEvent(new Event('hidden.bs.dialog'));
+        expect(input.getAttribute('aria-expanded')).toBe('false');
+      });
+
+      it('clears selection for no matches and an empty query, then selects the new query', () => {
+        const input = search('guide');
+        const alphaId = document.querySelector('[href="alpha.html"][role="option"]')?.id;
+        for (const query of ['zzzz-no-match', '']) {
+          search(query);
+          expect(input.hasAttribute('aria-activedescendant')).toBe(false);
+          expect(input.getAttribute('aria-expanded')).toBe('false');
+          expect(document.querySelector('[aria-selected="true"]')).toBeNull();
+        }
+        search('beta');
+        expectActive(input, 0);
+        search('alpha');
+        expectActive(input, 0);
+        expect(document.querySelector('[role="option"]')?.id).toBe(alphaId);
+      });
+
+      it('resynchronizes selection after asynchronous indexing rerenders the current query', async () => {
+        let finishFetch!: (value: Response) => void;
+        const response = new Promise<Response>((resolve) => {
+          finishFetch = resolve;
+        });
+        vi.stubGlobal('fetch', vi.fn(() => response));
+        const input = search('guide');
+        input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown' }));
+        finishFetch({ ok: true, text: async () => '<title>Guide Remote</title><main id="supa-main-content"><h2>Guide Remote</h2></main>' } as Response);
+        await vi.waitFor(() => expect(document.getElementById('supaSearchStatus')?.textContent).toBe('Results: 4'));
+        expectActive(input, 0);
+      });
+    });
+
     it('collects sidebar and heading documents, ranks query matches, and highlights terms', () => {
       document.body.innerHTML = `
         <nav class="supa-sidebar-tree">

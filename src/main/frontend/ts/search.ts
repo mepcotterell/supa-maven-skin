@@ -637,6 +637,27 @@ export function initSearch(): void {
   let searchDocs = collectLocalSearchDocuments(document);
   let fullSiteIndexed = false;
   let activeIndex = -1;
+  const optionIds = new Map<string, string>();
+  let nextOptionId = 0;
+
+  /**
+   * Synchronizes the visual selection with the combobox's accessible active option.
+   * @param items - Currently rendered search result links.
+   */
+  const syncActiveResult = (items: HTMLAnchorElement[]): void => {
+    items.forEach((item, index) => {
+      const selected = index === activeIndex;
+      item.classList.toggle('is-active', selected);
+      item.setAttribute('aria-selected', String(selected));
+    });
+    const active = items[activeIndex];
+    inputEl.setAttribute('aria-expanded', String(items.length > 0 && dialogEl.open));
+    if (active) {
+      inputEl.setAttribute('aria-activedescendant', active.id);
+    } else {
+      inputEl.removeAttribute('aria-activedescendant');
+    }
+  };
 
   const cacheKey = getSearchIndexCacheKey(document);
   const relativePath = getSiteRelativePath(document);
@@ -649,6 +670,7 @@ export function initSearch(): void {
   const renderResults = (query: string) => {
     resultsEl.innerHTML = '';
     activeIndex = -1;
+    syncActiveResult([]);
 
     if (!query.trim()) {
       statusEl.textContent = getLabel('searchHint');
@@ -664,9 +686,18 @@ export function initSearch(): void {
     // Plural-free, so one translation fits every count in every language
     statusEl.textContent = getLabel('searchResultCount', { count: matches.length });
 
-    matches.forEach((match, idx) => {
+    matches.forEach((match) => {
       const link = document.createElement('a');
-      link.className = `supa-search-result-item${idx === 0 ? ' is-active' : ''}`;
+      link.className = 'supa-search-result-item';
+      // Keep a destination's ID across query changes and asynchronous index rerenders.
+      let optionId = optionIds.get(match.href);
+      if (!optionId) {
+        do {
+          optionId = `supa-search-option-${nextOptionId++}`;
+        } while (document.getElementById(optionId));
+        optionIds.set(match.href, optionId);
+      }
+      link.id = optionId;
       link.href = toPageHref(match.href, relativePath);
       link.setAttribute('role', 'option');
 
@@ -723,6 +754,7 @@ export function initSearch(): void {
       resultsEl.appendChild(link);
     });
     activeIndex = 0;
+    syncActiveResult(Array.from(resultsEl.querySelectorAll<HTMLAnchorElement>('[role="option"]')));
   };
 
   let indexPromise: Promise<void> | null = null;
@@ -762,12 +794,12 @@ export function initSearch(): void {
     if (e.key === 'ArrowDown') {
       e.preventDefault();
       activeIndex = (activeIndex + 1) % items.length;
-      items.forEach((el, i) => el.classList.toggle('is-active', i === activeIndex));
+      syncActiveResult(items);
       items[activeIndex]?.scrollIntoView({ block: 'nearest' });
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
       activeIndex = (activeIndex - 1 + items.length) % items.length;
-      items.forEach((el, i) => el.classList.toggle('is-active', i === activeIndex));
+      syncActiveResult(items);
       items[activeIndex]?.scrollIntoView({ block: 'nearest' });
     } else if (e.key === 'Enter' && activeIndex >= 0 && items[activeIndex]) {
       e.preventDefault();
@@ -805,8 +837,16 @@ export function initSearch(): void {
     }
   });
 
+  dialogEl.addEventListener('hidden.bs.dialog', () => {
+    inputEl.setAttribute('aria-expanded', 'false');
+  });
+  dialogEl.addEventListener('close', () => {
+    inputEl.setAttribute('aria-expanded', 'false');
+  });
+
   // Focus input when dialog opens via trigger button
   dialogEl.addEventListener('shown.bs.dialog', () => {
+    syncActiveResult(Array.from(resultsEl.querySelectorAll<HTMLAnchorElement>('[role="option"]')));
     void ensureSiteIndex();
     inputEl.focus();
   });

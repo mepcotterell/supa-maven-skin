@@ -28,7 +28,48 @@ import { getLabel, warnUnknownLabels } from './labels';
 import { initOptionalLibraries } from './optional';
 import { initSearch } from './search';
 import { initTheme } from './theme';
-import { initTocAndScrollSpy } from './toc';
+import { findFragmentTarget, initTocAndScrollSpy } from './toc';
+
+/**
+ * Closes a link's drawer and restores same-page destination focus after Bootstrap's opener focus.
+ *
+ * @param drawer - Open navigation drawer.
+ * @param link - Activated section link.
+ */
+function closeDrawerForLink(drawer: HTMLDialogElement, link: HTMLAnchorElement): void {
+  const url = new URL(link.href, window.location.href);
+  const here = window.location;
+  const target = url.origin === here.origin && url.pathname === here.pathname &&
+    url.search === here.search ? findFragmentTarget(url.hash) : null;
+  const focusTarget = (): void => {
+    // Bootstrap's data API restores the opener during hidden.bs.drawer. A microtask runs after
+    // every listener, regardless of registration order, without waiting for smooth scrollend.
+    queueMicrotask(() => {
+      if (target?.isConnected) {
+        // Match ScrollSpy's focus behavior, preserving author-supplied tabindex and scroll position.
+        if (!target.hasAttribute('tabindex')) {
+          target.setAttribute('tabindex', '-1');
+        }
+        target.focus({ preventScroll: true });
+      }
+    });
+  };
+  if (target) {
+    drawer.addEventListener('hidden.bs.drawer', focusTarget, { once: true });
+  }
+  /** Removes an abandoned destination listener after the hide attempt settles. */
+  const clearPendingFocus = (): void => {
+    // A declined or rejected hide must not affect a later Escape/backdrop dismissal.
+    drawer.removeEventListener('hidden.bs.drawer', focusTarget);
+  };
+  try {
+    void Drawer.getOrCreateInstance(drawer).hide().then(clearPendingFocus, clearPendingFocus);
+  } catch {
+    drawer.removeEventListener('hidden.bs.drawer', focusTarget);
+    drawer.close?.();
+    focusTarget();
+  }
+}
 
 /**
  * Initializes the responsive left sidebar (`#supaSidebarDrawer`) and right TOC
@@ -56,13 +97,9 @@ export function initDrawers(): void {
   if (tocDrawer && !tocDrawer.hasAttribute('data-supa-drawer-bound')) {
     tocDrawer.setAttribute('data-supa-drawer-bound', 'true');
     tocDrawer.addEventListener('click', (e) => {
-      const link = (e.target as HTMLElement | null)?.closest('a.nav-link');
+      const link = (e.target as HTMLElement | null)?.closest<HTMLAnchorElement>('a.nav-link');
       if (link && window.innerWidth < 1280 && tocDrawer.open) {
-        try {
-          Drawer.getOrCreateInstance(tocDrawer).hide();
-        } catch {
-          tocDrawer.close?.();
-        }
+        closeDrawerForLink(tocDrawer, link);
       }
     });
   }
@@ -70,13 +107,9 @@ export function initDrawers(): void {
   if (sidebarDrawer && !sidebarDrawer.hasAttribute('data-supa-drawer-bound')) {
     sidebarDrawer.setAttribute('data-supa-drawer-bound', 'true');
     sidebarDrawer.addEventListener('click', (e) => {
-      const link = (e.target as HTMLElement | null)?.closest('a.supa-nav-link[href*="#"]');
+      const link = (e.target as HTMLElement | null)?.closest<HTMLAnchorElement>('a.supa-nav-link[href*="#"]');
       if (link && window.innerWidth < 1024 && sidebarDrawer.open) {
-        try {
-          Drawer.getOrCreateInstance(sidebarDrawer).hide();
-        } catch {
-          sidebarDrawer.close?.();
-        }
+        closeDrawerForLink(sidebarDrawer, link);
       }
     });
   }

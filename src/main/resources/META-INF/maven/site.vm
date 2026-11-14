@@ -619,6 +619,10 @@
           </svg>
           <input type="search"
                  id="supaSearchInput"
+                 role="combobox"
+                 aria-controls="supaSearchResults"
+                 aria-expanded="false"
+                 aria-autocomplete="list"
                  class="supa-search-input"
                  placeholder="$esc.html( $supaLabels.searchPlaceholder )"
                  autocomplete="off"
