@@ -3,13 +3,13 @@
 <nav class="documentation-channels" title="Documentation channels">
 <a href="index.html">Project home</a>
 <a href="documentation-channels.html" class="active">Channel guide</a>
-<a href="configuration.html">All versions</a>
-<a href="authoring-guide.html">API Reference (Release with a long descriptive version label)</a>
+<a href="guide.html">All versions</a>
+<a href="guides/install.html">API Reference (Release with a long descriptive version label)</a>
 <details class="documentation-version-picker">
 <summary>Version: Current release</summary>
 <ul>
 <li><a href="index.html">Development (main)</a></li>
-<li><a href="configuration.html">Current release</a></li>
+<li><a href="guide.html">Current release</a></li>
 <li><a href="index.html">Archived release 1</a></li>
 <li><a href="index.html">Archived release 2</a></li>
 <li><a href="index.html">Archived release 3</a></li>

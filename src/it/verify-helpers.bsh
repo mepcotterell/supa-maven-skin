@@ -212,3 +212,49 @@ void expectSiteIdReferencesResolve( File siteDir ) {
         expectIdReferencesResolve( path, readPage( siteDir, path ) );
     }
 }
+
+/**
+ * Fails when an href or src attribute on a page of the site names a local file the site does not
+ * have. Fragment-only links, links with a scheme (https:, mailto:, data:), and protocol-relative
+ * links are not followed; a root-relative path fails, since it breaks a site deployed below the
+ * domain root. Only opening tags are read, so markup shown in a code block is not followed.
+ */
+void expectSiteLocalLinksResolve( File siteDir ) {
+    List pages = sitePages( siteDir );
+    if ( pages.isEmpty() ) {
+        throw new IllegalStateException( siteDir + " holds no HTML pages" );
+    }
+    Pattern tagPattern = Pattern.compile( "<[A-Za-z][A-Za-z0-9]*(?=[\\s/>])[^>]*>" );
+    String[] names = new String[] { "href", "src" };
+    for ( int i = 0; i < pages.size(); i++ ) {
+        String path = (String) pages.get( i );
+        File pageDir = new File( siteDir, path ).getParentFile();
+        Matcher tags = tagPattern.matcher( readPage( siteDir, path ) );
+        while ( tags.find() ) {
+            Map attributes = tagAttributes( tags.group() );
+            for ( int n = 0; n < names.length; n++ ) {
+                String value = (String) attributes.get( names[n] );
+                if ( value == null ) {
+                    continue;
+                }
+                String target = value.replace( "&amp;", "&" ).replaceAll( "[?#].*$", "" );
+                if ( target.length() == 0 || target.startsWith( "//" )
+                     || target.matches( "^[A-Za-z][A-Za-z0-9+.-]*:.*" ) ) {
+                    continue;
+                }
+                if ( target.startsWith( "/" ) ) {
+                    throw new IllegalStateException( path + ": " + names[n] + "=\"" + value
+                        + "\" is root-relative, which breaks a site deployed below the domain root" );
+                }
+                File file = new File( pageDir, java.net.URLDecoder.decode( target.replace( "+", "%2B" ), "UTF-8" ) );
+                if ( file.isDirectory() ) {
+                    file = new File( file, "index.html" );
+                }
+                if ( !file.isFile() ) {
+                    throw new IllegalStateException( path + ": " + names[n] + "=\"" + value
+                        + "\" names a file the site does not have" );
+                }
+            }
+        }
+    }
+}

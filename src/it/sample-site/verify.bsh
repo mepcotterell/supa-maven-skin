@@ -183,6 +183,8 @@ expectTag( "index.html", html, "aside", new String[] { "class", "supa-sidebar-co
     "the sidebar <aside> landmark must be named by the navPrimary label" );
 // Every aria-labelledby and aria-describedby on every page, reports included, names an element there
 expectSiteIdReferencesResolve( siteDir );
+// Every local href and src on every page, the channels page's links included, names a file of the site
+expectSiteLocalLinksResolve( siteDir );
 java.util.regex.Matcher searchCombobox = java.util.regex.Pattern.compile( "<input[^>]*id=\"supaSearchInput\"[^>]*>" ).matcher( html );
 if ( !searchCombobox.find() || !searchCombobox.group().contains( "role=\"combobox\"" )
      || !searchCombobox.group().contains( "aria-controls=\"supaSearchResults\"" )
