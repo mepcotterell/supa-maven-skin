@@ -268,6 +268,11 @@ html:not([data-supa-resolved-theme]) .supa-logo-dark {
 
   svg {
     transition: transform 0.15s ease;
+
+    // The turn is motion; under reduced motion the chevron flips at once.
+    @media (prefers-reduced-motion: reduce) {
+      transition: none;
+    }
   }
 }
 

@@ -23,6 +23,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Fixed
 
+- **Reduced Motion Stops Moving Transforms**: With `prefers-reduced-motion: reduce`, a hovered palette card no longer lifts, and the palette menu, sidebar group, and code toggle chevrons flip at once instead of turning.
 - **Reader's Place on Heading Links in Firefox**: In Firefox, a page opened from a link to one of its headings no longer jumps back to the heading when it finishes loading, after a reload or Back has restored the reader's place or the reader has scrolled away while it loaded.
 - **Malformed Saved Tab Choices**: A saved synchronized-tab choice that is `null`, an array, or not a string is ignored, so one bad `localStorage['supa-tab-sync']` value no longer stops the copy buttons, the other enhancers, and the page-ready attribute, or drops pages from the search index.
 - **Isolated Page Enhancers**: When one enhancer fails on a page, the console names it and the remaining enhancers still run, so the page is still marked ready and keeps its copy buttons, search, and drawers.

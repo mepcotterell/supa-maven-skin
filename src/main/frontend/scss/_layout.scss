@@ -225,6 +225,11 @@ body.supa-body {
   pointer-events: none;
   color: var(--color-foreground-muted);
   transition: transform 0.15s ease;
+
+  // The turn is motion; under reduced motion the chevron flips at once, so the state still shows.
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
 }
 
 // Native <select> variant (#supaPaletteSelect, sidebar drawer footer): `appearance: none`
@@ -277,6 +282,15 @@ body.supa-body {
   &:hover {
     border-color: var(--color-brand-primary);
     transform: translateY(-1px);
+  }
+
+  // The lift is motion; the border colour alone marks the hover, and changes at once.
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+
+    &:hover {
+      transform: none;
+    }
   }
 
   &:focus-visible {

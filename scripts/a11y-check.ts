@@ -2063,6 +2063,61 @@ async function axNodes(page: Page, selector: string): Promise<AxSummary[]> {
 }
 
 /**
+ * Checks that under `prefers-reduced-motion: reduce` nothing on the page animates a `transform`
+ * and that a hovered palette card does not move. A moving transform (a card lifting a pixel, a
+ * chevron turning) is motion that colour-only transitions are not. The scenario samples the card
+ * right after the pointer reaches it, before the scenario's transition settle could hide a
+ * transition still running, and then lists every element, and its `::before` and `::after`,
+ * whose computed `transition-property` names `transform` or `all` with a non-zero duration.
+ * The chevrons turn instantly instead of fading: their state still shows, without the turn.
+ */
+const REDUCED_MOTION_TRANSFORMS: InteractionScenario = {
+  name: 'reduced-motion-transforms',
+  page: 'configuration.html',
+  viewport: DESKTOP,
+  variants: [{ palette: 'furo', polarity: 'light' }],
+  scope: ['.supa-palette-grid'],
+  setup: async (page) => {
+    const card = page.locator('.supa-palette-card:not(.is-active)').first();
+    await card.hover();
+    // Sampled in the same task as the hover: a transform transition would have begun by now.
+    const problems = await page.evaluate(() => {
+      const found: string[] = [];
+      const hovered = document.querySelector('.supa-palette-card:not(.is-active):hover');
+      if (!hovered) {
+        found.push('no palette card is hovered');
+      } else if (getComputedStyle(hovered).transform !== 'none') {
+        found.push(`a hovered palette card has transform ${getComputedStyle(hovered).transform}`);
+      }
+      /** @returns Whether the computed style animates `transform` at a non-zero duration. */
+      const animatesTransform = (style: CSSStyleDeclaration): boolean => {
+        const properties = style.transitionProperty.split(',').map((p) => p.trim());
+        const durations = style.transitionDuration.split(',').map((d) => parseFloat(d));
+        return properties.some((property, i) =>
+          (property === 'transform' || property === 'all') && durations[i % durations.length] > 0);
+      };
+      for (const element of document.querySelectorAll('*')) {
+        for (const pseudo of [null, '::before', '::after']) {
+          if (animatesTransform(getComputedStyle(element, pseudo))) {
+            // An SVG's `className` is an object, so read the attribute.
+            const classes = element.getAttribute('class')?.trim();
+            const name = `${element.tagName.toLowerCase()}${classes ? '.' + classes.split(/\s+/).join('.') : ''}${pseudo ?? ''}`;
+            found.push(`${name} transitions transform (${getComputedStyle(element, pseudo).transition})`);
+          }
+        }
+      }
+      return [...new Set(found)];
+    });
+    if (problems.length) {
+      throw new Error(`transforms still move under reduced motion: ${problems.join('; ')}`);
+    }
+  },
+  assertState: async (page) => {
+    await expectVisible(page.locator('.supa-palette-card:not(.is-active):hover').first(), 'the hovered palette card');
+  }
+};
+
+/**
  * Checks that each article heading's accessible name is its own text, without its permalink's
  * label, and that each permalink is still a focusable link named "Permalink to" the heading.
  * Chromium named a heading "Documentation Guide Permalink to Documentation Guide" while the
@@ -3605,6 +3660,7 @@ const SCENARIOS: readonly InteractionScenario[] = [
   sidebarLinkFocusScenario('sidebar-link-focus-desktop', DESKTOP, 'reduce'),
   sidebarLinkFocusScenario('sidebar-link-focus-smooth-mobile', MOBILE, 'no-preference'),
   sidebarLinkFocusScenario('sidebar-link-focus-smooth-desktop', DESKTOP, 'no-preference'),
+  REDUCED_MOTION_TRANSFORMS,
   HEADING_NAMES,
   ...DRAWER_ROLE_LAYOUTS.map(({ fontPx, viewport }) => drawerRolesScenario(fontPx, viewport)),
   ...LARGE_FONT_PAGES.flatMap((file) => LARGE_DEFAULT_FONTS.flatMap((fontPx) =>
