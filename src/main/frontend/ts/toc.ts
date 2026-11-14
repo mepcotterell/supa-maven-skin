@@ -363,7 +363,9 @@ export function assignHeadingIds(
  * (e.g. `#1-actions-buttons`) while preserving any preceding Doxia `<a id="...">`
  * anchor for backward compatibility, attaches the optional Furo `#` permalink, and adds an
  * anchor for the id Doxia writes into Markdown links to the heading (`doxiaLinkId()`),
- * recording that anchor's id on the heading as `data-doxia-link-id`.
+ * recording that anchor's id on the heading as `data-doxia-link-id`. A permalinked heading's text
+ * moves into a `span.supa-heading-text` that names the heading (`aria-labelledby`), so the
+ * permalink's label stays out of the heading's accessible name.
  *
  * @param article - Root article container (`#supa-main-content`).
  * @param enablePermalinks - Whether to append `.supa-headerlink` permalink anchors.
@@ -382,6 +384,8 @@ export function prepareHeadings(
   );
   // Where each heading's Doxia link anchor goes: before Doxia's own anchor, or the heading
   const linkAnchorPlaces = new Map<HTMLHeadingElement, Element>();
+  // The span that holds each permalinked heading's text, which names the heading
+  const headingTexts = new Map<HTMLHeadingElement, HTMLElement>();
 
   allHeadings.forEach((heading, index) => {
     const id = ids[index];
@@ -440,6 +444,16 @@ export function prepareHeadings(
         }
       });
 
+      // A heading is named by its content, which would take in the permalink's label ("Install
+      // Permalink to Install"). Its text goes in a span that names it instead, and the link stays
+      // inside, in its place on screen and in the Tab order. An author's own name is kept.
+      if (!heading.hasAttribute('aria-label') && !heading.hasAttribute('aria-labelledby')) {
+        const text = document.createElement('span');
+        text.className = 'supa-heading-text';
+        text.append(...Array.from(heading.childNodes));
+        heading.appendChild(text);
+        headingTexts.set(heading, text);
+      }
       heading.appendChild(anchor);
     }
   });
@@ -460,6 +474,18 @@ export function prepareHeadings(
       // buildTableOfContents() maps only the anchors that went in to their heading
       heading.setAttribute('data-doxia-link-id', linkId);
     }
+  });
+
+  // The text spans get their ids last, so that they never take an id a heading or a Doxia link
+  // anchor needs; one that an element already has gets a number.
+  headingTexts.forEach((text, heading) => {
+    const base = `supa-heading-text-${heading.id}`;
+    let textId = base;
+    for (let counter = 2; document.getElementById(textId); counter++) {
+      textId = `${base}-${counter}`;
+    }
+    text.id = textId;
+    heading.setAttribute('aria-labelledby', textId);
   });
 
   return allHeadings;

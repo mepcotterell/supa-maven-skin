@@ -393,7 +393,7 @@ Configures client-side code block enhancements, heading permalinks, offline sear
 | :--- | :--- | :--- |
 | `<copyCodeButton>` | `true` | Add a Copy-to-Clipboard button to all `<pre>` code blocks. |
 | `<syntaxHighlighting>` | `true` | Highlight `<pre><code>` blocks offline using bundled `highlight.js`. |
-| `<headingPermalinks>` | `true` | Append `#` permalink anchors to article headings (`h2`–`h6`). |
+| `<headingPermalinks>` | `true` | Append `#` permalink anchors to article headings (`h2`–`h6`). Each heading is still named by its own text for assistive technology (see [Architecture](architecture.html#doxia-20-normalization-prose-isolation)). |
 | `<headingPermalinkSymbol>` | `#` | Symbol rendered inside heading permalink anchors. |
 | `<search>` | `true` | Enable the sidebar search box and `/` (`⌘K` / `Ctrl+K`) search dialog. |
 | `<mermaid>` | `auto` | Lazy-load Mermaid when `.mermaid` or `code.language-mermaid` is present (`auto`, `true`, or `false`). |

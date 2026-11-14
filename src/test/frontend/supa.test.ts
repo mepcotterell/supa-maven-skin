@@ -2087,6 +2087,51 @@ describe('Supa Maven Skin Frontend Modules', () => {
       });
     });
 
+    it('keeps each permalink label out of its heading name, and the link focusable and named', async () => {
+      // axe-core's accessible-name computation stands in for the browser's; a11y-check.ts checks
+      // Chromium's accessibility tree on the rendered self-site.
+      const { default: axe } = await import('axe-core');
+      document.body.innerHTML = `
+        <main id="supa-main-content">
+          <h2>Full <code>site.xml</code> Example</h2>
+          <h3><span lang="ja">概要</span></h3>
+          <h4 aria-label="Author name">Own Label</h4>
+          <h2 id="supa-heading-text-full-sitexml-example">Text</h2>
+        </main>
+      `;
+      const article = document.getElementById('supa-main-content')!;
+      prepareHeadings(article, true, '#');
+      // A second run leaves the headings as the first one did
+      prepareHeadings(article, true, '#');
+      const headings = Array.from(article.querySelectorAll<HTMLElement>('h2, h3, h4'));
+      axe.setup(document);
+      try {
+        expect(headings.map((h) => axe.commons.text.accessibleText(h))).toEqual([
+          'Full site.xml Example',
+          '概要',
+          'Author name',
+          'Text'
+        ]);
+        headings.forEach((heading) => {
+          const permalinks = heading.querySelectorAll<HTMLAnchorElement>('.supa-headerlink');
+          expect(permalinks).toHaveLength(1);
+          const permalink = permalinks[0];
+          // Still inside the heading, so it stays where it was on screen and in the Tab order
+          expect(heading.lastElementChild).toBe(permalink);
+          expect(permalink.hasAttribute('aria-hidden')).toBe(false);
+          expect(permalink.tabIndex).toBe(0);
+          const text = heading.textContent!.slice(0, -1).trim();
+          expect(axe.commons.text.accessibleText(permalink)).toBe(`Permalink to ${text}`);
+        });
+      } finally {
+        axe.teardown();
+      }
+      // The heading's text keeps its language wrapper, and no id repeats
+      expect(headings[1].querySelector('[lang="ja"]')?.textContent).toBe('概要');
+      const ids = Array.from(document.querySelectorAll('[id]'), (el) => el.id);
+      expect(new Set(ids).size).toBe(ids.length);
+    });
+
     it('copies a percent-encoded permalink that leads back to a non-ASCII heading', async () => {
       const writeText = vi.fn(async (_text: string) => {});
       Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });

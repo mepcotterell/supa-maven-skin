@@ -1992,6 +1992,103 @@ function sidebarLinkFocusScenario(
 }
 
 /**
+ * Scenarios that read the browser's computed accessibility tree. Playwright exposes no engine's
+ * tree (its `ariaSnapshot()` computes names itself); only Chromium's DevTools protocol does
+ * (`Accessibility.getPartialAXTree`).
+ */
+const AX_TREE_ENGINES: EngineSupport = {
+  supported: ['chromium'],
+  reason: "only Chromium's DevTools protocol exposes the computed accessibility tree"
+};
+
+/** Page whose headings `heading-names` reads: it has headings with code, `&`, and every level. */
+const HEADING_NAMES_PAGE = 'configuration.html';
+
+/** What Chromium's accessibility tree exposes for one element. */
+interface AxSummary {
+  role: string;
+  name: string;
+  focusable: boolean;
+  /** Whether the element is left out of the tree that assistive technology reads. */
+  ignored: boolean;
+}
+
+/**
+ * Reads the name, role, and focusability Chromium computes for each element a selector matches.
+ *
+ * @param page - Chromium page.
+ * @param selector - CSS selector.
+ * @returns One entry per matching element, in document order.
+ */
+async function axNodes(page: Page, selector: string): Promise<AxSummary[]> {
+  const cdp = await page.context().newCDPSession(page);
+  try {
+    const { root } = await cdp.send('DOM.getDocument', { depth: 0 });
+    const { nodeIds } = await cdp.send('DOM.querySelectorAll', { nodeId: root.nodeId, selector });
+    const found: AxSummary[] = [];
+    for (const nodeId of nodeIds) {
+      const { nodes } = await cdp.send('Accessibility.getPartialAXTree', { nodeId, fetchRelatives: false });
+      // The first node is the one for the element itself
+      const node = nodes[0];
+      found.push({
+        role: String(node?.role?.value ?? ''),
+        name: String(node?.name?.value ?? ''),
+        focusable: node?.properties?.some((p) => p.name === 'focusable' && p.value.value === true) ?? false,
+        ignored: node?.ignored ?? true
+      });
+    }
+    return found;
+  } finally {
+    await cdp.detach();
+  }
+}
+
+/**
+ * Checks that each article heading's accessible name is its own text, without its permalink's
+ * label, and that each permalink is still a focusable link named "Permalink to" the heading.
+ * Chromium named a heading "Documentation Guide Permalink to Documentation Guide" while the
+ * permalink sat in the heading's name, which screen readers read in their heading lists.
+ */
+const HEADING_NAMES: InteractionScenario = {
+  name: 'heading-names',
+  page: HEADING_NAMES_PAGE,
+  viewport: DESKTOP,
+  variants: [{ palette: 'furo', polarity: 'light' }],
+  engines: AX_TREE_ENGINES,
+  setup: async () => {},
+  assertState: async (page) => {
+    const selector = '#supa-main-content :is(h2, h3, h4, h5, h6):has(> .supa-headerlink)';
+    const texts = await page.$$eval(selector, (headings) => headings.map((heading) => {
+      const clone = heading.cloneNode(true) as HTMLElement;
+      clone.querySelectorAll('.supa-headerlink').forEach((el) => el.remove());
+      return (clone.textContent ?? '').replace(/\s+/g, ' ').trim();
+    }));
+    if (texts.length < 10) {
+      throw new Error(`expected the article's headings to have permalinks, found ${texts.length}`);
+    }
+    const headings = await axNodes(page, selector);
+    const links = await axNodes(page, `${selector} > .supa-headerlink`);
+    const problems: string[] = [];
+    texts.forEach((text, idx) => {
+      const heading = headings[idx];
+      const link = links[idx];
+      if (heading?.role !== 'heading' || heading.name !== text) {
+        problems.push(`heading "${text}" is exposed as ${heading?.role} "${heading?.name}"`);
+      }
+      if (link?.role !== 'link' || link.ignored || !link.focusable ||
+          link.name !== `Permalink to ${text}`) {
+        problems.push(`the permalink of "${text}" is exposed as ${link?.role} "${link?.name}"` +
+          `${link?.ignored ? ', ignored' : ''}${link?.focusable ? '' : ', not focusable'}`);
+      }
+    });
+    if (problems.length > 0) {
+      const more = problems.length > 4 ? `; and ${problems.length - 4} more` : '';
+      throw new Error(`${problems.slice(0, 4).join('; ')}${more}`);
+    }
+  }
+};
+
+/**
  * Default font sizes the larger-font scenarios set, in CSS px: Chrome's "Very large" font setting
  * (24 px), and twice the 16 px default (32 px), the text size WCAG 1.4.4 Resize Text asks for.
  */
@@ -3364,6 +3461,7 @@ const SCENARIOS: readonly InteractionScenario[] = [
   sidebarLinkFocusScenario('sidebar-link-focus-desktop', DESKTOP, 'reduce'),
   sidebarLinkFocusScenario('sidebar-link-focus-smooth-mobile', MOBILE, 'no-preference'),
   sidebarLinkFocusScenario('sidebar-link-focus-smooth-desktop', DESKTOP, 'no-preference'),
+  HEADING_NAMES,
   ...LARGE_FONT_PAGES.flatMap((file) => LARGE_DEFAULT_FONTS.flatMap((fontPx) =>
     LARGE_FONT_WIDTHS.map((width) => largeDefaultFontScenario(file, fontPx, width)))),
   {
