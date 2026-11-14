@@ -49,10 +49,24 @@ jobs:
       - name: Build, lint, test, verify ITs, and generate site
         run: mvn -B -ntp clean install site
 
+      # The same check as publish-snapshot's, which skips a release version, so this leg uploads
+      # the build output only when that job will publish it.
+      - name: Check for a SNAPSHOT version
+        id: version
+        if: matrix.java == '21' && github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        run: |
+          PROJECT_VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
+          if [[ "$PROJECT_VERSION" == *-SNAPSHOT ]]; then
+            echo "snapshot=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Skipping the build output upload for non-SNAPSHOT version $PROJECT_VERSION"
+            echo "snapshot=false" >> "$GITHUB_OUTPUT"
+          fi
+
       # target/classes is the skin JAR's content that the Invoker tests just verified, for the
       # publish-snapshot job to sign.
       - name: Upload verified build output
-        if: matrix.java == '21' && github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        if: steps.version.outputs.snapshot == 'true'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: verified-classes
