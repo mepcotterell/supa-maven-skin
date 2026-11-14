@@ -3,6 +3,7 @@
  */
 
 import Combobox from 'bootstrap/js/dist/combobox.js';
+import Dialog from 'bootstrap/js/dist/dialog.js';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { parse as parseCss } from 'postcss';
@@ -2619,7 +2620,10 @@ describe('Supa Maven Skin Frontend Modules', () => {
         initSearch();
       });
 
-      afterEach(() => vi.unstubAllGlobals());
+      afterEach(() => {
+        vi.unstubAllGlobals();
+        vi.restoreAllMocks();
+      });
 
       /**
        * Types a query through the search input's public event interface.
@@ -2701,6 +2705,65 @@ describe('Supa Maven Skin Frontend Modules', () => {
         expectActive(input, 0);
         dialog.dispatchEvent(new Event('hidden.bs.dialog'));
         expect(input.getAttribute('aria-expanded')).toBe('false');
+      });
+
+      describe('while the dialog is closed', () => {
+        /**
+         * Closes the dialog as the browser does before it fires `close`.
+         * @returns The search dialog.
+         */
+        const closeDialog = (): HTMLDialogElement => {
+          const dialog = document.getElementById('supaSearchDialog') as HTMLDialogElement;
+          dialog.removeAttribute('open');
+          return dialog;
+        };
+
+        it.each(['close', 'hidden.bs.dialog'])('drops the active option after %s', (eventName) => {
+          const input = search('guide');
+          expectActive(input, 0);
+          closeDialog().dispatchEvent(new Event(eventName));
+          expect(input.getAttribute('aria-expanded')).toBe('false');
+          expect(input.hasAttribute('aria-activedescendant')).toBe(false);
+          expect(document.querySelectorAll('[role="option"]')).toHaveLength(2);
+        });
+
+        it('does not restore the active option when results re-render while closed', async () => {
+          let finishFetch!: (value: Response) => void;
+          const response = new Promise<Response>((resolve) => {
+            finishFetch = resolve;
+          });
+          vi.stubGlobal('fetch', vi.fn(() => response));
+          const input = search('guide');
+          closeDialog().dispatchEvent(new Event('close'));
+          input.dispatchEvent(new Event('input'));
+          expect(input.hasAttribute('aria-activedescendant')).toBe(false);
+          finishFetch({ ok: true, text: async () => '<title>Guide Remote</title><main id="supa-main-content"><h2>Guide Remote</h2></main>' } as Response);
+          await vi.waitFor(() => expect(document.getElementById('supaSearchStatus')?.textContent).toBe('Results: 4'));
+          expect(input.hasAttribute('aria-activedescendant')).toBe(false);
+          expect(input.getAttribute('aria-expanded')).toBe('false');
+        });
+
+        it('restores the active option when Bootstrap reopens the dialog', () => {
+          const input = search('guide');
+          const dialog = closeDialog();
+          dialog.dispatchEvent(new Event('close'));
+          dialog.setAttribute('open', '');
+          dialog.dispatchEvent(new Event('shown.bs.dialog'));
+          expectActive(input, 0);
+        });
+
+        it('restores the active option when the showModal fallback reopens the dialog', () => {
+          const input = search('guide');
+          const dialog = closeDialog() as HTMLDialogElement;
+          dialog.dispatchEvent(new Event('close'));
+          vi.spyOn(Dialog, 'getOrCreateInstance').mockImplementation(() => {
+            throw new Error('Bootstrap Dialog unavailable');
+          });
+          dialog.showModal = vi.fn(() => dialog.setAttribute('open', ''));
+          document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true }));
+          expect(dialog.showModal).toHaveBeenCalledOnce();
+          expectActive(input, 0);
+        });
       });
 
       it('clears selection for no matches and an empty query, then selects the new query', () => {

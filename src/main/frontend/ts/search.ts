@@ -652,11 +652,17 @@ export function initSearch(): void {
     });
     const active = items[activeIndex];
     inputEl.setAttribute('aria-expanded', String(items.length > 0 && dialogEl.open));
-    if (active) {
+    // A closed dialog keeps its results but has no active option to announce.
+    if (active && dialogEl.open) {
       inputEl.setAttribute('aria-activedescendant', active.id);
     } else {
       inputEl.removeAttribute('aria-activedescendant');
     }
+  };
+
+  /** Re-synchronizes the combobox state with the retained results. */
+  const syncRetainedResults = (): void => {
+    syncActiveResult(Array.from(resultsEl.querySelectorAll<HTMLAnchorElement>('[role="option"]')));
   };
 
   const cacheKey = getSearchIndexCacheKey(document);
@@ -827,6 +833,8 @@ export function initSearch(): void {
         Dialog.getOrCreateInstance(dialogEl).show();
       } catch {
         dialogEl.showModal?.();
+        // The fallback fires no `shown.bs.dialog`, so restore the retained results here.
+        syncRetainedResults();
       }
       void ensureSiteIndex();
       window.setTimeout(() => inputEl.focus(), 50);
@@ -836,22 +844,26 @@ export function initSearch(): void {
         Dialog.getOrCreateInstance(dialogEl).show();
       } catch {
         dialogEl.showModal?.();
+        // The fallback fires no `shown.bs.dialog`, so restore the retained results here.
+        syncRetainedResults();
       }
       void ensureSiteIndex();
       window.setTimeout(() => inputEl.focus(), 50);
     }
   });
 
-  dialogEl.addEventListener('hidden.bs.dialog', () => {
+  /** Marks the combobox collapsed with no active option once the dialog is closed. */
+  const clearActiveResult = (): void => {
     inputEl.setAttribute('aria-expanded', 'false');
-  });
-  dialogEl.addEventListener('close', () => {
-    inputEl.setAttribute('aria-expanded', 'false');
-  });
+    inputEl.removeAttribute('aria-activedescendant');
+  };
+
+  dialogEl.addEventListener('hidden.bs.dialog', clearActiveResult);
+  dialogEl.addEventListener('close', clearActiveResult);
 
   // Focus input when dialog opens via trigger button
   dialogEl.addEventListener('shown.bs.dialog', () => {
-    syncActiveResult(Array.from(resultsEl.querySelectorAll<HTMLAnchorElement>('[role="option"]')));
+    syncRetainedResults();
     void ensureSiteIndex();
     inputEl.focus();
   });
