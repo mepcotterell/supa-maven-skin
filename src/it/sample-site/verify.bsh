@@ -9,6 +9,8 @@ File siteDir = new File( basedir, "target/site" );
 if ( !siteDir.isDirectory() ) {
     throw new IllegalStateException( "target/site directory was not generated" );
 }
+// Element assertions use these helpers to check attributes independent of their order
+source( new File( basedir, "../../../src/it/verify-helpers.bsh" ).getCanonicalPath() );
 
 // Inspect the packaged skin JAR directly to verify META-INF/ license entries and root cleanliness
 File targetDir = new File( basedir, "../.." );
@@ -145,20 +147,17 @@ if ( !html.contains( "class=\"supa-page\"" ) ) {
 if ( !html.contains( "id=\"supaSidebarDrawer\"" ) || !html.contains( "lg:drawer drawer-start supa-sidebar-drawer" ) ) {
     throw new IllegalStateException( "Missing Bootstrap 6 left sidebar drawer" );
 }
-if ( !html.contains( "class=\"supa-sidebar-brand\" data-supa-brand-align=\"center\"" ) ) {
-    throw new IllegalStateException( "Missing center-aligned default data-supa-brand-align on .supa-sidebar-brand" );
-}
+expectTag( "index.html", html, "a", new String[] { "class", "supa-sidebar-brand", "data-supa-brand-align", "center" },
+    "Missing center-aligned default data-supa-brand-align on .supa-sidebar-brand" );
 if ( !html.contains( "id=\"supaTocDrawer\"" ) || !html.contains( "xl:drawer drawer-end supa-toc-drawer" ) ) {
     throw new IllegalStateException( "Missing Bootstrap 6 right TOC drawer" );
 }
 // <tocTitle> (localized here) must name the TOC <aside> landmark as well as its <nav>, or screen
 // readers list the landmark under the English default.
-java.util.regex.Matcher tocAsideLabel = java.util.regex.Pattern.compile( "<aside class=\"supa-toc-column\" aria-label=\"([^\"]*)\"" ).matcher( html );
-java.util.regex.Matcher tocNavLabel = java.util.regex.Pattern.compile( "<nav id=\"supaTocNav\"[^>]*\\saria-label=\"([^\"]*)\"" ).matcher( html );
-if ( !tocAsideLabel.find() || !tocNavLabel.find()
-     || !"Sur cette page".equals( tocAsideLabel.group( 1 ) ) || !tocAsideLabel.group( 1 ).equals( tocNavLabel.group( 1 ) ) ) {
-    throw new IllegalStateException( "TOC <aside> aria-label must follow <tocTitle> (\"Sur cette page\"), like the TOC <nav>" );
-}
+expectTag( "index.html", html, "aside", new String[] { "class", "supa-toc-column", "aria-label", "Sur cette page" },
+    "TOC <aside> aria-label must follow <tocTitle> (\"Sur cette page\")" );
+expectTag( "index.html", html, "nav", new String[] { "id", "supaTocNav", "aria-label", "Sur cette page" },
+    "TOC <nav> aria-label must follow <tocTitle> (\"Sur cette page\"), like the TOC <aside>" );
 if ( !html.contains( "data-bs-scroll=" ) || !html.contains( "data-bs-backdrop=" ) ) {
     throw new IllegalStateException( "Missing drawer data-bs-scroll / data-bs-backdrop attributes" );
 }
@@ -261,50 +260,44 @@ if ( !html.contains( "aria-keyshortcuts=\"/ Meta+K Control+K\"" ) || html.contai
 }
 // A role="menu" may own only menu items, groups, and separators; the color-scheme menu's visual
 // AA/AAA headers must stay hidden from assistive technology (axe aria-required-children).
-if ( !html.contains( "<h6 class=\"menu-header\" aria-hidden=\"true\">WCAG 2.2 AA Standard</h6>" )
-     || html.contains( "<h6 class=\"menu-header\">" ) ) {
-    throw new IllegalStateException( "Color-scheme menu headers must carry aria-hidden=\"true\" inside role=\"menu\" (axe aria-required-children, WCAG 1.3.1)" );
-}
+expectText( "index.html", html, "h6", new String[] { "class", "menu-header", "aria-hidden", "true" }, "WCAG 2.2 AA Standard",
+    "Color-scheme menu headers must carry aria-hidden=\"true\" inside role=\"menu\" (axe aria-required-children, WCAG 1.3.1)" );
+int menuHeaders = findTags( html, "h6", new String[] { "class~", "menu-header" } ).size();
+expectTags( "index.html", html, "h6", new String[] { "class~", "menu-header", "aria-hidden", "true" }, menuHeaders,
+    "Every color-scheme menu header must carry aria-hidden=\"true\" inside role=\"menu\" (axe aria-required-children, WCAG 1.3.1)" );
 // Voice-control users activate the color-scheme trigger by saying the scheme it shows, so its
 // accessible name and tooltip must contain that text (WCAG 2.5.3) before theme.ts runs, for the
 // configured <colorScheme>bootstrap</colorScheme>. Up to 0.1.5 it showed "Furo (AA)" whatever the
 // configuration and was named "Select accessible color scheme".
-java.util.regex.Matcher paletteTriggers = java.util.regex.Pattern.compile( "<button type=\"button\"\\s+class=\"supa-palette-btn\"[^>]*>\\s*<span class=\"supa-palette-btn-label\" data-supa-palette-label=\"true\">([^<]*)</span>" ).matcher( html );
-int paletteTriggerCount = 0;
-while ( paletteTriggers.find() ) {
-    paletteTriggerCount++;
-    String paletteTrigger = paletteTriggers.group( 0 );
-    if ( !"Bootstrap 6 (AA)".equals( paletteTriggers.group( 1 ) )
-         || !paletteTrigger.contains( "aria-label=\"Color scheme: Bootstrap 6 (AA)\"" )
-         || !paletteTrigger.contains( "data-bs-title=\"Color scheme: Bootstrap 6 (AA)\"" ) ) {
-        throw new IllegalStateException( "Color-scheme trigger must show the configured scheme and be named \"Color scheme: Bootstrap 6 (AA)\" (WCAG 2.5.3 Label in Name): " + paletteTrigger );
-    }
-}
-if ( paletteTriggerCount != 2 ) {
-    throw new IllegalStateException( "Expected the mobile-header and content-header color-scheme triggers, found " + paletteTriggerCount );
+expectTags( "index.html", html, "button", new String[] { "class", "supa-palette-btn" }, 2,
+    "Expected the mobile-header and content-header color-scheme triggers" );
+expectTags( "index.html", html, "button", new String[] {
+    "class", "supa-palette-btn", "type", "button",
+    "aria-label", "Color scheme: Bootstrap 6 (AA)", "data-bs-title", "Color scheme: Bootstrap 6 (AA)" }, 2,
+    "Color-scheme triggers must be named \"Color scheme: Bootstrap 6 (AA)\" for the configured scheme (WCAG 2.5.3 Label in Name)" );
+List paletteLabels = findTexts( html, "span", new String[] { "class", "supa-palette-btn-label", "data-supa-palette-label", "true" } );
+if ( !paletteLabels.equals( Arrays.asList( new String[] { "Bootstrap 6 (AA)", "Bootstrap 6 (AA)" } ) ) ) {
+    throw new IllegalStateException( "Color-scheme triggers must show the configured scheme \"Bootstrap 6 (AA)\" (WCAG 2.5.3 Label in Name): " + paletteLabels );
 }
 // Opened from the bottom of the sidebar drawer, the color-scheme .menu covered all but slivers of
 // the nav links above it (axe target-size, WCAG 2.5.8); the drawer footer uses a native <select>.
-int drawerFooterStart = html.indexOf( "<div class=\"supa-sidebar-footer" );
-int drawerFooterEnd = drawerFooterStart < 0 ? -1 : html.indexOf( "</dialog>", drawerFooterStart );
+int drawerFooterStart = html.indexOf( expectTag( "index.html", html, "div", new String[] { "class~", "supa-sidebar-footer" },
+    "Missing sidebar drawer Appearance footer" ) );
+int drawerFooterEnd = html.indexOf( "</dialog>", drawerFooterStart );
 if ( drawerFooterEnd < 0 ) {
     throw new IllegalStateException( "Missing sidebar drawer Appearance footer" );
 }
 String drawerFooter = html.substring( drawerFooterStart, drawerFooterEnd );
-if ( !drawerFooter.contains( "<select class=\"supa-palette-select\"" )
-     || !drawerFooter.contains( "data-supa-palette-select=\"true\"" )
-     || drawerFooter.contains( "supa-palette-btn" ) ) {
-    throw new IllegalStateException( "Sidebar drawer footer must render the color-scheme picker as a native <select data-supa-palette-select> (axe target-size, WCAG 2.5.8)" );
-}
+expectTag( "index.html", drawerFooter, "select", new String[] { "class", "supa-palette-select", "data-supa-palette-select", "true" },
+    "Sidebar drawer footer must render the color-scheme picker as a native <select data-supa-palette-select> (axe target-size, WCAG 2.5.8)" );
+reject( "index.html", drawerFooter, "supa-palette-btn", "Sidebar drawer footer must not render a color-scheme menu (axe target-size, WCAG 2.5.8)" );
 // Before theme.ts runs, every color-scheme control starts on the configured scheme, so the menus
 // and the drawer <select> agree with the trigger instead of always marking furo.
-String checkedBootstrap = "aria-checked=\"true\" data-supa-palette-option=\"bootstrap\"";
-if ( html.split( java.util.regex.Pattern.quote( checkedBootstrap ), -1 ).length - 1 != 2
-     || html.contains( "aria-checked=\"true\" data-supa-palette-option=\"furo\"" )
-     || !drawerFooter.contains( "<option value=\"bootstrap\" selected>" )
-     || drawerFooter.contains( "<option value=\"furo\" selected>" ) ) {
-    throw new IllegalStateException( "Color-scheme menus and the drawer <select> must start on the configured <colorScheme>bootstrap</colorScheme>" );
-}
+String startOnBootstrap = "Color-scheme menus and the drawer <select> must start on the configured <colorScheme>bootstrap</colorScheme>";
+expectTags( "index.html", html, "button", new String[] { "data-supa-palette-option", "bootstrap", "aria-checked", "true" }, 2, startOnBootstrap );
+rejectTag( "index.html", html, "button", new String[] { "data-supa-palette-option", "furo", "aria-checked", "true" }, startOnBootstrap );
+expectTag( "index.html", drawerFooter, "option", new String[] { "value", "bootstrap", "selected", "" }, startOnBootstrap );
+rejectTag( "index.html", drawerFooter, "option", new String[] { "value", "furo", "selected", "" }, startOnBootstrap );
 
 // Pages in subdirectories: site.xml hrefs reach the template relative to the site root, so the
 // skin must rewrite menu, breadcrumb, Previous / Next, logo, and footer icon URLs for the
@@ -334,44 +327,43 @@ for ( int p = 0; p < linkCheckedPages.length; p++ ) {
 }
 
 String installText = Files.readString( new File( siteDir, "guides/install.html" ).toPath(), StandardCharsets.UTF_8 );
-String[] installExpected = new String[] {
-    "data-supa-relative-path=\"..\"",
-    "<a class=\"supa-nav-link\" href=\"../index.html\">",
-    "<a class=\"supa-nav-link\" href=\"../guide.html\">",
-    "<a class=\"supa-nav-link active\" href=\"../guides/install.html\" aria-current=\"page\">",
-    "<a class=\"supa-nav-link\" href=\"../project-info.html\">Project Information</a>",
-    "<a class=\"supa-nav-link\" href=\"../summary.html\">",
-    "<a href=\"https://maven.apache.org/\">Maven</a>",
-    "<a href=\"../guide.html\">Docs</a>",
-    "<a class=\"supa-prev-page\" href=\"../guide.html\">",
-    "<a class=\"supa-next-page\" href=\"../project-info.html\">",
-    "<img class=\"supa-sidebar-logo\" src=\"../images/logo.svg\"",
-    "<a class=\"supa-footer-icon-link\" href=\"../guide.html\"",
-    "<a class=\"supa-footer-icon-link\" href=\"https://github.com/mepcotterell/supa-maven-skin\""
-};
-for ( int i = 0; i < installExpected.length; i++ ) {
-    if ( !installText.contains( installExpected[i] ) ) {
-        throw new IllegalStateException( "guides/install.html is missing " + installExpected[i] );
-    }
+String install = "guides/install.html";
+String resolvedForPage = "must resolve its site.xml href for the page's directory";
+if ( !tagHas( expectTag( install, installText, "html", new String[] {}, "page must have one <html>" ),
+        new String[] { "data-supa-relative-path", ".." } ) ) {
+    throw new IllegalStateException( install + " must carry data-supa-relative-path=\"..\"" );
 }
-if ( installText.split( "class=\"supa-nav-link active\"", -1 ).length != 2 ) {
-    throw new IllegalStateException( "guides/install.html must mark exactly one sidebar item as the current page" );
-}
+// A sidebar item's text is its <span class="supa-nav-text">, which names the item: two items
+// (Welcome and the About report) both link to the site's index.html
+expectText( install, installText, "a", new String[] { "class", "supa-nav-link", "href", "../index.html" },
+    "<span class=\"supa-nav-text\">Welcome</span>", "Sidebar item " + resolvedForPage );
+expectText( install, installText, "a", new String[] { "class", "supa-nav-link", "href", "../guide.html" },
+    "<span class=\"supa-nav-text\">User Guide</span>", "Sidebar item " + resolvedForPage );
+expectTag( install, installText, "a", new String[] {
+    "class", "supa-nav-link active", "href", "../guides/install.html", "aria-current", "page" },
+    "The current page's sidebar item " + resolvedForPage + " and be marked current" );
+expectText( install, installText, "a", new String[] { "class", "supa-nav-link", "href", "../project-info.html" }, "Project Information",
+    "The synthetic /project-info.html report link " + resolvedForPage );
+expectText( install, installText, "a", new String[] { "class", "supa-nav-link", "href", "../summary.html" },
+    "<span class=\"supa-nav-text\">Summary</span>", "Report menu item " + resolvedForPage );
+expectText( install, installText, "a", new String[] { "href", "https://maven.apache.org/" }, "Maven", "An absolute breadcrumb href must stay unchanged" );
+expectText( install, installText, "a", new String[] { "href", "../guide.html" }, "Docs", "Breadcrumb item " + resolvedForPage );
+expectTag( install, installText, "a", new String[] { "class", "supa-prev-page", "href", "../guide.html" }, "Previous page card " + resolvedForPage );
+expectTag( install, installText, "a", new String[] { "class", "supa-next-page", "href", "../project-info.html" }, "Next page card " + resolvedForPage );
+expectTag( install, installText, "img", new String[] { "class", "supa-sidebar-logo", "src", "../images/logo.svg" }, "Logo " + resolvedForPage );
+expectTag( install, installText, "a", new String[] { "class", "supa-footer-icon-link", "href", "../guide.html" }, "Footer icon " + resolvedForPage );
+expectTag( install, installText, "a", new String[] { "class", "supa-footer-icon-link", "href", "https://github.com/mepcotterell/supa-maven-skin" },
+    "An absolute footer icon href must stay unchanged" );
+expectTags( install, installText, "a", new String[] { "class~", "supa-nav-link active" }, 1,
+    "guides/install.html must mark exactly one sidebar item as the current page" );
 
-String[] topLevelExpected = new String[] {
-    "<a class=\"supa-nav-link\" href=\"guides/install.html\">",
-    "<a href=\"guide.html\">Docs</a>",
-    "<img class=\"supa-sidebar-logo\" src=\"images/logo.svg\"",
-    "<a class=\"supa-footer-icon-link\" href=\"guide.html\""
-};
-for ( int i = 0; i < topLevelExpected.length; i++ ) {
-    if ( !html.contains( topLevelExpected[i] ) ) {
-        throw new IllegalStateException( "index.html is missing " + topLevelExpected[i] );
-    }
-}
-if ( !guideText.contains( "<a class=\"supa-next-page\" href=\"guides/install.html\">" ) ) {
-    throw new IllegalStateException( "guide.html must link its Next page card to guides/install.html" );
-}
+expectText( "index.html", html, "a", new String[] { "class", "supa-nav-link", "href", "guides/install.html" },
+    "<span class=\"supa-nav-text\">Installation</span>", "Sidebar item " + resolvedForPage );
+expectText( "index.html", html, "a", new String[] { "href", "guide.html" }, "Docs", "Breadcrumb item " + resolvedForPage );
+expectTag( "index.html", html, "img", new String[] { "class", "supa-sidebar-logo", "src", "images/logo.svg" }, "Logo " + resolvedForPage );
+expectTag( "index.html", html, "a", new String[] { "class", "supa-footer-icon-link", "href", "guide.html" }, "Footer icon " + resolvedForPage );
+expectTag( "guide.html", guideText, "a", new String[] { "class", "supa-next-page", "href", "guides/install.html" },
+    "guide.html must link its Next page card to guides/install.html" );
 
 // <labels> overrides (site.xml): Velocity renders them HTML-escaped and fills their placeholders,
 // and keys the site leaves alone keep their English
@@ -392,10 +384,11 @@ if ( !html.contains( "placeholder=\"Search documentation...\"" ) ) {
     throw new IllegalStateException( "A misspelled <labels> key must not change the search placeholder" );
 }
 // The drawer <select> and the menus share the trigger's "Color scheme" wording
-if ( html.contains( "Accessible color scheme" ) || !drawerFooter.contains( "aria-label=\"Color scheme\">" )
-     || !html.contains( "class=\"menu supa-palette-menu\" role=\"menu\" aria-label=\"Color scheme\"" ) ) {
-    throw new IllegalStateException( "Color-scheme <select> and menus must be named by the colorScheme label (\"Color scheme\")" );
-}
+String colorSchemeNamed = "Color-scheme <select> and menus must be named by the colorScheme label (\"Color scheme\")";
+reject( "index.html", html, "Accessible color scheme", colorSchemeNamed );
+expectTag( "index.html", drawerFooter, "select", new String[] { "class", "supa-palette-select", "aria-label", "Color scheme" }, colorSchemeNamed );
+expectTags( "index.html", html, "div", new String[] { "class", "menu supa-palette-menu", "role", "menu", "aria-label", "Color scheme" }, 2,
+    colorSchemeNamed );
 // The scripts receive only overridden labels they use, as data-supa-label-<kebab-key> on <body>.
 // An empty <backToTop> falls back to English, so it emits nothing; Velocity-only keys such as
 // pageNext are never emitted; misspelled keys are listed for one console warning.
@@ -424,9 +417,9 @@ if ( !bodyOpen.contains( "data-supa-label-alert-dismiss=\"Fermer\"" ) ) {
     throw new IllegalStateException( "<labels><alertDismiss> must reach the scripts: " + bodyOpen );
 }
 String alertsText = Files.readString( new File( siteDir, "alerts.html" ).toPath(), StandardCharsets.UTF_8 );
-if ( !alertsText.contains( "data-bs-dismiss=\"alert\" aria-label=\"Fermer\"" ) ) {
-    throw new IllegalStateException( "#bsAlert in a .md.vm page must name its dismiss button with <labels><alertDismiss>" );
-}
+expectTag( "alerts.html", alertsText, "button", new String[] {
+    "type", "button", "class", "btn-close ms-auto", "data-bs-dismiss", "alert", "aria-label", "Fermer" },
+    "#bsAlert in a .md.vm page must name its dismiss button with <labels><alertDismiss>" );
 
 String channels = Files.readString( new File( siteDir, "documentation-channels.html" ).toPath(), StandardCharsets.UTF_8 );
 if ( !channels.contains( "class=\"documentation-channels\"" )

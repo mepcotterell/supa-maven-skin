@@ -1,9 +1,3 @@
-import java.io.File;
-import java.nio.file.Files;
-import java.nio.charset.StandardCharsets;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
 // Renders <locales>default,fr</locales>: the default locale (Locale.ROOT) from site.xml at the
 // root, and fr from site_fr.xml under /fr/. Maven reads site_fr.xml instead of site.xml, so a
 // label only site.xml sets must stay English under /fr/. Non-ASCII label text is compared in the
@@ -13,34 +7,36 @@ File siteDir = new File( basedir, "target/site" );
 if ( !siteDir.isDirectory() ) {
     throw new IllegalStateException( "target/site directory was not generated" );
 }
+// readPage, expect, reject, and the element assertions that check attributes independent of order
+source( new File( basedir, "../../../src/it/verify-helpers.bsh" ).getCanonicalPath() );
 
 String read( String path ) {
-    File file = new File( siteDir, path );
-    if ( !file.isFile() ) {
-        throw new IllegalStateException( path + " was not generated" );
-    }
-    return Files.readString( file.toPath(), StandardCharsets.UTF_8 );
-}
-
-void expect( String path, String html, String needle, String why ) {
-    if ( !html.contains( needle ) ) {
-        throw new IllegalStateException( path + ": " + why + " (expected " + needle + ")" );
-    }
-}
-
-void reject( String path, String html, String needle, String why ) {
-    if ( html.contains( needle ) ) {
-        throw new IllegalStateException( path + ": " + why + " (found " + needle + ")" );
-    }
+    return readPage( siteDir, path );
 }
 
 /** Returns the opening <body ...> tag, where the data-supa-label-* attributes live. */
 String bodyTag( String path, String html ) {
-    Matcher m = Pattern.compile( "<body\\b[^>]*>" ).matcher( html );
-    if ( !m.find() ) {
-        throw new IllegalStateException( path + ": no <body> tag" );
+    return expectTag( path, html, "body", new String[] {}, "page must have one <body>" );
+}
+
+/**
+ * Fails unless the "Built with" line reads sentence once its tags are removed, and links the
+ * Maven Site and Supa Maven Skin names it contains, in that order.
+ */
+void expectBuiltWith( String path, String html, String sentence, String why ) {
+    List lines = findTexts( html, "div", new String[] { "class", "supa-built-with" } );
+    if ( lines.size() != 1 ) {
+        throw new IllegalStateException( path + ": " + why + " (expected one \"Built with\" line, found " + lines + ")" );
     }
-    return m.group();
+    String line = (String) lines.get( 0 );
+    if ( !line.replaceAll( "<[^>]*>", "" ).startsWith( sentence ) ) {
+        throw new IllegalStateException( path + ": " + why + " (expected " + sentence + ", found " + line + ")" );
+    }
+    expectText( path, line, "a", new String[] { "href", "https://maven.apache.org/plugins/maven-site-plugin/" }, "Maven Site", why );
+    expectText( path, line, "a", new String[] { "href", "https://github.com/mepcotterell/supa-maven-skin" }, "Supa Maven Skin", why );
+    if ( line.indexOf( ">Maven Site</a>" ) > line.indexOf( ">Supa Maven Skin</a>" ) ) {
+        throw new IllegalStateException( path + ": " + why + " (the Maven Site link must come first: " + line + ")" );
+    }
 }
 
 String[] defaultPages = new String[] { "index.html", "guide.html" };
@@ -55,12 +51,12 @@ for ( int i = 0; i < defaultPages.length; i++ ) {
     expect( path, html, "<html lang=\"de\"", "default-locale page must take <language>de</language>" );
 
     // Template labels from site.xml
-    expect( path, html, "href=\"#supa-main-content\">Zum Inhalt springen</a>", "skip link must use skipToContent" );
+    expectText( path, html, "a", new String[] { "class~", "supa-skip-link", "href", "#supa-main-content" }, "Zum Inhalt springen",
+            "skip link must use skipToContent" );
     expect( path, html, "<span>Auf dieser Seite</span>", "TOC title must use the tocTitle label" );
     expect( path, html, "aria-label=\"Auf dieser Seite\"", "TOC landmark must be named by the tocTitle label" );
     reject( path, html, "Shorthand loses", "<labels><tocTitle> must win over the <tocTitle> shorthand" );
-    expect( path, html, "Erstellt mit <a href=\"https://maven.apache.org/plugins/maven-site-plugin/\">Maven Site</a>"
-            + " und <a href=\"https://github.com/mepcotterell/supa-maven-skin\">Supa Maven Skin</a>.",
+    expectBuiltWith( path, html, "Erstellt mit Maven Site und Supa Maven Skin.",
             "footerBuiltWith must keep both links in its {maven} and {skin} placeholders" );
     expect( path, html, "<span class=\"supa-last-updated\">Zuletzt aktualisiert am ", "footerLastUpdated must fill {date}" );
     Matcher lastUpdated = Pattern.compile( "Zuletzt aktualisiert am (\\d{4}-\\d{2}-\\d{2})\\." ).matcher( html );
@@ -70,9 +66,12 @@ for ( int i = 0; i < defaultPages.length; i++ ) {
 
     // A colorSchemeTrigger without {name} still names the scheme the button shows (WCAG 2.5.3),
     // and the scheme name is translated while its WCAG level stays the skin's
-    expect( path, html, "data-supa-palette-label=\"true\">Furo-Farben (AA)</span>", "trigger must show the translated scheme name" );
-    expect( path, html, "data-bs-title=\"Farbschema Furo-Farben (AA)\"", "trigger tooltip must append the scheme name" );
-    expect( path, html, "aria-label=\"Farbschema Furo-Farben (AA)\"", "trigger name must contain the visible scheme name" );
+    expectText( path, html, "span", new String[] { "class", "supa-palette-btn-label", "data-supa-palette-label", "true" },
+            "Furo-Farben (AA)", "trigger must show the translated scheme name" );
+    expectTags( path, html, "button", new String[] { "class", "supa-palette-btn", "data-bs-title", "Farbschema Furo-Farben (AA)" }, 2,
+            "trigger tooltip must append the scheme name" );
+    expectTags( path, html, "button", new String[] { "class", "supa-palette-btn", "aria-label", "Farbschema Furo-Farben (AA)" }, 2,
+            "trigger name must contain the visible scheme name" );
 
     // Script labels reach the scripts as <body> attributes, only for keys site.xml overrides
     expect( path, body, "data-supa-label-search-no-results=\"Keine Ergebnisse f&uuml;r &bdquo;{query}&ldquo;\"",
@@ -100,7 +99,8 @@ for ( int i = 0; i < frenchPages.length; i++ ) {
     expect( path, html, "<html lang=\"fr\"", "fr page must take the Maven locale over <language>" );
 
     // Template labels from site_fr.xml
-    expect( path, html, "href=\"#supa-main-content\">Aller au contenu</a>", "skip link must use the site_fr.xml label" );
+    expectText( path, html, "a", new String[] { "class~", "supa-skip-link", "href", "#supa-main-content" }, "Aller au contenu",
+            "skip link must use the site_fr.xml label" );
     expect( path, html, "<span>Sur cette page</span>", "TOC title must use the site_fr.xml label" );
 
     // Script labels from site_fr.xml
@@ -113,8 +113,7 @@ for ( int i = 0; i < frenchPages.length; i++ ) {
     reject( path, body, "data-supa-label-back-to-top", "backToTop is set only in site.xml" );
     reject( path, body, "data-supa-label-search-no-results", "searchNoResults is set only in site.xml" );
     expect( path, html, "data-bs-title=\"Color scheme: Furo (AA)\"", "colorSchemeTrigger must stay English" );
-    expect( path, html, "Built with <a href=\"https://maven.apache.org/plugins/maven-site-plugin/\">Maven Site</a>",
-            "footerBuiltWith must stay English" );
+    expectBuiltWith( path, html, "Built with Maven Site and Supa Maven Skin", "footerBuiltWith must stay English" );
     expect( path, html, "<span class=\"supa-last-updated\">Last updated on ", "footerLastUpdated must stay English" );
     expect( path, html, "aria-label=\"Close navigation\"", "navDrawerClose must stay English" );
 }
