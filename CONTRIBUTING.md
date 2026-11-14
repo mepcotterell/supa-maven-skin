@@ -14,6 +14,8 @@ mvn -B -ntp clean verify site
 # Rendered-page WCAG 2.2 A/AA checks, plus AAA contrast on the modus palettes (axe-core +
 # Playwright Chromium) on target/site/.
 # Not part of npm test or mvn verify; needs the site built above and a one-time browser install.
+# CI runs them in their own job on the site the JDK 21 build renders, and a SNAPSHOT publish
+# and the Pages deploy wait for them.
 npx playwright install chromium
 npm run test:a11y
 

@@ -49,8 +49,8 @@ jobs:
       - name: Build, lint, test, verify ITs, and generate site
         run: mvn -B -ntp clean install site
 
-      # target/classes is the skin JAR's content that the Invoker tests just verified. Upload it
-      # before the npm steps below run, for the publish-snapshot job to sign.
+      # target/classes is the skin JAR's content that the Invoker tests just verified, for the
+      # publish-snapshot job to sign.
       - name: Upload verified build output
         if: matrix.java == '21' && github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -60,27 +60,16 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
-      # Rendered-page WCAG checks need a real browser, so they run here instead of inside
-      # `mvn verify` (consumer sites never need Chromium). They scan the target/site/ built above.
-      - name: Set up Node.js for accessibility checks
+      # The rendered site for the accessibility job to scan, on pull requests too.
+      - name: Upload rendered site
         if: matrix.java == '21'
-        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          # Keep in sync with <node.version> in pom.xml (frontend-maven-plugin).
-          node-version: '22.14.0'
-          cache: npm
-
-      - name: Install npm dependencies
-        if: matrix.java == '21'
-        run: npm ci
-
-      - name: Install Playwright Chromium
-        if: matrix.java == '21'
-        run: npx playwright install --with-deps chromium
-
-      - name: Check rendered site accessibility (axe-core)
-        if: matrix.java == '21'
-        run: npm run test:a11y
+          name: rendered-site
+          path: target/site
+          if-no-files-found: error
+          # Long enough to re-run only a failed accessibility job after a delay.
+          retention-days: 7
 
       - name: Configure GitHub Pages
         if: matrix.java == '21' && github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
@@ -92,9 +81,52 @@ jobs:
         with:
           path: target/site
 
+  # Rendered-page WCAG checks need a real browser, so they run here instead of inside
+  # `mvn verify` (consumer sites never need Chromium). They scan the site the JDK 21 leg rendered,
+  # in a job of their own so a slow browser install cannot time out the build. A job can need
+  # only the whole matrix, so a failed JDK 25 leg also skips this one.
+  accessibility:
+    name: Accessibility (axe-core)
+    needs: verify
+    runs-on: ubuntu-latest
+    # Measured worst cases: npm ci 41 s and axe 425 s (run 43569166780), the browser install
+    # 584 s (run 42216815589), and about 15 s for checkout, Node setup, and the download, or
+    # 41 + 425 + 584 + 15 = 1065 s. 25 minutes (1500 s) leaves 435 s, enough for the axe step
+    # to double alongside the slowest install seen.
+    timeout-minutes: 25
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          # Keep in sync with <node.version> in pom.xml (frontend-maven-plugin).
+          node-version: '22.14.0'
+          cache: npm
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Download rendered site
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: rendered-site
+          path: target/site
+
+      - name: Check rendered site accessibility (axe-core)
+        run: npm run test:a11y
+
   deploy-pages:
     name: Deploy GitHub Pages
-    needs: verify
+    needs: [verify, accessibility]
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -115,7 +147,7 @@ jobs:
   # lifecycle phase keeps the build's other executions out of this job.
   publish-snapshot:
     name: Publish SNAPSHOT to Maven Central
-    needs: verify
+    needs: [verify, accessibility]
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 10
