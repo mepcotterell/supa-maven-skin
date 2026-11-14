@@ -325,25 +325,27 @@
 #supaResolveHref( $site.bannerLeft.href )
 #set( $brandHref = $resolvedHref )
 #end
-            <a class="supa-sidebar-brand" data-supa-brand-align="$esc.html( $sidebarBrandAlign )" href="$brandHref">
+## Configured URLs are escaped where they are written, after #supaResolveHref, which compares
+## the unescaped values
+            <a class="supa-sidebar-brand" data-supa-brand-align="$esc.html( $sidebarBrandAlign )" href="$esc.html( $brandHref )">
 #if( $lightLogo != "" && $darkLogo != "" )
 #supaResolveHref( $lightLogo )
 #set( $lightLogoUrl = $resolvedHref )
 #supaResolveHref( $darkLogo )
 #set( $darkLogoUrl = $resolvedHref )
               <div class="supa-sidebar-logo-container">
-                <img class="supa-sidebar-logo only-light" src="$lightLogoUrl" alt="$esc.html( $supaLabels.logoLightAlt )" />
-                <img class="supa-sidebar-logo only-dark" src="$darkLogoUrl" alt="$esc.html( $supaLabels.logoDarkAlt )" />
+                <img class="supa-sidebar-logo only-light" src="$esc.html( $lightLogoUrl )" alt="$esc.html( $supaLabels.logoLightAlt )" />
+                <img class="supa-sidebar-logo only-dark" src="$esc.html( $darkLogoUrl )" alt="$esc.html( $supaLabels.logoDarkAlt )" />
               </div>
 #elseif( $lightLogo != "" )
 #supaResolveHref( $lightLogo )
               <div class="supa-sidebar-logo-container">
-                <img class="supa-sidebar-logo" src="$resolvedHref" alt="$esc.html( $supaLabels.logoAlt )" />
+                <img class="supa-sidebar-logo" src="$esc.html( $resolvedHref )" alt="$esc.html( $supaLabels.logoAlt )" />
               </div>
 #elseif( $site.bannerLeft && $site.bannerLeft.image && $site.bannerLeft.image.src )
 #supaResolveHref( $site.bannerLeft.image.src )
               <div class="supa-sidebar-logo-container">
-                <img class="supa-sidebar-logo" src="$resolvedHref" alt="#if( $site.bannerLeft.name )$esc.html( $site.bannerLeft.name )#else$esc.html( $supaLabels.logoAlt )#end" />
+                <img class="supa-sidebar-logo" src="$esc.html( $resolvedHref )" alt="#if( $site.bannerLeft.name )$esc.html( $site.bannerLeft.name )#else$esc.html( $supaLabels.logoAlt )#end" />
               </div>
 #end
 #if( !$sidebarHideName )
@@ -426,7 +428,7 @@
                     <li class="breadcrumb-item">
 #if( $crumb.href )
 #supaResolveHref( $crumb.href )
-                      <a href="$resolvedHref">$esc.html( $crumb.name )</a>
+                      <a href="$esc.html( $resolvedHref )">$esc.html( $crumb.name )</a>
 #else
                       <span>$esc.html( $crumb.name )</span>
 #end
@@ -452,8 +454,9 @@
 #set( $repoFilePath = $doxiaPath )
 #end
 #if( $sourceViewBtn )
+#set( $sourceViewUrl = "${sourceRepo}/blob/${sourceBranch}/${repoFilePath}" )
                 <a class="supa-icon-btn"
-                   href="${sourceRepo}/blob/${sourceBranch}/${repoFilePath}"
+                   href="$esc.html( $sourceViewUrl )"
                    target="_blank"
                    rel="noopener noreferrer"
                    data-bs-toggle="tooltip"
@@ -464,8 +467,9 @@
                 </a>
 #end
 #if( $sourceEditBtn )
+#set( $sourceEditUrl = "${sourceRepo}/edit/${sourceBranch}/${repoFilePath}" )
                 <a class="supa-icon-btn"
-                   href="${sourceRepo}/edit/${sourceBranch}/${repoFilePath}"
+                   href="$esc.html( $sourceEditUrl )"
                    target="_blank"
                    rel="noopener noreferrer"
                    data-bs-toggle="tooltip"
@@ -559,7 +563,7 @@
 #if( $iconHref )
 ## Like menu hrefs, a relative icon href is written from the site root: resolve it for this page
 #supaResolveHref( $iconHref )
-                    <a class="supa-footer-icon-link" href="$resolvedHref"#if( $iconTitle ) data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="$esc.html( $iconTitle )" aria-label="$esc.html( $iconTitle )"#end target="_blank" rel="noopener noreferrer">
+                    <a class="supa-footer-icon-link" href="$esc.html( $resolvedHref )"#if( $iconTitle ) data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="$esc.html( $iconTitle )" aria-label="$esc.html( $iconTitle )"#end target="_blank" rel="noopener noreferrer">
 #if( $iconHtml )
                       $iconHtml
 #elseif( $iconTitle )

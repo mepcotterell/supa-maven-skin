@@ -17,7 +17,7 @@
   <!-- With a URL, the copyright line links the organization name -->
   <organization>
     <name>Example &amp; Co</name>
-    <url>https://example.org/</url>
+    <url>https://example.org/?team=a&amp;b=&quot;c&quot;</url>
   </organization>
 
   <properties>

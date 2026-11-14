@@ -19,9 +19,11 @@
       <!-- An alias of "left" -->
       <sidebarBrandAlign>start</sidebarBrandAlign>
       <sidebarHideName>true</sidebarHideName>
-      <lightLogo>images/logo-light.svg</lightLogo>
-      <darkLogo>images/logo-dark.svg</darkLogo>
+      <!-- A quote and an ampersand in each URL must reach the page escaped -->
+      <lightLogo>images/logo-light.svg?v=1&amp;polarity="light"</lightLogo>
+      <darkLogo>images/logo-dark.svg?v=1&amp;polarity="dark"</darkLogo>
       <sourceRepository>https://github.com/example/options-site</sourceRepository>
+      <sourceBranch>docs&amp;"draft"</sourceBranch>
       <sourceViewButton>false</sourceViewButton>
       <colorSchemeSelector>false</colorSchemeSelector>
       <search>false</search>
@@ -31,6 +33,13 @@
       <footerTimestamp>false</footerTimestamp>
       <katexCssCdnUrl>https://example.org/vendor/katex/katex.min.css</katexCssCdnUrl>
       <katexJsCdnUrl>https://example.org/vendor/katex/contrib/auto-render.min.js</katexJsCdnUrl>
+      <navIcons>
+        <icon>
+          <href>https://example.org/chat?room=docs&amp;topic="skin"</href>
+          <title>Chat</title>
+          <html><![CDATA[<i class="bi bi-chat" aria-hidden="true"></i>]]></html>
+        </icon>
+      </navIcons>
     </supaSkin>
   </custom>
 

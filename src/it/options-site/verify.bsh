@@ -1,7 +1,8 @@
 // Renders <supaSkin> with every feature that can be turned off turned off (except the edit button
 // and the version badge, which legacy-site turns off), an explicit dark default, start-aligned
-// brand, light and dark logos with the name hidden, <body><head> and <footer> content, custom KaTeX
-// URLs, and a .md.vm page that calls the author macros. Each feature that is off is checked absent
+// brand, light and dark logos with the name hidden, a quote and an ampersand in configured URLs, a
+// footer icon, <body><head> and <footer> content, custom KaTeX URLs, and a
+// .md.vm page that calls the author macros. Each feature that is off is checked absent
 // next to something that stays, so a page that failed to render at all cannot pass.
 
 File siteDir = new File( basedir, "target/site" );
@@ -43,14 +44,17 @@ for ( int p = 0; p < pages.length; p++ ) {
     expectTag( path, html, "a", new String[] { "class", "supa-sidebar-brand", "data-supa-brand-align", "left" },
         "<sidebarBrandAlign>start</sidebarBrandAlign> must align the brand left" );
 
-    // <lightLogo> and <darkLogo> together: one image per polarity, each with its own alt text
+    // <lightLogo> and <darkLogo> together: one image per polarity, each with its own alt text, and
+    // the quote and ampersand in each URL escaped
     expectTags( path, html, "img", new String[] { "class~", "supa-sidebar-logo" }, 2, "the brand must show exactly two logos" );
     expectTag( path, html, "img", new String[] {
-        "class", "supa-sidebar-logo only-light", "src", rootPrefix + "images/logo-light.svg", "alt", "Light Logo" },
-        "the light logo must show only in the light polarity" );
+        "class", "supa-sidebar-logo only-light", "src", rootPrefix + "images/logo-light.svg?v=1&amp;polarity=&quot;light&quot;",
+        "alt", "Light Logo" },
+        "the light logo must show only in the light polarity, its URL escaped" );
     expectTag( path, html, "img", new String[] {
-        "class", "supa-sidebar-logo only-dark", "src", rootPrefix + "images/logo-dark.svg", "alt", "Dark Logo" },
-        "the dark logo must show only in the dark polarity" );
+        "class", "supa-sidebar-logo only-dark", "src", rootPrefix + "images/logo-dark.svg?v=1&amp;polarity=&quot;dark&quot;",
+        "alt", "Dark Logo" },
+        "the dark logo must show only in the dark polarity, its URL escaped" );
 
     // <sidebarHideName>true</sidebarHideName> drops the name and the version badge under the logos
     reject( path, html, "supa-brand-meta", "the hidden brand name must not render its container" );
@@ -105,9 +109,18 @@ for ( int p = 0; p < pages.length; p++ ) {
     reject( path, html, "bi-file-earmark-code", "the View page source icon must not render" );
     reject( path, html, "/blob/main/", "no link may point at the source file view" );
     expectTag( path, html, "a", new String[] {
-        "class", "supa-icon-btn", "href", "https://github.com/example/options-site/edit/main/" + sourcePath,
+        "class", "supa-icon-btn", "href", "https://github.com/example/options-site/edit/docs&amp;&quot;draft&quot;/" + sourcePath,
         "target", "_blank", "rel", "noopener noreferrer", "aria-label", "Edit this page", "data-bs-title", "Edit this page" },
-        "the Edit this page button must link to the page's source" );
+        "the Edit this page button must link to the page's source on <sourceBranch>, escaped" );
+
+    // A <navIcons> <href> is a URL, so it is escaped; its <html> is markup, so it stays markup
+    String chatIcon = expectTag( path, html, "a", new String[] {
+        "class", "supa-footer-icon-link", "href", "https://example.org/chat?room=docs&amp;topic=&quot;skin&quot;",
+        "aria-label", "Chat", "target", "_blank", "rel", "noopener noreferrer" },
+        "the footer icon must link to its escaped <href>" );
+    int chatStart = html.indexOf( chatIcon );
+    expectTag( path, html.substring( chatStart, html.indexOf( "</a>", chatStart ) ), "i", new String[] {
+        "class", "bi bi-chat", "aria-hidden", "true" }, "the footer icon's <html> must render as markup" );
 
     // <body><head>: evaluated with Velocity for each page, so $relativePath is the page's own
     expectTag( path, head, "link", new String[] {

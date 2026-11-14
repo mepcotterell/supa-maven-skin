@@ -247,7 +247,7 @@ Apache Maven Doxia Site Renderer#if( $doxiaSiteRendererVersion ) $doxiaSiteRende
 ## element nested in another interactive control (axe nested-interactive, WCAG 4.1.2), so the
 ## summary carries only the chevron toggle and is overlaid on the link row by CSS.
 #if( $currentItemHref )
-        <a class="supa-nav-link#if( $isCurrent ) active#end" href="$currentItemHref"#if( $isCurrent ) aria-current="page"#end>$esc.html( $item.name )</a>
+        <a class="supa-nav-link#if( $isCurrent ) active#end" href="$esc.html( $currentItemHref )"#if( $isCurrent ) aria-current="page"#end>$esc.html( $item.name )</a>
 #end
         <details class="supa-nav-details"#if( $shouldOpen ) open="open"#end>
 #if( $currentItemHref )
@@ -273,7 +273,7 @@ Apache Maven Doxia Site Renderer#if( $doxiaSiteRendererVersion ) $doxiaSiteRende
       </li>
 #else
       <li class="supa-nav-item#if( $isCurrent ) is-current#end" data-depth="$depth">
-        <a class="supa-nav-link#if( $isCurrent ) active#end" href="$currentItemHref"#if( $isCurrent ) aria-current="page"#end#if( $item.target ) target="$item.target"#end>
+        <a class="supa-nav-link#if( $isCurrent ) active#end" href="$esc.html( $currentItemHref )"#if( $isCurrent ) aria-current="page"#end#if( $item.target ) target="$esc.html( $item.target )"#end>
           <span class="supa-nav-text">$esc.html( $item.name )</span>
         </a>
       </li>
@@ -345,7 +345,7 @@ Apache Maven Doxia Site Renderer#if( $doxiaSiteRendererVersion ) $doxiaSiteRende
     <nav class="supa-related-pages not-prose" aria-label="$esc.html( $supaLabels.pageNav )">
 #if( $prevItem )
 #supaMenuItemHref( $prevItem.href )
-      <a class="supa-prev-page" href="$itemHref">
+      <a class="supa-prev-page" href="$esc.html( $itemHref )">
         <svg class="supa-related-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"></polyline></svg>
         <div class="supa-page-info">
           <div class="supa-context">
@@ -357,7 +357,7 @@ Apache Maven Doxia Site Renderer#if( $doxiaSiteRendererVersion ) $doxiaSiteRende
 #end
 #if( $nextItem )
 #supaMenuItemHref( $nextItem.href )
-      <a class="supa-next-page" href="$itemHref">
+      <a class="supa-next-page" href="$esc.html( $itemHref )">
         <div class="supa-page-info">
           <div class="supa-context">
             <span>$esc.html( $supaLabels.pageNext )</span>
@@ -521,16 +521,16 @@ Apache Maven Doxia Site Renderer#if( $doxiaSiteRendererVersion ) $doxiaSiteRende
 #set( $currentYear = "${currentYearInt}" )
 #end
 #if( ${project.inceptionYear} && $currentYear != "" && ( ${project.inceptionYear} != $currentYear ) )
-#set( $supaCopyrightYears = "${project.inceptionYear}&#x2013;${currentYear}" )
+#set( $supaCopyrightYears = "$esc.html( ${project.inceptionYear} )&#x2013;${currentYear}" )
 #elseif( ${project.inceptionYear} )
-#set( $supaCopyrightYears = "${project.inceptionYear}" )
+#set( $supaCopyrightYears = $esc.html( ${project.inceptionYear} ) )
 #elseif( $currentYear != "" )
 #set( $supaCopyrightYears = $currentYear )
 #end
 #if( ${project.organization} )
 #if( ${project.organization.name} && ${project.organization.url} )
 #set( $supaQuote = '"' )
-#set( $supaCopyrightOrg = "<a href=${supaQuote}${project.organization.url}${supaQuote}>$esc.html( ${project.organization.name} )</a>" )
+#set( $supaCopyrightOrg = "<a href=${supaQuote}$esc.html( ${project.organization.url} )${supaQuote}>$esc.html( ${project.organization.name} )</a>" )
 #elseif( ${project.organization.name} )
 #set( $supaCopyrightOrg = $esc.html( ${project.organization.name} ) )
 #end
@@ -595,6 +595,7 @@ Apache Maven Doxia Site Renderer#if( $doxiaSiteRendererVersion ) $doxiaSiteRende
     <div class="card h-100 p-3">
       <div class="d-flex align-items-center gap-2 mb-2">
 #if( $icon && $icon != "" )
+## #bi escapes its classes, so $theme is escaped there, once
         #bi( $icon "text-$theme fs-5" "" )
 #end
         <a href="$esc.html( $href )" class="fw-semibold text-decoration-none">$esc.html( $title )</a>

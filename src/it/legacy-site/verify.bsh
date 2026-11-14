@@ -1,6 +1,7 @@
 // Renders the legacy <furoSkin> block, which the skin reads when site.xml has no <supaSkin>, with an
 // explicit light default, a right-aligned brand showing the <bannerLeft> image, the version badge
-// and the edit button turned off, and a pom.xml <organization> with a URL.
+// and the edit button turned off, a pom.xml <organization> with a URL, and a quote and an
+// ampersand in each site.xml and pom.xml URL and menu target.
 
 File siteDir = new File( basedir, "target/site" );
 if ( !siteDir.isDirectory() ) {
@@ -8,14 +9,16 @@ if ( !siteDir.isDirectory() ) {
 }
 source( new File( basedir, "../../../src/it/verify-helpers.bsh" ).getCanonicalPath() );
 
+// Page, its source path, and the href of its Next page card
 String[][] pages = new String[][] {
-    { "index.html", "src/site/markdown/index.md" },
-    { "guide.html", "src/site/markdown/guide.md" }
+    { "index.html", "src/site/markdown/index.md", "guide.html" },
+    { "guide.html", "src/site/markdown/guide.md", "guide.html?view=a&amp;b=&quot;c&quot;" }
 };
 
 for ( int p = 0; p < pages.length; p++ ) {
     String path = pages[p][0];
     String sourcePath = pages[p][1];
+    String nextHref = pages[p][2];
     String html = readPage( siteDir, path );
     String htmlTag = expectTag( path, html, "html", new String[] {}, "page must have one <html>" );
     String body = expectTag( path, html, "body", new String[] {}, "page must have one <body>" );
@@ -42,16 +45,16 @@ for ( int p = 0; p < pages.length; p++ ) {
         3, "every theme trigger must name the configured light default" );
     // R-43: asserted when fixed in N15 (the theme menus still mark Auto as the selected item)
 
-    // <sidebarBrandAlign>right</sidebarBrandAlign>, linked to the <bannerLeft> href
+    // <sidebarBrandAlign>right</sidebarBrandAlign>, linked to the <bannerLeft> href, escaped
     expectTag( path, html, "a", new String[] {
-        "class", "supa-sidebar-brand", "data-supa-brand-align", "right", "href", "guide.html" },
-        "the brand must align right and link to the <bannerLeft> href" );
+        "class", "supa-sidebar-brand", "data-supa-brand-align", "right", "href", "guide.html?from=brand&amp;q=&quot;x&quot;" },
+        "the brand must align right and link to the escaped <bannerLeft> href" );
 
     // Without <lightLogo>, the <bannerLeft> image is the logo, named by the banner's name
     expectTags( path, html, "img", new String[] { "class~", "supa-sidebar-logo" }, 1, "the brand must show exactly one logo" );
     expectTag( path, html, "img", new String[] {
-        "class", "supa-sidebar-logo", "src", "images/banner.svg", "alt", "Legacy Banner Project" },
-        "the <bannerLeft> image must be the logo, named by <bannerLeft name>" );
+        "class", "supa-sidebar-logo", "src", "images/banner.svg?v=1&amp;q=&quot;x&quot;", "alt", "Legacy Banner Project" },
+        "the <bannerLeft> image must be the logo, named by <bannerLeft name>, its URL escaped" );
     expectText( path, html, "span", new String[] { "class", "supa-brand-text", "id", "supaSidebarBrandText" },
         "Legacy Banner Project", "the brand name must come from <bannerLeft name>" );
 
@@ -77,9 +80,21 @@ for ( int p = 0; p < pages.length; p++ ) {
     if ( !copyrightLine.replaceAll( "<[^>]*>", "" ).matches( "Copyright &copy; 2024&#x2013;\\d{4} Example &amp; Co\\." ) ) {
         throw new IllegalStateException( path + ": the copyright line must name the years and the organization: " + copyrightLine );
     }
-    expectText( path, copyrightLine, "a", new String[] { "href", "https://example.org/" }, "Example &amp; Co",
-        "the organization must link to its <url>" );
+    expectText( path, copyrightLine, "a", new String[] { "href", "https://example.org/?team=a&amp;b=&quot;c&quot;" }, "Example &amp; Co",
+        "the organization must link to its escaped <url>" );
     rejectTag( path, html, "div", new String[] { "class~", "supa-custom-footer" }, "no custom footer is configured" );
+
+    // site.xml hrefs and menu targets are escaped where they are written: the breadcrumb, a linked
+    // group, a leaf with a target, and the Next page card
+    expectText( path, html, "a", new String[] { "href", "https://example.com/docs?a=1&amp;b=&quot;2&quot;" }, "Example &amp; Co",
+        "the breadcrumb must link to its escaped href" );
+    expectText( path, html, "a", new String[] { "class", "supa-nav-link", "href", "guide.html?view=a&amp;b=&quot;c&quot;" }, "Reference",
+        "the linked menu group must link to its escaped href" );
+    expectTag( path, html, "a", new String[] {
+        "class", "supa-nav-link", "href", "index.html?part=a&amp;b=&quot;c&quot;", "target", "docs&amp;&quot;x&quot;" },
+        "the menu item must keep its escaped href and target" );
+    expectTag( path, html, "a", new String[] { "class", "supa-next-page", "href", nextHref },
+        "the Next page card must link to the next menu item, escaped" );
 }
 
 // Every aria-labelledby and aria-describedby on every page names an element there

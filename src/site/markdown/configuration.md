@@ -377,6 +377,13 @@ Controls metadata and icon links in the page footer (`.supa-footer`) and version
 | `<footerVersion>` | `true` | Display the project version badge next to the project title in the sidebar. |
 | `<navIcons>` | *(empty)* | List of `<icon>` elements (`<href>`, `<title>`, `<html>`) rendered as tooltip-enabled icon links on the right side of the page footer (`.supa-footer-icons`), each a target of at least 24 &times; 24 CSS pixels. Write a relative `<href>` from the site root (`faq.html`); the skin rewrites it for pages in subdirectories. URLs with a scheme and paths starting with `/` are used unchanged. |
 
+### How Values Reach the Page
+
+Most values are plain text. The skin escapes each one where it writes it into an HTML attribute or URL, so a quote or an ampersand cannot break the page's markup. Write an ampersand in `site.xml` or `pom.xml` as `&amp;`, as XML requires; the page then carries `&amp;` in the attribute, which browsers read as `&`.
+
+- **Escaped:** `<lightLogo>`, `<darkLogo>`, `<sourceRepository>`, `<sourceBranch>`, `<sourceDirectory>`, `<headingPermalinkSymbol>`, `<mermaidCdnUrl>`, `<katexCssCdnUrl>`, `<katexJsCdnUrl>`, `<labels>`, and the `<navIcons>` `<href>` and `<title>`; in `site.xml`, the `href`, `name`, and `target` of menu items and breadcrumbs and the `<bannerLeft>` `href`, `name`, and image `src`; in `pom.xml`, the project name and version, `<inceptionYear>`, and the `<organization>` `<name>` and `<url>`.
+- **Markup:** `<announcement>`, the `<navIcons>` `<html>`, and the `site.xml` `<body><head>` and `<body><footer>` are HTML, written as given; the last two are evaluated with Velocity first. So are the `$body`, `$footer`, and `$description` arguments of the [helper macros](#velocity-helper-macros-reference-site-macrosvm).
+
 ### Code, Search, Diagrams & Math
 
 Configures client-side code block enhancements, heading permalinks, offline search, and lazy-loaded Mermaid / KaTeX rendering.

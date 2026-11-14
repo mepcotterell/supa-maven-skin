@@ -11,9 +11,10 @@
     <version>${skinVersion}</version>
   </skin>
 
-  <!-- Without <lightLogo>, the sidebar shows this image, and the brand links to its href -->
-  <bannerLeft name="Legacy Banner Project" href="guide.html">
-    <image src="images/banner.svg" />
+  <!-- Without <lightLogo>, the sidebar shows this image, and the brand links to its href. Here and
+       below, a quote and an ampersand in each URL and target must reach the page escaped. -->
+  <bannerLeft name="Legacy Banner Project" href="guide.html?from=brand&amp;q=&quot;x&quot;">
+    <image src="images/banner.svg?v=1&amp;q=&quot;x&quot;" />
   </bannerLeft>
 
   <custom>
@@ -32,9 +33,16 @@
   </custom>
 
   <body>
+    <breadcrumbs>
+      <item name="Example &amp; Co" href="https://example.com/docs?a=1&amp;b=&quot;2&quot;" />
+    </breadcrumbs>
     <menu name="Documentation">
       <item name="Welcome" href="index.html" />
       <item name="User Guide" href="guide.html" />
+      <!-- A linked, collapsed group: the default <sidebarCollapseDepth> of 1 opens it -->
+      <item name="Reference" href="guide.html?view=a&amp;b=&quot;c&quot;" collapse="true">
+        <item name="Details" href="index.html?part=a&amp;b=&quot;c&quot;" target="docs&amp;&quot;x&quot;" />
+      </item>
     </menu>
   </body>
 </site>
