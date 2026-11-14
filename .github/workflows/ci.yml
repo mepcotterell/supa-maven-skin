@@ -111,7 +111,8 @@ jobs:
     # Measured worst cases: npm ci 41 s and axe 425 s (run 43569166780), the browser install
     # 584 s (run 42216815589), and about 15 s for checkout, Node setup, and the download, or
     # 41 + 425 + 584 + 15 = 1065 s. 25 minutes (1500 s) leaves 435 s, enough for the axe step
-    # to double alongside the slowest install seen.
+    # to double alongside the slowest install seen. The Invoker fixture sites, scanned since, add
+    # 42 of 388 page variants, about 7 of 172 s locally.
     timeout-minutes: 25
     permissions:
       contents: read

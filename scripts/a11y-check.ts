@@ -49,7 +49,11 @@
  * `toc-link-focus-mobile`, `toc-link-focus-tablet`, `toc-link-focus-smooth-mobile`,
  * and `toc-link-focus-smooth-tablet` check destination focus, Tab continuation, and that the
  * element Tab reached keeps focus once the TOC navigation has settled.
- * Search results also assert the combobox's active descendant matches selection.
+ * `sidebar-link-focus-mobile`, `sidebar-link-focus-desktop`, and their `-smooth` variants check
+ * the same for a same-page sidebar link, in the drawer and in the inline sidebar.
+ * Search results also assert the combobox's active descendant matches selection, and
+ * `search-dialog-no-results` the polite no-results status. `sidebar-depth-three` checks the
+ * self-site's third sidebar level.
  * `forced-colors-controls-tabs`, `forced-colors-palettes`, and `forced-colors-search`
  * check system-color selection and distinct keyboard focus in light and dark;
  * the controls/tabs scan is scoped to those widgets. `forced-colors-states` checks that checked
