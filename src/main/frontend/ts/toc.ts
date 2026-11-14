@@ -205,6 +205,51 @@ function browserRestoresScroll(): boolean {
 }
 
 /**
+ * Keeps the reader where they are through the browser's last try to scroll to the URL's fragment.
+ * The HTML gives a heading no `id`, so the browser finds nothing to scroll to while it parses the
+ * page. Firefox tries once more right after the load event, finds the id `prepareHeadings()` has
+ * given the heading since, and scrolls to it: past the place it restored on a reload or a Back, and
+ * past where the reader scrolled while the page loaded. A page whose HTML holds the id keeps both:
+ * Firefox found the heading while parsing, and leaves a page scrolled since then alone. This puts
+ * the page back where it was at the load event when `keep` says the reader's place stands and no
+ * reader input has come since. Firefox scrolls before it returns to the event loop, and nothing
+ * else scrolls the page by the next frame or task, whichever comes first; the next frame puts the
+ * page back before the heading is painted.
+ *
+ * @param keep - Whether the reader's place at the load event stands: the browser restored it, or
+ *     the reader has moved since the page opened.
+ */
+function keepPlaceAtLoad(keep: () => boolean): void {
+  if (document.readyState === 'complete') {
+    return;
+  }
+  window.addEventListener(
+    'load',
+    () => {
+      const left = window.scrollX;
+      const top = window.scrollY;
+      const inputSinceLoad = watchReaderInput();
+      let checked = false;
+      const putBack = (): void => {
+        if (checked) {
+          return;
+        }
+        checked = true;
+        const moved = window.scrollX !== left || window.scrollY !== top;
+        if (!inputSinceLoad() && keep() && moved) {
+          // Instant: under `scroll-behavior: smooth`, the default would glide back from the heading
+          window.scrollTo({ left, top, behavior: 'instant' });
+        }
+      };
+      // A hidden tab runs no frames, so a task does the check there
+      window.requestAnimationFrame(putBack);
+      window.setTimeout(putBack, 0);
+    },
+    { once: true }
+  );
+}
+
+/**
  * Scrolls to the element the URL's fragment names when the page opens, and returns a second scroll
  * to it. Doxia 2 writes no `id` on headings, so the browser cannot find the heading a link names
  * until `prepareHeadings()` gives it one, and this scroll stands in for the browser's. The content
@@ -213,7 +258,9 @@ function browserRestoresScroll(): boolean {
  * of pixels short. The returned function scrolls to the element again once that is over, unless the
  * reader has scrolled, clicked, touched, or pressed a key since the page opened, or the fragment
  * no longer names an element. Neither scroll runs when the browser restores the reader's place, on
- * a reload or a Back or Forward. Both are smooth only where the stylesheet makes them so.
+ * a reload or a Back or Forward, and `keepPlaceAtLoad()` keeps the browser's own late scroll to the
+ * heading from taking that place, or the reader's, away. Both are smooth only where the stylesheet
+ * makes them so.
  *
  * @returns Function that scrolls to the fragment's element again once the page has loaded and its
  *     fonts are in, and resolves when it has done so or skipped it.
@@ -223,9 +270,12 @@ function landOnFragment(): () => Promise<void> {
   if (typeof window === 'undefined' || window.location.hash.length <= 1) {
     return skip;
   }
+  const restoring = browserRestoresScroll();
+  const movedBeforeLoad = watchReaderInput();
+  keepPlaceAtLoad(() => movedBeforeLoad() || restoring);
   // On a reload or a Back without the back/forward cache, the browser puts the reader back where
   // they were. Scrolling to the heading would fight that, and the second scroll would win it.
-  if (browserRestoresScroll()) {
+  if (restoring) {
     return skip;
   }
   const target = findFragmentTarget(window.location.hash);

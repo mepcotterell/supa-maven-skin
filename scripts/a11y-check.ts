@@ -1143,6 +1143,19 @@ const READER_SCROLL_PX = 600;
 const RELOAD_SCROLL_PX = 1500;
 
 /**
+ * Reloading a page at a fragment after scrolling away from it. WebKit scrolls to the fragment again
+ * on a reload whose load event a subresource holds, even on a page with no skin markup, CSS, or
+ * script whose HTML holds the target's `id` (register entry R-53), so it cannot keep the reader's
+ * place on the kitchen sink.
+ */
+const RELOAD_ENGINES: EngineSupport = {
+  supported: ['chromium', 'firefox'],
+  reason:
+    'WebKit scrolls to the fragment again on a reload whose load event a subresource holds, ' +
+    'even on a plain page with a static id and no skin (R-53)'
+};
+
+/**
  * Animation frames the scroll position must hold before a landing counts as finished. A smooth
  * scroll moves it on every frame.
  */
@@ -4223,6 +4236,7 @@ const SCENARIOS: readonly InteractionScenario[] = [
     page: DEEP_LINK_PAGE,
     viewport: DESKTOP,
     variants: [{ palette: 'furo', polarity: 'light' }],
+    engines: RELOAD_ENGINES,
     setup: async (page) => {
       await page.emulateMedia({ reducedMotion: 'no-preference' });
       await openDeepLink(page, DEEP_LINK_TARGET);

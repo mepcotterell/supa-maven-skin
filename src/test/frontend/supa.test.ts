@@ -2863,6 +2863,82 @@ describe('Supa Maven Skin Frontend Modules', () => {
         happyDOM.setURL(originalUrl);
       }
     });
+
+    it('keeps a reader who moved or was restored where they are when the browser tries the fragment again at load', async () => {
+      const happyDOM = (window as unknown as { happyDOM: { setURL: (url: string) => void } })
+        .happyDOM;
+      const originalUrl = window.location.href;
+      const scrollSpy = vi.spyOn(Element.prototype, 'scrollIntoView').mockImplementation(() => undefined);
+      let navigationType: NavigationTimingType = 'navigate';
+      const entries = vi
+        .spyOn(performance, 'getEntriesByType')
+        .mockImplementation((type: string) =>
+          type === 'navigation' ? ([{ type: navigationType }] as unknown as PerformanceEntryList) : []
+        );
+      // happy-dom has finished loading; stand in for a page whose load event is still to come
+      let readyState: DocumentReadyState = 'interactive';
+      Object.defineProperty(document, 'readyState', { get: () => readyState, configurable: true });
+      const tick = (): Promise<void> => new Promise((resolveTick) => setTimeout(resolveTick, 0));
+      /**
+       * Opens the page at `#usage` the way `type` names, lets `beforeLoad` run, fires the load
+       * event, and then scrolls as Firefox does when it tries the fragment once more right after
+       * the load event, now that the skin has given the heading its id.
+       *
+       * @param type - How the reader reached the page.
+       * @param beforeLoad - What happens between the skin's start and the load event.
+       * @param afterLoad - What happens between the load event and the browser's scroll.
+       * @returns The scroll position once the skin has had its turn.
+       */
+      const open = async (
+        type: NavigationTimingType,
+        beforeLoad: () => void,
+        afterLoad: () => void = () => undefined
+      ): Promise<number> => {
+        navigationType = type;
+        readyState = 'interactive';
+        window.scrollTo(0, 0);
+        happyDOM.setURL('https://example.org/docs/guide.html#usage');
+        document.body.innerHTML =
+          '<main id="supa-main-content"><h1>Guide</h1><h2>Install</h2><h2>Usage</h2></main>';
+        initTocAndScrollSpy();
+        beforeLoad();
+        readyState = 'complete';
+        window.dispatchEvent(new Event('load'));
+        afterLoad();
+        window.scrollTo(0, 6000);
+        await tick();
+        return window.scrollY;
+      };
+
+      try {
+        // The browser put the reader back where they were before a reload or a Back
+        expect(await open('reload', () => window.scrollTo(0, 3000))).toBe(3000);
+        expect(await open('back_forward', () => window.scrollTo(0, 3000))).toBe(3000);
+        // The reader scrolled away from the heading before the page had loaded
+        expect(
+          await open('navigate', () => {
+            window.dispatchEvent(new Event('wheel'));
+            window.scrollTo(0, 2400);
+          })
+        ).toBe(2400);
+        // Nobody moved: the browser's scroll to the heading stands
+        expect(await open('navigate', () => window.scrollTo(0, 5000))).toBe(6000);
+        // The reader's own input after the load event is theirs to keep
+        expect(
+          await open(
+            'reload',
+            () => window.scrollTo(0, 3000),
+            () => window.dispatchEvent(new Event('keydown'))
+          )
+        ).toBe(6000);
+      } finally {
+        Reflect.deleteProperty(document, 'readyState');
+        window.scrollTo(0, 0);
+        entries.mockRestore();
+        scrollSpy.mockRestore();
+        happyDOM.setURL(originalUrl);
+      }
+    });
   });
 
   describe('Code Block Highlighting, Language Pill, and Copy Button', () => {
