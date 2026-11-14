@@ -36,8 +36,13 @@
  * state was reached, scans it in `furo` light and dark and `modus` dark (AAA)
  * unless the scenario lists its own variants, and asserts the state still held
  * after the scan, so a broken selector fails the run instead of quietly
- * scanning the closed state. Every scan first waits for running CSS
- * transitions to finish, so axe measures settled colors, not a fade.
+ * scanning the closed state. `control-boundaries-focus` checks normal and
+ * validation borders of the checkbox, radio, switch, form control, chip input, and OTP slots,
+ * range track boundaries, thumb and fill contrast, preserved disabled range and OTP paint,
+ * unthemed and themed switch knobs, checked contrast and disabled fading, and a focused pill in
+ * all 12 variants.
+ * Every scan first waits for running CSS transitions to finish, so axe
+ * measures settled colors, not a fade.
  *
  * Run `mvn -B -ntp clean verify site` first, then `npm run test:a11y`; append
  * page or scenario names (`npm run test:a11y -- team.html palette-menu`) to
@@ -795,6 +800,11 @@ const PRINTED_FILLS: readonly PrintedFill[] = [
     paint: '',
     probe: '<div class="list-group"><span class="list-group-item active">Item</span></div>'
   },
+  ...['header', 'footer'].map((cap): PrintedFill => ({
+    selector: `.card.theme-primary .card-${cap}`,
+    paint: '',
+    probe: `<div class="card theme-primary"><div class="card-${cap}">Printed cap</div></div>`
+  })),
   { selector: '.form-range-input', paint: null },
   { selector: '.strength-segment.active', paint: '' },
   { selector: '.placeholder', paint: '' },
@@ -858,9 +868,13 @@ function printComponentsScenario(): InteractionScenario {
   const printed = printScenario('components.html', PRINT_PAGE);
   return {
     ...printed,
+    variants: ALL_VARIANTS,
     assertState: async (p) => {
       await printed.assertState(p);
       await expectPrintedFills(p);
+      await p.locator('#supa-main-content').evaluate((el, html) => el.insertAdjacentHTML('beforeend', html), INLINE_CODE_FILLS);
+      await expectInlineCodeOnFills(p);
+      await p.locator('#supaInlineCodeFills').evaluate((el) => el.remove());
       if (await p.locator('.documentation-channels').isVisible()) {
         throw new Error('Documentation navigation is rendered in print');
       }
@@ -1114,6 +1128,412 @@ function deepLinkScenario(
 }
 
 /**
+ * Measures the painted form edges and inactive pill outline on their actual ancestor fills, and
+ * the unchecked switch's knob on its track: the knob's position is what shows the off state.
+ * Canvas converts Chromium's resolved CSS colors to sRGB; translucent ancestor fills are
+ * composited before measuring WCAG luminance. axe does not check non-text contrast.
+ *
+ * @param page - Components page with unchecked controls and a keyboard-focused inactive pill.
+ */
+async function expectControlContrast(page: Page): Promise<void> {
+  await settleTransitions(page);
+  const failures = await page.evaluate(() => {
+    const canvas = document.createElement('canvas');
+    canvas.width = canvas.height = 1;
+    const context = canvas.getContext('2d', { willReadFrequently: true });
+    if (!context) {
+      throw new Error('Canvas color conversion is unavailable');
+    }
+    /**
+     * Converts a browser-resolved color to straight sRGB and alpha.
+     * @param color - Computed CSS color.
+     * @returns RGBA channels in [0, 1].
+     */
+    function rgba(color: string): number[] {
+      context!.clearRect(0, 0, 1, 1);
+      context!.fillStyle = color;
+      context!.fillRect(0, 0, 1, 1);
+      return Array.from(context!.getImageData(0, 0, 1, 1).data, (channel) => channel / 255);
+    }
+    /**
+     * Composites a color over an opaque background.
+     * @param top - Foreground RGBA.
+     * @param bottom - Opaque background RGBA.
+     * @returns Composited opaque RGBA.
+     */
+    function over(top: number[], bottom: number[]): number[] {
+      return [0, 1, 2].map((i) => top[i] * top[3] + bottom[i] * (1 - top[3])).concat(1);
+    }
+    /**
+     * Resolves the actual fill through all transparent ancestors.
+     * @param element - Element whose background is needed.
+     * @returns Opaque composited sRGB background.
+     */
+    function background(element: Element | null): number[] {
+      if (!element) {
+        return [1, 1, 1, 1];
+      }
+      return over(rgba(getComputedStyle(element).backgroundColor), background(element.parentElement));
+    }
+    /**
+     * Calculates WCAG relative luminance.
+     * @param color - Opaque sRGB color.
+     * @returns Relative luminance.
+     */
+    function luminance(color: number[]): number {
+      return color.slice(0, 3).map((v) => v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4)
+        .reduce((sum, v, i) => sum + v * [0.2126, 0.7152, 0.0722][i], 0);
+    }
+    const found: string[] = [];
+    const minimum = getComputedStyle(document.documentElement)
+      .getPropertyValue('--supa-wcag-level').includes('AAA') ? 4.5 : 3;
+    for (const selector of ['#checkMermaid', '#switchCopyBtn', '#demoDatepickerInput',
+      '#supaBoundaryRadio', '.chip-input', '[data-bs-target="#bsTabGradle"]']) {
+      const input = document.querySelector<HTMLElement>(selector);
+      if (!input) {
+        throw new Error(`Missing control ${selector}`);
+      }
+      const focus = selector.includes('bsTabGradle');
+      if (input instanceof HTMLInputElement && input.checked) {
+        found.push(`${selector} is checked`);
+      }
+      if (focus && (!input.matches(':focus-visible') || input.classList.contains('active'))) {
+        found.push('The inactive nav pill does not have keyboard-visible focus');
+      }
+      const element = selector === '#switchCopyBtn' ? input.closest('.switch')! : input;
+      const style = getComputedStyle(element);
+      if (focus ? style.outlineStyle !== 'solid' || parseFloat(style.outlineWidth) < 2
+        : style.borderTopStyle !== 'solid' || parseFloat(style.borderTopWidth) < 1) {
+        found.push(`${selector} has no painted ${focus ? 'outline' : 'border'}`);
+      }
+      const beneath = background(element.parentElement);
+      const painted = over(rgba(focus ? style.outlineColor : style.borderTopColor), beneath);
+      const a = luminance(painted);
+      const b = luminance(beneath);
+      const ratio = (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+      if (ratio < minimum) {
+        found.push(`${selector}: ${ratio.toFixed(3)}:1, minimum ${minimum}:1`);
+      }
+      if (selector === '#switchCopyBtn') {
+        const track = over(rgba(style.backgroundColor), beneath);
+        const knob = luminance(over(rgba(getComputedStyle(element, '::before').backgroundColor), track));
+        const fill = luminance(track);
+        const knobRatio = (Math.max(knob, fill) + 0.05) / (Math.min(knob, fill) + 0.05);
+        if (knobRatio < minimum) {
+          found.push(`${selector} knob on its track: ${knobRatio.toFixed(3)}:1, minimum ${minimum}:1`);
+        }
+      }
+    }
+
+    const range = document.querySelector('#demoRangeInput')!.closest('.form-range')!;
+    const slot = document.querySelector('.otp-slot')!;
+    const probe = document.createElement('span');
+    range.append(probe);
+    /**
+     * Resolves a component token to its painted opaque color.
+     * @param token - Range custom property.
+     * @returns Resolved sRGB color.
+     */
+    function rangeColor(token: string): number[] {
+      probe.style.backgroundColor = `var(${token})`;
+      return background(probe);
+    }
+    const track = rangeColor('--range-track-bg');
+    const thumb = rangeColor('--range-thumb-bg');
+    const fill = rangeColor('--range-track-fill-bg');
+    const pageFill = background(range.parentElement);
+    // Chromium does not expose native track computed styles. Resolve Bootstrap's shared
+    // track shadow token on a probe; both WebKit and Gecko consume it in range-track().
+    probe.style.boxShadow = 'var(--range-track-box-shadow, none)';
+    const shadow = getComputedStyle(probe).boxShadow;
+    const boundaryColor = shadow.match(/(?:rgba?|color)\([^)]*\)/)?.[0];
+    const boundary = boundaryColor ? rgba(boundaryColor) : track;
+    if (!shadow.includes('inset') || !shadow.includes('1px')) {
+      found.push(`Range track has no painted inset boundary: ${shadow}`);
+    }
+    const secondary = rangeColor('--color-background-secondary');
+    const pairs: Array<[string, number[], number[]]> = [
+      ['range track boundary/page', boundary, pageFill],
+      ['range track boundary/secondary', boundary, secondary],
+      ['OTP slot/secondary', rgba(getComputedStyle(slot).borderTopColor), secondary],
+      ['range thumb/track', thumb, track],
+      ['range thumb/page', thumb, pageFill],
+      ['range fill/track', fill, track],
+      ['OTP slot/surface', rgba(getComputedStyle(slot).borderTopColor), background(slot)]
+    ];
+    range.classList.add('theme-inverse');
+    const inverse = rangeColor('--theme-bg');
+    const inverseThumb = rangeColor('--range-thumb-bg');
+    const inverseFill = rangeColor('--range-track-fill-bg');
+    if (inverseThumb.join() !== inverse.join() || inverseFill.join() !== inverse.join()) {
+      found.push('inverse range must preserve its theme fill');
+    }
+    pairs.push(['inverse thumb/track', inverseThumb, track],
+      ['inverse thumb/page', inverseThumb, pageFill], ['inverse fill/track', inverseFill, track]);
+    range.classList.remove('theme-inverse');
+    for (const [label, ink, surface] of pairs) {
+      const a = luminance(ink);
+      const b = luminance(surface);
+      const ratio = (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+      if (ratio < minimum) {
+        found.push(`${label}: ${ratio.toFixed(3)}:1, minimum ${minimum}:1`);
+      }
+    }
+    const slots = document.querySelectorAll('.otp-slot');
+    if (slots.length !== 6) {
+      throw new Error(`Expected six rendered OTP slots, found ${slots.length}`);
+    }
+    for (const cell of slots) {
+      if (getComputedStyle(cell).borderTopColor !== getComputedStyle(slot).borderTopColor) {
+        found.push('OTP slots have inconsistent boundaries');
+      }
+    }
+    const otpInput = document.querySelector<HTMLInputElement>('.otp-input')!;
+    const rangeInput = document.querySelector<HTMLInputElement>('#demoRangeInput')!;
+    // Disabled native paint stays Bootstrap-owned; the enabled range tokens must disappear.
+    rangeInput.disabled = true;
+    probe.style.boxShadow = 'var(--range-track-box-shadow, none)';
+    if (getComputedStyle(probe).boxShadow !== 'none') {
+      found.push('Disabled range inherited the enabled track boundary');
+    }
+    const disabledThumb = rangeColor('--range-thumb-bg');
+    probe.style.backgroundColor = 'var(--theme-bg, var(--primary-base))';
+    if (JSON.stringify(disabledThumb) !== JSON.stringify(background(probe))) {
+      found.push('Disabled range inherited the enabled thumb override');
+    }
+    rangeInput.disabled = false;
+    otpInput.disabled = true;
+    probe.style.backgroundColor = 'var(--bg-2)';
+    if (JSON.stringify(rgba(getComputedStyle(slot).backgroundColor)) !==
+        JSON.stringify(background(probe))) {
+      found.push('Disabled OTP lost its Bootstrap background');
+    }
+    otpInput.disabled = false;
+    probe.remove();
+    const switches = document.querySelectorAll<HTMLElement>('#supaThemedSwitches .switch');
+    if (switches.length !== 32) {
+      throw new Error(`Expected 32 themed switch states, found ${switches.length}`);
+    }
+    for (const element of switches) {
+      const input = element.querySelector('input')!;
+      const style = getComputedStyle(element);
+      const indicator = getComputedStyle(element, '::before');
+      const track = background(element);
+      const ink = over(rgba(indicator.backgroundColor), track);
+      const a = luminance(ink);
+      const b = luminance(track);
+      const ratio = (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+      if (!input.disabled && ratio < minimum) {
+        found.push(`${input.id} knob on its track: ${ratio.toFixed(3)}:1, minimum ${minimum}:1`);
+      }
+      // Disabled controls are exempt; preserve Bootstrap's existing themed ink and fading.
+      const probe = document.createElement('span');
+      probe.style.color = input.checked || input.disabled ? 'var(--theme-contrast)' :
+        'var(--color-foreground-primary)';
+      element.append(probe);
+      if (JSON.stringify(rgba(getComputedStyle(probe).color)) !==
+        JSON.stringify(rgba(indicator.backgroundColor))) {
+        found.push(`${input.id} has unexpected knob ink`);
+      }
+      probe.remove();
+      if (indicator.opacity !== (input.disabled && !input.checked ? '0.4' : '1') ||
+        style.opacity !== (input.disabled && input.checked ? '0.65' : '1')) {
+        found.push(`${input.id} has unexpected disabled fading`);
+      }
+    }
+    return found;
+  });
+  if (failures.length) {
+    throw new Error(failures.join('; '));
+  }
+}
+
+/** Shared fixture for card-cap text and link contrast on solid, subtle, and translucent fills. */
+const INLINE_CODE_FILLS = `
+  <div id="supaInlineCodeFills">
+    ${['primary', 'accent', 'success', 'info', 'warning', 'danger', 'secondary', 'inverse'].map((theme) => `
+    <div class="card theme-${theme}">
+      <div class="card-header"><span data-supa-footer>Header</span> <a href="#supaInlineCodeFills" data-supa-footer>Header link</a> </div>
+      <div class="card-footer"><span data-supa-footer>Footer ${theme}</span> <a href="#supaInlineCodeFills" data-supa-footer>Footer link</a> </div>
+    </div>`).join('')}
+    <div class="theme-danger"><div class="card">
+      <div class="card-header"><span data-supa-footer>Inherited header</span></div><div class="card-footer"><span data-supa-footer>Inherited theme</span></div>
+    </div></div>
+    <div class="theme-danger"><div class="theme-reset">
+      <div class="card">
+        <div class="card-header"></div>
+        <div class="card-footer"></div>
+      </div>
+      <div class="theme-danger"><div class="card">
+        <div class="card-header"></div>
+        <div class="card-footer"></div>
+      </div></div>
+    </div></div>
+    <ul class="list-group"><li class="list-group-item active"></li></ul>
+    <div class="card"><div class="card-header"></div></div>
+    <div class="card card-subtle theme-success"><div class="card-header"></div></div>
+    <div class="card card-translucent theme-primary"><div class="card-header"></div></div>
+    ${['subtle', 'translucent'].flatMap((kind) =>
+      ['primary', 'accent', 'success', 'info', 'warning', 'danger', 'secondary', 'inverse'].map((theme) => `
+      <div class="card card-${kind} theme-${theme}"><div class="card-header"><span data-supa-footer>${kind} header</span><a href="#supaInlineCodeFills" data-supa-footer>Header link</a></div><div class="card-footer"><span data-supa-footer>${kind} ${theme}</span><a href="#supaInlineCodeFills" data-supa-footer>Footer link</a></div></div>`)).join('')}
+  </div>`;
+
+/**
+ * Checks card-cap text and links against their composited fill in `INLINE_CODE_FILLS`.
+ *
+ * @param page - Components page with `INLINE_CODE_FILLS` in its article.
+ */
+async function expectInlineCodeOnFills(page: Page): Promise<void> {
+  const failures = await page.evaluate(() => {
+    const canvas = document.createElement('canvas');
+    canvas.width = canvas.height = 1;
+    const context = canvas.getContext('2d', { willReadFrequently: true });
+    if (!context) {
+      throw new Error('Canvas color conversion is unavailable');
+    }
+    /**
+     * Converts a browser-resolved color to straight sRGB and alpha.
+     * @param color - Computed CSS color.
+     * @returns RGBA channels in [0, 1].
+     */
+    function rgba(color: string): number[] {
+      context!.clearRect(0, 0, 1, 1);
+      context!.fillStyle = color;
+      context!.fillRect(0, 0, 1, 1);
+      return Array.from(context!.getImageData(0, 0, 1, 1).data, (channel) => channel / 255);
+    }
+    /**
+     * Composites a color over an opaque background.
+     * @param top - Foreground RGBA.
+     * @param bottom - Opaque background RGBA.
+     * @returns Composited opaque RGBA.
+     */
+    function over(top: number[], bottom: number[]): number[] {
+      return [0, 1, 2].map((i) => top[i] * top[3] + bottom[i] * (1 - top[3])).concat(1);
+    }
+    /**
+     * Resolves the actual fill through all transparent ancestors.
+     * @param element - Element whose background is needed.
+     * @returns Opaque composited sRGB background.
+     */
+    function background(element: Element | null): number[] {
+      if (!element) {
+        return [1, 1, 1, 1];
+      }
+      return over(rgba(getComputedStyle(element).backgroundColor), background(element.parentElement));
+    }
+    /**
+     * Calculates WCAG relative luminance.
+     * @param color - Opaque sRGB color.
+     * @returns Relative luminance.
+     */
+    function luminance(color: number[]): number {
+      return color.slice(0, 3).map((v) => v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4)
+        .reduce((sum, v, i) => sum + v * [0.2126, 0.7152, 0.0722][i], 0);
+    }
+    const found: string[] = [];
+    const minimum = getComputedStyle(document.documentElement)
+      .getPropertyValue('--supa-wcag-level').includes('AAA') ? 7 : 4.5;
+    const footerText = document.querySelectorAll<HTMLElement>('#supaInlineCodeFills [data-supa-footer]');
+    if (footerText.length !== 98) {
+      found.push(`expected 98 cap text fixtures, found ${footerText.length}`);
+    }
+    for (const text of footerText) {
+      const fill = background(text);
+      const a = luminance(over(rgba(getComputedStyle(text).color), fill));
+      const b = luminance(fill);
+      const ratio = (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+      if (ratio < minimum) {
+        found.push(`${text.parentElement!.parentElement!.className} ${text.textContent}: ${ratio.toFixed(2)}:1, minimum ${minimum}:1`);
+      }
+    }
+    return found;
+  });
+  if (failures.length) {
+    throw new Error(failures.join('; '));
+  }
+}
+
+/** A control whose border `control-boundaries-focus` checks in normal and validation states. */
+interface ValidatedControl {
+  /** The element that takes the validation class. */
+  target: string;
+  /** The element that draws the border: the switch and chip input paint their wrappers. */
+  painted: string;
+}
+
+/** The controls whose normal and validation borders `control-boundaries-focus` checks. */
+const VALIDATED_CONTROLS: readonly ValidatedControl[] = [
+  { target: '#demoDatepickerInput', painted: '#demoDatepickerInput' },
+  { target: '.otp', painted: '.otp-slot' },
+  { target: '#checkMermaid', painted: '#checkMermaid' },
+  { target: '#switchCopyBtn', painted: '.switch:has(#switchCopyBtn)' },
+  { target: '#supaBoundaryRadio', painted: '#supaBoundaryRadio' },
+  { target: '.chip-input .form-ghost', painted: '.chip-input' }
+];
+
+/**
+ * Checks normal and validation borders without leaving validation classes on the fixture.
+ *
+ * @param page - Components page with unchecked controls and a focused inactive pill.
+ */
+async function expectControlValidationBorders(page: Page): Promise<void> {
+  for (const state of ['normal', 'invalid', 'valid']) {
+    await page.evaluate(([validationState, controls]) => {
+      for (const { target } of controls) {
+        const control = document.querySelector(target);
+        if (!control || control.matches('.is-valid, .is-invalid')) {
+          throw new Error(`Expected an unvalidated fixture: ${target}`);
+        }
+        if (validationState !== 'normal') {
+          control.classList.add(`is-${validationState}`);
+        }
+      }
+    }, [state, VALIDATED_CONTROLS] as const);
+    try {
+      await settleTransitions(page);
+      const problems = await page.evaluate(([validationState, controls]) => {
+        const failures: string[] = [];
+        for (const { target, painted: paintedSelector } of controls) {
+          const painted = document.querySelector(paintedSelector);
+          if (!painted) {
+            throw new Error(`Missing painted control: ${paintedSelector}`);
+          }
+          // Resolve each token through the browser in the component's own inherited context.
+          const probe = document.createElement('span');
+          painted.after(probe);
+          const token = validationState === 'normal' ? '--supa-control-border'
+            : validationState === 'invalid' ? '--danger-border' : '--success-border';
+          probe.style.borderColor = getComputedStyle(painted).getPropertyValue(token);
+          const expected = getComputedStyle(probe).borderTopColor;
+          probe.style.borderColor = getComputedStyle(painted).getPropertyValue('--supa-control-border');
+          const normal = getComputedStyle(probe).borderTopColor;
+          probe.remove();
+          const style = getComputedStyle(painted);
+          if (style.borderTopColor !== expected || style.borderTopStyle !== 'solid' ||
+              Number.parseFloat(style.borderTopWidth) <= 0 ||
+              (validationState !== 'normal' && style.borderTopColor === normal)) {
+            failures.push(`${target} ${validationState}: border ${style.borderTopColor}, ` +
+              `expected ${token} (${expected}); normal boundary ${normal}`);
+          }
+        }
+        return failures;
+      }, [state, VALIDATED_CONTROLS] as const);
+      if (problems.length > 0) {
+        throw new Error(`Control validation borders: ${problems.join('; ')}`);
+      }
+    } finally {
+      await page.evaluate((controls) => {
+        for (const { target } of controls) {
+          document.querySelector(target)?.classList.remove('is-valid', 'is-invalid');
+        }
+      }, VALIDATED_CONTROLS);
+      await settleTransitions(page);
+    }
+  }
+}
+
+/**
  * Interactive states scanned on top of the load-time matrix, each in its
  * `variants` (by default every `SCENARIO_VARIANTS` entry). Selectors target the
  * skin's own markup from `site.vm`, `site-macros.vm`, and the TypeScript
@@ -1121,6 +1541,54 @@ function deepLinkScenario(
  * toggled, so a state left open elsewhere on the page cannot stand in for it.
  */
 const SCENARIOS: readonly InteractionScenario[] = [
+  {
+    name: 'control-boundaries-focus',
+    page: 'components.html',
+    viewport: DESKTOP,
+    variants: ALL_VARIANTS,
+    setup: async (page) => {
+      await page.locator('.otp-slot').first().waitFor();
+      await page.locator('.otp-input').fill('');
+      await page.locator('#checkMermaid').uncheck();
+      await page.locator('#switchCopyBtn').uncheck();
+      // The showcase has no radio, so add an unchecked one beside the checkbox it mirrors.
+      await page.locator('#checkMermaid').evaluate((check) => {
+        check.closest('.form-field')!.insertAdjacentHTML('afterend', '<div class="form-field">' +
+          '<input class="radio" type="radio" id="supaBoundaryRadio" name="supaBoundaryRadio" />' +
+          '<label for="supaBoundaryRadio">Unchecked radio</label></div>');
+      });
+      // The showcase's switch is unthemed. Mirror it in every Bootstrap theme and state.
+      await page.locator('#switchCopyBtn').evaluate((switchInput) => {
+        const fixture = document.createElement('div');
+        fixture.id = 'supaThemedSwitches';
+        for (const theme of ['primary', 'accent', 'success', 'info', 'warning', 'danger',
+          'secondary', 'inverse']) {
+          for (const state of ['unchecked', 'checked', 'disabled', 'checked-disabled']) {
+            const id = `supaSwitch-${theme}-${state}`;
+            fixture.insertAdjacentHTML('beforeend', `<div class="form-field"><div class="switch theme-${theme}">` +
+              `<input type="checkbox" role="switch" id="${id}"` +
+              `${state === 'checked' || state === 'checked-disabled' ? ' checked' : ''}` +
+              `${state.includes('disabled') ? ' disabled' : ''} /></div>` +
+              `<label for="${id}">${theme} ${state}</label></div>`);
+          }
+        }
+        switchInput.closest('.form-field')!.after(fixture);
+      });
+      // Bootstrap's roving tabs skip inactive pills. Make this one reachable for a
+      // keyboard-only focus probe without the arrow key also activating its panel.
+      await page.locator('[data-bs-target="#bsTabGradle"]').evaluate((el) => {
+        el.setAttribute('tabindex', '0');
+      });
+      await page.locator('[data-bs-target="#bsTabMaven"]').focus();
+      await page.keyboard.press('Tab');
+      await page.mouse.move(0, 0);
+      await settleTransitions(page);
+    },
+    assertState: async (page) => {
+      await expectControlValidationBorders(page);
+      await expectControlContrast(page);
+    }
+  },
   ...[1440, 390, 320].flatMap((width): InteractionScenario[] =>
     [false, true].map((open): InteractionScenario => ({
       name: `documentation-channels-${width}-${open ? 'open' : 'closed'}`,

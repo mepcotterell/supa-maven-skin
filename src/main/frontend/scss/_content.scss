@@ -184,6 +184,16 @@
       color: var(--color-brand-primary);
       text-decoration-thickness: 2px;
     }
+
+    // Solid card caps need their theme's ink. Nest here to beat the article link selector's
+    // exclusions, keeping its underline and unthemed fallback at rest and on hover.
+    &:is(:is(.card-header, .card-footer):not(:is(.card-subtle, .card-translucent) *) a) {
+      color: var(--theme-contrast, var(--color-brand-content));
+
+      &:hover {
+        color: var(--theme-contrast, var(--color-brand-primary));
+      }
+    }
   }
 
   // Inline code (not inside <pre>)

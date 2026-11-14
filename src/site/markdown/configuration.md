@@ -420,7 +420,7 @@ With the default URLs, allow `https://cdn.jsdelivr.net` in `script-src` (Mermaid
 
 ## Built-In Accessible Color Schemes
 
-Every built-in color scheme is verified at build time by `scripts/lint-scss.ts` against **WCAG 2.2** relative luminance and contrast rules across both Light and Dark polarities: text and accent tokens on the primary (`--color-background-primary`) and secondary (`--color-background-secondary`) surfaces, the text, link, and icon colors on admonition title bars and bodies and on `.alert.theme-*` callouts, the sidebar, TOC, and search-result states, and Bootstrap 6 components in every theme and without one, at rest, hovered, and toggled on (see [Architecture](architecture.html) for the full list):
+Every built-in color scheme is verified at build time by `scripts/lint-scss.ts` against **WCAG 2.2** relative luminance and contrast rules across both Light and Dark polarities: text and accent tokens on the primary (`--color-background-primary`) and secondary (`--color-background-secondary`) surfaces, the text, link, and icon colors on admonition title bars and bodies and on `.alert.theme-*` callouts, the sidebar, TOC, and search-result states, Bootstrap control boundaries (unchecked checkboxes and radios, switch edges, and form-control and chip-input borders) on page and secondary surfaces, unchecked switch knobs on their tracks, focus rings on page, secondary, item, and hover surfaces, and Bootstrap 6 components in every theme and without one, at rest, hovered, and toggled on (see [Architecture](architecture.html) for the full list):
 
 | Scheme ID | Inspiration | Contrast | Notes |
 | :--- | :--- | :--- | :--- |
@@ -439,8 +439,8 @@ Defaults shown below are for the `furo` scheme; other schemes can override them.
 
 | Variable Name | Purpose |
 | :--- | :--- |
-| `color-brand-primary` | Primary brand accent color (active sidebar links, active TOC border, focus rings, `.btn-primary`). |
-| `color-brand-content` | Content hyperlink color inside `.prose` articles. |
+| `color-brand-primary` | Primary brand accent color (active sidebar links, active TOC border, skin-owned focus rings, `.btn-primary`). |
+| `color-brand-content` | Content hyperlink color inside `.prose` articles and Bootstrap component focus rings (`--primary-focus-ring`). Text and links on solid themed card headers and footers use `--theme-contrast` on their theme fill; subtle and translucent caps retain their own text colors. |
 | `color-background-primary` | Main article and page background surface (`--bg-body`). |
 | `color-background-secondary` | Left sidebar, code block header, and card secondary surface (`--bg-1`). |
 | `color-background-item` | Sidebar version badge, code language badge, and search-result badge background (default `light-dark(#f1f3f5, #212529)`). |
@@ -449,9 +449,10 @@ Defaults shown below are for the `furo` scheme; other schemes can override them.
 | `color-code-background` | Background of inline code and code blocks (default `light-dark(#f6f8fa, #1c1f24)`). |
 | `color-inline-code-background` | Declared inline-code background token (default `light-dark(rgba(175, 184, 193, 0.22), rgba(110, 118, 129, 0.35))`). Currently unused by the skin; inline code uses `color-code-background`. |
 | `color-inline-code-text` | Inline code text color (default `var(--color-foreground-primary)`). |
-| `color-foreground-primary` | Primary body text and heading color (`--fg-body`). |
+| `color-foreground-primary` | Primary body text and heading color (`--fg-body`), and the knob of an enabled, unchecked Bootstrap switch, with or without a theme. Enabled range thumbs (including active thumbs) and progress fills use this color against the unfilled track, including themed ranges except `.theme-inverse`, which retains its theme fill. The other theme fills fail the non-text target in at least one palette variant. |
 | `color-foreground-secondary` | Secondary metadata, caption, and inactive TOC link color (`--fg-2`). |
 | `color-foreground-muted` | Muted text, permalink `#` indicators, subtle labels, and the Datepicker's weekday names and days outside the shown month (`--fg-3`). |
+| `supa-control-border` | Bootstrap checkbox, radio, switch, enabled range track, form-control, chip-input, and OTP slot normal-state boundary color (default `var(--color-foreground-muted)`) to meet each palette's non-text target on page and secondary surfaces; Bootstrap validation states retain their semantic borders. Range tracks use an inset boundary and keep their `--bg-3` interior; disabled ranges retain Bootstrap paint. |
 | `color-foreground-border` | Interactive control border color (WCAG 1.4.11 non-text contrast &ge; 3:1). |
 | `supa-admonition-note-accent` | `note` and `seealso` admonition and `.theme-info` accent color. |
 | `supa-admonition-note-bg` | `note` and `seealso` admonition title background; also the Bootstrap `.theme-info` subtle background (default `light-dark(#ddf4ff, rgba(56, 139, 253, 0.14))`). |

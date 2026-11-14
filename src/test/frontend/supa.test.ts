@@ -4265,7 +4265,7 @@ describe('WCAG contrast audit (scripts/contrast-audit.ts)', () => {
     expect(named('search match highlight').length).toBe(2);
     for (const theme of ['primary', 'accent', 'success', 'info', 'warning', 'danger', 'secondary', 'inverse']) {
       expect(named(`.theme-${theme} `).map((surface: SurfaceSpec) => surface.surface)).toEqual([
-        `.theme-${theme} solid fill`,
+        `.theme-${theme} solid fill (including card caps and checked switch knobs)`,
         `.theme-${theme} outline button toggled on`,
         `.theme-${theme} outline, text, and link`,
         `.theme-${theme} subtle fill`,

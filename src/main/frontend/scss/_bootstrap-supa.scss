@@ -19,6 +19,79 @@
   --btn-input-fg: var(--color-foreground-primary);
 }
 
+// Bootstrap's generic border token also paints decorative dividers. Override only the
+// form tokens, so control boundaries use the same semantic color the contrast audit checks.
+// Match Bootstrap's forms layer: later source order replaces its defaults, while
+// the higher components layer keeps valid/invalid borders semantic.
+@layer forms {
+  // The track boundary shows the full scale even at min, where the fill has no width.
+  // Keep the bg-3 interior for thumb/fill contrast; disabled and validation paint wins.
+  .form-range:where(:has(.form-range-input:not(:disabled))) {
+    --range-track-box-shadow: inset 0 0 0 var(--border-width) var(--supa-control-border);
+    --range-thumb-bg: var(--color-foreground-primary);
+    --range-thumb-active-bg: var(--color-foreground-primary);
+    --range-track-fill-bg: var(--color-foreground-primary);
+  }
+
+  // Only inverse meets the non-text target against track and page in all 12 variants.
+  // Other themes keep the neutral contrast ink; disabled and validation paint still wins.
+  .form-range:where(.theme-inverse:has(.form-range-input:not(:disabled))) {
+    --range-thumb-bg: var(--theme-bg);
+    --range-thumb-active-bg: var(--theme-bg);
+    --range-track-fill-bg: var(--theme-bg);
+  }
+
+  // Bootstrap declares OTP defaults in components. Set the token on each slot rather
+  // than its wrapper, so inheritance cannot override it; components validation still wins.
+  .otp-slot {
+    --otp-slot-border-color: var(--supa-control-border);
+  }
+
+  .check {
+    --check-border-color: var(--supa-control-border);
+  }
+
+  .radio {
+    --radio-border-color: var(--supa-control-border);
+  }
+
+  .switch {
+    --switch-border-color: var(--supa-control-border);
+  }
+
+  // The knob's position is what shows the off state, but Bootstrap's white knob nearly vanishes
+  // on the light track. Bootstrap paints the knob from this token in both states, so only an
+  // unchecked switch changes; a disabled one keeps Bootstrap's more specific faded knob.
+  .switch:not(:has(input:checked)) {
+    --switch-indicator-bg: var(--color-foreground-primary);
+  }
+
+  // Themed knobs read --theme-contrast before the indicator token. Override the paint in
+  // Bootstrap's forms layer only while enabled and off. Keep specificity low so the later
+  // forced-colors rule still supplies system ink; checked and disabled states keep
+  // Bootstrap's theme ink and fading, and validation/focus rules keep their own properties.
+  .switch:where(:has(input:not(:checked):not(:disabled)))::before {
+    background-color: var(--color-foreground-primary);
+  }
+
+  .form-control,
+  .chip-input {
+    --control-border-color: var(--supa-control-border);
+  }
+}
+
+// Bootstrap gives solid footers the theme fill but only headers its contrasting ink.
+// Keep the same fallback and layer, leaving subtle and translucent caps on their own paint.
+@layer components {
+  .card-translucent .card-header {
+    color: var(--card-cap-color);
+  }
+
+  .card-footer:not(:is(.card-subtle, .card-translucent) *) {
+    color: var(--theme-contrast, var(--card-cap-color));
+  }
+}
+
 // ============================================================================
 // Bootstrap 6 Ergonomic Enhancements & Overlay Fixes
 // ============================================================================

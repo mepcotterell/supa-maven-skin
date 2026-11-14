@@ -383,6 +383,8 @@
   --fg-2: var(--color-foreground-secondary);
   --fg-3: var(--color-foreground-muted);
   --border-color: var(--color-background-border);
+  // Control edges must remain visible on both page and secondary surfaces.
+  --supa-control-border: var(--color-foreground-muted);
   --link-color: var(--color-brand-content);
   --link-decoration: var(--supa-link-decoration, none);
   --link-hover-color: var(--color-brand-primary);
@@ -397,7 +399,8 @@
   --primary-bg-subtle: color-mix(in oklch, var(--color-brand-primary) 12%, var(--color-background-primary));
   --primary-bg-muted: color-mix(in oklch, var(--color-brand-primary) 22%, var(--color-background-primary));
   --primary-border: color-mix(in oklch, var(--color-brand-primary) 45%, var(--color-background-primary));
-  --primary-focus-ring: color-mix(in oklch, var(--color-brand-primary) 65%, var(--color-background-primary));
+  // The text-grade brand color also clears non-text targets on item and hover fills.
+  --primary-focus-ring: var(--color-brand-content);
   --primary-contrast: light-dark(#ffffff, #000000);
 
   // Accent theme tokens derived from --supa-admonition-important-accent

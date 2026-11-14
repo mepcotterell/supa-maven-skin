@@ -171,7 +171,7 @@ For the state at page load, read the attributes on `<html>` described in [Choosi
 | Typography | `--font-stack`, `--font-stack--monospace` | Body and code font families. |
 
 > [!IMPORTANT] Override Source Tokens, Not Derived Ones
-> The skin derives Bootstrap 6's component tokens (`--primary-*`, `--success-*`, `--bg-*`, `--fg-*`, and similar) from the tokens above. Override `--color-brand-primary` rather than `--primary-bg`, so buttons, focus rings, badges, and links stay consistent.
+> The skin derives Bootstrap 6's component tokens (`--primary-*`, `--success-*`, `--bg-*`, `--fg-*`, and similar) from the tokens above. Override `--color-brand-primary` rather than `--primary-bg`, so brand-colored components stay consistent. Bootstrap focus rings and article links follow `--color-brand-content`; skin-owned focus rings follow `--color-brand-primary`.
 
 ### Overriding a Token Everywhere
 

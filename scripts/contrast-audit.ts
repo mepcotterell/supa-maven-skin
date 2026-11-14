@@ -190,8 +190,9 @@ interface ThemePaint {
 const THEME_PAINTS: readonly ThemePaint[] = [
   {
     // `.btn` / `.btn-solid`, `.badge`, `.avatar`, `.page-link.active`, `.chip.active`,
-    // `.menu-item.active`, `.nav-pills .nav-link.active`, `.card-header`, `.stepper-item.active`
-    variant: 'solid fill',
+    // `.menu-item.active`, `.nav-pills .nav-link.active`, `.card-header`, `.card-footer`,
+    // checked switch knobs, `.stepper-item.active`
+    variant: 'solid fill (including card caps and checked switch knobs)',
     fill: 'var(--theme-bg)',
     text: 'var(--theme-contrast)'
   },
@@ -328,6 +329,60 @@ function forTheme(expr: string, theme: string): string {
  * component, with and without a theme, at rest, hovered, and toggled on.
  */
 export const SURFACE_AUDITS: readonly SurfaceSpec[] = [
+  // The thumb protrudes beyond the fill; its silhouette against the page identifies the
+  // value. The progress fill also stays distinct from the unfilled track.
+  {
+    surface: 'Bootstrap range unfilled track',
+    layers: [PAGE, 'var(--bg-3)'],
+    foregrounds: [
+      { label: 'range thumb', color: 'var(--color-foreground-primary)', role: 'non-text' },
+      { label: 'range fill', color: 'var(--color-foreground-primary)', role: 'non-text' }
+    ]
+  },
+  {
+    surface: 'Bootstrap range page',
+    layers: [PAGE],
+    foregrounds: [
+      { label: 'range thumb silhouette', color: 'var(--color-foreground-primary)', role: 'non-text' }
+    ]
+  },
+  ...['var(--bg-3)', PAGE].map((surface): SurfaceSpec => ({
+    surface: `Bootstrap inverse range on ${surface}`,
+    layers: [PAGE, surface],
+    foregrounds: [{ label: 'inverse thumb and fill', color: 'var(--inverse-bg)', role: 'non-text' }]
+  })),
+  ...['--color-background-primary', '--color-background-secondary'].map(
+    (surface): SurfaceSpec => ({
+      surface: `Bootstrap range track boundary ${surface}`,
+      layers: [PAGE, `var(${surface})`],
+      foregrounds: [{ label: 'range track boundary', color: 'var(--supa-control-border)', role: 'non-text' }]
+    })
+  ),
+  ...['--color-background-primary', '--color-background-secondary'].map(
+    (surface): SurfaceSpec => ({
+      surface: `Bootstrap control boundaries ${surface}`,
+      layers: [PAGE, `var(${surface})`],
+      foregrounds: ['unchecked checkbox border', 'unchecked radio border', 'unchecked switch edge',
+        'form-control border', 'chip-input border', 'OTP slot boundary'].map(
+        (label): ForegroundSpec => ({ label, color: 'var(--supa-control-border)', role: 'non-text' })
+      )
+    })
+  ),
+  ...['--color-background-primary', '--color-background-secondary'].map(
+    (surface): SurfaceSpec => ({
+      surface: `Bootstrap unchecked switch track on ${surface}`,
+      layers: [PAGE, `var(${surface})`, 'var(--bg-3)'],
+      foregrounds: [{ label: 'unthemed or themed switch knob', color: 'var(--color-foreground-primary)', role: 'non-text' }]
+    })
+  ),
+  ...['--color-background-primary', '--color-background-secondary',
+    '--color-background-item', '--color-background-hover'].map(
+    (surface): SurfaceSpec => ({
+      surface: `Bootstrap focus ring ${surface}`,
+      layers: [PAGE, `var(${surface})`],
+      foregrounds: [{ label: 'focus ring', color: 'var(--primary-focus-ring)', role: 'non-text' }]
+    })
+  ),
   ...['--color-background-primary', '--color-background-secondary', '--color-background-hover'].map(
     (surface): SurfaceSpec => ({
       surface: `documentation channels ${surface}`,

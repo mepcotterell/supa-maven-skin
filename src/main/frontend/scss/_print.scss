@@ -29,6 +29,7 @@
   // all, so they keep the light polarity's fills, which meet the same contrast. Page and surface
   // fills still drop: tabs and underlines are borders, which print anyway, and an active tab's fill
   // is the page color.
+  :is(.card-header, .card-footer):not(:is(.card-subtle, .card-translucent) *),
   .badge,
   .btn,
   .chip,
