@@ -22,6 +22,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - **Release Checks**: Before it builds anything or reads a secret, the release workflow checks that it runs on a `v*` tag that names the `pom.xml` version, that the version is not a SNAPSHOT, and that `CHANGELOG.md` has the version's dated heading. A manual run started from a branch now fails instead of publishing to Maven Central without a GitHub Release. The workflow then waits, for up to an hour, until CI on `main` has succeeded for the tagged commit, including the rendered accessibility checks, and fails if that run failed, was cancelled, or does not exist; it used to publish before that commit's CI had finished.
 - **Tested and Minimum Toolchains**: The Quickstart Tutorial and the README separate the versions Supa Maven Skin is tested on (JDK 21 and 25, Maven 3.9.x) from the lower minimums that `maven-site-plugin` and `maven-project-info-reports-plugin` declare (Java 8, Maven 3.6.3), which are not promised.
 - **Documentation Navigation**: The documentation site no longer lists CI Management twice or an "About" report page that repeats Overview, and the Quickstart Tutorial's example no longer configures the `index` report next to the home page it has readers write.
+- **Self-Hosting KaTeX Without npm**: The KaTeX recipe in the authoring guide downloads the pinned package archive with `curl` and unpacks it with `tar` in a fresh temporary folder, so it needs neither npm nor a shared `/tmp/package`.
 
 ### Fixed
 

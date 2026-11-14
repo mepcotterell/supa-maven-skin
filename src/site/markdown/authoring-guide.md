@@ -404,10 +404,16 @@ Serve both libraries from your own site when you cannot depend on jsDelivr, for 
     mkdir -p src/site/resources/vendor/mermaid src/site/resources/vendor/katex
     curl -fsSL -o src/site/resources/vendor/mermaid/mermaid.min.js \
       https://cdn.jsdelivr.net/npm/mermaid@11.17.2/dist/mermaid.min.js
-    npm pack katex@0.16.47 --pack-destination /tmp && tar -xzf /tmp/katex-0.16.47.tgz -C /tmp
-    cp -R /tmp/package/dist/katex.min.js /tmp/package/dist/katex.min.css \
-      /tmp/package/dist/fonts /tmp/package/dist/contrib src/site/resources/vendor/katex/
+
+    # KaTeX ships as an npm package archive; unpack it in a new, empty temporary folder
+    KATEX_TMP=$(mktemp -d)
+    curl -fsSL https://registry.npmjs.org/katex/-/katex-0.16.47.tgz | tar -xz -C "$KATEX_TMP"
+    cp -R "$KATEX_TMP/package/dist/katex.min.js" "$KATEX_TMP/package/dist/katex.min.css" \
+      "$KATEX_TMP/package/dist/fonts" "$KATEX_TMP/package/dist/contrib" src/site/resources/vendor/katex/
+    rm -rf "$KATEX_TMP"
     ```
+
+    This needs only `curl` and `tar`, not Node.js or npm. The archive is the pinned `katex@0.16.47` npm package, so the files are the same ones `npm pack katex@0.16.47` would give you.
 
 2. Point the overrides at **root-relative** paths (or absolute `https://` URLs):
 
