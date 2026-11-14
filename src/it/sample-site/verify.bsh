@@ -178,6 +178,14 @@ expectText( "index.html", html, "span", new String[] { "id", "supaSidebarDrawerT
     "the sidebar drawer title must carry the navDrawerTitle label" );
 expectTag( "index.html", html, "dialog", new String[] { "id", "supaSearchDialog", "aria-label", "Search" },
     "the search dialog must be named by the search label" );
+// R-37: inline, each column is its <aside> landmark, and its <dialog> renders as a group, not a
+// dialog that never opened; index.ts removes the role where the column is a drawer
+expectTag( "index.html", html, "dialog", new String[] { "id", "supaSidebarDrawer", "role", "group" },
+    "the sidebar drawer must render with its inline role" );
+expectTag( "index.html", html, "dialog", new String[] { "id", "supaTocDrawer", "role", "group" },
+    "the TOC drawer must render with its inline role" );
+expectTag( "index.html", html, "aside", new String[] { "class", "supa-sidebar-column", "aria-label", "Primary navigation" },
+    "the sidebar <aside> landmark must be named by the navPrimary label" );
 // Every aria-labelledby and aria-describedby on every page, reports included, names an element there
 expectSiteIdReferencesResolve( siteDir );
 java.util.regex.Matcher searchCombobox = java.util.regex.Pattern.compile( "<input[^>]*id=\"supaSearchInput\"[^>]*>" ).matcher( html );

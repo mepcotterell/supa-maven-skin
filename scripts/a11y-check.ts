@@ -51,6 +51,8 @@
  * element Tab reached keeps focus once the TOC navigation has settled.
  * `sidebar-link-focus-mobile`, `sidebar-link-focus-desktop`, and their `-smooth` variants check
  * the same for a same-page sidebar link, in the drawer and in the inline sidebar.
+ * `drawer-roles-*` read the sidebar's and the TOC's role and name from Chromium's accessibility
+ * tree: a landmark with no dialog inside it inline, and a modal dialog when opened as a drawer.
  * Search results also assert the combobox's active descendant matches selection, and
  * `search-dialog-no-results` the polite no-results status. `sidebar-depth-three` checks the
  * self-site's third sidebar level.
@@ -2024,10 +2026,13 @@ interface AxSummary {
   focusable: boolean;
   /** Whether the element is left out of the tree that assistive technology reads. */
   ignored: boolean;
+  /** Whether a dialog is exposed as modal, which a `<dialog>` is after `showModal()`. */
+  modal: boolean;
 }
 
 /**
- * Reads the name, role, and focusability Chromium computes for each element a selector matches.
+ * Reads the name, role, focusability, and modality Chromium computes for each element a selector
+ * matches.
  *
  * @param page - Chromium page.
  * @param selector - CSS selector.
@@ -2047,7 +2052,8 @@ async function axNodes(page: Page, selector: string): Promise<AxSummary[]> {
         role: String(node?.role?.value ?? ''),
         name: String(node?.name?.value ?? ''),
         focusable: node?.properties?.some((p) => p.name === 'focusable' && p.value.value === true) ?? false,
-        ignored: node?.ignored ?? true
+        ignored: node?.ignored ?? true,
+        modal: node?.properties?.some((p) => p.name === 'modal' && p.value.value === true) ?? false
       });
     }
     return found;
@@ -2333,6 +2339,136 @@ function largeDefaultFontScenario(file: string, fontPx: number, width: number): 
         throw new Error(
           `at a ${fontPx}px default font and ${width}px: ${problems.slice(0, 5).join('; ')}${more}`
         );
+      }
+    }
+  };
+}
+
+/**
+ * Default font sizes, in CSS px, and viewports the `drawer-roles-*` scenarios load: both columns
+ * inline, the sidebar inline beside a TOC drawer, and both drawers, at the 16 px default; then a
+ * 1440 px window at 20 px (72em: the sidebar inline, the TOC a drawer) and at 24 px (60em: both
+ * drawers), where a px breakpoint would keep both columns inline.
+ */
+const DRAWER_ROLE_LAYOUTS: ReadonlyArray<{ fontPx: number; viewport: Viewport }> = [
+  { fontPx: 16, viewport: DESKTOP },
+  { fontPx: 16, viewport: TABLET },
+  { fontPx: 16, viewport: MOBILE },
+  { fontPx: 20, viewport: DESKTOP },
+  { fontPx: 24, viewport: DESKTOP }
+];
+
+/**
+ * Checks what Chromium's accessibility tree exposes for a navigation column. Inline, the column is
+ * its `<aside>` landmark, named as before, and its `<dialog>` is not exposed as a dialog, so a
+ * screen reader does not announce a dialog that never opened. As a drawer, the closed `<dialog>`
+ * is left out of the tree, and once its trigger opens it, it is a modal dialog named by its title;
+ * Escape closes it again.
+ *
+ * @param page - Page under test, with reduced motion.
+ * @param column - `sidebar` (`#supaSidebarDrawer`, `lg`) or `toc` (`#supaTocDrawer`, `xl`).
+ * @returns Problems found; empty when the column is exposed as it should be.
+ */
+async function navigationColumnSemanticsProblems(page: Page, column: 'sidebar' | 'toc'): Promise<string[]> {
+  const id = column === 'sidebar' ? 'supaSidebarDrawer' : 'supaTocDrawer';
+  const aside = column === 'sidebar' ? '.supa-sidebar-column' : '.supa-toc-column';
+  const trigger = page
+    .locator(column === 'sidebar'
+      ? '.supa-mobile-header [data-bs-target="#supaSidebarDrawer"]'
+      : '.supa-toc-drawer-trigger')
+    .filter({ visible: true })
+    .first();
+  const [label, title] = await page.evaluate(([drawerId, asideSelector]: [string, string]) => [
+    document.querySelector(asideSelector)?.getAttribute('aria-label') ?? '',
+    document.getElementById(`${drawerId}Title`)?.textContent?.trim() ?? ''
+  ], [id, aside] as [string, string]);
+  const show = (node: AxSummary | undefined): string =>
+    node ? `${node.ignored ? 'ignored ' : ''}${node.modal ? 'modal ' : ''}${node.role} "${node.name}"` : 'missing';
+  const problems: string[] = [];
+  if (!(await trigger.isVisible())) {
+    const [landmark] = await axNodes(page, aside);
+    const [drawer] = await axNodes(page, `#${id}`);
+    if (landmark?.role !== 'complementary' || landmark.ignored || landmark.name !== label) {
+      problems.push(`the inline ${column}'s <aside> is ${show(landmark)}, not complementary "${label}"`);
+    }
+    if (!drawer || drawer.ignored || drawer.role === 'dialog' || drawer.role !== 'group') {
+      problems.push(`the inline #${id} is exposed as ${show(drawer)}, not as a group`);
+    }
+    return problems;
+  }
+  const [closed] = await axNodes(page, `#${id}`);
+  if (!closed?.ignored) {
+    problems.push(`the closed #${id} drawer is exposed as ${show(closed)}`);
+  }
+  await page.evaluate((drawerId) => {
+    const drawer = document.getElementById(drawerId)!;
+    document.documentElement.removeAttribute('data-test-drawer-shown');
+    document.documentElement.removeAttribute('data-test-drawer-hidden');
+    drawer.addEventListener('shown.bs.drawer', () => {
+      document.documentElement.setAttribute('data-test-drawer-shown', 'true');
+    }, { once: true });
+    drawer.addEventListener('hidden.bs.drawer', () => {
+      document.documentElement.setAttribute('data-test-drawer-hidden', 'true');
+    }, { once: true });
+  }, id);
+  await trigger.click();
+  await page.waitForFunction(() => document.documentElement.hasAttribute('data-test-drawer-shown'));
+  const [open] = await axNodes(page, `#${id}`);
+  if (!open || open.ignored || open.role !== 'dialog' || !open.modal || open.name !== title) {
+    problems.push(`the open #${id} drawer is exposed as ${show(open)}, not as modal dialog "${title}"`);
+  }
+  await page.keyboard.press('Escape');
+  await page.waitForFunction(() => document.documentElement.hasAttribute('data-test-drawer-hidden'));
+  return problems;
+}
+
+/**
+ * Checks the accessibility-tree role and name of the sidebar and the TOC at one default font and
+ * viewport, inline and as drawers (see `navigationColumnSemanticsProblems()`). Each column is
+ * inline or a drawer by the skin's em breakpoints, which the larger fonts move.
+ *
+ * @param fontPx - Browser's default font size, in CSS px.
+ * @param viewport - Viewport to load the page at.
+ * @returns Scenario that checks both columns, leaving both drawers closed for the scan.
+ */
+function drawerRolesScenario(fontPx: number, viewport: Viewport): InteractionScenario {
+  /**
+   * Lists the problems with both columns.
+   *
+   * @param page - Page under test.
+   * @returns Problems found in either column.
+   */
+  const problemsOf = async (page: Page): Promise<string[]> => [
+    ...await navigationColumnSemanticsProblems(page, 'sidebar'),
+    ...await navigationColumnSemanticsProblems(page, 'toc')
+  ];
+  return {
+    name: `drawer-roles-${fontPx}-${viewport.width}`,
+    page: 'getting-started.html',
+    viewport,
+    variants: [{ palette: 'furo', polarity: 'light' }],
+    engines: AX_TREE_ENGINES,
+    prepare: async (page) => {
+      const cdp = await page.context().newCDPSession(page);
+      // Chrome's font-size setting keeps the fixed-width font 3 px smaller, 13 px at the 16 px default.
+      await cdp.send('Page.setFontSizes', { fontSizes: { standard: fontPx, fixed: fontPx - 3 } });
+    },
+    setup: async (page) => {
+      await page.emulateMedia({ reducedMotion: 'reduce' });
+      const problems = await problemsOf(page);
+      if (problems.length > 0) {
+        throw new Error(`at a ${fontPx}px default font and ${viewport.width}px: ${problems.join('; ')}`);
+      }
+      await settleTransitions(page);
+    },
+    assertState: async (page) => {
+      const open = await page.locator('dialog.drawer[open]').count();
+      if (open !== 0) {
+        throw new Error(`expected both drawers closed after the check, found ${open} open`);
+      }
+      const problems = await problemsOf(page);
+      if (problems.length > 0) {
+        throw new Error(`at a ${fontPx}px default font and ${viewport.width}px: ${problems.join('; ')}`);
       }
     }
   };
@@ -3475,6 +3611,7 @@ const SCENARIOS: readonly InteractionScenario[] = [
   sidebarLinkFocusScenario('sidebar-link-focus-smooth-mobile', MOBILE, 'no-preference'),
   sidebarLinkFocusScenario('sidebar-link-focus-smooth-desktop', DESKTOP, 'no-preference'),
   HEADING_NAMES,
+  ...DRAWER_ROLE_LAYOUTS.map(({ fontPx, viewport }) => drawerRolesScenario(fontPx, viewport)),
   ...LARGE_FONT_PAGES.flatMap((file) => LARGE_DEFAULT_FONTS.flatMap((fontPx) =>
     LARGE_FONT_WIDTHS.map((width) => largeDefaultFontScenario(file, fontPx, width)))),
   {

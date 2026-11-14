@@ -325,8 +325,12 @@
     <div class="supa-page">
       <!-- 1. Left Navigation Sidebar (Inline on lg+, Bootstrap 6 Left Drawer below lg) -->
       <aside class="supa-sidebar-column" aria-label="$esc.html( $supaLabels.navPrimary )">
+## role="group" while inline: the <aside> is the landmark there, and a <dialog> would be announced
+## as a dialog that never opened. Chromium and Firefox ignore role="none" on a <dialog>. initDrawers()
+## in index.ts removes the role below the breakpoint, so the drawer opens as a modal dialog.
         <dialog class="drawer drawer-start supa-sidebar-drawer"
                 id="supaSidebarDrawer"
+                role="group"
                 data-bs-scroll="$esc.html( $sidebarDrawerScroll )"
                 data-bs-backdrop="$esc.html( $sidebarDrawerBackdrop )"
                 tabindex="-1"
@@ -603,8 +607,10 @@
 #if( $tocSidebar )
         <!-- 3. Right Table of Contents Sidebar ("On this page" — Inline on xl+, Bootstrap 6 Right Drawer below xl) -->
         <aside class="supa-toc-column" aria-label="$esc.html( $supaLabels.tocTitle )">
+## role="group" while inline, as on #supaSidebarDrawer
           <dialog class="drawer drawer-end supa-toc-drawer"
                   id="supaTocDrawer"
+                  role="group"
                   data-bs-scroll="$esc.html( $tocDrawerScroll )"
                   data-bs-backdrop="$esc.html( $tocDrawerBackdrop )"
                   tabindex="-1"
