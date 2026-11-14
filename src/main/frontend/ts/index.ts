@@ -284,30 +284,61 @@ export function initBackToTop(): void {
 export const SUPA_READY_ATTRIBUTE = 'data-supa-ready';
 
 /**
- * Boots all Supa Maven Skin frontend modules in deterministic order.
+ * Runs one enhancer so that an error in it cannot stop the ones after it: the error is logged
+ * with the enhancer's name and `fallback` stands in for its result. The boot would otherwise
+ * stop at the first throw, leaving the page without copy buttons, search, or `data-supa-ready`.
+ *
+ * @param name - Name shown in the console message.
+ * @param enhancer - Enhancer to run.
+ * @param fallback - Result to use when the enhancer throws.
+ * @returns What the enhancer returned, or `fallback` if it threw.
+ */
+function runEnhancer<T>(name: string, enhancer: () => T, fallback: T): T {
+  try {
+    return enhancer();
+  } catch (error) {
+    console.error(`Supa Maven Skin: ${name} failed`, error);
+    return fallback;
+  }
+}
+
+/**
+ * Boots all Supa Maven Skin frontend modules in deterministic order. Each synchronous enhancer
+ * runs on its own, so one that throws is logged and the others still run.
  *
  * @returns Promise that resolves once optional libraries and lazily loaded
  *     widgets have settled, `data-supa-ready` has been set on `<html>`, and the
  *     page has scrolled to its URL's heading again (or had no reason to).
  */
 export function initSupaSkin(): Promise<void> {
-  warnUnknownLabels();
-  initTheme();
-  initDoxiaEnhancements();
+  runEnhancer('warnUnknownLabels', warnUnknownLabels, undefined);
+  runEnhancer('initTheme', initTheme, undefined);
+  runEnhancer('initDoxiaEnhancements', () => initDoxiaEnhancements(), undefined);
   // Document-wide: a channels navigation may sit outside the article.
-  restoreDocumentationChannels(document);
-  const landOnFragmentAgain = initTocAndScrollSpy();
-  initCodeBlocks();
-  initSearch();
-  initDrawers();
-  initBackToTop();
-  const widgetsSettled = initBootstrapComponents(document);
+  runEnhancer('restoreDocumentationChannels', () => restoreDocumentationChannels(document), undefined);
+  const landOnFragmentAgain = runEnhancer(
+    'initTocAndScrollSpy',
+    initTocAndScrollSpy,
+    (): Promise<void> => Promise.resolve()
+  );
+  runEnhancer('initCodeBlocks', () => initCodeBlocks(), undefined);
+  runEnhancer('initSearch', initSearch, undefined);
+  runEnhancer('initDrawers', initDrawers, undefined);
+  runEnhancer('initBackToTop', initBackToTop, undefined);
+  const widgetsSettled = runEnhancer(
+    'initBootstrapComponents',
+    () => initBootstrapComponents(document),
+    Promise.resolve()
+  );
   // After code blocks and tables exist so every scroll wrapper is seen. The lazily loaded
   // playground fills its code block later; the regions' ResizeObserver re-checks it then.
-  initScrollRegions(document);
+  runEnhancer('initScrollRegions', () => initScrollRegions(document), undefined);
   // `allSettled` so a failed CDN import or widget chunk still marks the page ready, and only
   // once every widget on the page has initialized.
-  return Promise.allSettled([initOptionalLibraries(), widgetsSettled]).then(() => {
+  return Promise.allSettled([
+    runEnhancer('initOptionalLibraries', initOptionalLibraries, Promise.resolve()),
+    widgetsSettled
+  ]).then(() => {
     document.documentElement.setAttribute(SUPA_READY_ATTRIBUTE, 'true');
     // Highlighting, the widgets, Mermaid, and KaTeX have reshaped the article since the TOC
     // enhancer scrolled to the URL's heading, so scroll to it again once the page has settled.

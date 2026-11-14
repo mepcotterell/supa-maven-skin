@@ -56,6 +56,7 @@ import {
   Tooltip
 } from '../../main/frontend/ts/bootstrap-components';
 import { enhanceCodeBlocks } from '../../main/frontend/ts/code';
+import * as doxiaModule from '../../main/frontend/ts/doxia';
 import {
   ADMONITION_META,
   type AdmonitionType,
@@ -1030,6 +1031,31 @@ describe('Supa Maven Skin Frontend Modules', () => {
       expect(document.documentElement.hasAttribute(SUPA_READY_ATTRIBUTE)).toBe(false);
       await ready;
       expect(document.documentElement.getAttribute(SUPA_READY_ATTRIBUTE)).toBe('true');
+    });
+
+    it('keeps later enhancers and data-supa-ready running when one enhancer throws, logging its name', async () => {
+      document.body.innerHTML = `
+        <main id="supa-main-content">
+          <pre><code class="language-java">int x = 1;</code></pre>
+        </main>
+      `;
+      document.documentElement.removeAttribute(SUPA_READY_ATTRIBUTE);
+      const failure = new Error('doxia exploded');
+      vi.spyOn(doxiaModule, 'initDoxiaEnhancements').mockImplementation(() => {
+        throw failure;
+      });
+      const logged = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+      try {
+        await expect(initSupaSkin()).resolves.toBeUndefined();
+
+        expect(logged).toHaveBeenCalledWith(expect.stringContaining('initDoxiaEnhancements'), failure);
+        // initCodeBlocks runs after the failed enhancer, and the page is still marked ready.
+        expect(document.querySelectorAll('.supa-copy-btn').length).toBeGreaterThan(0);
+        expect(document.documentElement.getAttribute(SUPA_READY_ATTRIBUTE)).toBe('true');
+      } finally {
+        vi.restoreAllMocks();
+      }
     });
 
     it.each(['supaTocDrawer', 'supaSidebarDrawer'])('keeps section focus after %s link closes, leaving dismissal focus alone', async (id) => {

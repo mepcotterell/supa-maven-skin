@@ -24,6 +24,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ### Fixed
 
 - **Malformed Saved Tab Choices**: A saved synchronized-tab choice that is `null`, an array, or not a string is ignored, so one bad `localStorage['supa-tab-sync']` value no longer stops the copy buttons, the other enhancers, and the page-ready attribute, or drops pages from the search index.
+- **Isolated Page Enhancers**: When one enhancer fails on a page, the console names it and the remaining enhancers still run, so the page is still marked ready and keeps its copy buttons, search, and drawers.
 - **Custom CSS Values**: A `<lightCssVariables>` or `<darkCssVariables>` value containing `</style` no longer ends the skin's `<style>` element: each `<` is written as the CSS escape `\3c `, which CSS reads as `<`, and quotes stay as written.
 - **Configured Theme Before Scripts**: Before scripts run, the theme menus mark the configured `<defaultTheme>` as checked instead of always Auto. A `<defaultTheme>` that names no mode starts in `auto`, and a `<colorScheme>` that names no scheme starts on `furo`, in the page's attributes as well as in the scripts.
 - **Invalid Numeric Options**: A `<tocMaxDepth>` or `<sidebarCollapseDepth>` that is not a number keeps its default, instead of writing the literal text `$tocMaxDepth` into the page or logging Velocity errors during the build. A depth of `0` stays `0`.
