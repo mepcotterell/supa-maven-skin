@@ -232,7 +232,7 @@ Sets the page language and replaces the English text of the skin's own interface
 | Option | Default | Description |
 | :--- | :--- | :--- |
 | `<language>` | *(empty)* | Language of the site's pages as a BCP 47 tag (`de`, `pt-BR`; the Java form `pt_BR` is accepted and written as `pt-BR`), written to `<html lang>`. It applies only to pages Maven renders without a locale: when `<locales>` lists a language (`<locales>default,fr</locales>` renders French under `/fr/`), that locale names the language of its pages and `<language>` is ignored. With neither, `lang` is `en`. A value that is not shaped like a language tag (a 2- or 3-letter language, then `-`-separated subtags of up to 8 letters or digits; `de DE` is not) is ignored, and `lang` is `en`. |
-| `<labels>` | *(empty)* | One child element per label to override, named by its key: `<labels><search>Suche</search></labels>`. Values are plain text, always HTML-escaped (markup is shown as text). An empty element keeps the English label. A key the skin does not know, such as a misspelled `<serchPlaceholder>`, changes nothing and is reported in one browser-console warning. |
+| `<labels>` | *(empty)* | One child element per label to override, named by its key: `<labels><search>Suche</search></labels>`. Values are plain text, always HTML-escaped: an escaped character such as `&lt;` or text in a `CDATA` section shows as typed. An element inside a label, such as `<b>`, makes the skin ignore that label: it keeps the English text and the browser console names the key. An empty element keeps the English label too. A key the skin does not know, such as a misspelled `<serchPlaceholder>`, changes nothing and is reported in one browser-console warning. |
 
 ### Labels
 
