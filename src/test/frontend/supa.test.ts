@@ -6,6 +6,7 @@ import Combobox from 'bootstrap/js/dist/combobox.js';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { parse as parseCss } from 'postcss';
+import { compile } from 'sass-embedded';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   BUNDLED_LICENSES,
@@ -4273,6 +4274,26 @@ describe('Supa Maven Skin Frontend Modules', () => {
   });
 });
 
+describe('forced-colors range tracks', () => {
+  it('removes author shadows from both vendor tracks in compiled forced-colors CSS', () => {
+    // Compile the source directly so this guard never depends on a prior Vite build.
+    const css = parseCss(compile(resolve('src/main/frontend/scss/_forced-colors.scss')).css);
+    const shadows = new Map<string, string>();
+    css.walkAtRules('media', media => {
+      if (media.params !== '(forced-colors: active)') {
+        return;
+      }
+      media.walkRules(rule => {
+        rule.walkDecls('box-shadow', declaration => {
+          shadows.set(rule.selector, declaration.value);
+        });
+      });
+    });
+    expect(shadows.get('.form-range-input::-webkit-slider-runnable-track')).toBe('none');
+    expect(shadows.get('.form-range-input::-moz-range-track')).toBe('none');
+  });
+});
+
 describe('WCAG contrast audit (scripts/contrast-audit.ts)', () => {
   it('matches the unquoted palette selectors Dart Sass emits on <html>', () => {
     const attributes = { 'data-supa-palette': 'modus', 'data-bs-theme': 'dark' };
@@ -4609,5 +4630,34 @@ describe('WCAG contrast audit (scripts/contrast-audit.ts)', () => {
     ]);
     // The skin keeps those days opaque and colors them with the muted text.
     expect(auditContrast(tokens, 'modus', 'dark', calendar)).toEqual({ checked: 8, violations: [] });
+  });
+
+  it('audits tooltips with the tokens and fade Bootstrap 6 paints them with', () => {
+    const tooltips = SURFACE_AUDITS.filter((surface: SurfaceSpec) => surface.surface.startsWith('tooltip'));
+    expect(tooltips.map((surface: SurfaceSpec) => surface.surface)).toEqual([
+      'tooltip over --color-background-primary',
+      'tooltip over --color-background-secondary'
+    ]);
+    // The entries spell out Bootstrap's `.tooltip` tokens as the root tokens they read, so they
+    // must follow the Bootstrap release the skin bundles.
+    const bootstrap = readFileSync(resolve(process.cwd(), 'node_modules/bootstrap/scss/_tooltip.scss'), 'utf8');
+    const token = (name: string): string | undefined =>
+      bootstrap.match(new RegExp(`--tooltip-${name}:\\s*([^,\\n]+),`))?.[1]?.trim();
+    for (const surface of tooltips) {
+      expect(surface.layers.at(-1)).toBe(token('bg'));
+      expect(surface.foregrounds).toEqual([{ label: 'text', color: token('color'), role: 'text' }]);
+      expect(surface.opacity).toBe(token('opacity'));
+    }
+    // A tooltip whose text and fill were left the same color must fail the audit.
+    const tokens = new Map([
+      ['--supa-wcag-level', '"AA"'],
+      ['--color-background-primary', '#ffffff'],
+      ['--color-background-secondary', '#f8f9fb'],
+      ['--fg-body', '#111827'],
+      ['--bg-body', '#111827']
+    ]);
+    expect(auditContrast(tokens, 'furo', 'light', tooltips).violations).toHaveLength(2);
+    tokens.set('--bg-body', '#ffffff');
+    expect(auditContrast(tokens, 'furo', 'light', tooltips)).toEqual({ checked: 2, violations: [] });
   });
 });

@@ -43,10 +43,16 @@
  * validation borders of the checkbox, radio, switch, form control, chip input, and OTP slots,
  * range track boundaries, thumb and fill contrast, preserved disabled range and OTP paint,
  * unthemed and themed switch knobs, checked contrast and disabled fading, and a focused pill in
- * all 12 variants.
+ * all 12 variants, as `copy-button-tooltip` and `range-tooltip` scan a tooltip.
  * `toc-link-focus-mobile`, `toc-link-focus-tablet`, `toc-link-focus-smooth-mobile`,
  * and `toc-link-focus-smooth-tablet` check destination focus and Tab continuation.
  * Search results also assert the combobox's active descendant matches selection.
+ * `forced-colors-controls-tabs`, `forced-colors-palettes`, and `forced-colors-search`
+ * check system-color selection and distinct keyboard focus in light and dark;
+ * the controls/tabs scan is scoped to those widgets. `forced-colors-pages` scans
+ * every top-level page unscoped in both OS color schemes; `forced-colors-popover`
+ * checks open popover text, box edges, and the connecting arrow. `forced-colors-tooltip`
+ * checks the range slider's tooltip keeps a system-color text fill and border.
  * Every scan first waits for running CSS transitions to finish, so axe
  * measures settled colors, not a fade.
  *
@@ -1766,6 +1772,437 @@ async function expectPaletteFocus(page: Page): Promise<void> {
 }
 
 /**
+ * Verifies forced-color ink and selection cues against browser-resolved system colors.
+ *
+ * @param page - Page with forced colors active and the scenario's selected states visible.
+ * @param kind - State family to inspect.
+ */
+async function expectForcedColorCues(page: Page, kind: string): Promise<void> {
+  await settleTransitions(page);
+  const failures = await page.evaluate((family) => {
+    const problems: string[] = [];
+    if (!matchMedia('(forced-colors: active)').matches) {
+      throw new Error('Forced colors must be active');
+    }
+    const probe = document.createElement('span');
+    document.body.append(probe);
+    const systemColor = (name: string): string => {
+      probe.style.color = name;
+      return getComputedStyle(probe).color;
+    };
+    const ink = systemColor('CanvasText');
+    const highlight = systemColor('Highlight');
+    if (family === 'controls-tabs') {
+      for (const selector of ['#checkMermaid', '#switchCopyBtn']) {
+        const input = document.querySelector<HTMLInputElement>(selector)!;
+        const painted = selector === '#switchCopyBtn' ? input.closest('.switch')! : input;
+        const cue = getComputedStyle(painted, '::before');
+        if (!input.checked || cue.backgroundColor !== ink || cue.opacity !== '1' ||
+            cue.backgroundColor === getComputedStyle(painted).backgroundColor) {
+          problems.push(`${selector}: missing contrasting system-color mark/knob`);
+        }
+        const on = `${cue.opacity}/${cue.transform}/${cue.insetInlineStart}`;
+        input.checked = false;
+        const off = getComputedStyle(painted, '::before');
+        if (on === `${off.opacity}/${off.transform}/${off.insetInlineStart}`) {
+          problems.push(`${selector}: checked and unchecked cues are identical`);
+        }
+        input.checked = true;
+      }
+    }
+    const pairs = family === 'controls-tabs'
+      ? [['.supa-tab-btn', 'aria-selected']]
+      : family === 'palettes'
+        ? [['.supa-palette-card', 'aria-pressed'], ['[data-supa-palette-option]', 'aria-checked']]
+        : [['.supa-search-result-item', 'aria-selected']];
+    for (const [selector, attribute] of pairs) {
+      const selected = [...document.querySelectorAll(`${selector}[${attribute}="true"]`)]
+        .find((el) => el.getBoundingClientRect().height > 0);
+      const other = [...document.querySelectorAll(`${selector}[${attribute}="false"]`)]
+        .find((el) => el.getBoundingClientRect().height > 0);
+      if (!selected || !other) {
+        problems.push(`${selector}: missing visible selected/unselected pair`);
+        continue;
+      }
+      if (selector === '.supa-tab-btn' &&
+          !getComputedStyle(selected).textDecorationLine.includes('underline')) {
+        problems.push(`${selector}: selected tab must be underlined`);
+      }
+      const on = getComputedStyle(selected);
+      const off = getComputedStyle(other);
+      if (on.outlineStyle !== 'solid' || Number.parseFloat(on.outlineWidth) < 2 ||
+          on.outlineColor !== highlight ||
+          `${on.outlineStyle}/${on.outlineWidth}/${on.outlineColor}` ===
+            `${off.outlineStyle}/${off.outlineWidth}/${off.outlineColor}`) {
+        problems.push(`${selector}: selected outline must differ and resolve to Highlight`);
+      }
+    }
+    probe.remove();
+    return problems;
+  }, kind);
+  if (failures.length) {
+    throw new Error(failures.join('; '));
+  }
+  // Selection must remain visible at rest and gain a separate cue on keyboard focus.
+  const selector = kind === 'controls-tabs' ? '.supa-tab-btn[aria-selected="true"]'
+    : kind === 'palettes' ? '.supa-palette-card[aria-pressed="true"]'
+      : '.supa-search-result-item[aria-selected="true"]';
+  const selected = page.locator(`${selector}:visible`).first();
+  await selected.blur();
+  const resting = await selected.evaluate((el) => {
+    const style = getComputedStyle(el);
+    return `${style.outlineStyle}/${style.outlineWidth}/${style.outlineColor}/${style.outlineOffset}`;
+  });
+  await selected.focus();
+  await page.keyboard.press('Shift+Tab');
+  await page.keyboard.press('Tab');
+  await expectFocused(page, selected, 'selected forced-color item');
+  const focused = await selected.evaluate((el) => {
+    if (!el.matches(':focus-visible')) {
+      throw new Error('Selected item must have keyboard-visible focus');
+    }
+    const style = getComputedStyle(el);
+    return `${style.outlineStyle}/${style.outlineWidth}/${style.outlineColor}/${style.outlineOffset}`;
+  });
+  if (focused === resting) {
+    throw new Error(`${selector}: keyboard focus must differ from resting selection`);
+  }
+  await selected.blur();
+  if (kind === 'palettes') {
+    // Tabbing to the article card dismisses the header menu; restore its scan state.
+    const trigger = page.locator('.supa-palette-btn:visible').first();
+    if (await trigger.getAttribute('aria-expanded') !== 'true') {
+      await trigger.click();
+    }
+    await trigger.blur();
+    await page.mouse.move(0, 0);
+    await page.locator('.tooltip.show').waitFor({ state: 'hidden' });
+  }
+}
+
+/**
+ * Builds a forced-colors regression scenario in both OS color schemes.
+ *
+ * @param kind - State family to exercise.
+ * @returns Scenario checking system-color cues before and after axe.
+ */
+function forcedColorsScenario(kind: string): InteractionScenario {
+  return {
+    name: `forced-colors-${kind}`,
+    page: kind === 'palettes' ? 'configuration.html' : 'components.html',
+    viewport: DESKTOP,
+    // Unscoped forced-colors-pages scans cover text and ARIA; axe has no non-text
+    // contrast rule, so scoped computed-style and pixel assertions cover control cues.
+    scope: kind === 'controls-tabs' ? ['#checkMermaid', '.switch', '.form-range', '.supa-tabs'] : undefined,
+    variants: [{ palette: 'furo', polarity: 'light' }, { palette: 'furo', polarity: 'dark' }],
+    setup: async (page) => {
+      await page.emulateMedia({ forcedColors: 'active' });
+      if (kind === 'controls-tabs') {
+        await page.locator('#checkMermaid').check();
+        await page.locator('#switchCopyBtn').check();
+        // Remove focus as a confounder: the selection cue must survive blur.
+        await page.locator('#switchCopyBtn').blur();
+      } else if (kind === 'palettes') {
+        await page.locator('.supa-palette-btn:visible').first().click();
+      } else {
+        await page.keyboard.press('ControlOrMeta+k');
+        await page.waitForFunction(
+          () => Object.keys(sessionStorage).some((key) => key.startsWith('supa-search-index-'))
+        );
+        await page.locator('#supaSearchInput').fill('configuration');
+        await expectVisible(page.locator('.supa-search-result-item').nth(1), 'second result');
+        await page.keyboard.press('ArrowDown');
+      }
+      // Scrolling to controls can leave the pointer over an unrelated range tooltip.
+      // Keep this scan on the requested selection states, with no incidental hover.
+      await page.mouse.move(0, 0);
+      if (kind === 'palettes') {
+        await page.locator('.supa-palette-btn:visible').first().blur();
+        await page.locator('.tooltip.show').waitFor({ state: 'hidden' });
+      }
+    },
+    assertState: async (page) => {
+      await expectForcedColorCues(page, kind);
+      if (kind === 'controls-tabs') {
+        await settleTransitions(page);
+        const range = page.locator('#demoRangeInput');
+        const geometry = await range.evaluate((el) => {
+          const input = el as HTMLInputElement;
+          // Resolve rem/calc tokens as rendered lengths, not parseFloat("1rem").
+          const probe = document.createElement('span');
+          input.parentElement!.append(probe);
+          probe.style.cssText = 'position: absolute; height: 0; pointer-events: none';
+          probe.style.width = getComputedStyle(input).getPropertyValue('--range-thumb-width');
+          const thumbWidth = probe.getBoundingClientRect().width;
+          probe.style.width = getComputedStyle(input).getPropertyValue('--range-thumb-height');
+          const thumbHeight = probe.getBoundingClientRect().width;
+          probe.style.width = getComputedStyle(input).getPropertyValue('--range-track-height');
+          const trackHeight = probe.getBoundingClientRect().width;
+          probe.style.color = 'CanvasText';
+          const ink = getComputedStyle(probe).color;
+          probe.style.color = 'Canvas';
+          const paper = getComputedStyle(probe).color;
+          probe.style.color = 'Highlight';
+          const fill = getComputedStyle(probe).color;
+          probe.remove();
+          const {width, height} = input.getBoundingClientRect();
+          const fraction = (input.valueAsNumber - Number(input.min || 0)) /
+            (Number(input.max || 100) - Number(input.min || 0));
+          return {width, height, thumbWidth, thumbHeight, trackHeight, fraction, ink, fill, paper};
+        });
+        const pixels = await range.screenshot({animations: 'disabled'});
+        const visible = await page.evaluate(async ({base64, geometry: g}) => {
+          const image = new Image();
+          image.src = `data:image/png;base64,${base64}`;
+          await image.decode();
+          const canvas = document.createElement('canvas');
+          canvas.width = image.width;
+          canvas.height = image.height;
+          const context = canvas.getContext('2d')!;
+          // Convert resolved system colors to the same RGB bytes as the screenshot.
+          context.fillStyle = g.ink;
+          context.fillRect(0, 0, 1, 1);
+          const ink = context.getImageData(0, 0, 1, 1).data.slice(0, 3);
+          // Highlight may be translucent; progress is composited over Canvas.
+          context.fillStyle = g.paper;
+          context.fillRect(0, 0, 1, 1);
+          const paper = context.getImageData(0, 0, 1, 1).data.slice(0, 3);
+          context.fillStyle = g.fill;
+          context.fillRect(0, 0, 1, 1);
+          const fill = context.getImageData(0, 0, 1, 1).data.slice(0, 3);
+          context.drawImage(image, 0, 0);
+          const data = context.getImageData(0, 0, image.width, image.height).data;
+          const thumbLeft = (g.width - g.thumbWidth) * g.fraction;
+          const thumbRight = thumbLeft + g.thumbWidth;
+          const trackTop = (g.height - g.trackHeight) / 2;
+          const trackBottom = trackTop + g.trackHeight;
+          const thumbTop = (g.height - g.thumbHeight) / 2;
+          // Only the thumb protrusions can contribute thumb ink. Track samples are
+          // at least one thumb-width away, excluding the rounded ends as well.
+          const filledStart = g.thumbWidth;
+          const filledEnd = thumbLeft - g.thumbWidth;
+          const emptyStart = thumbRight + g.thumbWidth;
+          const emptyEnd = g.width - g.thumbWidth;
+          if (g.thumbHeight <= g.trackHeight + 4 || filledEnd <= filledStart ||
+              emptyEnd <= emptyStart || !Number.isFinite(thumbLeft)) {
+            throw new Error(`forced-colors range invalid sampling geometry: ${JSON.stringify(g)}`);
+          }
+          let thumb = 0;
+          const topBorder = new Uint8Array(image.width);
+          const bottomBorder = new Uint8Array(image.width);
+          let progress = 0;
+          for (let y = 0; y < image.height; y++) {
+            for (let x = 0; x < image.width; x++) {
+              const cssX = (x + .5) * g.width / image.width;
+              const cssY = (y + .5) * g.height / image.height;
+              const offset = (y * image.width + x) * 4;
+              if (cssX > thumbLeft + g.thumbWidth / 4 &&
+                  cssX < thumbRight - g.thumbWidth / 4 &&
+                  cssY > thumbTop + 1 && cssY < thumbTop + g.thumbHeight - 1 &&
+                  (cssY < trackTop - 1 || cssY > trackBottom + 1) &&
+                  // Bootstrap overlays a white gradient (up to 15%) on thumb ink.
+                  ink.every((channel, i) => Math.abs(data[offset + i] - channel) <= 40)) {
+                thumb++;
+              }
+              // Squared RGB distances admit partially blended border ink while
+              // excluding Canvas and near-Canvas pixels that are closer to paper.
+              if (cssX > emptyStart && cssX < emptyEnd &&
+                  ink.reduce((sum, channel, i) => sum + (data[offset + i] - channel) ** 2, 0) <
+                  paper.reduce((sum, channel, i) => sum + (data[offset + i] - channel) ** 2, 0)) {
+                // Compare pixel centers in CSS coordinates so these edge bands
+                // tolerate fractional placement at any device pixel ratio.
+                if (Math.abs(cssY - trackTop) <= 1.5) { topBorder[x] = 1; }
+                if (Math.abs(cssY - trackBottom) <= 1.5) { bottomBorder[x] = 1; }
+              }
+              if (cssX > filledStart && cssX < filledEnd &&
+                  Math.abs(cssY - g.height / 2) < 1 &&
+                  fill.every((channel, i) => Math.abs(data[offset + i] - channel) <= 1)) {
+                progress++;
+              }
+            }
+          }
+          let border = 0;
+          let borderSpan = 0;
+          for (let x = 0; x < image.width; x++) {
+            const cssX = (x + .5) * g.width / image.width;
+            if (cssX > emptyStart && cssX < emptyEnd) {
+              borderSpan++;
+              if (topBorder[x] && bottomBorder[x]) { border++; }
+            }
+          }
+          // Five columns give the 80% coverage threshold at least four samples.
+          if (borderSpan < 5) {
+            throw new Error(`forced-colors range invalid sampling geometry: ${JSON.stringify(g)}`);
+          }
+          // Require both edges in 80% of columns: allow antialiasing gaps without
+          // accepting stray ink, independently of how many device rows an edge fills.
+          const borderMinimum = borderSpan * .8;
+          // Require substantial ink in each independent region, not stray edge pixels.
+          const scale = image.width / g.width * image.height / g.height;
+          return {thumb, border, borderSpan, progress, thumbMinimum: 8 * scale,
+            borderMinimum,
+            progressMinimum: (filledEnd - filledStart) * scale};
+        }, {base64: pixels.toString('base64'), geometry});
+        const missing: string[] = [];
+        if (visible.thumb < visible.thumbMinimum) { missing.push('thumb'); }
+        if (visible.border < visible.borderMinimum) { missing.push('track border'); }
+        if (visible.progress < visible.progressMinimum) { missing.push('track progress fill'); }
+        if (missing.length) {
+          throw new Error(`forced-colors range missing ${missing.join(', ')} pixels: ` +
+            JSON.stringify(visible));
+        }
+      }
+      if (kind === 'palettes') {
+        await expectPaletteFocus(page);
+      }
+    }
+  };
+}
+
+/** The OS supplies the colors, so repeating all six palettes adds no coverage. */
+const FORCED_VARIANTS: readonly Variant[] = [
+  { palette: 'furo', polarity: 'light' }, { palette: 'furo', polarity: 'dark' }
+];
+
+/** Shared filter name for every unscoped forced-colors page scan. */
+const FORCED_COLORS_PAGES = 'forced-colors-pages';
+
+/**
+ * Builds an unscoped forced-colors page scan.
+ *
+ * @param file - Top-level self-site page.
+ * @returns Scenario scanned in both OS color schemes without exclusions.
+ */
+function forcedColorsPageScenario(file: string): InteractionScenario {
+  return {
+    name: FORCED_COLORS_PAGES, page: file, viewport: DESKTOP, variants: FORCED_VARIANTS,
+    setup: async (page) => { await page.emulateMedia({ forcedColors: 'active' }); },
+    assertState: async (page) => {
+      if (!await page.evaluate(() => matchMedia('(forced-colors: active)').matches)) {
+        throw new Error('expected forced colors on the whole page');
+      }
+    }
+  };
+}
+
+/** Open popover text, box, and the arrow that connects it to its trigger. */
+const FORCED_POPOVER: InteractionScenario = {
+  name: 'forced-colors-popover', page: 'components.html', viewport: DESKTOP,
+  variants: FORCED_VARIANTS,
+  setup: async (page) => {
+    await page.emulateMedia({ forcedColors: 'active' });
+    await page.locator('[data-bs-toggle="popover"]').first().click();
+    await expectVisible(page.locator('.popover.show'), 'the open popover');
+    await page.mouse.move(0, 0);
+  },
+  assertState: async (page) => {
+    await expectVisible(page.locator('.popover.show'), 'the open popover');
+    const problems = await page.locator('.popover.show').evaluate((el) => {
+      const found: string[] = [];
+      const probe = document.createElement('span');
+      probe.style.color = 'CanvasText';
+      document.body.append(probe);
+      const ink = getComputedStyle(probe).color;
+      probe.style.color = 'Canvas';
+      const paper = getComputedStyle(probe).color;
+      probe.remove();
+      for (const text of el.querySelectorAll('.popover-header, .popover-body')) {
+        if (getComputedStyle(text).color !== ink || !text.textContent?.trim()) {
+          found.push('popover text must retain system ink and content');
+        }
+      }
+      const box = getComputedStyle(el);
+      if (box.borderTopColor !== ink || Number.parseFloat(box.borderTopWidth) < 1) {
+        found.push('popover box must have a system-ink border');
+      }
+      // Chromium forces transparent triangle borders to ink as well, turning the arrow
+      // into a rectangle (before crops: 145 ink pixels, only 8 background pixels).
+      // Preserve transparency on both triangles; only the outline and fill use system colors.
+      const arrow = el.querySelector('.popover-arrow')!;
+      for (const pseudo of ['::before', '::after']) {
+        const style = getComputedStyle(arrow, pseudo);
+        const colors = [style.borderTopColor, style.borderRightColor,
+          style.borderBottomColor, style.borderLeftColor];
+        if (colors.filter((color) => color === 'rgba(0, 0, 0, 0)').length !== 3) {
+          found.push(`${pseudo} must keep three transparent triangle borders`);
+        }
+        const widths = [style.borderTopWidth, style.borderRightWidth,
+          style.borderBottomWidth, style.borderLeftWidth];
+        const expected = pseudo === '::before' ? ink : paper;
+        if (!colors.some((color, index) => color === expected && Number.parseFloat(widths[index]) > 0)) {
+          found.push(`${pseudo} must have a nonzero visible system-color triangle side`);
+        }
+      }
+      return found;
+    });
+    if (problems.length) {
+      throw new Error(`forced-colors popover: ${problems.join('; ')}`);
+    }
+  }
+};
+
+/** The range slider's value bubble on `components.html`, which reuses Bootstrap's tooltip markup. */
+const RANGE_TOOLTIP = '.supa-article .form-range-bubble.tooltip.show';
+
+/**
+ * Builds a scan of the range slider's always-shown value bubble, the tooltip axe reported in dark
+ * forced colors. In forced colors it also asserts the system-color text fill and border.
+ *
+ * @param forced - Whether to emulate forced colors.
+ * @returns Scenario scoped to the bubble.
+ */
+function rangeTooltipScenario(forced: boolean): InteractionScenario {
+  return {
+    name: forced ? 'forced-colors-tooltip' : 'range-tooltip',
+    page: 'components.html',
+    viewport: DESKTOP,
+    variants: forced
+      ? [{ palette: 'furo', polarity: 'light' }, { palette: 'furo', polarity: 'dark' }]
+      : ALL_VARIANTS,
+    scope: [RANGE_TOOLTIP],
+    setup: async (page) => {
+      if (forced) {
+        await page.emulateMedia({ forcedColors: 'active' });
+      }
+      // axe measures text only inside the viewport.
+      await page.locator(RANGE_TOOLTIP).scrollIntoViewIfNeeded();
+      await page.mouse.move(0, 0);
+    },
+    assertState: async (page) => {
+      const inner = page.locator(`${RANGE_TOOLTIP} .tooltip-inner`);
+      await expectVisible(inner, 'the range slider value bubble');
+      if (!forced) {
+        return;
+      }
+      const problems = await inner.evaluate((el) => {
+        if (!matchMedia('(forced-colors: active)').matches) {
+          return ['forced colors must be active'];
+        }
+        const probe = document.createElement('span');
+        probe.style.color = 'CanvasText';
+        document.body.append(probe);
+        const ink = getComputedStyle(probe).color;
+        probe.remove();
+        const style = getComputedStyle(el);
+        const found: string[] = [];
+        // axe reads the text fill before `color`, so it must resolve to the forced ink too.
+        if (style.color !== ink || style.webkitTextFillColor !== ink) {
+          found.push(`text ${style.color} filled ${style.webkitTextFillColor}, expected ${ink}`);
+        }
+        if (style.borderTopStyle !== 'solid' || Number.parseFloat(style.borderTopWidth) < 1 ||
+            style.borderTopColor !== ink) {
+          found.push(`border ${style.borderTopStyle} ${style.borderTopWidth} ${style.borderTopColor}`);
+        }
+        return found;
+      });
+      if (problems.length) {
+        throw new Error(`forced-colors tooltip: ${problems.join('; ')}`);
+      }
+    }
+  };
+}
+
+/**
  * Interactive states scanned on top of the load-time matrix, each in its
  * `variants` (by default every `SCENARIO_VARIANTS` entry). Selectors target the
  * skin's own markup from `site.vm`, `site-macros.vm`, and the TypeScript
@@ -1773,6 +2210,9 @@ async function expectPaletteFocus(page: Page): Promise<void> {
  * toggled, so a state left open elsewhere on the page cannot stand in for it.
  */
 const SCENARIOS: readonly InteractionScenario[] = [
+  FORCED_POPOVER,
+  ...['controls-tabs', 'palettes', 'search'].map(forcedColorsScenario),
+  ...[false, true].map(rangeTooltipScenario),
   tocLinkFocusScenario('toc-link-focus-mobile', MOBILE, 'reduce'),
   tocLinkFocusScenario('toc-link-focus-tablet', { width: 1024, height: 768 }, 'reduce'),
   tocLinkFocusScenario('toc-link-focus-smooth-mobile', MOBILE, 'no-preference'),
@@ -1989,6 +2429,7 @@ const SCENARIOS: readonly InteractionScenario[] = [
     name: 'copy-button-tooltip',
     page: 'index.html',
     viewport: DESKTOP,
+    variants: ALL_VARIANTS,
     setup: async (page) => {
       await page.locator('#supa-main-content .supa-copy-btn').first().focus();
     },
@@ -2516,7 +2957,7 @@ function buildJobs(pages: string[]): ScanJob[] {
   for (const polarity of ['light', 'dark'] as const) {
     jobs.push({ page: 'index.html', palette: 'furo', polarity, ...MOBILE });
   }
-  for (const scenario of SCENARIOS) {
+  for (const scenario of [...SCENARIOS, ...pages.map(forcedColorsPageScenario)]) {
     for (const variant of scenario.variants ?? SCENARIO_VARIANTS) {
       jobs.push({ page: scenario.page, ...variant, ...scenario.viewport, scenario });
     }
@@ -2726,7 +3167,7 @@ async function main(): Promise<number> {
     );
     return 1;
   }
-  const scenarioNames = SCENARIOS.map((s) => s.name);
+  const scenarioNames = [...SCENARIOS.map((s) => s.name), FORCED_COLORS_PAGES];
   // Optional positional page or scenario names (`npm run test:a11y -- team.html`,
   // `npm run test:a11y -- search-dialog-results`) narrow the matrix while iterating
   // on a fix; CI always runs the full matrix.

@@ -623,6 +623,19 @@ export const SURFACE_AUDITS: readonly SurfaceSpec[] = [
     layers: [CALENDAR, 'var(--primary-bg)'],
     foregrounds: [{ label: 'day', color: 'var(--primary-contrast)', role: 'text' }]
   },
+  // Tooltips and the range slider's value bubble, which reuses `.tooltip` markup. Bootstrap 6's
+  // `_tooltip.scss` sets `--tooltip-color: var(--bg-body)` and `--tooltip-bg: var(--fg-body)` on
+  // `.tooltip`, written here as the root tokens they read, and fades the shown tooltip to
+  // `--tooltip-opacity: .95` over whatever it floats above. The arrow repeats the fill and carries
+  // no information of its own, so, as WCAG 1.4.11 treats such decoration, it is not measured.
+  ...['--color-background-primary', '--color-background-secondary'].map(
+    (surface): SurfaceSpec => ({
+      surface: `tooltip over ${surface}`,
+      layers: [PAGE, `var(${surface})`, 'var(--fg-body)'],
+      foregrounds: [{ label: 'text', color: 'var(--bg-body)', role: 'text' }],
+      opacity: '.95'
+    })
+  ),
   ...BOOTSTRAP_THEMES.flatMap((theme: string): SurfaceSpec[] =>
     THEME_PAINTS.map(
       ({ variant, fill, text, opacity }): SurfaceSpec => ({

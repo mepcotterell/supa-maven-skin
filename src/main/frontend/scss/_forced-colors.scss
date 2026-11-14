@@ -1,0 +1,87 @@
+// Forced colors discards the fills Bootstrap uses for its masked check and knob.
+// Preserve only their system-color ink; the control surfaces remain OS-managed.
+@media (forced-colors: active) {
+  @layer forms {
+    .check::before,
+    .switch::before {
+      forced-color-adjust: none;
+      background-color: CanvasText;
+    }
+  }
+
+  // Native slider fills and shadows disappear under forced colors. Keep system-color
+  // thumb ink, track edges, and progress; vendor pseudo-elements need separate rules
+  // because an unknown pseudo-element invalidates an entire selector list.
+  // Opting out also preserves author shadows, so explicitly remove the track shadow.
+  .form-range-input::-webkit-slider-thumb {
+    forced-color-adjust: none;
+    background-color: CanvasText;
+  }
+
+  .form-range-input::-moz-range-thumb {
+    forced-color-adjust: none;
+    background-color: CanvasText;
+  }
+
+  .form-range-input::-webkit-slider-runnable-track {
+    forced-color-adjust: none;
+    background-color: Canvas;
+    --range-track-fill-bg: Highlight;
+    border: 1px solid CanvasText;
+    box-shadow: none;
+  }
+
+  .form-range-input::-moz-range-track {
+    forced-color-adjust: none;
+    background-color: Canvas;
+    --range-track-fill-bg: Highlight;
+    border: 1px solid CanvasText;
+    box-shadow: none;
+  }
+
+  // Chromium forces the transparent sides of the arrow's border triangles to ink,
+  // turning the pointer into a solid rectangle. Preserve their shape, with only
+  // these decorative triangles opting out and their fill/outline using OS colors.
+  .popover {
+    --popover-arrow-border: CanvasText;
+    --popover-bg: Canvas;
+    --popover-header-bg: Canvas;
+  }
+
+  .popover-arrow::before,
+  .popover-arrow::after {
+    forced-color-adjust: none;
+  }
+
+  // Attribute selectors follow the same state exposed to assistive technology.
+  // Inset outlines stay inside scrollable result lists and menu clipping bounds.
+  .supa-search-result-item[aria-selected="true"],
+  .supa-tab-btn[aria-selected="true"],
+  .supa-palette-card[aria-pressed="true"],
+  [data-supa-palette-option][aria-checked="true"] {
+    outline: 3px solid Highlight;
+    outline-offset: -3px;
+  }
+
+  // Move the ring outside on keyboard focus so selection alone cannot mask focus.
+  .supa-search-result-item[aria-selected="true"]:focus-visible,
+  .supa-tab-btn[aria-selected="true"]:focus-visible,
+  .supa-palette-card[aria-pressed="true"]:focus-visible,
+  [data-supa-palette-option][aria-checked="true"]:focus-visible {
+    outline-offset: 2px;
+  }
+
+  .supa-tab-btn[aria-selected="true"] {
+    text-decoration: underline;
+    text-underline-offset: .25em;
+  }
+
+  // Forced colors repaints a tooltip's inverted fill as Canvas, so the pill merges with the page;
+  // a border keeps it a distinct box. Chromium paints the text in CanvasText but leaves the
+  // computed -webkit-text-fill-color at Bootstrap's --tooltip-color, which axe reads (1.12:1 on
+  // black in dark mode), so name the system color there too.
+  .tooltip-inner {
+    -webkit-text-fill-color: CanvasText;
+    border: 1px solid CanvasText;
+  }
+}
