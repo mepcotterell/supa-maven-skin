@@ -32,7 +32,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - **Workflow Actions and Signing**: All GitHub Actions are pinned to verified commit SHAs; CI imports the signing key and configures publishing credentials only after verification under the existing SNAPSHOT publishing guard.
 
-
 ## [0.2.0] - 2026-11-06
 
 ### Added
