@@ -51,9 +51,10 @@
  * `forced-colors-controls-tabs`, `forced-colors-palettes`, and `forced-colors-search`
  * check system-color selection and distinct keyboard focus in light and dark;
  * the controls/tabs scan is scoped to those widgets. `forced-colors-states` checks that checked
- * radios and selected, current, pressed, and disabled Bootstrap states visibly change their
- * element, that their text reads against the pixels painted under it, and that keyboard focus
- * differs from resting selection. `forced-colors-pages` scans
+ * radios and toggle buttons and selected, current, pressed, and disabled Bootstrap states visibly
+ * change their element, that their text reads against the pixels painted under it, that inactive
+ * stepper counters and connectors stand out from the page, and that keyboard focus differs from
+ * resting selection. `forced-colors-pages` scans
  * every top-level page unscoped in both OS color schemes; `forced-colors-popover`
  * checks open popover text, box edges, and the connecting arrow. `forced-colors-tooltip`
  * checks the range slider's tooltip keeps a system-color text fill and border.
@@ -2270,6 +2271,10 @@ interface ForcedStateCue {
   share?: number;
   /** Regions the state paints, for a cue drawn outside the element's own box. Runs in the page. */
   regions?: (element: Element) => CueRegion[];
+  /** System color the element's text must compute to in the state, and not out of it. */
+  ink?: string;
+  /** Descendant that takes keyboard focus for the element, when the element itself does not. */
+  focus?: string;
 }
 
 /**
@@ -2298,9 +2303,40 @@ function toggleActive(element: Element, on: boolean): void {
 }
 
 /**
+ * Toggles a disabled class and the `aria-disabled` that mirrors it on a link-like item.
+ *
+ * @param element - Element to toggle.
+ * @param on - Whether to disable it.
+ */
+function toggleDisabled(element: Element, on: boolean): void {
+  element.classList.toggle('disabled', on);
+  if (on) {
+    element.setAttribute('aria-disabled', 'true');
+  } else {
+    element.removeAttribute('aria-disabled');
+  }
+}
+
+/**
+ * Finds the box of an element's text, where a disabled state changes only the ink. Runs in the
+ * page.
+ *
+ * @param element - Element whose text to box.
+ * @returns One region around the text.
+ */
+function textBox(element: Element): CueRegion[] {
+  const range = document.createRange();
+  range.selectNodeContents(element);
+  const { x, y, width, height } = range.getBoundingClientRect();
+  // GrayText repaints only the glyphs, about a quarter of their box.
+  return [{ name: 'label', x, y, width, height, share: .05 }];
+}
+
+/**
  * States Bootstrap and the skin draw only with author colors, which forced colors replaces with
- * the same system colors in and out of the state. The showcase has no radio and no active
- * list-group item, so `forced-colors-states` adds them (`#supaForcedStates`).
+ * the same system colors in and out of the state. The showcase has no radio, no toggle button
+ * group (`.btn-check`), no active list-group item, and no disabled list-group item or nav link,
+ * so `forced-colors-states` adds them (`#supaForcedStates`).
  */
 const FORCED_STATE_CUES: readonly ForcedStateCue[] = [
   ...['#supaForcedRadio', '#supaForcedRadioDisabled'].map((selector): ForcedStateCue => ({
@@ -2350,6 +2386,22 @@ const FORCED_STATE_CUES: readonly ForcedStateCue[] = [
         (element as HTMLElement).click();
       }
     }
+  },
+  // Bootstrap 6 nests the input in its label button and clips it, so only the label shows the state.
+  ...['checkbox', 'radio'].map((type): ForcedStateCue => ({
+    name: `checked ${type} toggle button`, selector: `#supaForcedStates .btn-check:has(input[type="${type}"])`,
+    state: ':has(input:checked)', focus: 'input',
+    toggle: (element, on) => {
+      element.querySelector('input')!.checked = on;
+    }
+  })),
+  {
+    name: 'disabled list-group item', selector: '#supaForcedStates a.list-group-item', state: '.disabled',
+    ink: 'GrayText', regions: textBox, toggle: toggleDisabled
+  },
+  {
+    name: 'disabled nav link', selector: '#supaForcedStates .nav-link', state: '.disabled',
+    ink: 'GrayText', regions: textBox, toggle: toggleDisabled
   },
   { name: 'active chip', selector: '.chip.active', state: '.active', toggle: toggleActive },
   {
@@ -2571,9 +2623,88 @@ async function expectSelectedLinkIdentified(page: Page): Promise<string[]> {
 }
 
 /**
+ * Finds where an inactive stepper item draws its structure: the left quarter of its counter circle,
+ * clear of the centered digit, and the connector to the next item. Runs in the page.
+ *
+ * @param element - A `.stepper-item` in a horizontal stepper.
+ * @returns The counter's edge, and the connector unless the item is the last.
+ */
+function inactiveStepperRegions(element: Element): CueRegion[] {
+  const size = Number.parseFloat(getComputedStyle(element, '::before').width);
+  const item = element.getBoundingClientRect();
+  const center = item.left + item.width / 2;
+  const label = `item ${[...element.parentElement!.children].indexOf(element) + 1}`;
+  const regions = [{
+    name: `${label} counter edge`, x: center - size / 2, y: item.top, width: size / 4, height: size, share: .05
+  }];
+  const next = element.nextElementSibling?.getBoundingClientRect();
+  if (next) {
+    const nextCenter = next.left + next.width / 2;
+    if (Math.abs(next.top - item.top) > 1 || nextCenter - center < size + 8) {
+      throw new Error(`forced-colors stepper must be horizontal: ${JSON.stringify({item, next})}`);
+    }
+    regions.push({
+      name: `${label} connector`, x: center + size / 2 + 2, y: item.top + size / 2 - 3,
+      width: nextCenter - center - size - 4, height: 6, share: .2
+    });
+  }
+  return regions;
+}
+
+/**
+ * Checks that an inactive stepper keeps its structure: forced colors repaints Bootstrap's counter
+ * circles and connectors as `Canvas`, leaving bare digits. Only the first item stays active, so the
+ * stepper shows a connector from the last active item and one between two inactive items; each
+ * region is photographed with the stepper shown and hidden, and the inactive digit must read.
+ *
+ * @param page - `components.html` with forced colors active.
+ * @returns Failure messages, empty when every counter edge and connector stands out from the page.
+ */
+async function expectInactiveStepper(page: Page): Promise<string[]> {
+  // Tag the stepper: deactivating its items stops the selector from matching it.
+  await page.locator('.stepper:has(> .stepper-item.active + .stepper-item.active)').first()
+    .evaluate((el) => el.setAttribute('data-supa-forced-stepper', ''));
+  const stepper = page.locator('[data-supa-forced-stepper]');
+  await stepper.evaluate((el) => el.scrollIntoView({ block: 'center', behavior: 'instant' }));
+  await page.mouse.move(0, 0);
+  const active = await stepper.evaluate((el) => [...el.children].map((item) => item.classList.contains('active')));
+  await stepper.evaluate((el) => {
+    [...el.children].forEach((item, index) => item.classList.toggle('active', index === 0));
+  });
+  const items = stepper.locator(':scope > .stepper-item');
+  const regions: CueRegion[] = [];
+  for (let index = 0; index < await items.count(); index++) {
+    const found = await items.nth(index).evaluate(inactiveStepperRegions);
+    // The first item is active; keep only its connector, which leads to an inactive item.
+    regions.push(...(index === 0 ? found.slice(1) : found));
+  }
+  const shown = await shootRegions(page, regions);
+  const failures = (await expectPaintedTextContrast(page, await items.nth(1).evaluate(selectedTextRegions)))
+    .map((problem) => `inactive stepper ${problem}`);
+  await stepper.evaluate((el) => {
+    (el as HTMLElement).style.visibility = 'hidden';
+  });
+  const hidden = await shootRegions(page, regions);
+  await stepper.evaluate((el, states) => {
+    (el as HTMLElement).style.visibility = '';
+    [...el.children].forEach((item, index) => item.classList.toggle('active', states[index]));
+  }, active);
+  const shares = await visibleChange(page, hidden, shown);
+  regions.forEach((region, index) => {
+    if (shares[index] < region.share) {
+      failures.push(`inactive stepper ${region.name}: ${(shares[index] * 100).toFixed(1)}% of pixels ` +
+        `differ from the page, need ${region.share * 100}%`);
+    }
+  });
+  return failures;
+}
+
+/**
  * Asserts that every `FORCED_STATE_CUES` state visibly changes its element in forced colors, that a
- * disabled page link reads as `GrayText`, and that keyboard focus on a nav pill and a playground
- * pill looks different from their resting selection, unselected or selected.
+ * disabled page link, list-group item, and nav link read as `GrayText`, that an inactive stepper
+ * keeps its counters and connectors, and that keyboard focus on a nav pill, a playground pill, and
+ * a checkbox and radio toggle button looks different from their resting selection, unselected or
+ * selected.
  *
  * @param page - `components.html` with forced colors active and `#supaForcedStates` added.
  */
@@ -2605,6 +2736,15 @@ async function expectForcedStateCues(page: Page): Promise<void> {
         throw new Error(`forced-colors ${cue.name}: could not ${on ? 'enter' : 'leave'} ${cue.state}`);
       }
       shots.push(await shootRegions(page, regions));
+      if (cue.ink) {
+        const ink = await element.evaluate((el, name) => ({
+          system: (window as unknown as ColorWindow).a11yColor.system(name), text: getComputedStyle(el).color
+        }), cue.ink);
+        if ((ink.text === ink.system) !== on) {
+          failures.push(`${cue.name}: text must compute ${on ? '' : 'other than '}${cue.ink} ` +
+            `${on ? 'in' : 'out of'} ${cue.state}: ${JSON.stringify(ink)}`);
+        }
+      }
       if (on) {
         const text = await element.evaluate(selectedTextRegions);
         failures.push(...(await expectPaintedTextContrast(page, text)).map((problem) => `${cue.name} ${problem}`));
@@ -2631,11 +2771,14 @@ async function expectForcedStateCues(page: Page): Promise<void> {
     failures.push(`disabled page link must read as GrayText against enabled links: ${JSON.stringify(ink)}`);
   }
   failures.push(...await expectSelectedLinkIdentified(page));
+  failures.push(...await expectInactiveStepper(page));
   // A resting outline must not stand in for the focus ring: compare a selected, unfocused item with
   // the same item focused by keyboard, both unselected and selected.
-  for (const name of ['active nav pill', 'pressed playground pill']) {
+  for (const name of ['active nav pill', 'pressed playground pill', 'checked checkbox toggle button',
+    'checked radio toggle button']) {
     const cue = FORCED_STATE_CUES.find((candidate) => candidate.name === name)!;
     const element = page.locator(`[data-supa-forced-cue="${name}"]`);
+    const target = cue.focus ? element.locator(cue.focus) : element;
     await element.evaluate((el) => el.scrollIntoView({ block: 'center', behavior: 'instant' }));
     await page.mouse.move(0, 0);
     // Pad the box so an outline drawn outside it counts.
@@ -2643,23 +2786,23 @@ async function expectForcedStateCues(page: Page): Promise<void> {
       const { x, y, width, height } = el.getBoundingClientRect();
       return [{ name: 'box', x: x - 6, y: y - 6, width: width + 12, height: height + 12, share: .05 }];
     });
-    await element.blur();
-    if (await element.evaluate((el) => el.matches(':focus'))) {
+    await target.blur();
+    if (await target.evaluate((el) => el.matches(':focus'))) {
       throw new Error(`forced-colors ${name}: the resting item must not have focus`);
     }
     const resting = await shootRegions(page, regions);
     await element.evaluate(cue.toggle, false);
-    await element.focus();
+    await target.focus();
     await page.keyboard.press('Shift+Tab');
     await page.keyboard.press('Tab');
-    await expectFocused(page, element, name);
-    if (!await element.evaluate((el) => el.matches(':focus-visible'))) {
+    await expectFocused(page, target, name);
+    if (!await target.evaluate((el) => el.matches(':focus-visible'))) {
       throw new Error(`forced-colors ${name}: keyboard focus must match :focus-visible`);
     }
     const focusedOff = await shootRegions(page, regions);
     await element.evaluate(cue.toggle, true);
     const focusedOn = await shootRegions(page, regions);
-    await element.blur();
+    await target.blur();
     const [unselected] = await visibleChange(page, resting, focusedOff);
     const [selected] = await visibleChange(page, resting, focusedOn);
     if (unselected < regions[0].share || selected < regions[0].share) {
@@ -2692,7 +2835,15 @@ const FORCED_STATES: InteractionScenario = {
         '<span class="list-group-item active" aria-current="true">Active item</span>' +
         '<div class="list-group-item active">Rich item <a href="#supaForcedStates">Read details</a> ' +
         '<small class="text-body-secondary">Secondary</small> <span class="badge theme-primary">Badge</span>' +
-        '</div></div></div>');
+        '</div><a class="list-group-item list-group-item-action" href="#supaForcedStates">Linked item</a>' +
+        '</div><nav class="nav"><a class="nav-link" href="#supaForcedStates">Nav link</a></nav>' +
+        '<div class="btn-group" role="group" aria-label="Checkbox toggle buttons">' +
+        '<label class="btn-check btn-outline theme-primary"><input type="checkbox" checked />Checked</label>' +
+        '<label class="btn-check btn-outline theme-primary"><input type="checkbox" />Unchecked</label></div> ' +
+        '<div class="btn-group" role="group" aria-label="Radio toggle buttons">' +
+        '<label class="btn-check btn-solid theme-primary"><input type="radio" name="supaForcedToggle" checked />' +
+        'Checked</label><label class="btn-check btn-solid theme-primary">' +
+        '<input type="radio" name="supaForcedToggle" />Unchecked</label></div></div>');
     });
     await page.locator(TOGGLE_BUTTON).evaluate((el) => (el as HTMLElement).click());
     await page.mouse.move(0, 0);

@@ -15,12 +15,28 @@
     }
   }
 
+  // Forced colors repaints stepper counters and connectors as Canvas, leaving bare digits. Ring
+  // each counter, thinner than the active Highlight ring below, and draw connectors in GrayText.
+  .stepper-item::before {
+    outline: 1px solid CanvasText;
+    outline-offset: -1px;
+  }
+
+  .stepper-item::after {
+    background-color: GrayText;
+  }
+
   // A stepper connector has no text, so it can take a fill; it fills only up to the last active item.
   .stepper-item.active:has(+ .stepper-item.active)::after {
     background-color: Highlight;
   }
 
-  .page-item.disabled > .page-link {
+  // Bootstrap marks these disabled items only with a lighter color, which forced colors drops.
+  .page-item.disabled > .page-link,
+  .list-group-item.disabled,
+  .list-group-item:disabled,
+  .nav-link.disabled,
+  .nav-link:disabled {
     color: GrayText;
   }
 
@@ -68,8 +84,8 @@
     forced-color-adjust: none;
   }
 
-  // Selected, current, and pressed states otherwise differ only by author fills, which forced
-  // colors repaints as the same Canvas. Mark them with an inset ring rather than a Highlight fill:
+  // Selected, current, pressed, and checked states otherwise differ only by author fills, which
+  // forced colors repaints as the same Canvas. Mark them with an inset ring, not a Highlight fill:
   // Chromium draws a Canvas backplate behind forced text, which would hide HighlightText on a fill
   // and leave nested links in LinkText on it. Attribute selectors follow the state exposed to
   // assistive technology; inset outlines stay inside scrollable lists and menu clipping bounds.
@@ -81,6 +97,7 @@
   .nav-pills .nav-link.active,
   .page-item.active > .page-link,
   .btn.active,
+  .btn-check:has(input:checked),
   .chip.active,
   .list-group-item.active,
   .stepper-item.active::before {
@@ -97,6 +114,7 @@
   .nav-pills .nav-link.active:focus-visible,
   .page-item.active > .page-link:focus-visible,
   .btn.active:focus-visible,
+  .btn-check:has(input:checked:focus-visible),
   .chip.active:focus-visible,
   .list-group-item.active:focus-visible {
     outline-offset: 2px;
@@ -106,6 +124,11 @@
   // the author's pressed color, which axe reads: 1.34:1 for a pressed outline button in light.
   .btn.active {
     -webkit-text-fill-color: ButtonText;
+  }
+
+  // A checked toggle button is a label, which Chromium paints in CanvasText, with the same report.
+  .btn-check:has(input:checked) {
+    -webkit-text-fill-color: CanvasText;
   }
 
   .supa-tab-btn[aria-selected="true"] {
