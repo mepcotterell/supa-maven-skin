@@ -90,7 +90,14 @@
       <item name="Configuration Reference" href="configuration.html">
         <item name="Color Scheme Preview" href="configuration.html#interactive-accessible-color-scheme-preview" />
         <item name="Full site.xml Example" href="configuration.html#full-sitexml-example" />
-        <item name="Configuration Options" href="configuration.html#configuration-options" />
+        <item name="Configuration Options" href="configuration.html#configuration-options">
+          <item name="Theme &amp; Branding" href="configuration.html#theme-branding" />
+          <item name="Layout &amp; Navigation" href="configuration.html#layout-navigation" />
+          <item name="Language &amp; Labels" href="configuration.html#language-labels" />
+          <item name="Responsive Drawers" href="configuration.html#responsive-drawers" />
+          <item name="Footer &amp; Links" href="configuration.html#footer-links" />
+          <item name="Code, Search &amp; Math" href="configuration.html#code-search-diagrams-math" />
+        </item>
         <item name="Accessible Color Schemes" href="configuration.html#built-in-accessible-color-schemes" />
         <item name="CSS Variables" href="configuration.html#extending-palettes-via-lightcssvariables-darkcssvariables" />
         <item name="Velocity Macros" href="configuration.html#velocity-helper-macros-reference-site-macrosvm" />
