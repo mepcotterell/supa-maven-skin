@@ -487,6 +487,56 @@ describe('Supa Maven Skin Frontend Modules', () => {
       expect(window.localStorage.getItem(TAB_SYNC_STORAGE_KEY)).toContain('Kotlin');
     });
 
+    it.each([
+      ['JSON null', 'null'],
+      ['a JSON array', '["Java"]'],
+      ['a JSON string', '"Java"'],
+      ['not JSON', '{not json']
+    ])('ignores a saved tab choice that is %s', (_name, saved) => {
+      window.localStorage.setItem(TAB_SYNC_STORAGE_KEY, saved);
+      const container = document.createElement('div');
+      container.innerHTML = `
+        <div class="supa-tabs" data-tab-group="lang">
+          <div data-tab="Java">Java code</div>
+          <div data-tab="Kotlin">Kotlin code</div>
+        </div>
+      `;
+
+      expect(() => initContentTabs(container)).not.toThrow();
+      const tabButtons = container.querySelectorAll<HTMLButtonElement>('.supa-tab-btn');
+      expect(tabButtons.length).toBe(2);
+      expect(tabButtons[0].classList.contains('active')).toBe(true);
+
+      // A later choice still persists, replacing the malformed value with a valid one.
+      tabButtons[1].click();
+      expect(JSON.parse(window.localStorage.getItem(TAB_SYNC_STORAGE_KEY) ?? 'null')).toEqual({
+        lang: 'Kotlin'
+      });
+    });
+
+    it('skips saved tab choices that are not strings and keeps the valid ones', () => {
+      window.localStorage.setItem(
+        TAB_SYNC_STORAGE_KEY,
+        JSON.stringify({ first: 123, second: 'Kotlin', third: null })
+      );
+      const container = document.createElement('div');
+      container.innerHTML = `
+        <div class="supa-tabs" data-tab-group="first">
+          <div data-tab="Java">Java code</div>
+          <div data-tab="Kotlin">Kotlin code</div>
+        </div>
+        <div class="supa-tabs" data-tab-group="second">
+          <div data-tab="Java">Java code</div>
+          <div data-tab="Kotlin">Kotlin code</div>
+        </div>
+      `;
+
+      expect(() => initContentTabs(container)).not.toThrow();
+      const groups = container.querySelectorAll<HTMLElement>('.supa-tabs');
+      expect(groups[0].querySelector('.supa-tab-btn.active')?.textContent).toBe('Java');
+      expect(groups[1].querySelector('.supa-tab-btn.active')?.textContent).toBe('Kotlin');
+    });
+
     it('marks Team report Gravatar avatars without alt as decorative and leaves authored alt text alone', () => {
       const container = document.createElement('div');
       container.innerHTML = `

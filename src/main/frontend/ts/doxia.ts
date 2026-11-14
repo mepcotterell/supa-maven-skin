@@ -412,6 +412,27 @@ function inferPanelTabLabel(panel: HTMLElement, index: number): string {
 }
 
 /**
+ * Keeps only the usable entries of a parsed `localStorage['supa-tab-sync']` value. The key is
+ * shared with other scripts and older releases, so it may hold `null`, an array, or choices that
+ * are not strings, none of which may stop the enhancers that run after the tabs.
+ *
+ * @param parsed - Value `JSON.parse` returned for the saved tab choices.
+ * @returns Group key to saved tab label, empty when the value is not an object of strings.
+ */
+function parseStoredTabChoices(parsed: unknown): Record<string, string> {
+  const choices: Record<string, string> = {};
+  if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+    return choices;
+  }
+  for (const [group, label] of Object.entries(parsed)) {
+    if (typeof label === 'string') {
+      choices[group] = label;
+    }
+  }
+  return choices;
+}
+
+/**
  * Enhances `.supa-tabs` containers with `<div data-tab="Label">` or `<div title="Label">`
  * panels into accessible ARIA tablists (`sphinx-inline-tabs` equivalent) that synchronize
  * active tab selection across the entire site via `localStorage`.
@@ -428,7 +449,7 @@ export function initContentTabs(container: HTMLElement): void {
   try {
     const raw = window.localStorage?.getItem(TAB_SYNC_STORAGE_KEY);
     if (raw) {
-      storedPrefs = JSON.parse(raw) as Record<string, string>;
+      storedPrefs = parseStoredTabChoices(JSON.parse(raw));
     }
   } catch {
     // Ignore storage read errors
