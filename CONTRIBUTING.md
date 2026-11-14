@@ -42,3 +42,17 @@ CI (SNAPSHOTs from `main`) and `release.yml` (tags `v*`) build and verify withou
 mvn -B -ntp -Prelease jar:jar source:jar-no-fork@attach-sources jar:jar@attach-javadocs \
   gpg:sign@sign-artifacts central-publishing:publish -Dgpg.skip=true -DskipUpload=true
 ```
+
+## Releasing
+
+1. On `main`, set `<version>` in `pom.xml`, `version` in `package.json`, and `<latest-release.version>` to the release version, without `-SNAPSHOT`. Move the `## [Unreleased]` entries in `CHANGELOG.md` under a `## [x.y.z] - YYYY-MM-DD` heading and update the install snippets; `npm run lint:docs` lists what is left.
+2. Commit, push `main`, then push the tag `vx.y.z` on that commit.
+
+The release workflow (`release.yml`) starts with a preflight job that holds no secrets and fails the release, before anything is built or signed, unless:
+
+- the run is on a `v*` tag; a `workflow_dispatch` run must also be started from the tag, not a branch;
+- the tag without its `v` equals Maven's `project.version`;
+- that version is not a SNAPSHOT;
+- `CHANGELOG.md` has its `## [x.y.z] - YYYY-MM-DD` heading, whose section becomes the GitHub Release notes.
+
+The checks are in `scripts/check-release-ready.ts`. To fix a failed preflight, delete the tag, fix the commit on `main`, and tag again.

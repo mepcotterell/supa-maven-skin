@@ -16,6 +16,7 @@ import {
   packageNameFromSassSpecifier,
   sassModuleSpecifiers
 } from '../../../scripts/bundled-licenses';
+import { checkReleaseMetadata, type ReleaseMetadata } from '../../../scripts/check-release-ready';
 import {
   auditContrast,
   collectRootTokens,
@@ -5370,5 +5371,92 @@ describe('WCAG contrast audit (scripts/contrast-audit.ts)', () => {
     expect(auditContrast(tokens, 'furo', 'light', tooltips).violations).toHaveLength(2);
     tokens.set('--bg-body', '#ffffff');
     expect(auditContrast(tokens, 'furo', 'light', tooltips)).toEqual({ checked: 2, violations: [] });
+  });
+});
+
+describe('release preflight (scripts/check-release-ready.ts)', () => {
+  const CHANGELOG = [
+    '# Changelog',
+    '',
+    '## [Unreleased]',
+    '',
+    '## [0.2.10] - 2026-12-01',
+    '',
+    '## [0.2.1] - 2026-11-20',
+    '',
+    '### Fixed',
+    '',
+    '- Something.',
+    ''
+  ].join('\n');
+
+  /**
+   * Builds release metadata for a tag that matches its release.
+   *
+   * @param overrides - Fields to replace.
+   * @returns The metadata to check.
+   */
+  const release = (overrides: Partial<ReleaseMetadata> = {}): ReleaseMetadata => ({
+    ref: 'refs/tags/v0.2.1',
+    pomVersion: '0.2.1',
+    changelog: CHANGELOG,
+    ...overrides
+  });
+
+  it('passes a v* tag that matches a released POM version with a dated changelog heading', () => {
+    expect(checkReleaseMetadata(release())).toEqual([]);
+  });
+
+  it('rejects a run on a branch, including a dispatch on a branch named like a tag', () => {
+    for (const ref of ['refs/heads/main', 'refs/heads/v0.2.1', 'refs/tags/0.2.1', 'refs/tags/v', '']) {
+      const errors = checkReleaseMetadata(release({ ref }));
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toContain('v*');
+      expect(errors[0]).toContain('workflow_dispatch');
+    }
+  });
+
+  it('rejects a tag whose version differs from project.version', () => {
+    const errors = checkReleaseMetadata(release({ ref: 'refs/tags/v0.2.2', pomVersion: '0.2.1' }));
+    expect(errors).toHaveLength(2);
+    expect(errors[0]).toContain('v0.2.2');
+    expect(errors[0]).toContain('0.2.1');
+    expect(errors[0]).toContain('project.version');
+    // The changelog is checked against the tag's version, which has no heading here.
+    expect(errors[1]).toContain('## [0.2.2] - YYYY-MM-DD');
+  });
+
+  it('rejects a SNAPSHOT version even when the tag matches it', () => {
+    const errors = checkReleaseMetadata(
+      release({
+        ref: 'refs/tags/v0.2.1-SNAPSHOT',
+        pomVersion: '0.2.1-SNAPSHOT',
+        changelog: `${CHANGELOG}\n## [0.2.1-SNAPSHOT] - 2026-11-20\n`
+      })
+    );
+    expect(errors).toEqual([expect.stringContaining('SNAPSHOT')]);
+  });
+
+  it('rejects a changelog without the dated heading for the version', () => {
+    const changelogs = [
+      CHANGELOG.replace('## [0.2.1] - 2026-11-20', '## [Unreleased-0.2.1]'),
+      CHANGELOG.replace('## [0.2.1] - 2026-11-20', '## [0.2.1]'),
+      CHANGELOG.replace('## [0.2.1] - 2026-11-20', '## [0.2.1] - TBD'),
+      CHANGELOG.replace('## [0.2.1] - 2026-11-20', '### [0.2.1] - 2026-11-20'),
+      // A heading for 0.2.10, and a version whose dots would match any character as a pattern.
+      CHANGELOG.replace('## [0.2.1] - 2026-11-20', ''),
+      CHANGELOG.replace('## [0.2.1] - 2026-11-20', '## [0x2y1] - 2026-11-20')
+    ];
+    for (const changelog of changelogs) {
+      const errors = checkReleaseMetadata(release({ changelog }));
+      expect(errors).toEqual([expect.stringContaining('## [0.2.1] - YYYY-MM-DD')]);
+    }
+  });
+
+  it('reports every failed check at once', () => {
+    const errors = checkReleaseMetadata(
+      release({ ref: 'refs/tags/v0.3.0', pomVersion: '0.3.0-SNAPSHOT', changelog: '## [Unreleased]\n' })
+    );
+    expect(errors).toHaveLength(3);
   });
 });
