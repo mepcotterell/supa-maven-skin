@@ -178,9 +178,10 @@ Bootstrap 6's own grays and state fills fall short of 7:1 in places, so the four
 - **Inverse theme.** Light `.theme-inverse` subtle surfaces in `modus-tritanopia` use `color-background-item`, because Bootstrap's light inverse surface leaves the teal link at 6.9:1.
 - **Muted fills.** The muted fills of hovered chips, nav links, and list-group actions (`--<theme>-bg-muted`) sit halfway between each theme's subtle fill and `color-background-primary`.
 - **State tokens.** Hovered sidebar links keep `color-foreground-primary`. The current page's brand tint (`supa-nav-active-bg`) is mixed into `color-background-primary` instead of laid over the sidebar; dark `modus-tinted` uses 4% instead of 12%, because 12% matched the sidebar. Hovered unthemed buttons and chips (`supa-bg-active`) use Modus Vivendi's `#535353` gray (`#4a4f69` in `modus-tinted`) in dark polarity, and a hovered selected chip stays opaque (`supa-chip-selected-hover-opacity` is `1`).
-- **Range themes.** A themed range keeps neutral thumb and fill colors, except `.theme-inverse`, because the other theme fills fail the non-text target in at least one palette variant.
 
 In every scheme, Bootstrap's dark `.theme-secondary` and `.theme-inverse` muted fills step toward the page, because Bootstrap's own were lighter than the text on them. The audit above measures each of these states.
+
+The themed range slider is a different kind of rule: it applies in all six schemes, and it is a component rule on `.form-range` in `_bootstrap-supa.scss`, not a token that `<lightCssVariables>` or `<darkCssVariables>` can set. An enabled themed range keeps neutral thumb and fill colors (`color-foreground-primary`), except `.theme-inverse`, because the other theme fills fail the non-text target in at least one palette variant.
 
 ### Build-Time Tokens vs. Rendered-Page Checks
 
