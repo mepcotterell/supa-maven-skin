@@ -261,6 +261,29 @@ if ( html.contains( "<html lang=\"\"" ) || !html.contains( "<html lang=\"en\"" )
 if ( !html.contains( "supa-nav-has-children has-link" ) ) {
     throw new IllegalStateException( "Missing linked parent sidebar item for the Project Information reports menu" );
 }
+// Three menu levels: each item's data-depth is one more than the item that holds it, including
+// the item after a nested group, and a linked parent's toggle is named after it
+expectTag( "index.html", html, "li", new String[] { "class", "supa-nav-item supa-nav-has-children has-link", "data-depth", "1" },
+    "Guide Sections must render as a linked parent at depth 1" );
+expectText( "index.html", html, "a", new String[] { "class", "supa-nav-link", "href", "guide.html#configuration" }, "Guide Sections",
+    "the depth-1 parent must render its link" );
+expectTag( "index.html", html, "summary", new String[] { "class", "supa-nav-summary", "aria-label", "Configuration section" },
+    "the depth-2 parent's toggle must be named after it" );
+java.util.regex.Matcher depths = java.util.regex.Pattern.compile(
+    "<li class=\"([^\"]*)\" data-depth=\"(\\d+)\">\\s*<a class=\"supa-nav-link\" href=\"([^\"]*)\">\\s*(?:<span class=\"supa-nav-text\">)?([^<]*)" ).matcher( html );
+Map itemDepths = new HashMap();
+while ( depths.find() ) {
+    itemDepths.put( depths.group( 4 ).trim(), depths.group( 2 ) );
+}
+String[][] expectedDepths = new String[][] {
+    { "Guide Sections", "1" }, { "Configuration", "2" }, { "Skin Snippet", "3" }, { "Install Section", "2" }, { "User Guide", "1" }
+};
+for ( int i = 0; i < expectedDepths.length; i++ ) {
+    if ( !expectedDepths[i][1].equals( itemDepths.get( expectedDepths[i][0] ) ) ) {
+        throw new IllegalStateException( "Sidebar item " + expectedDepths[i][0] + " must be at data-depth " + expectedDepths[i][1]
+            + ", found " + itemDepths.get( expectedDepths[i][0] ) + " (" + itemDepths + ")" );
+    }
+}
 if ( java.util.regex.Pattern.compile( "<summary[^>]*>\\s*<a\\s" ).matcher( html ).find() ) {
     throw new IllegalStateException( "Sidebar <summary> must not contain a link (axe nested-interactive, WCAG 4.1.2)" );
 }

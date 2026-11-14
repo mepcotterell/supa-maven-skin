@@ -65,6 +65,14 @@
       <item name="Welcome" href="index.html" />
       <item name="User Guide" href="guide.html" />
       <item name="Installation" href="guides/install.html" />
+      <!-- Three levels, with an item after the nested group, for the sidebar's deepest branch.
+           Section links only, so the Previous / Next cards ignore them. -->
+      <item name="Guide Sections" href="guide.html#configuration">
+        <item name="Configuration" href="guide.html#configuration">
+          <item name="Skin Snippet" href="guide.html#configuration" />
+        </item>
+        <item name="Install Section" href="guide.html#1-install" />
+      </item>
     </menu>
     <menu ref="reports" />
   </body>

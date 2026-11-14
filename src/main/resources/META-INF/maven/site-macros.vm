@@ -262,11 +262,12 @@ Apache Maven Doxia Site Renderer#if( $doxiaSiteRendererVersion ) $doxiaSiteRende
             </span>
           </summary>
           <ul class="supa-nav-sublist list-unstyled">
-#set( $childDepth = $depth + 1 )
+## $childDepth is global, and a nested group under a child sets it one deeper, so it is set again
+## from this call's own $depth before each child, or the children after that group render too deep.
 #foreach( $child in $item.items )
+#set( $childDepth = $depth + 1 )
 #supaSidebarMenuItem( $child $childDepth $collapseDepth )
 #end
-#set( $depth = $childDepth - 1 )
           </ul>
         </details>
       </li>
