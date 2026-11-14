@@ -4934,10 +4934,18 @@ const CANCELLED_REQUEST = /^(?:net::ERR_ABORTED|NS_BINDING_ABORTED|cancelled)$/;
 const ENGINE_LOAD_REPORTS = {
   /** Chromium and WebKit, with the request's URL as the message's source. */
   failedToLoad: /^Failed to load resource: /,
-  /** Chromium, with the page as the source: "Access to script at '<url>' from origin ...". */
-  corsBlocked: /^Access to [A-Za-z ]+ at '([^']+)' from origin '[^']+' has been blocked by CORS policy: /,
-  /** WebKit, with no source or URL; the same text is the failed request's `errorText`. */
-  originNotAllowed: /^Origin \S+ is not allowed by Access-Control-Allow-Origin\. Status code: \d+$/,
+  /**
+   * Chromium, with the page as the source: "Access to script at '<url>' from origin ...", which
+   * also names the requested URL, as "(redirected from '<url>')", when a redirect led there.
+   */
+  corsBlocked:
+    /^Access to [A-Za-z ]+ at '([^']+)'(?: \(redirected from '([^']+)'\))? from origin '[^']+' has been blocked by CORS policy: /,
+  /**
+   * WebKit, with no source or URL, prefixed with "Cross-origin redirection to <url> denied ..."
+   * when a redirect led there; the same text is the failed request's `errorText`.
+   */
+  originNotAllowed:
+    /^(?:Cross-origin redirection to \S+ denied by Cross-Origin Resource Sharing policy: )?Origin \S+ is not allowed by Access-Control-Allow-Origin\. Status code: \d+$/,
   /** Firefox, for a cross-origin request that failed or lacked CORS headers. */
   firefoxCors:
     /^\[JavaScript Error: "Cross-Origin Request Blocked: The Same Origin Policy disallows reading the remote resource at (\S+?)\. \(Reason: /,
@@ -5090,7 +5098,12 @@ function collectPageErrors(page: Page, baseUrl: string, siteDir: string): () => 
     if (reports.failedToLoad.test(text)) {
       return source !== '' && (mayFail(source) || handledUrls.has(source));
     }
-    const blocked = reports.corsBlocked.exec(text)?.[1] ?? reports.firefoxCors.exec(text)?.[1];
+    const cors = reports.corsBlocked.exec(text);
+    if (cors) {
+      const [, target, redirectedFrom] = cors;
+      return mayFail(target) && (redirectedFrom === undefined || mayFail(redirectedFrom));
+    }
+    const blocked = reports.firefoxCors.exec(text)?.[1];
     if (blocked !== undefined) {
       return mayFail(blocked);
     }
