@@ -443,9 +443,9 @@ Defaults shown below are for the `furo` scheme; other schemes can override them.
 | `color-brand-content` | Content hyperlink color inside `.prose` articles and Bootstrap component focus rings (`--primary-focus-ring`). Text and links on solid themed card headers and footers use `--theme-contrast` on their theme fill; subtle and translucent caps retain their own text colors. |
 | `color-background-primary` | Main article and page background surface (`--bg-body`). |
 | `color-background-secondary` | Left sidebar, code block header, and card secondary surface (`--bg-1`). |
-| `color-background-item` | Sidebar version badge, code language badge, and search-result badge background (default `light-dark(#f1f3f5, #212529)`). |
-| `color-background-hover` | Hover state surface for navigation items and icon buttons (`--bg-2`). |
-| `color-background-border` | Subtle hairline border color across sidebars, tables, and headers (`--border-color`). |
+| `color-background-item` | Sidebar version badge, code language badge, and search-result badge background, and Bootstrap's `--bg-2` (default `light-dark(#f1f3f5, #212529)`). |
+| `color-background-hover` | Hover state surface for navigation items, icon buttons, search results, and channel links. Bootstrap's `--bg-2` does not read it; that is `color-background-item`. |
+| `color-background-border` | Subtle hairline border color across sidebars, tables, and headers (`--border-color`), and Bootstrap's `--bg-3` (the fill of a hovered or pressed button or chip without a theme, through `supa-bg-active`). |
 | `color-code-background` | Background of code blocks (default `light-dark(#f6f8fa, #1c1f24)`). |
 | `color-inline-code-background` | Background of inline code (default `light-dark(rgba(175, 184, 193, 0.22), rgba(110, 118, 129, 0.35))`). Translucent in `furo` and `bootstrap`, so it tints the surface beneath, such as an admonition or alert. On a solid fill (the `.card-header` or `.card-footer` of a themed card that is not `.card-subtle` or `.card-translucent`, an active `.list-group-item`) it is laid over `color-background-primary` instead. Unthemed card caps inside `.theme-reset` keep the ordinary background; a theme inside the reset restores the solid-fill chip. |
 | `color-inline-code-text` | Inline code text color (default `var(--color-foreground-primary)`). |
@@ -453,7 +453,7 @@ Defaults shown below are for the `furo` scheme; other schemes can override them.
 | `color-foreground-secondary` | Secondary metadata, caption, and inactive TOC link color (`--fg-2`). |
 | `color-foreground-muted` | Muted text, permalink `#` indicators, subtle labels, and the Datepicker's weekday names and days outside the shown month (`--fg-3`). |
 | `supa-control-border` | Bootstrap checkbox, radio, switch, enabled range track, form-control, chip-input, and OTP slot normal-state boundary color (default `var(--color-foreground-muted)`) to meet each palette's non-text target on page and secondary surfaces; Bootstrap validation states retain their semantic borders. Range tracks use an inset boundary and keep their `--bg-3` interior; disabled ranges retain Bootstrap paint. |
-| `color-foreground-border` | Interactive control border color (WCAG 1.4.11 non-text contrast &ge; 3:1). |
+| `color-foreground-border` | Border color of blockquotes, `<kbd>`, the sidebar search button, the palette swatches, the open or hovered palette select and picker, and a hovered playground pill (WCAG 1.4.11 non-text contrast &ge; 3:1 on the page). Form controls use `supa-control-border`. |
 | `supa-admonition-note-accent` | `note` and `seealso` admonition and `.theme-info` accent color. |
 | `supa-admonition-note-bg` | `note` and `seealso` admonition title background; also the Bootstrap `.theme-info` subtle background (default `light-dark(#ddf4ff, rgba(56, 139, 253, 0.14))`). |
 | `supa-admonition-tip-accent` | `tip` and `hint` admonition and `.theme-success` accent color. |
