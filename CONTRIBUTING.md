@@ -20,3 +20,5 @@ npm run test:a11y
 # Regenerate the README screenshots in .github/screenshots/ from target/site/ (same browser).
 npm run screenshots
 ```
+
+Update GitHub Actions pins by resolving the desired upstream tag to its full commit SHA (dereferencing annotated tags), and update the trailing release-version comment alongside the pin.

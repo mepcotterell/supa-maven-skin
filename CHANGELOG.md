@@ -10,6 +10,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - **Documentation Channels**: Palette-aware channel navigation and a native version disclosure, with responsive wrapping, keyboard focus, current-page cues, and print suppression. Supports `.supa-documentation-channels` and existing `.documentation-channels` markup.
 
+### Security
+
+- **Workflow Actions and Signing**: All GitHub Actions are pinned to verified commit SHAs; CI imports the signing key and configures publishing credentials only after verification under the existing SNAPSHOT publishing guard.
+
+
 ## [0.2.0] - 2026-11-06
 
 ### Added
