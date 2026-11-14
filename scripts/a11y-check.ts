@@ -1847,6 +1847,10 @@ function tocLinkFocusScenario(
   };
 }
 
+/** The `<details>` of the self-site's third-level sidebar group, under Configuration Options. */
+const DEPTH_THREE_GROUP =
+  '.supa-sidebar-tree li[data-depth="2"]:has(> a.supa-nav-link[href$="#configuration-options"]) > details.supa-nav-details';
+
 /** A query no page of the self-site contains, for the zero-result search state. */
 const NO_RESULTS_QUERY = 'qzxvjkw';
 
@@ -3393,6 +3397,59 @@ const SCENARIOS: readonly InteractionScenario[] = [
       const group = page.locator('.supa-sidebar-tree details.supa-nav-details').first();
       await expectVisible(group.locator(':scope > .supa-nav-sublist'), 'the re-expanded sidebar group');
       await expectFocused(page, group.locator(':scope > summary'), 'the group toggle');
+    }
+  },
+  {
+    // The self-site's only three-level branch: Reference > Configuration Reference >
+    // Configuration Options > its sections. The group is collapsed and re-expanded from the
+    // keyboard, as in sidebar-group-expanded.
+    name: 'sidebar-depth-three',
+    page: 'configuration.html',
+    viewport: DESKTOP,
+    setup: async (page) => {
+      const group = page.locator(DEPTH_THREE_GROUP);
+      await group.locator(':scope > summary').focus();
+      await page.keyboard.press('Enter');
+      await expectAttribute(group, 'open', null, 'the collapsed third-level group');
+      await page.keyboard.press('Enter');
+    },
+    assertState: async (page) => {
+      const group = page.locator(DEPTH_THREE_GROUP);
+      await expectVisible(group.locator(':scope > .supa-nav-sublist > li[data-depth="3"] a.supa-nav-link').first(),
+        'a third-level sidebar link');
+      await expectFocused(page, group.locator(':scope > summary'), 'the third-level group toggle');
+      const problem = await page.evaluate((selector) => {
+        const details = document.querySelector(selector)!;
+        const item = details.parentElement!;
+        // A linked parent: its link, then the <details> whose summary is named after it
+        const link = item.querySelector(':scope > a.supa-nav-link');
+        if (!item.matches('li.supa-nav-item.supa-nav-has-children.has-link[data-depth="2"]') ||
+            link?.textContent?.trim() !== 'Configuration Options' || link.nextElementSibling !== details) {
+          return `unexpected third-level parent: ${item.outerHTML.slice(0, 160)}`;
+        }
+        const summary = details.querySelector(':scope > summary');
+        if (summary?.getAttribute('aria-label') !== 'Configuration Options section' ||
+            summary.querySelector('a, button, input, select, textarea, [tabindex]')) {
+          return `the third-level toggle must be named after its parent and hold no other control: ${summary?.outerHTML.slice(0, 160)}`;
+        }
+        const children = details.querySelectorAll(':scope > ul.supa-nav-sublist > li');
+        if (children.length < 2 || [...children].some((li) => li.getAttribute('data-depth') !== '3')) {
+          return `expected the third-level items at data-depth 3, got ${[...children].map((li) => li.getAttribute('data-depth')).join(', ')}`;
+        }
+        // Every item sits one level below the item whose sublist holds it, siblings after a
+        // nested group included, and a top-level item is at depth 1.
+        for (const li of document.querySelectorAll<HTMLElement>('.supa-sidebar-tree li[data-depth]')) {
+          const parent = li.parentElement!.closest<HTMLElement>('li[data-depth]');
+          const expected = parent ? Number(parent.dataset.depth) + 1 : 1;
+          if (Number(li.dataset.depth) !== expected) {
+            return `"${li.textContent?.trim().split('\n')[0]}" has data-depth ${li.dataset.depth}, expected ${expected}`;
+          }
+        }
+        return '';
+      }, DEPTH_THREE_GROUP);
+      if (problem) {
+        throw new Error(problem);
+      }
     }
   },
   {
