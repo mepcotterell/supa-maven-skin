@@ -406,6 +406,16 @@ To serve Mermaid and KaTeX from your own site, follow [Self-Hosting Mermaid & Ka
 
 ### Content Security Policy
 
+Supa Maven Skin emits a static inline `<script>` in `<head>` to apply the reader's theme and color scheme before first paint. Allow it by adding this hash to your `script-src` directive alongside the site's own bundled scripts and widget chunks:
+
+```text
+script-src 'self' 'sha256-bFi2dl1DG0ER3uQVQ+giyr3tAmby9eSQ/l78rYKMNRk=';
+```
+
+This is the script allowance, not a complete policy for every page's content. If your policy also declares `script-src-elem`, include the same allowances there because that directive takes precedence for `<script>` elements. The hash covers the exact script body, including leading and trailing whitespace, without the `<script>` tags. It is identical across pages and site configurations: `<defaultTheme>` and `<colorScheme>` are read from HTML attributes, not interpolated into the script. For unmodified generated HTML, the hash can change only when the skin version changes; check this reference when upgrading. HTML minification or other deployment processing that changes the script's whitespace also requires a new hash. If the script is blocked, the page can flash the wrong theme or palette before the bundled script initializes it.
+
+The optional `css/site.css` stylesheet link also has an inline `onerror="this.remove()"` handler. It removes that link element if the stylesheet fails to load, for example when the consumer site supplies no `site.css`. The script hash above does not authorize this event handler. A strict policy that blocks inline handlers can leave it blocked: the failed link remains in the DOM and the browser may report a CSP violation, but the skin's main stylesheet still renders the page. Only the failed-link cleanup is lost.
+
 With the default URLs, allow `https://cdn.jsdelivr.net` in `script-src` (Mermaid and KaTeX), `style-src` (`katex.min.css`), and `font-src` (KaTeX fonts, which `katex.min.css` loads relative to itself; fonts are not executable and are not covered by SRI). None of the pinned files fetch further code at runtime, so `connect-src` needs nothing extra. Self-hosting removes the jsDelivr origin entirely. Mermaid's rendered SVGs carry inline `<style>` and `style` attributes, so a `style-src` without `'unsafe-inline'` will leave diagrams unstyled.
 
 ## Built-In Accessible Color Schemes
@@ -425,24 +435,36 @@ Every built-in color scheme is verified at build time by `scripts/lint-scss.ts` 
 
 Just like Sphinx Furo's `light_css_variables` and `dark_css_variables`, any child element inside `<lightCssVariables>` or `<darkCssVariables>` is emitted as `--<tag-name>: <value>;` and automatically feeds into Bootstrap 6's component tokens (`--primary-*`, `--success-*`, `--warning-*`, `--danger-*`, `--info-*`, `--accent-*`) via `color-mix(in oklch, ...)`. In the four `modus*` schemes, `.theme-secondary` text and subtle surfaces (secondary alerts, outline buttons, and subtle badges) also follow `color-foreground-muted` on `color-background-secondary`, and dark solid secondary fills (buttons, badges, avatars) use Modus Vivendi's `#505050` mode-line gray (`#484d67` in `modus-tinted`) under white, because Bootstrap's own grays fall short of 7:1. For the same reason, light `.theme-inverse` subtle surfaces in `modus-tritanopia` use `color-background-item`; the muted fills of hovered chips, nav links, and list-group actions (`--<theme>-bg-muted`) sit halfway between each theme's subtle fill and `color-background-primary`; and the `modus*` schemes override the `supa-*` state tokens below: hovered sidebar links keep `color-foreground-primary`, the current page's brand tint is mixed into `color-background-primary` instead of laid over the sidebar (4% instead of 12% in dark `modus-tinted`, where 12% matched the sidebar), hovered unthemed buttons and chips use Modus Vivendi's `#535353` bg-active gray (`#4a4f69` in `modus-tinted`) in dark polarity, and a hovered selected chip stays opaque. In every scheme, Bootstrap's dark `.theme-secondary` and `.theme-inverse` muted fills step toward the page, because Bootstrap's own were lighter than the text on them:
 
+Defaults shown below are for the `furo` scheme; other schemes can override them. In `light-dark(...)`, the first value is for light polarity and the second is for dark polarity. Variable names omit the leading `--` because they are also the XML child element names.
+
 | Variable Name | Purpose |
 | :--- | :--- |
 | `color-brand-primary` | Primary brand accent color (active sidebar links, active TOC border, focus rings, `.btn-primary`). |
 | `color-brand-content` | Content hyperlink color inside `.prose` articles. |
 | `color-background-primary` | Main article and page background surface (`--bg-body`). |
 | `color-background-secondary` | Left sidebar, code block header, and card secondary surface (`--bg-1`). |
+| `color-background-item` | Sidebar version badge, code language badge, and search-result badge background (default `light-dark(#f1f3f5, #212529)`). |
 | `color-background-hover` | Hover state surface for navigation items and icon buttons (`--bg-2`). |
 | `color-background-border` | Subtle hairline border color across sidebars, tables, and headers (`--border-color`). |
+| `color-code-background` | Background of inline code and code blocks (default `light-dark(#f6f8fa, #1c1f24)`). |
+| `color-inline-code-background` | Declared inline-code background token (default `light-dark(rgba(175, 184, 193, 0.22), rgba(110, 118, 129, 0.35))`). Currently unused by the skin; inline code uses `color-code-background`. |
+| `color-inline-code-text` | Inline code text color (default `var(--color-foreground-primary)`). |
 | `color-foreground-primary` | Primary body text and heading color (`--fg-body`). |
 | `color-foreground-secondary` | Secondary metadata, caption, and inactive TOC link color (`--fg-2`). |
 | `color-foreground-muted` | Muted text, permalink `#` indicators, subtle labels, and the Datepicker's weekday names and days outside the shown month (`--fg-3`). |
 | `color-foreground-border` | Interactive control border color (WCAG 1.4.11 non-text contrast &ge; 3:1). |
 | `supa-admonition-note-accent` | `note` and `seealso` admonition and `.theme-info` accent color. |
+| `supa-admonition-note-bg` | `note` and `seealso` admonition title background; also the Bootstrap `.theme-info` subtle background (default `light-dark(#ddf4ff, rgba(56, 139, 253, 0.14))`). |
 | `supa-admonition-tip-accent` | `tip` and `hint` admonition and `.theme-success` accent color. |
+| `supa-admonition-tip-bg` | `tip` and `hint` admonition title background; also the Bootstrap `.theme-success` subtle background and highlighted diff additions (default `light-dark(#dafbe1, rgba(46, 160, 67, 0.14))`). |
 | `supa-admonition-important-accent` | `important` and `admonition` callout and `.theme-accent` accent color. |
+| `supa-admonition-important-bg` | `important` and `admonition` callout title background; also the Bootstrap `.theme-accent` subtle background (default `light-dark(#fbefff, rgba(163, 113, 247, 0.14))`). |
 | `supa-admonition-warning-accent` | `warning` and `caution` admonition and `.theme-warning` accent color. |
+| `supa-admonition-warning-bg` | `warning` and `caution` admonition title background; also the Bootstrap `.theme-warning` subtle background (default `light-dark(#fff8c5, rgba(187, 128, 9, 0.14))`). |
 | `supa-admonition-caution-accent` | `danger`, `attention`, and `error` admonition and `.theme-danger` accent color. |
+| `supa-admonition-caution-bg` | `danger`, `attention`, and `error` admonition title background; also the Bootstrap `.theme-danger` subtle background and highlighted diff deletions (default `light-dark(#ffebe9, rgba(248, 81, 73, 0.14))`). |
 | `supa-admonition-todo-accent` | `todo` admonition neutral accent color. |
+| `supa-admonition-todo-bg` | `todo` admonition title background (default `light-dark(#f1f3f5, rgba(139, 148, 158, 0.16))`). |
 | `supa-nav-hover-fg` | Text color of a hovered sidebar link and of the active search result's title, on `color-background-hover` (default `var(--color-brand-primary)`). |
 | `supa-nav-active-fg` | Text color of the current page's sidebar link (default `var(--color-brand-primary)`). |
 | `supa-nav-active-bg` | Background of the current page's sidebar link (default `color-mix(in srgb, var(--color-brand-primary) 12%, transparent)`, laid over the sidebar). |

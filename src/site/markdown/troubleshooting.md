@@ -25,6 +25,20 @@ mvn site:run
 python3 -m http.server 8000 --directory target/site
 ```
 
+### Old Skin or Labels After a Rebuild
+
+Some pages still show the old skin or old labels after changing `site.xml` or the skin version.
+
+**Cause:** Doxia Sitetools 2 skips pages whose source is unchanged during a plain `mvn site`, even when the skin or `site.xml` has changed. Generated reports can pick up the new settings while authored pages keep the old skin, labels, language, or options.
+
+**Fix:** After changing the skin or `site.xml` (including a locale's `site_<lang>.xml`), rebuild every page:
+
+```bash
+mvn clean site
+```
+
+`clean` removes `target/`, so save any old site you want to compare outside `target/` first. Then preview the rebuilt site over HTTP.
+
 ### Search Results Are Out of Date After a Rebuild
 
 You rebuilt the site, but the search dialog still lists old headings or misses new pages.
@@ -152,7 +166,7 @@ The rest of the page works, but a widget stays plain HTML: a Datepicker is an or
 - A Content Security Policy only allows specific script URLs instead of the site's own origin.
 - After a skin upgrade, a browser or CDN cache serves the old main script next to the new widget files. The files are not renamed between versions, so the two do not fit together.
 
-**Fix:** Publish the whole generated `target/site/` directory, including every file in `js/`. If the site sends a Content Security Policy, allow the site's own scripts (`script-src 'self'`). After an upgrade, purge the CDN cache or force-reload the page.
+**Fix:** Publish the whole generated `target/site/` directory, including every file in `js/`. If the site sends a Content Security Policy, allow the site's own scripts (`script-src 'self'`). Also follow [Content Security Policy](configuration.html#content-security-policy) for the inline anti-FOUC script's hash and the stylesheet error handler's behavior under a strict policy. After an upgrade, purge the CDN cache or force-reload the page.
 
 If the console shows no such warning and the widget's markup was added by a script of your own after the page loaded, see [Running Scripts After the Skin Initializes](customizing.html#running-scripts-after-the-skin-initializes).
 

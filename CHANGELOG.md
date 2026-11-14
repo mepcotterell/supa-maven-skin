@@ -10,6 +10,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - **Documentation Channels**: Palette-aware channel navigation and a native version disclosure, with responsive wrapping, keyboard focus, current-page cues, and print suppression. Supports `.supa-documentation-channels` and existing `.documentation-channels` markup.
 
+### Changed
+
+- **Content Security Policy Guidance**: The reference documents the static inline anti-FOUC script hash and stylesheet error handler behavior under a strict policy, with an integration assertion keeping the documented hash synchronized with the rendered script.
+- **Palette Token Reference**: The reference documents the shipped code color and admonition background tokens, their Furo defaults, and the surfaces they paint.
+
+### Fixed
+
+- **Clean Site Rebuild Guidance**: The migration, customizing, and troubleshooting guides now require `mvn clean site` after skin or `site.xml` changes so unchanged pages receive the new skin, labels, language, and options. The migration guide saves the Fluido comparison copy outside `target/` before cleaning.
+
 ### Security
 
 - **Workflow Actions and Signing**: All GitHub Actions are pinned to verified commit SHAs; CI imports the signing key and configures publishing credentials only after verification under the existing SNAPSHOT publishing guard.

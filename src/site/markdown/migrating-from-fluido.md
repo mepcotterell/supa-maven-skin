@@ -26,7 +26,7 @@ Earlier releases declare older prerequisites: for example, Fluido 1.11.1 require
 - **Coming from a Fluido 2.0.0-M milestone:** your build may run a `maven-site-plugin` older than 3.21.0 (Fluido 2.0.0-M11's own build uses 3.20.0). Do the plugin upgrade in item 1 of [Step 1](#step-1-upgrade-the-site-toolchain), then continue with Step 2.
 
 > [!TIP] Keep a Baseline Build
-> Run `mvn site` once with Fluido before you start and keep a copy of `target/site/`. Comparing the two builds page by page is the quickest way to spot a menu, link, or image that did not survive the switch.
+> Run `mvn site` once with Fluido before you start and save a copy of `target/site/` outside `target/` before cleaning (for example, in a sibling directory named `fluido-site-baseline/`). Comparing the two builds page by page is the quickest way to spot a menu, link, or image that did not survive the switch.
 
 ---
 
@@ -88,6 +88,8 @@ Replace the Fluido `<skin>` element in `src/site/site.xml`:
   <version>0.2.0</version>
 </skin>
 ```
+
+After completing the remaining configuration changes below, run `mvn clean site` as described in the [Verification Checklist](#verification-checklist), including when switching back to Fluido.
 
 Check for a newer release of [`io.github.mepcotterell:supa-maven-skin` on Maven Central](https://central.sonatype.com/artifact/io.github.mepcotterell/supa-maven-skin); the [Quickstart Tutorial](getting-started.html#step-2-create-srcsitesitexml) shows the complete `site.xml`. **Supa Maven Skin** packages its CSS, JavaScript, and icon fonts inside the skin JAR, so consumer projects do not need Node.js or any extra build plugin.
 
@@ -261,7 +263,9 @@ Hand-written HTML in `.md`, `.xhtml`, or `.xdoc` pages is a different story. Flu
 
 ## Verification Checklist
 
-After `mvn site` succeeds, preview the site over HTTP with `mvn site:run` (or `python3 -m http.server 8000 --directory target/site`) and check the following. Pages opened from `file://` skip the skin's JavaScript, so search, the theme and color scheme controls, the "On this page" table of contents, and other enhancements would look broken; see [Previewing Your Site](troubleshooting.html#previewing-your-site).
+After completing the skin and configuration changes, rebuild with `mvn clean site`. Doxia Sitetools 2 skips pages whose source is unchanged during a plain `mvn site`, even when the skin or `site.xml` has changed. See [Old Skin or Labels After a Rebuild](troubleshooting.html#old-skin-or-labels-after-a-rebuild).
+
+After the clean build succeeds, preview the site over HTTP with `mvn site:run` (or `python3 -m http.server 8000 --directory target/site`) and check the following. Pages opened from `file://` skip the skin's JavaScript, so search, the theme and color scheme controls, the "On this page" table of contents, and other enhancements would look broken; see [Previewing Your Site](troubleshooting.html#previewing-your-site).
 
 - [ ] The build log shows no errors from parsing `site.xml`, and the generator comment at the top of each page reads "Rendered using Supa Maven Skin".
 - [ ] The sidebar brand shows the right name and logo, and every menu, including `ref="reports"` and `ref="modules"`, appears in the left sidebar.

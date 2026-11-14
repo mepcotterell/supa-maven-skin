@@ -7,6 +7,9 @@ This how-to guide shows how a consumer site adds its own CSS, JavaScript, and `<
 
 ---
 
+> [!IMPORTANT] Rebuild After Configuration Changes
+> After changing the skin or `site.xml` (including a locale's `site_<lang>.xml`), run `mvn clean site` so every page uses the new settings. Doxia Sitetools 2 skips unchanged page sources during a plain `mvn site`; see [Old Skin or Labels After a Rebuild](troubleshooting.html#old-skin-or-labels-after-a-rebuild). Adding or editing `site.css` still needs just `mvn site`.
+
 ## Choosing a Customization Layer
 
 Reach for the lightest layer that does the job. Built-in options are tested with every release; your own CSS and scripts are not.
@@ -160,7 +163,7 @@ For the state at page load, read the attributes on `<html>` described in [Choosi
 
 | Token family | Examples | Controls |
 | :--- | :--- | :--- |
-| Palette colors | `--color-brand-primary`, `--color-brand-content`, `--color-background-primary`, `--color-foreground-primary` | Surfaces, text, links, and brand accents. See the full list in [Extending Palettes](configuration.html#extending-palettes-via-lightcssvariables-darkcssvariables). |
+| Palette colors | `--color-brand-primary`, `--color-brand-content`, `--color-background-primary`, `--color-foreground-primary` | Surfaces, text, links, and brand accents. See the palette color token reference, including code colors and admonition backgrounds, in [Extending Palettes](configuration.html#extending-palettes-via-lightcssvariables-darkcssvariables). |
 | Admonition accents | `--supa-admonition-note-accent`, `--supa-admonition-note-bg` | Admonitions and the matching Bootstrap 6 `.theme-*` colors. |
 | Navigation states | `--supa-nav-hover-fg`, `--supa-nav-active-fg`, `--supa-nav-active-bg` | Text of a hovered sidebar link (and the active search result's title), and the current page's sidebar link text and background. |
 | Search and control states | `--supa-search-mark-fg`, `--supa-search-mark-bg`, `--supa-bg-active`, `--supa-chip-selected-hover-opacity` | Highlighted search matches, the fill of hovered unthemed buttons and chips, and the fade of a hovered selected chip. |
@@ -342,7 +345,7 @@ The skin's own interface text (search, navigation, the table of contents, the th
    </custom>
    ```
 
-3. Rebuild with `mvn site` and check the pages, including the search dialog, a code block's copy button, and the theme and color-scheme menus.
+3. Rebuild with `mvn clean site` (see [Old Skin or Labels After a Rebuild](troubleshooting.html#old-skin-or-labels-after-a-rebuild)) and check the pages, including the search dialog, a code block's copy button, and the theme and color-scheme menus.
 
 The [Labels](configuration.html#labels) reference lists every key with its English text and placeholders. When you write a label:
 

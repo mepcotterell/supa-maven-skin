@@ -2,6 +2,8 @@ import java.io.File;
 import java.nio.file.Files;
 import java.nio.charset.StandardCharsets;
 import java.util.jar.JarFile;
+import java.security.MessageDigest;
+import java.util.Base64;
 
 File siteDir = new File( basedir, "target/site" );
 if ( !siteDir.isDirectory() ) {
@@ -111,6 +113,31 @@ if ( !indexHtml.isFile() ) {
     throw new IllegalStateException( "index.html was not generated" );
 }
 String html = Files.readString( indexHtml.toPath(), StandardCharsets.UTF_8 );
+
+// Invoker runs this copy from target/it/sample-site, so ../../../ reaches the repository.
+// Read the published example rather than duplicating its hash: changing either the docs
+// or the script alone must fail. Preserve all script whitespace when hashing.
+File cspDocs = new File( basedir, "../../../src/site/markdown/configuration.md" ).getCanonicalFile();
+String cspReference = Files.readString( cspDocs.toPath(), StandardCharsets.UTF_8 );
+java.util.regex.Matcher documentedHash = java.util.regex.Pattern.compile(
+    "script-src 'self' '(sha256-[A-Za-z0-9+/]{43}=)'" ).matcher( cspReference );
+if ( !documentedHash.find() ) {
+    throw new IllegalStateException( "Missing inline head script CSP hash in " + cspDocs );
+}
+String expectedCspHash = documentedHash.group( 1 );
+String headHtml = html.substring( 0, html.indexOf( "</head>" ) );
+java.util.regex.Matcher headScript = java.util.regex.Pattern.compile(
+    "<script>([\\s\\S]*?)</script>" ).matcher( headHtml );
+if ( !headScript.find() || !headScript.group( 1 ).contains( "supa-theme" ) ) {
+    throw new IllegalStateException( "Missing inline anti-FOUC head script" );
+}
+String actualCspHash = "sha256-" + Base64.getEncoder().encodeToString(
+    MessageDigest.getInstance( "SHA-256" ).digest( headScript.group( 1 ).getBytes( StandardCharsets.UTF_8 ) ) );
+if ( !actualCspHash.equals( expectedCspHash ) ) {
+    throw new IllegalStateException( "Inline head script CSP hash mismatch: documented "
+        + expectedCspHash + ", rendered " + actualCspHash );
+}
+System.out.println( "Inline head script CSP hash matches " + cspDocs + ": " + actualCspHash );
 
 if ( !html.contains( "class=\"supa-page\"" ) ) {
     throw new IllegalStateException( "Missing Furo 3-column page wrapper" );
