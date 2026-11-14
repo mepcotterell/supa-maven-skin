@@ -5573,13 +5573,17 @@ describe('WCAG contrast audit (scripts/contrast-audit.ts)', () => {
       ['--supa-nav-active-fg', 'var(--color-brand-primary)'],
       ['--supa-nav-active-bg', 'color-mix(in srgb, var(--color-brand-primary) 12%, transparent)']
     ]);
-    expect(auditContrast(tokens, 'modus', 'dark', named('sidebar')).violations).toEqual([
-      "WCAG 2.2 AAA text contrast violation in palette 'modus' (dark): link var(--supa-nav-hover-fg) " +
-        '(#00bcff) on sidebar link, hovered (#2d2d2d) has contrast 6.32:1 (minimum 7.0:1).',
-      "WCAG 2.2 AAA text contrast violation in palette 'modus' (dark): link var(--supa-nav-active-fg) " +
-        '(#00bcff) on sidebar current page (.supa-nav-link.active) (#1a3139) has contrast 6.25:1 ' +
-        '(minimum 7.0:1).'
-    ]);
+    const missed = auditContrast(tokens, 'modus', 'dark', named('sidebar')).violations;
+    expect(missed).toHaveLength(2);
+    expect(missed).toEqual(
+      expect.arrayContaining([
+        "WCAG 2.2 AAA text contrast violation in palette 'modus' (dark): link var(--supa-nav-hover-fg) " +
+          '(#00bcff) on sidebar link, hovered (#2d2d2d) has contrast 6.32:1 (minimum 7.0:1).',
+        "WCAG 2.2 AAA text contrast violation in palette 'modus' (dark): link var(--supa-nav-active-fg) " +
+          '(#00bcff) on sidebar current page (.supa-nav-link.active) (#1a3139) has contrast 6.25:1 ' +
+          '(minimum 7.0:1).'
+      ])
+    );
     // The modus overrides in _variables.scss: main text on hover, brand tint mixed into the page.
     tokens.set('--supa-nav-hover-fg', 'var(--color-foreground-primary)');
     tokens.set(
@@ -5587,30 +5591,97 @@ describe('WCAG contrast audit (scripts/contrast-audit.ts)', () => {
       'color-mix(in srgb, var(--color-brand-primary) 12%, var(--color-background-primary))'
     );
     const fixed = auditContrast(tokens, 'modus', 'dark', named('sidebar'));
-    expect(fixed.checked).toBe(3);
+    // The hovered and current-page links; a link at rest is measured on the secondary surface.
+    expect(fixed.checked).toBe(2);
     expect(fixed.violations).toEqual([]);
     expect(named('search result, active').length).toBe(1);
     expect(named('search match highlight').length).toBe(2);
     for (const theme of ['primary', 'accent', 'success', 'info', 'warning', 'danger', 'secondary', 'inverse']) {
-      expect(named(`.theme-${theme} `).map((surface: SurfaceSpec) => surface.surface)).toEqual([
-        `.theme-${theme} solid fill (including card caps and checked switch knobs)`,
-        `.theme-${theme} outline button toggled on`,
-        `.theme-${theme} outline, text, and link`,
-        `.theme-${theme} subtle fill`,
-        `.theme-${theme} subtle fill, emphasized text`,
-        `.theme-${theme} solid button hovered`,
-        `.theme-${theme} solid button toggled on`,
-        `.theme-${theme} outline button hovered`,
-        `.theme-${theme} subtle button hovered`,
-        `.theme-${theme} subtle button toggled on`,
-        `.theme-${theme} text button hovered`,
-        `.theme-${theme} text button toggled on`,
-        `.theme-${theme} link hovered`,
-        `.theme-${theme} chip hovered`,
-        `.theme-${theme} muted fill, emphasized text`,
-        `.theme-${theme} selected chip hovered`
-      ]);
+      expect(named(`.theme-${theme} `).map((surface: SurfaceSpec) => surface.surface)).toEqual(
+        expect.arrayContaining([
+          `.theme-${theme} solid fill (including card caps and checked switch knobs)`,
+          `.theme-${theme} outline button toggled on`,
+          `.theme-${theme} outline, text, and link`,
+          `.theme-${theme} subtle fill, emphasized text`,
+          `.theme-${theme} solid button hovered`,
+          `.theme-${theme} solid button toggled on`,
+          `.theme-${theme} outline button hovered`,
+          `.theme-${theme} subtle button hovered`,
+          `.theme-${theme} subtle button toggled on`,
+          `.theme-${theme} text button hovered`,
+          `.theme-${theme} text button toggled on`,
+          `.theme-${theme} link hovered`,
+          `.theme-${theme} chip hovered`,
+          `.theme-${theme} muted fill, emphasized text`,
+          `.theme-${theme} selected chip hovered`
+        ])
+      );
     }
+  });
+
+  describe('SURFACE_AUDITS coverage', () => {
+    /** Every name a violation can give a component: its surface, its label, or a sharer's name. */
+    const componentsOf = (audits: readonly SurfaceSpec[]): string[] =>
+      audits.flatMap((surface: SurfaceSpec) => [
+        surface.surface,
+        ...surface.foregrounds.flatMap((fg) => [fg.label, ...(fg.sharedWith ?? [])])
+      ]);
+    const themes = ['primary', 'accent', 'success', 'info', 'warning', 'danger', 'secondary', 'inverse'];
+    const required: string[] = [
+      'range thumb',
+      'range fill',
+      'range thumb silhouette',
+      'range track boundary',
+      'unchecked checkbox border',
+      'unchecked radio border',
+      'unchecked switch edge',
+      'form-control border',
+      'chip-input border',
+      'OTP slot boundary',
+      'documentation channels links, summary, and current link',
+      'documentation channels control border and focus outline',
+      'sidebar link',
+      ...themes.map((theme: string) => `.theme-${theme} subtle fill`)
+    ];
+
+    it('measures no pair twice, since the stricter of two identical measurements decides', () => {
+      const signatures = SURFACE_AUDITS.flatMap((surface: SurfaceSpec) =>
+        surface.foregrounds.map((fg) => JSON.stringify([surface.layers, fg.color, surface.opacity ?? '1']))
+      );
+      const repeated = signatures.filter((signature, index) => signatures.indexOf(signature) !== index);
+      // A repeat names a component that shares a pair: list it in the first entry's `sharedWith`.
+      expect(repeated).toEqual([]);
+    });
+
+    it('still names every component whose pair another entry measures', () => {
+      const listed = componentsOf(SURFACE_AUDITS);
+      for (const component of required) {
+        expect(listed, component).toContain(component);
+      }
+      // Dropping the entry that carries a component must fail the check above.
+      const withoutAlert = SURFACE_AUDITS.filter((surface: SurfaceSpec) => surface.surface !== '.alert.theme-primary');
+      expect(componentsOf(withoutAlert)).not.toContain('.theme-primary subtle fill');
+      const withoutControls = SURFACE_AUDITS.filter(
+        (surface: SurfaceSpec) => !surface.surface.startsWith('Bootstrap control boundaries')
+      );
+      expect(componentsOf(withoutControls)).not.toContain('range track boundary');
+    });
+
+    it('names the components that share a failing measurement in its message', () => {
+      const [alert] = SURFACE_AUDITS.filter((surface: SurfaceSpec) => surface.surface === '.alert.theme-primary');
+      const tokens = new Map([
+        ['--supa-wcag-level', '"AA"'],
+        ['--color-background-primary', '#ffffff'],
+        ['--primary-bg-subtle', '#ffffff'],
+        ['--primary-fg', '#cccccc'],
+        ['--color-brand-content', '#000000']
+      ]);
+      expect(auditContrast(tokens, 'furo', 'light', [alert!]).violations).toEqual([
+        "WCAG 2.2 AA text contrast violation in palette 'furo' (light): text var(--primary-fg) (#cccccc) on " +
+          '.alert.theme-primary (#ffffff) has contrast 1.61:1 (minimum 4.5:1). ' +
+          'Also paints: .theme-primary subtle fill.'
+      ]);
+    });
   });
 
   it('marks disabled pagination links as disabled, which Doxia strips from raw HTML', () => {
@@ -5666,10 +5737,12 @@ describe('WCAG contrast audit (scripts/contrast-audit.ts)', () => {
 
   it('audits unthemed buttons and chips on the --bg-* steps Bootstrap falls back to', () => {
     const unthemed = SURFACE_AUDITS.filter((surface: SurfaceSpec) => surface.surface.startsWith('unthemed'));
-    expect(unthemed.map((surface: SurfaceSpec) => surface.surface)).toEqual([
-      'unthemed button, chip, or badge (--bg-2)',
-      'unthemed button or chip, hovered or pressed (--supa-bg-active)'
-    ]);
+    expect(unthemed.map((surface: SurfaceSpec) => surface.surface)).toEqual(
+      expect.arrayContaining([
+        'unthemed button, chip, or badge (--bg-2)',
+        'unthemed button or chip, hovered or pressed (--supa-bg-active)'
+      ])
+    );
     // Modus dark as 0.1.3 shipped it: `--bg-3` is the border gray, under white body text.
     const tokens = new Map([
       ['--supa-wcag-level', '"AAA"'],
@@ -5745,12 +5818,14 @@ describe('WCAG contrast audit (scripts/contrast-audit.ts)', () => {
 
   it('audits the Datepicker calendar, whose days outside the month are muted rather than faded', () => {
     const calendar = SURFACE_AUDITS.filter((surface: SurfaceSpec) => surface.surface.startsWith('Datepicker'));
-    expect(calendar.map((surface: SurfaceSpec) => surface.surface)).toEqual([
-      'Datepicker calendar',
-      'Datepicker day, month, or year, hovered',
-      'Datepicker today',
-      'Datepicker selection'
-    ]);
+    expect(calendar.map((surface: SurfaceSpec) => surface.surface)).toEqual(
+      expect.arrayContaining([
+        'Datepicker calendar',
+        'Datepicker day, month, or year, hovered',
+        'Datepicker today',
+        'Datepicker selection'
+      ])
+    );
     // Modus dark's calendar on components.html, where axe read Bootstrap's 50% fade of a day
     // outside the month as #808080 on #000000 (5.31:1).
     const tokens = new Map([
@@ -5782,10 +5857,12 @@ describe('WCAG contrast audit (scripts/contrast-audit.ts)', () => {
 
   it('audits tooltips with the tokens and fade Bootstrap 6 paints them with', () => {
     const tooltips = SURFACE_AUDITS.filter((surface: SurfaceSpec) => surface.surface.startsWith('tooltip'));
-    expect(tooltips.map((surface: SurfaceSpec) => surface.surface)).toEqual([
-      'tooltip over --color-background-primary',
-      'tooltip over --color-background-secondary'
-    ]);
+    expect(tooltips.map((surface: SurfaceSpec) => surface.surface)).toEqual(
+      expect.arrayContaining([
+        'tooltip over --color-background-primary',
+        'tooltip over --color-background-secondary'
+      ])
+    );
     // The entries spell out Bootstrap's `.tooltip` tokens as the root tokens they read, so they
     // must follow the Bootstrap release the skin bundles.
     const bootstrap = readFileSync(resolve(process.cwd(), 'node_modules/bootstrap/scss/_tooltip.scss'), 'utf8');

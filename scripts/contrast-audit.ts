@@ -60,6 +60,12 @@ export interface ForegroundSpec {
   color: string;
   /** Which WCAG target applies. */
   role: ContrastRole;
+  /**
+   * Other components that paint this same color on these same layers, which would otherwise be
+   * separate entries measuring an identical pair. The violation message names them, so one
+   * measurement still reports every component it protects.
+   */
+  sharedWith?: readonly string[];
 }
 
 /** A background surface and every foreground that renders on it. */
@@ -189,7 +195,7 @@ interface ThemePaint {
  * overrides of them in `_bootstrap-supa.scss`, declare them. A fill of `transparent` sits
  * directly on the page.
  *
- * The first five are what a component shows without a pointer on it, including a toggle button
+ * The first four are what a component shows without a pointer on it, including a toggle button
  * left on (`.active`, a checked `.btn-check`), which the component showcase renders at rest. The
  * rest are the hover and press states those rules derive with `oklch(from ...)`, the `bg-muted`
  * fill, or `opacity`. A pressed (`:active`) button that is not toggled on keeps its hover colors:
@@ -218,13 +224,10 @@ const THEME_PAINTS: readonly ThemePaint[] = [
     fill: 'transparent',
     text: 'var(--theme-fg)'
   },
-  {
-    // `.btn-subtle`, `.badge-subtle`, `.avatar-subtle`, `.chip`, `.list-group-item`,
-    // `.nav-link.active`, the open `.accordion-button`, and `.alert` (with links, above)
-    variant: 'subtle fill',
-    fill: 'var(--theme-bg-subtle)',
-    text: 'var(--theme-fg)'
-  },
+  // `--theme-bg-subtle` under `--theme-fg` (`.btn-subtle`, `.badge-subtle`, `.avatar-subtle`,
+  // `.chip`, `.list-group-item`, `.nav-link.active`, the open `.accordion-button`, and `.alert`) is
+  // the pair the `.alert.theme-<name>` entries of `SURFACE_AUDITS` measure, so it is not repeated
+  // here.
   {
     // `.toast-header`, `.card-subtle` header and footer, and a hovered `.page-link` or
     // `.menu-item`
@@ -344,15 +347,12 @@ export const SURFACE_AUDITS: readonly SurfaceSpec[] = [
     surface: 'Bootstrap range unfilled track',
     layers: [PAGE, 'var(--bg-3)'],
     foregrounds: [
-      { label: 'range thumb', color: 'var(--color-foreground-primary)', role: 'non-text' },
-      { label: 'range fill', color: 'var(--color-foreground-primary)', role: 'non-text' }
-    ]
-  },
-  {
-    surface: 'Bootstrap range page',
-    layers: [PAGE],
-    foregrounds: [
-      { label: 'range thumb silhouette', color: 'var(--color-foreground-primary)', role: 'non-text' }
+      {
+        label: 'range thumb',
+        color: 'var(--color-foreground-primary)',
+        role: 'non-text',
+        sharedWith: ['range fill']
+      }
     ]
   },
   ...['var(--bg-3)', PAGE].map((surface): SurfaceSpec => ({
@@ -360,13 +360,6 @@ export const SURFACE_AUDITS: readonly SurfaceSpec[] = [
     layers: [PAGE, surface],
     foregrounds: [{ label: 'inverse thumb and fill', color: 'var(--inverse-bg)', role: 'non-text' }]
   })),
-  ...['--color-background-primary', '--color-background-secondary'].map(
-    (surface): SurfaceSpec => ({
-      surface: `Bootstrap range track boundary ${surface}`,
-      layers: [PAGE, `var(${surface})`],
-      foregrounds: [{ label: 'range track boundary', color: 'var(--supa-control-border)', role: 'non-text' }]
-    })
-  ),
   ...['var(--bg-body)', 'var(--bg-1)'].map(
     (surface): SurfaceSpec => ({
       surface: `palette menu focus on ${surface}`,
@@ -378,10 +371,14 @@ export const SURFACE_AUDITS: readonly SurfaceSpec[] = [
     (surface): SurfaceSpec => ({
       surface: `Bootstrap control boundaries ${surface}`,
       layers: [PAGE, `var(${surface})`],
-      foregrounds: ['unchecked checkbox border', 'unchecked radio border', 'unchecked switch edge',
-        'form-control border', 'chip-input border', 'OTP slot boundary'].map(
-        (label): ForegroundSpec => ({ label, color: 'var(--supa-control-border)', role: 'non-text' })
-      )
+      // The enabled range track boundary paints the same border color on the same layers.
+      foregrounds: [{
+        label: 'unchecked checkbox border',
+        color: 'var(--supa-control-border)',
+        role: 'non-text',
+        sharedWith: ['unchecked radio border', 'unchecked switch edge', 'form-control border',
+          'chip-input border', 'OTP slot boundary', 'range track boundary']
+      }]
     })
   ),
   ...['--color-background-primary', '--color-background-secondary'].map(
@@ -399,14 +396,20 @@ export const SURFACE_AUDITS: readonly SurfaceSpec[] = [
       foregrounds: [{ label: 'focus ring', color: 'var(--primary-focus-ring)', role: 'non-text' }]
     })
   ),
-  ...['--color-background-primary', '--color-background-secondary', '--color-background-hover'].map(
+  // The documentation channels navigation paints its links, summary, and current link in
+  // `--color-foreground-primary`, with the same color for its control border and focus outline.
+  // The text target is the stricter, so that one measurement stands for both. On the secondary
+  // surface it is the one `--color-background-secondary` measures below.
+  ...['--color-background-primary', '--color-background-hover'].map(
     (surface): SurfaceSpec => ({
       surface: `documentation channels ${surface}`,
       layers: [PAGE, `var(${surface})`],
-      foregrounds: [
-        { label: 'links, summary, and current link', color: 'var(--color-foreground-primary)', role: 'text' },
-        { label: 'control border and focus outline', color: 'var(--color-foreground-primary)', role: 'non-text' }
-      ]
+      foregrounds: [{
+        label: 'links, summary, and current link',
+        color: 'var(--color-foreground-primary)',
+        role: 'text',
+        sharedWith: ['control border and focus outline']
+      }]
     })
   ),
   {
@@ -414,7 +417,14 @@ export const SURFACE_AUDITS: readonly SurfaceSpec[] = [
     layers: [PAGE],
     foregrounds: [
       ...PAGE_TEXT_TOKENS.map(
-        (token: string): ForegroundSpec => ({ label: token, color: `var(${token})`, role: 'text' })
+        (token: string): ForegroundSpec => ({
+          label: token,
+          color: `var(${token})`,
+          role: 'text',
+          // The range thumb's silhouette against the page is this color on this layer, measured
+          // here at the stricter text target.
+          ...(token === '--color-foreground-primary' ? { sharedWith: ['range thumb silhouette'] } : {})
+        })
       ),
       {
         label: '--color-foreground-border',
@@ -427,7 +437,22 @@ export const SURFACE_AUDITS: readonly SurfaceSpec[] = [
     surface: '--color-background-secondary',
     layers: [PAGE, 'var(--color-background-secondary)'],
     foregrounds: PAGE_TEXT_TOKENS.map(
-      (token: string): ForegroundSpec => ({ label: token, color: `var(${token})`, role: 'text' })
+      (token: string): ForegroundSpec => ({
+        label: token,
+        color: `var(${token})`,
+        role: 'text',
+        // The sidebar's links at rest (`SIDEBAR` is this surface) and the documentation
+        // channels navigation on it paint exactly this pair.
+        ...(token === '--color-foreground-primary'
+          ? {
+              sharedWith: [
+                'sidebar link',
+                'documentation channels links, summary, and current link',
+                'documentation channels control border and focus outline'
+              ]
+            }
+          : {})
+      })
     )
   },
   ...ADMONITION_KINDS.map(
@@ -454,7 +479,15 @@ export const SURFACE_AUDITS: readonly SurfaceSpec[] = [
       surface: `.alert.theme-${theme}`,
       layers: [PAGE, `var(--${theme}-bg-subtle)`],
       foregrounds: [
-        { label: 'text', color: `var(--${theme}-fg)`, role: 'text' },
+        // `--<theme>-bg-subtle` under `--<theme>-fg` is also how every subtle component paints
+        // (`.btn-subtle`, `.badge-subtle`, `.chip`, `.list-group-item`, ...), so this one
+        // measurement covers them.
+        {
+          label: 'text',
+          color: `var(--${theme}-fg)`,
+          role: 'text',
+          sharedWith: [`.theme-${theme} subtle fill`]
+        },
         { label: 'link', color: LINK, role: 'text' }
       ]
     })
@@ -539,11 +572,8 @@ export const SURFACE_AUDITS: readonly SurfaceSpec[] = [
   ),
   // Sidebar navigation (`.supa-nav-link` in `_sidebar.scss`). The hover rule also paints the
   // `.supa-nav-label` of a hovered group `<summary>`, whose own hover background is the same.
-  {
-    surface: 'sidebar link',
-    layers: [PAGE, SIDEBAR],
-    foregrounds: [{ label: 'link', color: 'var(--color-foreground-primary)', role: 'text' }]
-  },
+  // A link at rest is `--color-foreground-primary` on `SIDEBAR`, the pair that
+  // `--color-background-secondary` above measures.
   {
     surface: 'sidebar link, hovered',
     layers: [PAGE, SIDEBAR, 'var(--color-background-hover)'],
@@ -1436,10 +1466,12 @@ export function auditContrast(
         // A faded element shows both colors mixed with what lies beneath, as axe reads them.
         const shownColor: Rgba = opacity < 1 ? painted : color;
         const faded: string = opacity < 1 ? ` at ${Math.round(opacity * 100)}% opacity` : '';
+        // One measurement can stand for several components that paint the same pair.
+        const shared: string = fg.sharedWith?.length ? ` Also paints: ${fg.sharedWith.join('; ')}.` : '';
         violations.push(
           `WCAG 2.2 ${kind} violation in ${where}: ${label} (${toHex(shownColor)}) on ` +
             `${surface.surface} (${toHex(shownBackground)})${faded} has contrast ` +
-            `${ratio.toFixed(2)}:1 (minimum ${min.toFixed(1)}:1).`
+            `${ratio.toFixed(2)}:1 (minimum ${min.toFixed(1)}:1).${shared}`
         );
       }
     }
