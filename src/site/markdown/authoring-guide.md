@@ -21,6 +21,8 @@ Doxia 2.0 supports two ways to author Markdown pages in `src/site/markdown/`:
    Because `##` denotes a single-line comment in Apache Velocity, wrap level-2+ Markdown heading hashes in Velocity's unparsed block syntax (`#[[##]]# Section Heading` or `#[[###]]# Subsection`) inside `.md.vm` files so Velocity passes `##` / `###` through to the Markdown parser.
 3. **Keeping Multi-Line HTML Blocks Contiguous**:
    In CommonMark (Doxia 2.0), a blank line inside a raw HTML `<div>...</div>` block ends the HTML block early. Keep multi-line HTML component wrappers free of internal empty lines (use `&#10;` if you need a blank line inside an HTML `<pre><code>` block).
+4. **Titles Inside HTML Components**:
+   Doxia turns every `<h1>`–`<h6>` into a page section, even inside a raw HTML `<div>`, which breaks the sections that follow. Give a card or other component its title with a heading-styled `<div>` (`<div class="card-title h5">`), as `#bsCard` does, and keep `<button>` content to inline elements such as `<span>`.
 
 ### Using Velocity Helper Macros (`#bsBadge`, `#bsCard`, & `#bsGuideCard`)
 
@@ -34,8 +36,8 @@ In `.md.vm` pages, `#bsBadge( $theme $variant $text )`, `#bsCard( $title $subtit
   </div>
   <div class="card not-prose" style="max-width: 28rem;">
     <div class="card-body">
-      <h5 class="card-title">Supa Maven Skin</h5>
-      <h6 class="card-subtitle mb-2 text-body-secondary">io.github.mepcotterell:supa-maven-skin</h6>
+      <div class="card-title h5">Supa Maven Skin</div>
+      <div class="card-subtitle h6 mb-2 text-body-secondary">io.github.mepcotterell:supa-maven-skin</div>
       <p class="card-text">Zero-config Sphinx Furo aesthetics powered by Bootstrap 6.</p>
     </div>
     <div class="card-footer text-body-secondary">MIT License</div>

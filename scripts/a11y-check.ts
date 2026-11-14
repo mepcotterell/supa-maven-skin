@@ -297,6 +297,15 @@ const NAV_DUPLICATE_RULE = 'nav-duplicate-destination';
  * every `site.xml` section link is followed on its own page.
  */
 const NAV_FRAGMENT_RULE = 'nav-fragment-target';
+/**
+ * Reported for content markup that the browser builds into a different tree than its author wrote,
+ * or that loses its roles: a Doxia `<section>` opened inside an element, which happens when raw
+ * HTML holds an `<h1>`–`<h6>` (the browser closes the section with the element, and Doxia's own
+ * `</section>` then closes the page's real sections early); an element that is not phrasing
+ * content inside a `<button>`; and a Bootstrap tab whose panel is not a `tabpanel` once the skin
+ * has run (Doxia drops `role` from raw-HTML lists and `<div>`s, and Bootstrap's Tab restores it).
+ */
+const CONTENT_STRUCTURE_RULE = 'content-structure';
 const DESKTOP: Viewport = { width: 1440, height: 900 };
 const MOBILE: Viewport = { width: 390, height: 844 };
 /**
@@ -709,6 +718,67 @@ async function checkNavFragments(page: Page, job: ScanJob): Promise<Finding[]> {
     summary: `Fix the following: the sidebar links ${JSON.stringify(href)}, but no element on the page has that id`,
     html: '',
     helpUrl: 'src/site/site.xml'
+  }));
+}
+
+/**
+ * Checks the article's rendered structure and every button's content (`CONTENT_STRUCTURE_RULE`).
+ *
+ * @param page - Page in the job's state.
+ * @param job - Scan job, for the report.
+ * @returns One finding per misplaced section, button with block content, or tab without a panel.
+ */
+async function checkContentStructure(page: Page, job: ScanJob): Promise<Finding[]> {
+  const problems = await page.evaluate(() => {
+    const found: Array<{ target: string; summary: string; html: string }> = [];
+    const describe = (el: Element): string =>
+      `<${el.tagName.toLowerCase()}${el.className ? ` class="${String(el.className)}"` : ''}>`;
+    const main = document.querySelector('#supa-main-content');
+    for (const section of Array.from(main?.querySelectorAll('section') ?? [])) {
+      const parent = section.parentElement;
+      if (parent && parent !== main && parent.tagName !== 'SECTION') {
+        found.push({
+          target: `${describe(parent)} > section`,
+          summary: `a Doxia section opened inside ${describe(parent)}; write a heading-styled <div> instead of an <h1>-<h6> in raw HTML`,
+          html: section.outerHTML
+        });
+      }
+    }
+    // Elements a <button> may not contain: it takes phrasing content only.
+    const block = 'address, article, aside, blockquote, details, dialog, div, dl, fieldset, figure, ' +
+      'footer, form, h1, h2, h3, h4, h5, h6, header, hr, main, menu, nav, ol, p, pre, section, table, ul';
+    for (const button of Array.from(document.querySelectorAll('button'))) {
+      const inner = button.querySelector(block);
+      if (inner) {
+        found.push({
+          target: `${describe(button)} ${describe(inner)}`,
+          summary: `a button contains ${describe(inner)}, which is not phrasing content; use a <span>`,
+          html: button.outerHTML
+        });
+      }
+    }
+    for (const tab of Array.from(document.querySelectorAll('[data-bs-toggle="tab"][data-bs-target]'))) {
+      const selector = tab.getAttribute('data-bs-target') ?? '';
+      const panel = selector.startsWith('#') ? document.getElementById(selector.slice(1)) : null;
+      if (panel?.getAttribute('role') !== 'tabpanel') {
+        found.push({
+          target: `[data-bs-target=${JSON.stringify(selector)}]`,
+          summary: `the tab's panel ${selector} is not role="tabpanel" once the skin has run`,
+          html: tab.outerHTML
+        });
+      }
+    }
+    return found;
+  });
+  return problems.map(({ target, summary, html }) => ({
+    page: pageLabel(job),
+    variant: variantLabel(job),
+    ruleId: CONTENT_STRUCTURE_RULE,
+    impact: 'moderate',
+    target,
+    summary: `Fix the following: ${summary}`,
+    html: html.replace(/\s+/g, ' ').trim().slice(0, 160),
+    helpUrl: 'https://html.spec.whatwg.org/multipage/form-elements.html#the-button-element'
   }));
 }
 
@@ -4900,6 +4970,7 @@ async function scan(context: BrowserContext, baseUrl: string, job: ScanJob): Pro
   const navFindings = scenario?.scope
     ? []
     : [...(await checkNavDestinations(page, job)), ...(await checkNavFragments(page, job))];
+  const structureFindings = scenario?.scope ? [] : await checkContentStructure(page, job);
   // `options()` replaces axe's run options, so it carries the AA tags itself. axe runs a rule
   // enabled under `rules` even when its tags are outside `runOnly`.
   const builder = new AxeBuilder({ page }).options({
@@ -4932,7 +5003,13 @@ async function scan(context: BrowserContext, baseUrl: string, job: ScanJob): Pro
       helpUrl: 'src/main/frontend/ts/index.ts'
     })
   );
-  const findings: Finding[] = [...labelFindings, ...idFindings, ...navFindings, ...errorFindings];
+  const findings: Finding[] = [
+    ...labelFindings,
+    ...idFindings,
+    ...navFindings,
+    ...structureFindings,
+    ...errorFindings
+  ];
   // No rule exclusions: every violation is either fixed in the skin or in demo content.
   for (const violation of results.violations) {
     for (const node of violation.nodes) {
@@ -5200,7 +5277,7 @@ async function main(): Promise<number> {
         `${scenarioJobs} in interactive states) with axe-core [${WCAG_TAGS.join(', ')}], ` +
         `plus ${AAA_CONTRAST_RULE} on the ${aaaJobs} AAA-palette variants, ` +
         `${LABEL_IN_NAME_RULE} (WCAG 2.5.3) on every visible ${LABEL_IN_NAME_SELECTOR}, ` +
-        `${UNIQUE_ID_RULE} and ${NAV_FRAGMENT_RULE} on every page, ` +
+        `${UNIQUE_ID_RULE}, ${NAV_FRAGMENT_RULE}, and ${CONTENT_STRUCTURE_RULE} on every page, ` +
         `and ${NAV_DUPLICATE_RULE} on every page of the documentation site`
     );
     const errors: ScanError[] = [];
@@ -5242,7 +5319,7 @@ async function main(): Promise<number> {
       `a11y: no WCAG A/AA violations across ${jobs.length} page variants in ${engine}, ` +
         `no AAA contrast violations across the ${aaaJobs} AAA-palette variants, ` +
         `no ${LABEL_IN_NAME_RULE} violations on ${LABEL_IN_NAME_SELECTOR}, ` +
-        `no repeated ids, and no sidebar fragment without its target${skippedNote}.`
+        `no repeated ids, no sidebar fragment without its target, and no misbuilt content${skippedNote}.`
     );
     return 0;
   } finally {

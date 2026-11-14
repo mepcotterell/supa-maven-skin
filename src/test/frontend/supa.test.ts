@@ -1612,6 +1612,38 @@ describe('Supa Maven Skin Frontend Modules', () => {
       }
     });
 
+    it('restores the tablist and tabpanel roles that Doxia drops from raw-HTML Bootstrap tabs', async () => {
+      // Doxia keeps `role` on a raw-HTML <button> but drops it from <ul>, <li>, and <div>.
+      const container = document.createElement('div');
+      container.innerHTML = `
+        <ul class="nav nav-pills">
+          <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#doxiaTabA" type="button" role="tab">A</button></li>
+          <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#doxiaTabB" type="button" role="tab">B</button></li>
+        </ul>
+        <div class="tab-content">
+          <div class="tab-pane active" id="doxiaTabA">A</div>
+          <div class="tab-pane" id="doxiaTabB">B</div>
+        </div>
+      `;
+      document.body.appendChild(container);
+      try {
+        await initLazyWidgets(container);
+
+        expect(container.querySelector('ul.nav')?.getAttribute('role')).toBe('tablist');
+        container.querySelectorAll('li.nav-item').forEach((item) => {
+          expect(item.getAttribute('role')).toBe('presentation');
+        });
+        container.querySelectorAll('.tab-pane').forEach((panel) => {
+          expect(panel.getAttribute('role')).toBe('tabpanel');
+        });
+        const tabs = container.querySelectorAll('[role="tab"]');
+        expect(tabs[0].getAttribute('aria-selected')).toBe('true');
+        expect(tabs[1].getAttribute('aria-selected')).toBe('false');
+      } finally {
+        container.remove();
+      }
+    });
+
     it('sets html[data-supa-ready] only after the lazily loaded Component Playground has initialized', async () => {
       document.body.innerHTML = `
         <main id="supa-main-content">

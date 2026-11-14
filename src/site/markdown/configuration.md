@@ -11,93 +11,93 @@ Click any color scheme card below (or use the palette selector in the top header
 
 <div class="supa-palette-grid not-prose" role="group" aria-label="Accessible color scheme presets">
   <button type="button" class="supa-palette-card is-active" data-supa-palette-card="furo" aria-pressed="true">
-    <div class="supa-palette-card-header">
+    <span class="supa-palette-card-header">
       <span class="supa-palette-card-title">Furo Default</span>
       <span class="badge theme-primary">WCAG AA</span>
-    </div>
-    <div class="supa-palette-card-desc">Sphinx Furo crisp documentation palette (&ge; 4.5:1 across all surfaces).</div>
-    <div class="supa-palette-swatches" aria-hidden="true">
+    </span>
+    <span class="supa-palette-card-desc">Sphinx Furo crisp documentation palette (&ge; 4.5:1 across all surfaces).</span>
+    <span class="supa-palette-swatches" aria-hidden="true">
       <span class="supa-palette-swatch" style="background:#ffffff"></span>
       <span class="supa-palette-swatch" style="background:#131416"></span>
       <span class="supa-palette-swatch" style="background:#1d50d8"></span>
       <span class="supa-palette-swatch" style="background:#116329"></span>
       <span class="supa-palette-swatch" style="background:#6e40c9"></span>
-    </div>
+    </span>
   </button>
 
   <button type="button" class="supa-palette-card" data-supa-palette-card="bootstrap" aria-pressed="false">
-    <div class="supa-palette-card-header">
+    <span class="supa-palette-card-header">
       <span class="supa-palette-card-title">Bootstrap 6 OKLCH</span>
       <span class="badge theme-primary">WCAG AA</span>
-    </div>
-    <div class="supa-palette-card-desc">Perceptually uniform Bootstrap 6 OKLCH semantic palette (&ge; 4.5:1).</div>
-    <div class="supa-palette-swatches" aria-hidden="true">
+    </span>
+    <span class="supa-palette-card-desc">Perceptually uniform Bootstrap 6 OKLCH semantic palette (&ge; 4.5:1).</span>
+    <span class="supa-palette-swatches" aria-hidden="true">
       <span class="supa-palette-swatch" style="background:#f8f9fa"></span>
       <span class="supa-palette-swatch" style="background:#0f1115"></span>
       <span class="supa-palette-swatch" style="background:#0a53be"></span>
       <span class="supa-palette-swatch" style="background:#0f5132"></span>
       <span class="supa-palette-swatch" style="background:#842029"></span>
-    </div>
+    </span>
   </button>
 
   <button type="button" class="supa-palette-card" data-supa-palette-card="modus" aria-pressed="false">
-    <div class="supa-palette-card-header">
+    <span class="supa-palette-card-header">
       <span class="supa-palette-card-title">Modus (Operandi / Vivendi)</span>
       <span class="badge theme-success">WCAG AAA</span>
-    </div>
-    <div class="supa-palette-card-desc">Protesilaos Stavrou's Emacs Modus high-contrast themes (&ge; 7.0:1).</div>
-    <div class="supa-palette-swatches" aria-hidden="true">
+    </span>
+    <span class="supa-palette-card-desc">Protesilaos Stavrou's Emacs Modus high-contrast themes (&ge; 7.0:1).</span>
+    <span class="supa-palette-swatches" aria-hidden="true">
       <span class="supa-palette-swatch" style="background:#ffffff"></span>
       <span class="supa-palette-swatch" style="background:#000000"></span>
       <span class="supa-palette-swatch" style="background:#0031a9"></span>
       <span class="supa-palette-swatch" style="background:#00bcff"></span>
       <span class="supa-palette-swatch" style="background:#531ab6"></span>
-    </div>
+    </span>
   </button>
 
   <button type="button" class="supa-palette-card" data-supa-palette-card="modus-tinted" aria-pressed="false">
-    <div class="supa-palette-card-header">
+    <span class="supa-palette-card-header">
       <span class="supa-palette-card-title">Modus Tinted</span>
       <span class="badge theme-success">WCAG AAA</span>
-    </div>
-    <div class="supa-palette-card-desc">Low-glare warm cream paper &amp; night-sky canvas (&ge; 7.0:1 AAA).</div>
-    <div class="supa-palette-swatches" aria-hidden="true">
+    </span>
+    <span class="supa-palette-card-desc">Low-glare warm cream paper &amp; night-sky canvas (&ge; 7.0:1 AAA).</span>
+    <span class="supa-palette-swatches" aria-hidden="true">
       <span class="supa-palette-swatch" style="background:#fbf7f0"></span>
       <span class="supa-palette-swatch" style="background:#0d0e1c"></span>
       <span class="supa-palette-swatch" style="background:#0031a9"></span>
       <span class="supa-palette-swatch" style="background:#4cbdff"></span>
       <span class="supa-palette-swatch" style="background:#8f0000"></span>
-    </div>
+    </span>
   </button>
 
   <button type="button" class="supa-palette-card" data-supa-palette-card="modus-deuteranopia" aria-pressed="false">
-    <div class="supa-palette-card-header">
+    <span class="supa-palette-card-header">
       <span class="supa-palette-card-title">Modus Deuteranopia</span>
       <span class="badge theme-success">WCAG AAA</span>
-    </div>
-    <div class="supa-palette-card-desc">Red-green colorblind-safe Blue / Gold / Warm Amber palette (&ge; 7.0:1).</div>
-    <div class="supa-palette-swatches" aria-hidden="true">
+    </span>
+    <span class="supa-palette-card-desc">Red-green colorblind-safe Blue / Gold / Warm Amber palette (&ge; 7.0:1).</span>
+    <span class="supa-palette-swatches" aria-hidden="true">
       <span class="supa-palette-swatch" style="background:#ffffff"></span>
       <span class="supa-palette-swatch" style="background:#000000"></span>
       <span class="supa-palette-swatch" style="background:#0031a9"></span>
       <span class="supa-palette-swatch" style="background:#604800"></span>
       <span class="supa-palette-swatch" style="background:#6e3b00"></span>
-    </div>
+    </span>
   </button>
 
   <button type="button" class="supa-palette-card" data-supa-palette-card="modus-tritanopia" aria-pressed="false">
-    <div class="supa-palette-card-header">
+    <span class="supa-palette-card-header">
       <span class="supa-palette-card-title">Modus Tritanopia</span>
       <span class="badge theme-success">WCAG AAA</span>
-    </div>
-    <div class="supa-palette-card-desc">Blue-yellow colorblind-safe Teal / Magenta / Crimson palette (&ge; 7.0:1).</div>
-    <div class="supa-palette-swatches" aria-hidden="true">
+    </span>
+    <span class="supa-palette-card-desc">Blue-yellow colorblind-safe Teal / Magenta / Crimson palette (&ge; 7.0:1).</span>
+    <span class="supa-palette-swatches" aria-hidden="true">
       <span class="supa-palette-swatch" style="background:#ffffff"></span>
       <span class="supa-palette-swatch" style="background:#000000"></span>
       <span class="supa-palette-swatch" style="background:#005454"></span>
       <span class="supa-palette-swatch" style="background:#721045"></span>
       <span class="supa-palette-swatch" style="background:#970000"></span>
-    </div>
+    </span>
   </button>
 </div>
 
