@@ -666,10 +666,77 @@ dialog[data-bs-backdrop="false"]::backdrop {
   }
 }
 
-// Override Bootstrap 6 @layer components .lg:drawer / .xl:drawer !important rules
+// Lays a `.drawer` dialog out inline in its column, as Bootstrap's own `lg:drawer` and `xl:drawer`
+// do above their breakpoints, but at the skin's em breakpoints. Bootstrap's responsive drawers
+// switch at its px breakpoints, which do not follow the reader's font, so the dialogs carry the
+// always-on `.drawer` and this reset replaces the one Bootstrap applies above `lg` and `xl`. It
+// sits in Bootstrap's `components` layer with the same selectors' weight and `!important` flags as
+// Bootstrap's reset, so the skin's own rules above and below still win where they did. `.drawer`
+// also paints its color, outline, clip, radius, shadow, flow, and overflow in that layer at every
+// width, which Bootstrap's responsive drawers do only below their breakpoint; `revert-layer`
+// takes those back to what they were without the drawer.
+// stylelint-disable declaration-no-important
+@mixin -inline-drawer {
+  --drawer-height: auto;
+  --drawer-border-width: 0;
+  z-index: auto;
+  flex-grow: 1;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  inset: auto;
+  visibility: visible !important;
+  background-color: transparent !important;
+  border: 0 !important;
+  width: auto !important;
+  height: auto !important;
+  transition: none !important;
+  display: flex !important;
+  position: static !important;
+  transform: none !important;
+  color: revert-layer;
+  outline: revert-layer;
+  background-clip: revert-layer;
+  border-radius: revert-layer;
+  box-shadow: revert-layer;
+  flex-direction: revert-layer;
+  overflow: revert-layer;
+
+  .drawer-header {
+    display: none;
+  }
+
+  .drawer-body {
+    flex-direction: row;
+    flex-grow: 0;
+    width: 100%;
+    padding: 0;
+    display: flex;
+    overflow-y: visible;
+    background-color: transparent !important;
+  }
+}
+// stylelint-enable declaration-no-important
+
+@layer components {
+  @media (width >= bp.$lg) {
+    .supa-sidebar-drawer {
+      @include -inline-drawer;
+    }
+  }
+
+  @media (width >= bp.$xl) {
+    .supa-toc-drawer {
+      @include -inline-drawer;
+    }
+  }
+}
+
+// Override the inline drawers' !important rules above
 @layer base {
   @media (width >= bp.$lg) {
-    .supa-sidebar-drawer.lg\:drawer {
+    .supa-sidebar-drawer.drawer {
       position: sticky !important;
       top: 0 !important;
       height: 100% !important;
@@ -678,7 +745,7 @@ dialog[data-bs-backdrop="false"]::backdrop {
   }
 
   @media (width >= bp.$xl) {
-    .supa-toc-drawer.xl\:drawer {
+    .supa-toc-drawer.drawer {
       position: sticky !important;
       top: 0 !important;
       height: 100% !important;

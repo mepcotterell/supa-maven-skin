@@ -238,7 +238,7 @@
 #end
 
     <!-- Mobile / Tablet Sticky Header Bar (< lg) -->
-    <header class="supa-mobile-header lg:d-none">
+    <header class="supa-mobile-header">
       <div class="supa-mobile-header-left">
         <button type="button"
                 class="supa-icon-btn"
@@ -305,7 +305,7 @@
     <div class="supa-page">
       <!-- 1. Left Navigation Sidebar (Inline on lg+, Bootstrap 6 Left Drawer below lg) -->
       <aside class="supa-sidebar-column" aria-label="$esc.html( $supaLabels.navPrimary )">
-        <dialog class="lg:drawer drawer-start supa-sidebar-drawer"
+        <dialog class="drawer drawer-start supa-sidebar-drawer"
                 id="supaSidebarDrawer"
                 data-bs-scroll="$esc.html( $sidebarDrawerScroll )"
                 data-bs-backdrop="$esc.html( $sidebarDrawerBackdrop )"
@@ -313,7 +313,7 @@
                 aria-labelledby="supaSidebarDrawerTitle">
 ## Named by the drawer title, which renders on every page, even where it is hidden from view on lg+
 ## or where <sidebarHideName> drops the brand name
-          <div class="drawer-header lg:d-none supa-drawer-header">
+          <div class="drawer-header supa-drawer-header">
             <span class="drawer-title fw-semibold" id="supaSidebarDrawerTitle">$esc.html( $supaLabels.navDrawerTitle )</span>
             <button type="button" class="btn-close" data-bs-dismiss="drawer" aria-label="$esc.html( $supaLabels.navDrawerClose )"></button>
           </div>
@@ -393,7 +393,7 @@
             </nav>
 
             <!-- Mobile / Tablet Drawer Appearance Footer (< lg) -->
-            <div class="supa-sidebar-footer lg:d-none">
+            <div class="supa-sidebar-footer">
               <div class="supa-sidebar-footer-group">
                 <span class="supa-sidebar-footer-label">$esc.html( $supaLabels.navAppearance )</span>
                 <div class="supa-sidebar-footer-controls">
@@ -477,12 +477,12 @@
 #end
 #end
 #if( $colorSchemeSelector )
-#supaPalettePicker( "d-none lg:d-inline-flex" "bottom-end" $colorScheme )
+#supaPalettePicker( "" "bottom-end" $colorScheme )
 #end
-#supaThemeToggle( "d-none lg:d-inline-flex" "bottom-end" )
+#supaThemeToggle( "" "bottom-end" )
 #if( $tocSidebar )
                 <button type="button"
-                        class="supa-icon-btn supa-toc-drawer-trigger d-none lg:d-inline-flex xl:d-none"
+                        class="supa-icon-btn supa-toc-drawer-trigger"
                         data-bs-toggle="drawer"
                         data-bs-target="#supaTocDrawer"
                         data-bs-placement="bottom"
@@ -579,13 +579,13 @@
 #if( $tocSidebar )
         <!-- 3. Right Table of Contents Sidebar ("On this page" — Inline on xl+, Bootstrap 6 Right Drawer below xl) -->
         <aside class="supa-toc-column" aria-label="$esc.html( $supaLabels.tocTitle )">
-          <dialog class="xl:drawer drawer-end supa-toc-drawer"
+          <dialog class="drawer drawer-end supa-toc-drawer"
                   id="supaTocDrawer"
                   data-bs-scroll="$esc.html( $tocDrawerScroll )"
                   data-bs-backdrop="$esc.html( $tocDrawerBackdrop )"
                   tabindex="-1"
                   aria-labelledby="supaTocDrawerTitle">
-            <div class="drawer-header xl:d-none supa-drawer-header">
+            <div class="drawer-header supa-drawer-header">
               <span class="drawer-title fw-semibold" id="supaTocDrawerTitle">$esc.html( $supaLabels.tocTitle )</span>
               <button type="button" class="btn-close" data-bs-dismiss="drawer" aria-label="$esc.html( $supaLabels.tocDrawerClose )"></button>
             </div>

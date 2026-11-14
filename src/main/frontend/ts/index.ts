@@ -31,14 +31,14 @@ import { initTheme } from './theme';
 import { findFragmentTarget, initTocAndScrollSpy } from './toc';
 
 /**
- * Viewport width, in em, from which the sidebar is inline rather than a drawer: Bootstrap's `lg`
- * in `_breakpoints.scss`, where `lg:drawer` on `#supaSidebarDrawer` switches.
+ * Viewport width, in em, from which the sidebar is inline rather than a drawer: `$lg` in
+ * `_breakpoints.scss`, where `_layout.scss` lays `#supaSidebarDrawer` out inline.
  */
 export const SIDEBAR_INLINE_EM = 64;
 
 /**
- * Viewport width, in em, from which the TOC is inline rather than a drawer: Bootstrap's `xl` in
- * `_breakpoints.scss`, where `xl:drawer` on `#supaTocDrawer` switches.
+ * Viewport width, in em, from which the TOC is inline rather than a drawer: `$xl` in
+ * `_breakpoints.scss`, where `_layout.scss` lays `#supaTocDrawer` out inline.
  */
 export const TOC_INLINE_EM = 80;
 

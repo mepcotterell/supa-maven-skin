@@ -1214,7 +1214,7 @@ describe('Supa Maven Skin Frontend Modules', () => {
          */
         const mountInline = (href: string) => {
           document.body.innerHTML = `
-            <dialog id="supaSidebarDrawer" class="lg:drawer" open><a class="supa-nav-link" href="${href}">Usage</a></dialog>
+            <dialog id="supaSidebarDrawer" class="drawer drawer-start supa-sidebar-drawer" open><a class="supa-nav-link" href="${href}">Usage</a></dialog>
             <main id="supa-main-content"><h2 id="usage">Usage</h2><a id="later" href="#next">Later</a></main>`;
           stubViewport(1440);
           initDrawers();
@@ -1275,12 +1275,12 @@ describe('Supa Maven Skin Frontend Modules', () => {
 
     it('configures left #supaSidebarDrawer (.drawer-start) and right #supaTocDrawer (.drawer-end) with body scrolling and backdrop options', () => {
       document.body.innerHTML = `
-        <dialog class="lg:drawer drawer-start supa-sidebar-drawer"
+        <dialog class="drawer drawer-start supa-sidebar-drawer"
                 id="supaSidebarDrawer"
                 data-bs-scroll="true"
                 data-bs-backdrop="false"
                 tabindex="-1"></dialog>
-        <dialog class="xl:drawer drawer-end supa-toc-drawer"
+        <dialog class="drawer drawer-end supa-toc-drawer"
                 id="supaTocDrawer"
                 data-bs-scroll="false"
                 data-bs-backdrop="static"

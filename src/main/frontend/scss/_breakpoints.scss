@@ -9,23 +9,15 @@
 // breakpoints: at a 32px default, a 1280px window is 40em, below `lg`, so the
 // article spans it and both columns become drawers.
 //
-// main.scss hands $breakpoints to Bootstrap, so its responsive classes
-// (`lg:drawer`, `xl:d-none`, and an author's `md:col-6`) switch at the same
-// widths as the skin's own media queries, and index.ts asks matchMedia the
-// same `lg` and `xl` queries before it closes a drawer.
+// Only the skin's own chrome uses these. Bootstrap's $breakpoints stay in px, so
+// an author's responsive classes, container queries, and --breakpoint-* tokens
+// are Bootstrap's own; for the same reason the chrome uses none of Bootstrap's
+// responsive classes (`lg:drawer`, `lg:d-none`), and _layout.scss lays the
+// `.drawer` dialogs out inline itself. index.ts asks matchMedia for `$lg` and
+// `$xl` (SIDEBAR_INLINE_EM, TOC_INLINE_EM) before it closes a drawer.
 // ============================================================================
 
 $sm: 36em;  // 576px at 16px
 $md: 48em;  // 768px
 $lg: 64em;  // 1024px: the sidebar is inline from here up (index.ts SIDEBAR_INLINE_EM)
 $xl: 80em;  // 1280px: the TOC is inline from here up (index.ts TOC_INLINE_EM)
-$xxl: 96em; // 1536px
-
-$breakpoints: (
-  xs: 0,
-  sm: $sm,
-  md: $md,
-  lg: $lg,
-  xl: $xl,
-  2xl: $xxl
-);
