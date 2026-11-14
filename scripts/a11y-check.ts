@@ -429,19 +429,50 @@ async function expectHovered(locator: Locator, what: string): Promise<void> {
 }
 
 /**
- * Waits for the page's running CSS transitions to finish, so axe measures settled colors.
+ * Waits until the page has stopped scrolling and its CSS transitions have finished, so axe
+ * measures settled colors.
  *
  * A state change can recolor text at once while its background still fades (the search result
  * that loses `.is-active`), and axe would otherwise measure whatever mix the fade had reached.
+ * A smooth scroll still running after a scenario's setup carries content under the resting
+ * pointer, and each `:hover` it gives or takes starts a transition after an earlier wait has
+ * returned (a code block's language label fading out). So the wait repeats until two frames
+ * pass with no scroll and no transition running before or after them.
  * Animations are not awaited: a spinner runs forever, and the skin's own animations end hidden.
  *
  * @param page - Page under test.
  */
 async function settleTransitions(page: Page): Promise<void> {
   await page.evaluate(async () => {
-    const transitions = document.getAnimations().filter((animation) => animation instanceof CSSTransition);
-    // A transition interrupted by another state change rejects `finished`; that one is settled too.
-    await Promise.all(transitions.map((transition) => transition.finished.catch(() => undefined)));
+    /** @returns The page's running CSS transitions. */
+    const running = (): Animation[] =>
+      document.getAnimations().filter((animation) => animation instanceof CSSTransition);
+    /** @returns A promise that resolves at the next animation frame. */
+    const nextFrame = (): Promise<void> =>
+      new Promise((resolveFrame) => requestAnimationFrame(() => resolveFrame()));
+    let scrolled: boolean;
+    /** Records that the document or a nested scroller moved. */
+    const onScroll = (): void => {
+      scrolled = true;
+    };
+    // Element scroll events do not bubble, so listen in the capture phase.
+    document.addEventListener('scroll', onScroll, { capture: true, passive: true });
+    try {
+      for (;;) {
+        scrolled = false;
+        const transitions = running();
+        // A transition interrupted by another state change rejects `finished`; that one is settled too.
+        await Promise.all(transitions.map((transition) => transition.finished.catch(() => undefined)));
+        // The hover a scroll moves restyles in the frame after it, and its transition starts there.
+        await nextFrame();
+        await nextFrame();
+        if (!scrolled && transitions.length === 0 && running().length === 0) {
+          return;
+        }
+      }
+    } finally {
+      document.removeEventListener('scroll', onScroll, { capture: true });
+    }
   });
 }
 
