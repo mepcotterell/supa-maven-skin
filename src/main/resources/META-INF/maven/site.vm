@@ -528,7 +528,7 @@
 ## print stylesheet does not print that URL a second time. CSS cannot compare text with an
 ## attribute. Velocity keeps the backslash in a single-quoted string, so `\2` is a backreference.
 #set( $supaBodyContent = $bodyContent.replaceAll( '(<a(?: [^>]*)? href="(https?://[^"]+)"[^>]*)>\2</a>', '$1 data-supa-bare-url>$2</a>' ) )
-            <main id="supa-main-content" class="supa-article prose" role="main">
+            <main id="supa-main-content" class="supa-article prose">
               $supaBodyContent
             </main>
 

@@ -262,6 +262,14 @@ expectTags( "index.html", html, "button", new String[] {
     "class~", "supa-theme-toggle-btn", "aria-label", "Color theme: Auto", "data-bs-title", "Color theme: Auto" },
     3, "every theme trigger must name auto" );
 
+// The article is the page's one <main>, which is the main landmark without a role attribute
+String mainTag = expectTag( "index.html", html, "main", new String[] { "id", "supa-main-content", "class", "supa-article prose" },
+    "the article must be the page's <main>" );
+expectTags( "index.html", html, "main", new String[] {}, 1, "the page must have one <main>" );
+if ( tagAttributes( mainTag ).containsKey( "role" ) ) {
+    throw new IllegalStateException( "<main> must not repeat its implicit main role: " + mainTag );
+}
+
 File guideHtml = new File( siteDir, "guide.html" );
 if ( !guideHtml.isFile() ) {
     throw new IllegalStateException( "guide.html was not generated" );
