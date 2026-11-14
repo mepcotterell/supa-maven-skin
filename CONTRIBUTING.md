@@ -2,6 +2,24 @@
 
 The project's conventions (code style, the accessibility and documentation rules, and where code lives) are in [AGENTS.md](AGENTS.md).
 
+## Setting Up
+
+You need:
+
+- **JDK 21 or newer.** Checkstyle 14 needs it, and CI builds on JDK 21 and 25.
+- **Maven 3.9 or newer.**
+- **Node.js `22.14.0` with npm `10.9.2`**, only if you want to run the npm scripts below directly. These are the versions `pom.xml` pins in `<node.version>` and `<npm.version>`, and CI uses the same Node. The scripts need Node 22.6 or newer, because they run TypeScript with `--experimental-strip-types`.
+
+Maven can provide Node for you. During `mvn verify`, `frontend-maven-plugin` downloads the pinned Node and npm into `node/`, runs `npm install` into `node_modules/`, and then runs the Vite build, `npm run lint`, and `npm test`. Both folders are git-ignored. So the full Maven build below needs only a JDK and Maven.
+
+For the fast npm loop, install the dependencies exactly as `package-lock.json` lists them:
+
+```bash
+npm ci
+```
+
+If you do not have the pinned Node, run `mvn generate-resources` once, then put the Node Maven downloaded first on your `PATH` with `export PATH="$PWD/node:$PATH"`.
+
 ## Building and Testing
 
 ```bash
@@ -10,6 +28,9 @@ npm run lint && npm test && npm run build
 
 # Full Maven build + Vitest unit tests + maven-invoker-plugin integration tests (each project in src/it/) + self-site render
 mvn -B -ntp clean verify site
+
+# Run one integration-test project (sample-site, localized-site, options-site, or legacy-site) instead of all four
+mvn -B -ntp verify -Dinvoker.test=localized-site
 
 # Rendered-page WCAG 2.2 A/AA checks, plus AAA contrast on the modus palettes (axe-core +
 # Playwright Chromium) on target/site/ and on each Invoker fixture's target/it/<name>/target/site/.
