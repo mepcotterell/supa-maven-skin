@@ -3566,6 +3566,21 @@ describe('Supa Maven Skin Frontend Modules', () => {
       expect(highlighted).toContain('<mark class="supa-search-mark">Dark</mark>');
     });
 
+    it('highlights query terms in raw text, so entity names in the query never match escaped characters', () => {
+      const html = highlightQueryTerms('A < B & C', 'lt amp');
+      // The text itself holds no "lt" or "amp", so nothing is marked and the text stays escaped.
+      expect(html).toBe('A &lt; B &amp; C');
+
+      const div = document.createElement('div');
+      div.innerHTML = highlightQueryTerms('Salt <b> & amp', 'lt amp');
+      expect(div.textContent).toBe('Salt <b> & amp');
+      expect(Array.from(div.querySelectorAll('mark')).map((m) => m.textContent)).toEqual(['lt', 'amp']);
+      expect(div.querySelector('b')).toBeNull();
+      expect(highlightQueryTerms('a&b', 'a&')).toBe(
+        '<mark class="supa-search-mark">a&amp;</mark>b'
+      );
+    });
+
     it('converts page-relative links to site-root-relative hrefs and back for any page depth', () => {
       const nestedPage = 'https://example.org/docs/guides/install.html';
       expect(toSiteRootHref('../faq.html', nestedPage, '..')).toBe('faq.html');

@@ -75,28 +75,41 @@ function resolveSearchSection(doc: SearchDocument): string {
 }
 
 /**
- * Escapes HTML special characters in `text` and wraps matching search query terms
- * (2+ characters) in `<mark class="supa-search-mark">` elements.
+ * Escapes HTML special characters in `text`.
+ *
+ * @param text - Raw text.
+ * @returns The text as safe HTML.
+ */
+function escapeHtml(text: string): string {
+  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+/**
+ * Wraps matching search query terms (2+ characters) in `<mark class="supa-search-mark">`
+ * elements and escapes everything else. The terms are matched against the raw text and each
+ * segment is escaped on its own: matching the escaped text instead would let a query such as
+ * `lt amp` break up the `&lt;` and `&amp;` that stand for `<` and `&`.
  *
  * @param text - Raw text to highlight.
  * @param rawQuery - Raw search query entered by the user.
  * @returns HTML-escaped string with `<mark>` tags around matching terms.
  */
 export function highlightQueryTerms(text: string, rawQuery: string): string {
-  const escapedText = text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
   const terms = rawQuery
     .trim()
     .split(/\s+/)
     .filter((t) => t.length >= 2)
     .map((t) => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
   if (terms.length === 0) {
-    return escapedText;
+    return escapeHtml(text);
   }
-  const regex = new RegExp(`(${terms.join('|')})`, 'gi');
-  return escapedText.replace(regex, '<mark class="supa-search-mark">$1</mark>');
+  // The capture group makes split() keep the matches, at the odd indices.
+  return text
+    .split(new RegExp(`(${terms.join('|')})`, 'gi'))
+    .map((segment, i) =>
+      i % 2 === 1 ? `<mark class="supa-search-mark">${escapeHtml(segment)}</mark>` : escapeHtml(segment)
+    )
+    .join('');
 }
 
 /**
