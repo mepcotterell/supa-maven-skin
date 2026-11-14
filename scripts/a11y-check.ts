@@ -4926,6 +4926,13 @@ const OPTIONAL_SITE_PATHS: ReadonlySet<string> = new Set(['/css/site.css']);
 const CANCELLED_REQUEST = /^(?:net::ERR_ABORTED|NS_BINDING_ABORTED|cancelled)$/;
 
 /**
+ * The console error Chromium and WebKit log for a failed request, with the request's URL as its
+ * source: "Failed to load resource: net::ERR_INTERNET_DISCONNECTED" or "Failed to load resource:
+ * the server responded with a status of 404 (Not Found)".
+ */
+const RESOURCE_LOAD_REPORT = /^Failed to load resource: /;
+
+/**
  * Firefox's console errors for a failed cross-origin script, which give the page, or nothing, as
  * their source, and name the request only in their text: the CORS failure of an unreachable host,
  * and the Subresource Integrity mismatch of the empty body it leaves. Each captures the URL.
@@ -4948,17 +4955,19 @@ const RESOURCE_DIAGNOSTICS: readonly RegExp[] = [
  * A missing image, font, stylesheet, or widget chunk is a broken page even when the page still
  * boots: `bootstrap-components.ts` only warns when a chunk does not load and leaves the widget as
  * plain HTML. So a request to the site's own origin fails the scan when it is answered with an
- * error status, which is how the static server answers a missing file, and when it fails without
- * a response, as a Content Security Policy block or a refused MIME type does, unless it was
- * cancelled (`CANCELLED_REQUEST`) for a file the site has. `OPTIONAL_SITE_PATHS` may be missing.
- * Requests to other origins, the Mermaid and KaTeX CDN and any URL a site configures, may fail: a
- * scan may hold them back, and an unreachable host is a network matter.
+ * error status, which is how the static server answers a missing file, and when the engine reports
+ * it failed without a response, as a Content Security Policy block does, unless it was cancelled
+ * (`CANCELLED_REQUEST`) for a file the site has. `OPTIONAL_SITE_PATHS` may be missing. Requests to
+ * other origins, the Mermaid and KaTeX CDN and any URL a site configures, may fail: a scan may
+ * hold them back, and an unreachable host is a network matter.
  *
  * Engines also log a failed request as a `console.error`. The one console error left out is the
- * engine's own report of a failure the request listeners have judged, an allowed one or one they
- * recorded: a message whose source is that request's URL (Chromium and WebKit "Failed to load
- * resource"), or one of Firefox's `RESOURCE_DIAGNOSTICS` naming it. Every other console error,
- * an application's or a Content Security Policy report among them, is recorded.
+ * engine's own report of a failed attempt the request listeners have judged, an allowed one or
+ * one they recorded: Chromium's and WebKit's `RESOURCE_LOAD_REPORT` whose source is that request's
+ * URL, or one of Firefox's `RESOURCE_DIAGNOSTICS` naming it. A successful response to the same URL
+ * between the failure and the report means the report is about a later attempt, and it is
+ * recorded. Every other console error, an application's (even one logged by a script whose own URL
+ * failed later) or a Content Security Policy report among them, is recorded.
  *
  * @param page - Page to listen to, before it navigates.
  * @param baseUrl - Origin of the site under test.
@@ -4969,8 +4978,20 @@ function collectPageErrors(page: Page, baseUrl: string, siteDir: string): () => 
   const { origin } = new URL(baseUrl);
   const errors: string[] = [];
   const reported = new Set<string>();
-  const judgedUrls = new Set<string>();
-  const consoleErrors: Array<{ text: string; source: string }> = [];
+  // Each event's place in the page's event order, so a report can be matched to its attempt.
+  let order = 0;
+  const judged = new Map<string, number[]>();
+  const succeeded = new Map<string, number[]>();
+  const consoleErrors: Array<{ text: string; source: string; at: number }> = [];
+  /**
+   * Notes that a request to `href` reached an outcome now.
+   *
+   * @param outcomes - Map of the outcome's places by URL.
+   * @param href - Requested URL.
+   */
+  const note = (outcomes: Map<string, number[]>, href: string): void => {
+    outcomes.set(href, [...(outcomes.get(href) ?? []), order++]);
+  };
   /**
    * Judges a failed request: it fails the scan when it was for a file the site must have.
    *
@@ -4987,13 +5008,13 @@ function collectPageErrors(page: Page, baseUrl: string, siteDir: string): () => 
   ): void => {
     const { origin: requestOrigin, pathname } = new URL(href);
     if (requestOrigin !== origin || OPTIONAL_SITE_PATHS.has(pathname)) {
-      judgedUrls.add(href);
+      note(judged, href);
       return;
     }
     if (cancelled && resolveSitePath(siteDir, pathname) !== null) {
       return;
     }
-    judgedUrls.add(href);
+    note(judged, href);
     if (!reported.has(pathname)) {
       reported.add(pathname);
       errors.push(`the ${resourceType} ${pathname} ${failure}`);
@@ -5004,7 +5025,7 @@ function collectPageErrors(page: Page, baseUrl: string, siteDir: string): () => 
   });
   page.on('console', (message) => {
     if (message.type() === 'error') {
-      consoleErrors.push({ text: message.text(), source: message.location().url });
+      consoleErrors.push({ text: message.text(), source: message.location().url, at: order++ });
     }
   });
   page.on('response', (response) => {
@@ -5012,6 +5033,8 @@ function collectPageErrors(page: Page, baseUrl: string, siteDir: string): () => 
     if (status >= 400) {
       const type = response.request().resourceType();
       judgeFailure(response.url(), type, `answered ${status}`, false);
+    } else {
+      note(succeeded, response.url());
     }
   });
   page.on('requestfailed', (request) => {
@@ -5020,22 +5043,30 @@ function collectPageErrors(page: Page, baseUrl: string, siteDir: string): () => 
     judgeFailure(request.url(), request.resourceType(), `failed (${errorText})`, cancelled);
   });
   /**
-   * Tells whether a console error is the engine's own report of a judged request failure.
+   * Tells whether a console error is the engine's own report of a judged failed attempt.
    *
    * @param text - Console message text.
    * @param source - URL the engine gives as the message's source.
+   * @param at - The message's place in the page's event order.
    * @returns Whether the request listeners have already judged the failure it reports.
    */
-  const reportsJudgedFailure = (text: string, source: string): boolean =>
-    judgedUrls.has(source) ||
-    RESOURCE_DIAGNOSTICS.some((pattern) => {
-      const named = pattern.exec(text)?.[1];
-      return named !== undefined && judgedUrls.has(named);
+  const reportsJudgedFailure = (text: string, source: string, at: number): boolean => {
+    const href = RESOURCE_LOAD_REPORT.test(text)
+      ? source
+      : RESOURCE_DIAGNOSTICS.map((pattern) => pattern.exec(text)?.[1]).find((url) => url);
+    if (!href) {
+      return false;
+    }
+    const successes = succeeded.get(href) ?? [];
+    return (judged.get(href) ?? []).some((failedAt) => {
+      const [from, to] = failedAt < at ? [failedAt, at] : [at, failedAt];
+      return !successes.some((succeededAt) => succeededAt > from && succeededAt < to);
     });
+  };
   return () => [
     ...errors,
     ...consoleErrors
-      .filter(({ text, source }) => !reportsJudgedFailure(text, source))
+      .filter(({ text, source, at }) => !reportsJudgedFailure(text, source, at))
       .map(({ text }) => text)
   ];
 }
