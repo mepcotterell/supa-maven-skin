@@ -9,7 +9,8 @@
  * WCAG 2.0/2.1/2.2 A and AA rule tags, plus the AAA `color-contrast-enhanced`
  * rule (7:1) on the `modus*` palettes that promise AAA, and checks that the
  * color-scheme trigger's accessible name contains the scheme name it shows
- * (WCAG 2.5.3 Label in Name) and that no two elements share an `id`. The SCSS
+ * (WCAG 2.5.3 Label in Name), that no two elements share an `id`, and, on the self-site,
+ * that no two sidebar items link the same destination. The SCSS
  * token linter (`npm run lint:scss`) proves palette pairs meet their contrast targets in
  * isolation; this script proves the rendered combination of Velocity markup,
  * CSS, and TypeScript enhancements does too.
@@ -284,6 +285,12 @@ const LABEL_IN_NAME_RULE = 'label-in-name';
  * `duplicate-id` rule is deprecated and no longer runs under the WCAG tags.
  */
 const UNIQUE_ID_RULE = 'unique-id';
+/**
+ * Reported when the documentation site's sidebar lists one destination in two items, such as a
+ * `site.xml` shortcut for a page that a project-info report already lists. The fixture sites are
+ * not checked: `sample-site` repeats `index.html` on purpose, to test the "About" report item.
+ */
+const NAV_DUPLICATE_RULE = 'nav-duplicate-destination';
 const DESKTOP: Viewport = { width: 1440, height: 900 };
 const MOBILE: Viewport = { width: 390, height: 844 };
 /**
@@ -622,6 +629,38 @@ async function checkUniqueIds(page: Page, job: ScanJob): Promise<Finding[]> {
     summary: `Fix the following: ${count} elements have the id ${JSON.stringify(id)}`,
     html: '',
     helpUrl: 'https://html.spec.whatwg.org/multipage/dom.html#the-id-attribute'
+  }));
+}
+
+/**
+ * Checks that no two sidebar items on a page of the documentation site link the same destination
+ * (`NAV_DUPLICATE_RULE`). Items that differ in their `#fragment` are different destinations.
+ *
+ * @param page - Page in the job's state.
+ * @param job - Scan job, for the report.
+ * @returns One finding per repeated href; none for a fixture site.
+ */
+async function checkNavDestinations(page: Page, job: ScanJob): Promise<Finding[]> {
+  if (job.site) {
+    return [];
+  }
+  const repeated = await page.evaluate(() => {
+    const counts = new Map<string, number>();
+    for (const link of Array.from(document.querySelectorAll('.supa-sidebar-tree a.supa-nav-link'))) {
+      const href = link.getAttribute('href') ?? '';
+      counts.set(href, (counts.get(href) ?? 0) + 1);
+    }
+    return [...counts].filter(([href, count]) => href && count > 1);
+  });
+  return repeated.map(([href, count]) => ({
+    page: pageLabel(job),
+    variant: variantLabel(job),
+    ruleId: NAV_DUPLICATE_RULE,
+    impact: 'moderate',
+    target: `.supa-sidebar-tree a[href=${JSON.stringify(href)}]`,
+    summary: `Fix the following: ${count} sidebar items link to ${JSON.stringify(href)}`,
+    html: '',
+    helpUrl: 'src/site/site.xml'
   }));
 }
 
@@ -4810,6 +4849,7 @@ async function scan(context: BrowserContext, baseUrl: string, job: ScanJob): Pro
   // A scoped scan covers only the regions its state changes; the load-time scans check the rest.
   const labelFindings = scenario?.scope ? [] : await checkLabelInName(page, job);
   const idFindings = scenario?.scope ? [] : await checkUniqueIds(page, job);
+  const navFindings = scenario?.scope ? [] : await checkNavDestinations(page, job);
   // `options()` replaces axe's run options, so it carries the AA tags itself. axe runs a rule
   // enabled under `rules` even when its tags are outside `runOnly`.
   const builder = new AxeBuilder({ page }).options({
@@ -4842,7 +4882,7 @@ async function scan(context: BrowserContext, baseUrl: string, job: ScanJob): Pro
       helpUrl: 'src/main/frontend/ts/index.ts'
     })
   );
-  const findings: Finding[] = [...labelFindings, ...idFindings, ...errorFindings];
+  const findings: Finding[] = [...labelFindings, ...idFindings, ...navFindings, ...errorFindings];
   // No rule exclusions: every violation is either fixed in the skin or in demo content.
   for (const violation of results.violations) {
     for (const node of violation.nodes) {
@@ -5110,7 +5150,7 @@ async function main(): Promise<number> {
         `${scenarioJobs} in interactive states) with axe-core [${WCAG_TAGS.join(', ')}], ` +
         `plus ${AAA_CONTRAST_RULE} on the ${aaaJobs} AAA-palette variants, ` +
         `${LABEL_IN_NAME_RULE} (WCAG 2.5.3) on every visible ${LABEL_IN_NAME_SELECTOR}, ` +
-        `and ${UNIQUE_ID_RULE} on every page`
+        `${UNIQUE_ID_RULE} on every page, and ${NAV_DUPLICATE_RULE} on every page of the documentation site`
     );
     const errors: ScanError[] = [];
     const perJob = await mapLimit(jobs, CONCURRENCY, async (job) => {
