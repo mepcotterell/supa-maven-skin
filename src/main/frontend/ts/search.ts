@@ -818,6 +818,22 @@ export function initSearch(): void {
     }
   });
 
+  /**
+   * Opens the search dialog for a keyboard shortcut, starts indexing the site on first use, and
+   * moves focus to the input once the dialog is on screen.
+   */
+  const openSearchDialog = (): void => {
+    try {
+      Dialog.getOrCreateInstance(dialogEl).show();
+    } catch {
+      dialogEl.showModal?.();
+      // The fallback fires no `shown.bs.dialog`, so restore the retained results here.
+      syncRetainedResults();
+    }
+    void ensureSiteIndex();
+    window.setTimeout(() => inputEl.focus(), 50);
+  };
+
   // Global keyboard shortcuts: `/` or `Cmd/Ctrl + K`
   document.addEventListener('keydown', (e) => {
     const target = e.target as HTMLElement | null;
@@ -829,26 +845,10 @@ export function initSearch(): void {
 
     if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
       e.preventDefault();
-      try {
-        Dialog.getOrCreateInstance(dialogEl).show();
-      } catch {
-        dialogEl.showModal?.();
-        // The fallback fires no `shown.bs.dialog`, so restore the retained results here.
-        syncRetainedResults();
-      }
-      void ensureSiteIndex();
-      window.setTimeout(() => inputEl.focus(), 50);
+      openSearchDialog();
     } else if (!isInput && e.key === '/' && !dialogEl.open) {
       e.preventDefault();
-      try {
-        Dialog.getOrCreateInstance(dialogEl).show();
-      } catch {
-        dialogEl.showModal?.();
-        // The fallback fires no `shown.bs.dialog`, so restore the retained results here.
-        syncRetainedResults();
-      }
-      void ensureSiteIndex();
-      window.setTimeout(() => inputEl.focus(), 50);
+      openSearchDialog();
     }
   });
 

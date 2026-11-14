@@ -3041,17 +3041,25 @@ describe('Supa Maven Skin Frontend Modules', () => {
         });
       });
 
-      describe('the / shortcut', () => {
+      describe('the / and Ctrl/Cmd+K shortcuts', () => {
         /**
-         * Presses `/` on `target`, as a reader does.
+         * Presses a shortcut on `target`, as a reader does.
+         * @param init - Key and modifiers of the press.
          * @param target - Element receiving the key press.
          * @returns The dispatched event.
          */
-        const pressSlash = (target: EventTarget = document.body): KeyboardEvent => {
-          const event = new KeyboardEvent('keydown', { key: '/', bubbles: true, cancelable: true });
+        const press = (init: KeyboardEventInit, target: EventTarget = document.body): KeyboardEvent => {
+          const event = new KeyboardEvent('keydown', { bubbles: true, cancelable: true, ...init });
           target.dispatchEvent(event);
           return event;
         };
+        const slash: KeyboardEventInit = { key: '/' };
+        // Both shortcuts open the dialog through one path, so each behavior is checked for each.
+        const shortcuts: Array<[string, KeyboardEventInit]> = [
+          ['/', slash],
+          ['Ctrl+K', { key: 'k', ctrlKey: true }],
+          ['Cmd+K', { key: 'k', metaKey: true }]
+        ];
 
         /**
          * Closes the dialog as the browser does before it fires `close`.
@@ -3068,13 +3076,13 @@ describe('Supa Maven Skin Frontend Modules', () => {
           vi.useRealTimers();
         });
 
-        it('opens the dialog through Bootstrap and focuses the input once it is shown', () => {
+        it.each(shortcuts)('%s opens the dialog through Bootstrap and focuses the input once it is shown', (_name, init) => {
           vi.useFakeTimers();
           const dialog = closeDialog();
           const show = vi.spyOn(Dialog.getOrCreateInstance(dialog), 'show').mockResolvedValue(undefined);
           dialog.showModal = vi.fn();
           const input = document.getElementById('supaSearchInput') as HTMLInputElement;
-          const event = pressSlash();
+          const event = press(init);
           expect(event.defaultPrevented).toBe(true);
           expect(show).toHaveBeenCalledOnce();
           expect(dialog.showModal).not.toHaveBeenCalled();
@@ -3083,7 +3091,7 @@ describe('Supa Maven Skin Frontend Modules', () => {
           expect(document.activeElement).toBe(input);
         });
 
-        it('opens the dialog with showModal() and restores the retained results when Bootstrap fails', () => {
+        it.each(shortcuts)('%s opens the dialog with showModal() and restores the retained results when Bootstrap fails', (_name, init) => {
           vi.useFakeTimers();
           const input = search('guide');
           const dialog = closeDialog();
@@ -3092,7 +3100,7 @@ describe('Supa Maven Skin Frontend Modules', () => {
           });
           dialog.showModal = vi.fn(() => dialog.setAttribute('open', ''));
           input.blur();
-          const event = pressSlash();
+          const event = press(init);
           expect(event.defaultPrevented).toBe(true);
           expect(dialog.showModal).toHaveBeenCalledOnce();
           vi.advanceTimersByTime(50);
@@ -3100,24 +3108,24 @@ describe('Supa Maven Skin Frontend Modules', () => {
           expectActive(input, 0);
         });
 
-        it('tolerates a dialog without showModal() when Bootstrap fails', () => {
+        it.each(shortcuts)('%s tolerates a dialog without showModal() when Bootstrap fails', (_name, init) => {
           const dialog = closeDialog();
           vi.spyOn(Dialog, 'getOrCreateInstance').mockImplementation(() => {
             throw new Error('Bootstrap Dialog unavailable');
           });
           (dialog as { showModal?: unknown }).showModal = undefined;
-          expect(() => pressSlash()).not.toThrow();
+          expect(() => press(init)).not.toThrow();
           expect(dialog.hasAttribute('open')).toBe(false);
         });
 
-        it('starts indexing the site for the first search, like Ctrl/Cmd+K', async () => {
+        it.each(shortcuts)('%s starts indexing the site for the first search', async (_name, init) => {
           // An index that an earlier test cached in sessionStorage would make the fetch unnecessary.
           window.sessionStorage.clear();
           const fetchMock = vi.fn(async () => ({ ok: false }));
           vi.stubGlobal('fetch', fetchMock);
           const dialog = closeDialog();
           vi.spyOn(Dialog.getOrCreateInstance(dialog), 'show').mockResolvedValue(undefined);
-          pressSlash();
+          press(init);
           await vi.waitFor(() => expect(fetchMock).toHaveBeenCalled());
         });
 
@@ -3125,7 +3133,7 @@ describe('Supa Maven Skin Frontend Modules', () => {
           const dialog = document.getElementById('supaSearchDialog') as HTMLDialogElement;
           const show = vi.spyOn(Dialog.getOrCreateInstance(dialog), 'show').mockResolvedValue(undefined);
           dialog.showModal = vi.fn();
-          const event = pressSlash();
+          const event = press(slash);
           expect(event.defaultPrevented).toBe(false);
           expect(show).not.toHaveBeenCalled();
           expect(dialog.showModal).not.toHaveBeenCalled();
@@ -3141,12 +3149,12 @@ describe('Supa Maven Skin Frontend Modules', () => {
           const dialog = closeDialog();
           const show = vi.spyOn(Dialog.getOrCreateInstance(dialog), 'show').mockResolvedValue(undefined);
           dialog.showModal = vi.fn();
-          const event = pressSlash(field);
+          const event = press(slash, field);
           expect(event.defaultPrevented).toBe(false);
           expect(show).not.toHaveBeenCalled();
           expect(dialog.showModal).not.toHaveBeenCalled();
           // The same press on the page itself opens it, so the field was what suppressed it.
-          pressSlash();
+          press(slash);
           expect(show).toHaveBeenCalledOnce();
         });
       });
