@@ -2243,8 +2243,13 @@ async function axNodes(page: Page, selector: string): Promise<AxSummary[]> {
  * right after the pointer reaches it, before the scenario's transition settle could hide a
  * transition still running, and then lists every element, and its `::before` and `::after`,
  * whose computed `transition-property` names `transform` or `all` with a non-zero duration.
- * The chevrons turn instantly instead of fading: their state still shows, without the turn.
+ * The code toggle chevron is drawn only on the component showcase, so the scenario then opens
+ * `REDUCED_MOTION_SHOWCASE` in a second tab of the same reduced-motion context and checks that
+ * chevron too. The chevrons turn instantly instead of fading: their state still shows, without
+ * the turn.
  */
+const REDUCED_MOTION_SHOWCASE = 'components.html';
+
 const REDUCED_MOTION_TRANSFORMS: InteractionScenario = {
   name: 'reduced-motion-transforms',
   page: 'configuration.html',
@@ -2282,6 +2287,25 @@ const REDUCED_MOTION_TRANSFORMS: InteractionScenario = {
       }
       return [...new Set(found)];
     });
+    const showcase = await page.context().newPage();
+    try {
+      await showcase.goto(new URL(REDUCED_MOTION_SHOWCASE, page.url()).href, { waitUntil: 'load' });
+      const chevron = showcase.locator('.supa-component-code-toggle .supa-code-toggle-chevron').first();
+      await chevron.waitFor({ state: 'attached', timeout: READY_TIMEOUT_MS });
+      const transition = await chevron.evaluate((element) => {
+        const style = getComputedStyle(element);
+        const durations = style.transitionDuration.split(',').map((d) => parseFloat(d));
+        const moves = style.transitionProperty
+          .split(',')
+          .some((p, i) => ['transform', 'all'].includes(p.trim()) && durations[i % durations.length] > 0);
+        return moves ? style.transition : null;
+      });
+      if (transition !== null) {
+        problems.push(`the code toggle chevron on ${REDUCED_MOTION_SHOWCASE} transitions transform (${transition})`);
+      }
+    } finally {
+      await showcase.close();
+    }
     if (problems.length) {
       throw new Error(`transforms still move under reduced motion: ${problems.join('; ')}`);
     }
