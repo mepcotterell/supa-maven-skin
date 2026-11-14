@@ -23,6 +23,8 @@ Doxia 2.0 supports two ways to author Markdown pages in `src/site/markdown/`:
    In CommonMark (Doxia 2.0), a blank line inside a raw HTML `<div>...</div>` block ends the HTML block early. Keep multi-line HTML component wrappers free of internal empty lines (use `&#10;` if you need a blank line inside an HTML `<pre><code>` block).
 4. **Titles Inside HTML Components**:
    Doxia turns every `<h1>`–`<h6>` into a page section, even inside a raw HTML `<div>`, which breaks the sections that follow. Give a card or other component its title with a heading-styled `<div>` (`<div class="card-title h5">`), as `#bsCard` does, and keep `<button>` content to inline elements such as `<span>`.
+5. **Naming Navigation in HTML**:
+   Doxia removes `aria-*` attributes from raw HTML in Markdown, `.md.vm`, and XDoc pages, so `<nav aria-label="Breadcrumb">` reaches the page with no name. Name a `<nav>` with `title` instead (`<nav title="Breadcrumb">`): when the page loads, the skin moves the title into `aria-label`, so screen readers name the landmark and no tooltip shows over its links. A `<nav>` that has an `aria-label` or `aria-labelledby` is left as it is.
 
 ### Using Velocity Helper Macros (`#bsBadge`, `#bsCard`, & `#bsGuideCard`)
 

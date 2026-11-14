@@ -536,11 +536,11 @@ Authors can write a simple `<ol class="supa-stepper" title="3">` ordered list or
 
 ### Breadcrumbs & Pagination
 
-The pagination shows page 1 of a series, so "Previous" is disabled and page 1 is current. The live demo has no other pages to link to, so its items are inert `span.page-link` elements; the code below links pages 2 and 3 as a real series would. Give every page link a real destination: Doxia rewrites `href="#"` in raw HTML to `#null`, a fragment no element has. Doxia also drops `aria-*` and `tabindex` attributes from raw-HTML links and list items, so **Supa Maven Skin** restores Bootstrap's `aria-disabled="true"` (and, on a link, `tabindex="-1"`) on disabled page items (`.page-item.disabled > .page-link`) when the page loads. Put `aria-current="page"` on the current item's `span`, which keeps it.
+The pagination shows page 1 of a series, so "Previous" is disabled and page 1 is current. The live demo has no other pages to link to, so its items are inert `span.page-link` elements; the code below links pages 2 and 3 as a real series would. Give every page link a real destination: Doxia rewrites `href="#"` in raw HTML to `#null`, a fragment no element has. Doxia also drops `aria-*` and `tabindex` attributes from raw-HTML links and list items, so **Supa Maven Skin** restores Bootstrap's `aria-disabled="true"` (and, on a link, `tabindex="-1"`) on disabled page items (`.page-item.disabled > .page-link`) when the page loads. Put `aria-current="page"` on the current item's `span`, which keeps it. Doxia drops `aria-label` from a raw-HTML `<nav>` too, so name each navigation with `title`, which the skin moves into `aria-label` when the page loads.
 
 <div class="supa-component-preview not-prose">
   <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
-    <nav aria-label="Breadcrumb demo">
+    <nav title="Breadcrumb demo">
       <ol class="breadcrumb mb-0">
         <li class="breadcrumb-item"><a class="breadcrumb-link" href="index.html">Docs</a></li>
         <li class="breadcrumb-divider" aria-hidden="true"></li>
@@ -549,7 +549,7 @@ The pagination shows page 1 of a series, so "Previous" is disabled and page 1 is
         <li class="breadcrumb-item"><span class="breadcrumb-link active" aria-current="page">Bootstrap 6 Components</span></li>
       </ol>
     </nav>
-    <nav aria-label="Pagination demo">
+    <nav title="Pagination demo">
       <ul class="pagination pagination-sm mb-0">
         <li class="page-item disabled"><span class="page-link">Previous</span></li>
         <li class="page-item active"><span class="page-link" aria-current="page">1</span></li>
@@ -563,7 +563,7 @@ The pagination shows page 1 of a series, so "Previous" is disabled and page 1 is
 
 ```html
 <!-- Bootstrap 6 Breadcrumb -->
-<nav aria-label="Breadcrumb">
+<nav title="Breadcrumb">
   <ol class="breadcrumb mb-0">
     <li class="breadcrumb-item"><a class="breadcrumb-link" href="index.html">Docs</a></li>
     <li class="breadcrumb-divider" aria-hidden="true"></li>
@@ -574,7 +574,7 @@ The pagination shows page 1 of a series, so "Previous" is disabled and page 1 is
 </nav>
 
 <!-- Bootstrap 6 Pagination -->
-<nav aria-label="Pagination">
+<nav title="Pagination">
   <ul class="pagination pagination-sm mb-0">
     <li class="page-item disabled"><span class="page-link">Previous</span></li>
     <li class="page-item active"><span class="page-link" aria-current="page">1</span></li>

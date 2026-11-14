@@ -831,6 +831,38 @@ export function markDisabledPageLinks(container: HTMLElement): void {
 }
 
 /**
+ * Names a navigation landmark from its `title` when nothing else names it, removing the title.
+ *
+ * Doxia's sinks drop `aria-*` attributes from raw HTML in Markdown, `.md.vm`, and XDoc pages but
+ * keep `title`, so a `<nav>` an author names there reaches the page with only its title. The title
+ * moves into `aria-label`, which drops the tooltip it would show over every link and leaves no
+ * title for `initTooltips()` to turn into a Bootstrap tooltip, which would remove it unnamed. A
+ * `<nav>` with an `aria-label` or `aria-labelledby` is left alone, so a second call changes nothing.
+ *
+ * @param nav - Navigation element to name.
+ */
+function nameNavigationFromTitle(nav: Element): void {
+  const title = nav.getAttribute('title')?.trim();
+  if (title && !nav.hasAttribute('aria-label') && !nav.hasAttribute('aria-labelledby')) {
+    nav.setAttribute('aria-label', title);
+    nav.removeAttribute('title');
+  }
+}
+
+/**
+ * Names each `<nav>` in the article that Doxia left unnamed from the `title` it keeps.
+ *
+ * Only the article is scanned: it holds the Doxia-rendered page, while the skin's own navigation
+ * and the `site.xml` `<head>` and `<footer>` markup outside it are not filtered by Doxia and keep
+ * the names they are written with.
+ *
+ * @param container - Root container element to scan.
+ */
+export function restoreNavigationNames(container: HTMLElement): void {
+  container.querySelectorAll('nav').forEach(nameNavigationFromTitle);
+}
+
+/**
  * Restores the documentation channels navigation's name and current-page link from the hooks
  * Doxia keeps.
  *
@@ -847,11 +879,7 @@ export function restoreDocumentationChannels(root: ParentNode = document): void 
   root
     .querySelectorAll<HTMLElement>('.supa-documentation-channels, .documentation-channels')
     .forEach((nav) => {
-      const title = nav.getAttribute('title')?.trim();
-      if (title && !nav.hasAttribute('aria-label') && !nav.hasAttribute('aria-labelledby')) {
-        nav.setAttribute('aria-label', title);
-        nav.removeAttribute('title');
-      }
+      nameNavigationFromTitle(nav);
       nav.querySelectorAll('a.active:not([aria-current])').forEach((link) => {
         link.setAttribute('aria-current', 'page');
       });
@@ -923,6 +951,7 @@ export function initDoxiaEnhancements(
   normalizeDoxiaTables(root);
   labelReportAvatars(root);
   markDisabledPageLinks(root);
+  restoreNavigationNames(root);
   transformGfmAdmonitions(root);
   initContentTabs(root);
   initBootstrapAccordions(root);

@@ -795,6 +795,51 @@ describe('Supa Maven Skin Frontend Modules', () => {
         expect(nav.querySelector('a')?.getAttribute('aria-current')).toBe('page');
       });
     });
+
+    describe('article navigation names, whose aria-label Doxia strips from raw HTML', () => {
+      it('names an unnamed <nav> in the article from its title, once, and leaves named ones alone', () => {
+        // What Doxia renders for a raw-HTML `<nav aria-label="..." title="...">`: only the title survives.
+        const root = document.createElement('main');
+        root.innerHTML = `
+          <nav title=" Breadcrumb demo "><ol class="breadcrumb"><li class="breadcrumb-item">Docs</li></ol></nav>
+          <div><nav title="Pagination demo"><ul class="pagination"></ul></nav></div>
+          <nav title="Tooltip" aria-label="Kept"><a href="a.html">A</a></nav>
+          <nav title="Tooltip" aria-labelledby="nav-heading"><a href="b.html">B</a></nav>
+          <nav title="  "><a href="c.html">C</a></nav>
+          <nav><a href="d.html">D</a></nav>`;
+        initDoxiaEnhancements(root);
+        initDoxiaEnhancements(root);
+        const navs = Array.from(root.querySelectorAll('nav')).map((nav) => [
+          nav.getAttribute('aria-label'),
+          nav.getAttribute('title')
+        ]);
+        expect(navs).toEqual([
+          ['Breadcrumb demo', null],
+          ['Pagination demo', null],
+          ['Kept', 'Tooltip'],
+          [null, 'Tooltip'],
+          [null, '  '],
+          [null, null]
+        ]);
+      });
+
+      it('names the article navigation before tooltips take titles, and only in the article', async () => {
+        // The skin chrome and the site.xml <head> and <footer> markup sit outside the article, and
+        // Doxia does not filter them, so their aria-label survives and they are never renamed.
+        document.body.innerHTML = `
+          <nav class="supa-breadcrumb-nav" aria-label="Breadcrumb" title="Chrome"><a href="w.html">W</a></nav>
+          <footer><nav title="Outside"><a href="x.html">X</a></nav></footer>
+          <main id="supa-main-content"><nav title="Inside"><a href="y.html">Y</a></nav></main>`;
+        await initSupaSkin();
+        const [chrome, outside, inside] = Array.from(document.querySelectorAll('nav'));
+        expect(chrome?.getAttribute('aria-label')).toBe('Breadcrumb');
+        expect(outside?.hasAttribute('aria-label')).toBe(false);
+        // initTooltips() turns every remaining title into a Bootstrap tooltip and removes it, so a
+        // name taken from the title afterwards would be lost.
+        expect(inside?.getAttribute('aria-label')).toBe('Inside');
+        expect(inside?.hasAttribute('title')).toBe(false);
+      });
+    });
   });
 
   describe('Bootstrap 6 Plugins, Drawers & .prose Isolation', () => {

@@ -302,8 +302,11 @@ const NAV_FRAGMENT_RULE = 'nav-fragment-target';
  * or that loses its roles: a Doxia `<section>` opened inside an element, which happens when raw
  * HTML holds an `<h1>`–`<h6>` (the browser closes the section with the element, and Doxia's own
  * `</section>` then closes the page's real sections early); an element that is not phrasing
- * content inside a `<button>`; and a Bootstrap tab whose panel is not a `tabpanel` once the skin
- * has run (Doxia drops `role` from raw-HTML lists and `<div>`s, and Bootstrap's Tab restores it).
+ * content inside a `<button>`; a Bootstrap tab whose panel is not a `tabpanel` once the skin
+ * has run (Doxia drops `role` from raw-HTML lists and `<div>`s, and Bootstrap's Tab restores it);
+ * and a navigation landmark with no name, which screen readers list beside the page's other
+ * navigation landmarks as just "navigation" (Doxia drops `aria-label` from a raw-HTML `<nav>`, and
+ * the skin names one from the `title` it keeps).
  */
 const CONTENT_STRUCTURE_RULE = 'content-structure';
 const DESKTOP: Viewport = { width: 1440, height: 900 };
@@ -722,11 +725,13 @@ async function checkNavFragments(page: Page, job: ScanJob): Promise<Finding[]> {
 }
 
 /**
- * Checks the article's rendered structure and every button's content (`CONTENT_STRUCTURE_RULE`).
+ * Checks the article's rendered structure, every button's content, and every navigation landmark's
+ * name (`CONTENT_STRUCTURE_RULE`).
  *
  * @param page - Page in the job's state.
  * @param job - Scan job, for the report.
- * @returns One finding per misplaced section, button with block content, or tab without a panel.
+ * @returns One finding per misplaced section, button with block content, tab without a panel, or
+ *     unnamed navigation landmark.
  */
 async function checkContentStructure(page: Page, job: ScanJob): Promise<Finding[]> {
   const problems = await page.evaluate(() => {
@@ -754,6 +759,18 @@ async function checkContentStructure(page: Page, job: ScanJob): Promise<Finding[
           target: `${describe(button)} ${describe(inner)}`,
           summary: `a button contains ${describe(inner)}, which is not phrasing content; use a <span>`,
           html: button.outerHTML
+        });
+      }
+    }
+    for (const nav of Array.from(document.querySelectorAll('nav, [role="navigation"]'))) {
+      const referenced = (nav.getAttribute('aria-labelledby') ?? '').split(/\s+/).filter(Boolean)
+        .map((id) => document.getElementById(id)?.textContent ?? '').join(' ').trim();
+      const name = referenced || nav.getAttribute('aria-label')?.trim() || nav.getAttribute('title')?.trim();
+      if (!name) {
+        found.push({
+          target: describe(nav),
+          summary: 'a navigation landmark has no name; name a raw-HTML <nav> with title, which Doxia keeps',
+          html: nav.outerHTML
         });
       }
     }
@@ -3719,7 +3736,7 @@ const FORCED_STATES: InteractionScenario = {
         '<div class="list-group-item active">Rich item <a href="#supaForcedStates">Read details</a> ' +
         '<small class="text-body-secondary">Secondary</small> <span class="badge theme-primary">Badge</span>' +
         '</div><a class="list-group-item list-group-item-action" href="#supaForcedStates">Linked item</a>' +
-        '</div><nav class="nav"><a class="nav-link" href="#supaForcedStates">Nav link</a></nav>' +
+        '</div><nav class="nav" aria-label="Forced states"><a class="nav-link" href="#supaForcedStates">Nav link</a></nav>' +
         '<div class="btn-group" role="group" aria-label="Checkbox toggle buttons">' +
         '<label class="btn-check btn-outline theme-primary"><input type="checkbox" checked />Checked</label>' +
         '<label class="btn-check btn-outline theme-primary"><input type="checkbox" />Unchecked</label></div> ' +
@@ -4229,8 +4246,9 @@ const SCENARIOS: readonly InteractionScenario[] = [
   },
   {
     // Doxia rewrites `href="#"` in raw HTML to `#null`, a fragment no element has, so the
-    // pagination demo uses inert `span.page-link` items (R-26). The scan itself repeats the page's
-    // load-time scan, so it runs in one variant.
+    // pagination demo uses inert `span.page-link` items (R-26). Doxia also drops `aria-label` from
+    // the demos' `<nav>`s, so they keep a `title` that the skin moves into `aria-label` (R-75). The
+    // scan itself repeats the page's load-time scan, so it runs in one variant.
     name: 'pagination-demo',
     page: 'components.html',
     viewport: DESKTOP,
@@ -4248,13 +4266,19 @@ const SCENARIOS: readonly InteractionScenario[] = [
           previousDisabled: previous?.getAttribute('aria-disabled'),
           previousFocusable: previous ? previous.tabIndex >= 0 : null,
           current: Array.from(pagination?.querySelectorAll('[aria-current="page"]') ?? [],
-            (el) => el.textContent?.trim()).join()
+            (el) => el.textContent?.trim()).join(),
+          // Each demo's navigation, as `aria-label|title`: named, and without the title's tooltip.
+          navs: ['.breadcrumb', '.pagination'].map((list) => {
+            const nav = article.querySelector(list)?.closest('nav');
+            return `${nav?.getAttribute('aria-label')}|${nav?.getAttribute('title')}`;
+          }).join()
         };
       });
       if (demo.nullLinks !== 0 || demo.previous !== 'Previous' || demo.previousDisabled !== 'true'
-        || demo.previousFocusable !== false || demo.current !== '1') {
-        throw new Error('pagination demo must link nowhere dead, disable "Previous", and mark page 1 ' +
-          `current: ${JSON.stringify(demo)}`);
+        || demo.previousFocusable !== false || demo.current !== '1'
+        || demo.navs !== 'Breadcrumb demo|null,Pagination demo|null') {
+        throw new Error('pagination demo must link nowhere dead, disable "Previous", mark page 1 ' +
+          `current, and name the demo navigations: ${JSON.stringify(demo)}`);
       }
     }
   },
