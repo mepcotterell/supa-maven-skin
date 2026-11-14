@@ -8,7 +8,7 @@ The project's conventions (code style, the accessibility and documentation rules
 # Fast frontend inner loop (ESLint, SCSS WCAG 2.2 AA/AAA contrast linter, Velocity linter, Docs version linter, Vitest, bundle size budget)
 npm run lint && npm test && npm run build
 
-# Full Maven build + Vitest unit tests + maven-invoker-plugin integration test + self-site render
+# Full Maven build + Vitest unit tests + maven-invoker-plugin integration tests (each project in src/it/) + self-site render
 mvn -B -ntp clean verify site
 
 # Rendered-page WCAG 2.2 A/AA checks, plus AAA contrast on the modus palettes (axe-core +

@@ -1,0 +1,24 @@
+# Author Macros
+
+This Velocity page calls the skin's author macros.
+
+#[[##]]# Icons
+
+A decorative icon: #bi( "book" "" "" ) Read the guide.
+
+A meaningful icon: #bi( "check-circle-fill" "text-success" "Supported" ) Works offline.
+
+#[[##]]# Badges
+
+Status: #bsBadge( "success" "" "Stable" ) and #bsBadge( "info" "subtle" "Preview" ).
+
+#[[##]]# Cards
+
+#bsCard( "Release notes" "Version 1.0" "The first stable release." "Published in 2025" )
+
+#[[##]]# Guide Cards
+
+#bsCardGridStart( "mt-2" )
+#bsGuideCard( "" "rocket-takeoff" "primary" "guide.html" "User Guide" "Guide" "Read the <code>guide</code>." )
+#bsGuideCard( "col-12" "" "info" "index.html" "Welcome" "" "Back to the start." )
+#bsCardGridEnd()

@@ -1,0 +1,159 @@
+// Helpers shared by the verify.bsh scripts of the Invoker projects in src/it/. Each script loads
+// this file with source(), from the repository copy, since Invoker clones only the projects:
+//
+//     source( new File( basedir, "../../../src/it/verify-helpers.bsh" ).getCanonicalPath() );
+//
+// An assertion on an element isolates its opening tag, then compares each attribute on its own,
+// so it does not depend on attribute order or on the whitespace between attributes. A class
+// attribute compares as a set of class names.
+
+import java.io.File;
+import java.nio.file.Files;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+/** Reads a generated page, failing when Maven did not write it. */
+String readPage( File siteDir, String path ) {
+    File file = new File( siteDir, path );
+    if ( !file.isFile() ) {
+        throw new IllegalStateException( path + " was not generated" );
+    }
+    return Files.readString( file.toPath(), StandardCharsets.UTF_8 );
+}
+
+/** Returns the attributes of an opening tag by name; a bare attribute such as selected maps to "". */
+Map tagAttributes( String tag ) {
+    Map attributes = new HashMap();
+    Matcher name = Pattern.compile( "^<[A-Za-z0-9]+" ).matcher( tag );
+    int start = name.find() ? name.end() : 0;
+    Matcher m = Pattern.compile( "\\s([^\\s=/>\"']+)(?:\\s*=\\s*\"([^\"]*)\")?" ).matcher( tag );
+    m.region( start, tag.length() );
+    while ( m.find() ) {
+        attributes.put( m.group( 1 ), m.group( 2 ) == null ? "" : m.group( 2 ) );
+    }
+    return attributes;
+}
+
+/** Returns the class names of a class attribute value. */
+Set classNames( String value ) {
+    Set names = new HashSet();
+    String trimmed = value.trim();
+    if ( trimmed.length() > 0 ) {
+        names.addAll( Arrays.asList( trimmed.split( "\\s+" ) ) );
+    }
+    return names;
+}
+
+/**
+ * Tells whether an opening tag has every expected attribute, given as name, value pairs. "class"
+ * must name exactly the given classes in any order; "class~" must include them among others.
+ */
+boolean tagHas( String tag, String[] expected ) {
+    Map attributes = tagAttributes( tag );
+    for ( int i = 0; i < expected.length; i += 2 ) {
+        String name = expected[i];
+        String value = expected[i + 1];
+        if ( name.equals( "class~" ) ) {
+            if ( !attributes.containsKey( "class" )
+                 || !classNames( (String) attributes.get( "class" ) ).containsAll( classNames( value ) ) ) {
+                return false;
+            }
+        } else if ( name.equals( "class" ) ) {
+            if ( !attributes.containsKey( "class" )
+                 || !classNames( (String) attributes.get( "class" ) ).equals( classNames( value ) ) ) {
+                return false;
+            }
+        } else if ( !value.equals( attributes.get( name ) ) ) {
+            return false;
+        }
+    }
+    return true;
+}
+
+/** Returns every opening tag of the element that has the expected attributes (see tagHas). */
+List findTags( String html, String element, String[] expected ) {
+    List found = new ArrayList();
+    Matcher m = Pattern.compile( "<" + element + "(?=[\\s/>])[^>]*>" ).matcher( html );
+    while ( m.find() ) {
+        if ( tagHas( m.group(), expected ) ) {
+            found.add( m.group() );
+        }
+    }
+    return found;
+}
+
+/** Describes the expected attributes for a failure message. */
+String describe( String element, String[] expected ) {
+    StringBuilder text = new StringBuilder( "<" + element );
+    for ( int i = 0; i < expected.length; i += 2 ) {
+        text.append( " " + expected[i] + "=\"" + expected[i + 1] + "\"" );
+    }
+    return text.append( ">" ).toString();
+}
+
+/** Fails unless exactly count opening tags of the element have the expected attributes. */
+void expectTags( String where, String html, String element, String[] expected, int count, String why ) {
+    int found = findTags( html, element, expected ).size();
+    if ( found != count ) {
+        throw new IllegalStateException( where + ": " + why + " (expected " + count + " of "
+            + describe( element, expected ) + ", found " + found + ")" );
+    }
+}
+
+/** Fails unless exactly one opening tag of the element has the expected attributes, and returns it. */
+String expectTag( String where, String html, String element, String[] expected, String why ) {
+    expectTags( where, html, element, expected, 1, why );
+    return (String) findTags( html, element, expected ).get( 0 );
+}
+
+/** Fails when any opening tag of the element has the expected attributes. */
+void rejectTag( String where, String html, String element, String[] expected, String why ) {
+    expectTags( where, html, element, expected, 0, why );
+}
+
+/**
+ * Returns the content of each element with the expected attributes and no nested element of the
+ * same name, with runs of whitespace collapsed to one space and trimmed.
+ */
+List findTexts( String html, String element, String[] expected ) {
+    List texts = new ArrayList();
+    Matcher m = Pattern.compile( "(<" + element + "(?=[\\s>])[^>]*>)((?:(?!</?" + element + "[\\s>]).)*)</" + element + ">",
+        Pattern.DOTALL ).matcher( html );
+    while ( m.find() ) {
+        if ( tagHas( m.group( 1 ), expected ) ) {
+            texts.add( m.group( 2 ).replaceAll( "\\s+", " " ).trim() );
+        }
+    }
+    return texts;
+}
+
+/** Fails unless an element with the expected attributes has exactly this content (see findTexts). */
+void expectText( String where, String html, String element, String[] expected, String text, String why ) {
+    List texts = findTexts( html, element, expected );
+    if ( !texts.contains( text ) ) {
+        throw new IllegalStateException( where + ": " + why + " (expected " + describe( element, expected )
+            + text + "</" + element + ">, found " + texts + ")" );
+    }
+}
+
+/** Fails unless the page contains the needle. */
+void expect( String where, String html, String needle, String why ) {
+    if ( !html.contains( needle ) ) {
+        throw new IllegalStateException( where + ": " + why + " (expected " + needle + ")" );
+    }
+}
+
+/** Fails when the page contains the needle. */
+void reject( String where, String html, String needle, String why ) {
+    if ( html.contains( needle ) ) {
+        throw new IllegalStateException( where + ": " + why + " (found " + needle + ")" );
+    }
+}

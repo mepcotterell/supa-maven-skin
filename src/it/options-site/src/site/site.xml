@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Every optional feature that can be turned off is off here, except <sourceEditButton> and
+     <footerVersion>, which legacy-site turns off, so each source button is shown off beside the
+     other one on. -->
+<site xmlns="http://maven.apache.org/SITE/2.0.0"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:schemaLocation="http://maven.apache.org/SITE/2.0.0 https://maven.apache.org/xsd/site-2.0.0.xsd"
+      name="Options Supa Site">
+
+  <skin>
+    <groupId>${skinGroupId}</groupId>
+    <artifactId>${skinArtifactId}</artifactId>
+    <version>${skinVersion}</version>
+  </skin>
+
+  <custom>
+    <supaSkin>
+      <defaultTheme>dark</defaultTheme>
+      <!-- An alias of "left" -->
+      <sidebarBrandAlign>start</sidebarBrandAlign>
+      <sidebarHideName>true</sidebarHideName>
+      <lightLogo>images/logo-light.svg</lightLogo>
+      <darkLogo>images/logo-dark.svg</darkLogo>
+      <sourceRepository>https://github.com/example/options-site</sourceRepository>
+      <sourceViewButton>false</sourceViewButton>
+      <colorSchemeSelector>false</colorSchemeSelector>
+      <search>false</search>
+      <tocSidebar>false</tocSidebar>
+      <breadcrumb>false</breadcrumb>
+      <prevNextButtons>false</prevNextButtons>
+      <footerTimestamp>false</footerTimestamp>
+      <katexCssCdnUrl>https://example.org/vendor/katex/katex.min.css</katexCssCdnUrl>
+      <katexJsCdnUrl>https://example.org/vendor/katex/contrib/auto-render.min.js</katexJsCdnUrl>
+    </supaSkin>
+  </custom>
+
+  <body>
+    <head>
+      <![CDATA[
+      <link rel="icon" type="image/svg+xml" href="$relativePath/images/favicon.svg" />
+      ]]>
+    </head>
+    <!-- Configured, but <breadcrumb>false</breadcrumb> hides the whole trail -->
+    <breadcrumbs>
+      <item name="Example" href="https://example.org/" />
+    </breadcrumbs>
+    <menu name="Documentation">
+      <item name="Welcome" href="index.html" />
+      <item name="User Guide" href="guide.html" />
+      <item name="Author Macros" href="macros.html" />
+      <item name="Setup" href="guides/setup.html" />
+    </menu>
+    <footer>
+      <![CDATA[
+      Options fixture footer, <a href="$relativePath/index.html">back to the start</a>.
+      ]]>
+    </footer>
+  </body>
+</site>

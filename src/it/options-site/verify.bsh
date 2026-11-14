@@ -1,0 +1,214 @@
+// Renders <supaSkin> with every feature that can be turned off turned off (except the edit button
+// and the version badge, which legacy-site turns off), an explicit dark default, start-aligned
+// brand, light and dark logos with the name hidden, <body><head> and <footer> content, custom KaTeX
+// URLs, and a .md.vm page that calls the author macros. Each feature that is off is checked absent
+// next to something that stays, so a page that failed to render at all cannot pass.
+
+File siteDir = new File( basedir, "target/site" );
+if ( !siteDir.isDirectory() ) {
+    throw new IllegalStateException( "target/site directory was not generated" );
+}
+source( new File( basedir, "../../../src/it/verify-helpers.bsh" ).getCanonicalPath() );
+
+// Page, its directory's $relativePath, the prefix the skin resolves site-root hrefs with, and its
+// source path for the source buttons
+String[][] pages = new String[][] {
+    { "index.html", ".", "", "src/site/markdown/index.md" },
+    { "guide.html", ".", "", "src/site/markdown/guide.md" },
+    { "macros.html", ".", "", "src/site/markdown/macros.md.vm" },
+    { "guides/setup.html", "..", "../", "src/site/markdown/guides/setup.md" }
+};
+
+for ( int p = 0; p < pages.length; p++ ) {
+    String path = pages[p][0];
+    String relativePath = pages[p][1];
+    String rootPrefix = pages[p][2];
+    String sourcePath = pages[p][3];
+    String html = readPage( siteDir, path );
+    String head = html.substring( 0, html.indexOf( "</head>" ) );
+    String htmlTag = expectTag( path, html, "html", new String[] {}, "page must have one <html>" );
+    String body = expectTag( path, html, "body", new String[] {}, "page must have one <body>" );
+
+    // <defaultTheme>dark</defaultTheme>: the anti-FOUC script starts from it, and before scripts
+    // run each of the three theme triggers is named for it
+    if ( !tagHas( htmlTag, new String[] { "data-supa-default-theme", "dark" } ) ) {
+        throw new IllegalStateException( path + ": <html> must carry data-supa-default-theme=\"dark\": " + htmlTag );
+    }
+    expectTags( path, html, "button", new String[] {
+        "class~", "supa-theme-toggle-btn", "aria-label", "Color theme: Dark", "data-bs-title", "Color theme: Dark" },
+        3, "every theme trigger must name the configured dark default" );
+    // R-43: asserted when fixed in N15 (the theme menus still mark Auto as the selected item)
+
+    // <sidebarBrandAlign>start</sidebarBrandAlign> is an alias of left
+    expectTag( path, html, "a", new String[] { "class", "supa-sidebar-brand", "data-supa-brand-align", "left" },
+        "<sidebarBrandAlign>start</sidebarBrandAlign> must align the brand left" );
+
+    // <lightLogo> and <darkLogo> together: one image per polarity, each with its own alt text
+    expectTags( path, html, "img", new String[] { "class~", "supa-sidebar-logo" }, 2, "the brand must show exactly two logos" );
+    expectTag( path, html, "img", new String[] {
+        "class", "supa-sidebar-logo only-light", "src", rootPrefix + "images/logo-light.svg", "alt", "Light Logo" },
+        "the light logo must show only in the light polarity" );
+    expectTag( path, html, "img", new String[] {
+        "class", "supa-sidebar-logo only-dark", "src", rootPrefix + "images/logo-dark.svg", "alt", "Dark Logo" },
+        "the dark logo must show only in the dark polarity" );
+
+    // <sidebarHideName>true</sidebarHideName> drops the name and the version badge under the logos
+    reject( path, html, "supa-brand-meta", "the hidden brand name must not render its container" );
+    rejectTag( path, html, "span", new String[] { "id", "supaSidebarBrandText" }, "the hidden brand name must not render" );
+    rejectTag( path, html, "span", new String[] { "class~", "supa-version-badge" }, "the version badge goes with the hidden name" );
+    // R-28: asserted when fixed in N15 (the sidebar drawer keeps aria-labelledby="supaSidebarBrandText")
+
+    // <colorSchemeSelector>false</colorSchemeSelector>: no picker in the headers or the drawer,
+    // while the theme triggers checked above stay
+    rejectTag( path, html, "button", new String[] { "class~", "supa-palette-btn" }, "the color-scheme menus must not render" );
+    rejectTag( path, html, "select", new String[] { "class~", "supa-palette-select" }, "the drawer color-scheme <select> must not render" );
+    reject( path, html, "supa-palette-picker", "no color-scheme picker container may render" );
+
+    // <search>false</search>
+    if ( !tagHas( body, new String[] { "data-supa-search", "false" } ) ) {
+        throw new IllegalStateException( path + ": <body> must carry data-supa-search=\"false\": " + body );
+    }
+    rejectTag( path, html, "dialog", new String[] { "id", "supaSearchDialog" }, "the search dialog must not render" );
+    rejectTag( path, html, "button", new String[] { "class~", "supa-search-trigger" }, "the sidebar search trigger must not render" );
+    rejectTag( path, html, "button", new String[] { "data-bs-target", "#supaSearchDialog" }, "no button may open a search dialog" );
+
+    // <tocSidebar>false</tocSidebar>
+    if ( !tagHas( body, new String[] { "data-supa-toc", "false" } ) ) {
+        throw new IllegalStateException( path + ": <body> must carry data-supa-toc=\"false\": " + body );
+    }
+    rejectTag( path, html, "aside", new String[] { "class~", "supa-toc-column" }, "the TOC column must not render" );
+    rejectTag( path, html, "dialog", new String[] { "id", "supaTocDrawer" }, "the TOC drawer must not render" );
+    rejectTag( path, html, "button", new String[] { "class~", "supa-toc-drawer-trigger" }, "no TOC drawer trigger may render" );
+
+    // <breadcrumb>false</breadcrumb> hides the trail, including the <breadcrumbs> site.xml sets
+    rejectTag( path, html, "nav", new String[] { "class~", "supa-breadcrumb-nav" }, "the breadcrumb trail must not render" );
+    rejectTag( path, html, "ol", new String[] { "class~", "breadcrumb" }, "the breadcrumb list must not render" );
+    rejectTag( path, html, "a", new String[] { "href", "https://example.org/" }, "the site.xml breadcrumb item must not render" );
+    expectTag( path, html, "div", new String[] { "class~", "supa-header-left" }, "the content header must still render" );
+
+    // <prevNextButtons>false</prevNextButtons>, although every page has a neighbor in the menu
+    rejectTag( path, html, "nav", new String[] { "class~", "supa-related-pages" }, "the previous / next navigation must not render" );
+    rejectTag( path, html, "a", new String[] { "class~", "supa-prev-page" }, "no previous page card may render" );
+    rejectTag( path, html, "a", new String[] { "class~", "supa-next-page" }, "no next page card may render" );
+
+    // <footerTimestamp>false</footerTimestamp> drops only the date: the "Built with" line stays
+    rejectTag( path, html, "span", new String[] { "class~", "supa-last-updated" }, "the Last updated date must not render" );
+    reject( path, html, "Last updated on", "the Last updated sentence must not render" );
+    expectTag( path, html, "div", new String[] { "class", "supa-built-with" }, "the Built with line must still render" );
+
+    // <sourceViewButton>false</sourceViewButton> drops the view button; the edit button stays
+    rejectTag( path, html, "a", new String[] { "aria-label", "View page source" }, "the View page source button must not render" );
+    reject( path, html, "bi-file-earmark-code", "the View page source icon must not render" );
+    reject( path, html, "/blob/main/", "no link may point at the source file view" );
+    expectTag( path, html, "a", new String[] {
+        "class", "supa-icon-btn", "href", "https://github.com/example/options-site/edit/main/" + sourcePath,
+        "target", "_blank", "rel", "noopener noreferrer", "aria-label", "Edit this page", "data-bs-title", "Edit this page" },
+        "the Edit this page button must link to the page's source" );
+
+    // <body><head>: evaluated with Velocity for each page, so $relativePath is the page's own
+    expectTag( path, head, "link", new String[] {
+        "rel", "icon", "type", "image/svg+xml", "href", relativePath + "/images/favicon.svg" },
+        "the <body><head> content must render in <head> with $relativePath resolved" );
+    reject( path, html, "$relativePath", "no $relativePath may stay unevaluated" );
+
+    // <body><footer> replaces the copyright line, evaluated with Velocity like <head>
+    reject( path, html, "supa-copyright", "a custom <footer> must replace the copyright line" );
+    reject( path, html, "Copyright &copy;", "a custom <footer> must replace the copyright sentence" );
+    List customFooters = findTexts( html, "div", new String[] { "class", "supa-custom-footer" } );
+    if ( customFooters.size() != 1 ) {
+        throw new IllegalStateException( path + ": expected one custom footer, found " + customFooters );
+    }
+    String customFooter = (String) customFooters.get( 0 );
+    if ( !"Options fixture footer, back to the start.".equals( customFooter.replaceAll( "<[^>]*>", "" ) ) ) {
+        throw new IllegalStateException( path + ": unexpected custom footer text: " + customFooter );
+    }
+    expectText( path, customFooter, "a", new String[] { "href", relativePath + "/index.html" }, "back to the start",
+        "the custom footer link must resolve $relativePath" );
+
+    // <katexCssCdnUrl> and <katexJsCdnUrl> reach optional.ts on <body>
+    if ( !tagHas( body, new String[] {
+            "data-supa-katex-css-url", "https://example.org/vendor/katex/katex.min.css",
+            "data-supa-katex-js-url", "https://example.org/vendor/katex/contrib/auto-render.min.js",
+            "data-supa-katex", "auto" } ) ) {
+        throw new IllegalStateException( path + ": <body> must carry the custom KaTeX URLs: " + body );
+    }
+    reject( path, body, "data-supa-mermaid-url", "an unset <mermaidCdnUrl> must not be emitted" );
+}
+
+// The author macros, called from macros.md.vm. Only the article is checked, so the skin's own
+// icons and badges cannot satisfy these assertions.
+String macrosPage = readPage( siteDir, "macros.html" );
+String article = macrosPage.substring( macrosPage.indexOf( "<main" ), macrosPage.indexOf( "</main>" ) );
+String[] macroCalls = new String[] { "#bi(", "#bsBadge(", "#bsCard(", "#bsCardGridStart(", "#bsGuideCard(", "#bsCardGridEnd(" };
+for ( int i = 0; i < macroCalls.length; i++ ) {
+    reject( "macros.html", article, macroCalls[i], "every author macro call must be expanded" );
+}
+
+// #bi: decorative without a label, an image named by its label otherwise
+String decorativeIcon = expectTag( "macros.html", article, "i", new String[] { "class", "bi bi-book", "aria-hidden", "true" },
+    "#bi without a label must render a decorative icon" );
+if ( tagAttributes( decorativeIcon ).containsKey( "role" ) || tagAttributes( decorativeIcon ).containsKey( "aria-label" ) ) {
+    throw new IllegalStateException( "macros.html: a decorative #bi icon must have no role or name: " + decorativeIcon );
+}
+String namedIcon = expectTag( "macros.html", article, "i", new String[] {
+    "class", "bi bi-check-circle-fill text-success", "role", "img", "aria-label", "Supported" },
+    "#bi with a label must render an image named by it" );
+if ( tagAttributes( namedIcon ).containsKey( "aria-hidden" ) ) {
+    throw new IllegalStateException( "macros.html: a named #bi icon must not be hidden: " + namedIcon );
+}
+
+// #bsBadge, without and with a variant
+expectText( "macros.html", article, "span", new String[] { "class", "badge theme-success not-prose" }, "Stable",
+    "#bsBadge without a variant must render a solid themed badge" );
+expectText( "macros.html", article, "span", new String[] { "class", "badge badge-subtle theme-info not-prose" }, "Preview",
+    "#bsBadge with a variant must add its badge-* class" );
+
+// #bsCard with a title, subtitle, body, and footer
+expectTag( "macros.html", article, "div", new String[] { "class", "card not-prose my-3" }, "#bsCard must render one card" );
+expectText( "macros.html", article, "div", new String[] { "class", "card-title h5" }, "Release notes", "#bsCard title" );
+expectText( "macros.html", article, "div", new String[] { "class", "card-subtitle h6 mb-2 text-body-secondary" }, "Version 1.0",
+    "#bsCard subtitle" );
+expectText( "macros.html", article, "div", new String[] { "class", "card-text" }, "The first stable release.", "#bsCard body" );
+expectText( "macros.html", article, "div", new String[] { "class", "card-footer text-body-secondary" }, "Published in 2025",
+    "#bsCard footer" );
+
+// #bsCardGridStart, two #bsGuideCard calls, and #bsCardGridEnd: the grid row must hold both cards
+// and close before the section ends
+String gridOpen = expectTag( "macros.html", article, "div", new String[] { "class", "row g-3 not-prose my-3 mt-2" },
+    "#bsCardGridStart must open one grid row with its extra classes" );
+int gridStart = article.indexOf( gridOpen );
+Matcher divTokens = Pattern.compile( "<div(?=[\\s>])|</div>" ).matcher( article );
+divTokens.region( gridStart, article.length() );
+int depth = 0;
+int gridEnd = -1;
+while ( divTokens.find() ) {
+    depth += divTokens.group().equals( "</div>" ) ? -1 : 1;
+    if ( depth == 0 ) {
+        gridEnd = divTokens.end();
+        break;
+    }
+}
+int sectionEnd = article.indexOf( "</section>", gridStart );
+if ( gridEnd < 0 || gridEnd > sectionEnd ) {
+    throw new IllegalStateException( "macros.html: #bsCardGridEnd must close the grid row inside its section" );
+}
+String grid = article.substring( gridStart, gridEnd );
+// The first card takes the default column classes, the second its own
+expectTag( "macros.html", grid, "div", new String[] { "class", "col-12 md:col-6" }, "#bsGuideCard must default to col-12 md:col-6" );
+expectTag( "macros.html", grid, "div", new String[] { "class", "col-12" }, "#bsGuideCard must use its column classes" );
+expectTags( "macros.html", grid, "div", new String[] { "class", "card h-100 p-3" }, 2, "the grid must hold both guide cards" );
+expectTag( "macros.html", grid, "i", new String[] { "class", "bi bi-rocket-takeoff text-primary fs-5", "aria-hidden", "true" },
+    "#bsGuideCard must draw its icon in its theme color, once" );
+expectText( "macros.html", grid, "a", new String[] { "class", "fw-semibold text-decoration-none", "href", "guide.html" }, "User Guide",
+    "#bsGuideCard must link its title" );
+expectText( "macros.html", grid, "a", new String[] { "class", "fw-semibold text-decoration-none", "href", "index.html" }, "Welcome",
+    "#bsGuideCard must link its title" );
+expectTags( "macros.html", grid, "span", new String[] { "class~", "badge" }, 1, "only the guide card with a badge may show one" );
+expectText( "macros.html", grid, "span", new String[] { "class", "badge badge-subtle theme-primary ms-auto" }, "Guide",
+    "#bsGuideCard badge" );
+expectText( "macros.html", grid, "p", new String[] { "class", "mb-0 text-body-secondary small" }, "Read the <code>guide</code>.",
+    "#bsGuideCard must keep the HTML in its description" );
+expectText( "macros.html", grid, "p", new String[] { "class", "mb-0 text-body-secondary small" }, "Back to the start.",
+    "#bsGuideCard description" );
+
+return true;

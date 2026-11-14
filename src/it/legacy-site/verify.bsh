@@ -1,0 +1,85 @@
+// Renders the legacy <furoSkin> block, which the skin reads when site.xml has no <supaSkin>, with an
+// explicit light default, a right-aligned brand showing the <bannerLeft> image, the version badge
+// and the edit button turned off, and a pom.xml <organization> with a URL.
+
+File siteDir = new File( basedir, "target/site" );
+if ( !siteDir.isDirectory() ) {
+    throw new IllegalStateException( "target/site directory was not generated" );
+}
+source( new File( basedir, "../../../src/it/verify-helpers.bsh" ).getCanonicalPath() );
+
+String[][] pages = new String[][] {
+    { "index.html", "src/site/markdown/index.md" },
+    { "guide.html", "src/site/markdown/guide.md" }
+};
+
+for ( int p = 0; p < pages.length; p++ ) {
+    String path = pages[p][0];
+    String sourcePath = pages[p][1];
+    String html = readPage( siteDir, path );
+    String htmlTag = expectTag( path, html, "html", new String[] {}, "page must have one <html>" );
+    String body = expectTag( path, html, "body", new String[] {}, "page must have one <body>" );
+
+    // <furoSkin> is read for the template's options (site.vm) and for its labels (site-macros.vm)
+    if ( !tagHas( htmlTag, new String[] { "data-supa-default-palette", "modus", "data-supa-palette", "modus" } ) ) {
+        throw new IllegalStateException( path + ": <furoSkin><colorScheme> must reach <html>: " + htmlTag );
+    }
+    expectTags( path, html, "button", new String[] {
+        "class", "supa-palette-btn", "aria-label", "Color scheme: Modus (AAA)", "data-bs-title", "Color scheme: Modus (AAA)" },
+        2, "both color-scheme triggers must start on the <furoSkin> scheme" );
+    expectText( path, html, "a", new String[] { "class", "supa-skip-link visually-hidden-focusable", "href", "#supa-main-content" },
+        "Skip to the documentation", "<furoSkin><labels> must reach the template labels" );
+    if ( !tagHas( body, new String[] { "data-supa-label-search-no-results", "Nothing matches {query}" } ) ) {
+        throw new IllegalStateException( path + ": <furoSkin><labels> must reach the script labels on <body>: " + body );
+    }
+
+    // <defaultTheme>light</defaultTheme>
+    if ( !tagHas( htmlTag, new String[] { "data-supa-default-theme", "light" } ) ) {
+        throw new IllegalStateException( path + ": <html> must carry data-supa-default-theme=\"light\": " + htmlTag );
+    }
+    expectTags( path, html, "button", new String[] {
+        "class~", "supa-theme-toggle-btn", "aria-label", "Color theme: Light", "data-bs-title", "Color theme: Light" },
+        3, "every theme trigger must name the configured light default" );
+    // R-43: asserted when fixed in N15 (the theme menus still mark Auto as the selected item)
+
+    // <sidebarBrandAlign>right</sidebarBrandAlign>, linked to the <bannerLeft> href
+    expectTag( path, html, "a", new String[] {
+        "class", "supa-sidebar-brand", "data-supa-brand-align", "right", "href", "guide.html" },
+        "the brand must align right and link to the <bannerLeft> href" );
+
+    // Without <lightLogo>, the <bannerLeft> image is the logo, named by the banner's name
+    expectTags( path, html, "img", new String[] { "class~", "supa-sidebar-logo" }, 1, "the brand must show exactly one logo" );
+    expectTag( path, html, "img", new String[] {
+        "class", "supa-sidebar-logo", "src", "images/banner.svg", "alt", "Legacy Banner Project" },
+        "the <bannerLeft> image must be the logo, named by <bannerLeft name>" );
+    expectText( path, html, "span", new String[] { "class", "supa-brand-text", "id", "supaSidebarBrandText" },
+        "Legacy Banner Project", "the brand name must come from <bannerLeft name>" );
+
+    // <footerVersion>false</footerVersion> drops the version badge, while the name stays
+    rejectTag( path, html, "span", new String[] { "class~", "supa-version-badge" }, "the version badge must not render" );
+    expectTag( path, html, "div", new String[] { "class", "supa-brand-meta" }, "the brand name must still render" );
+
+    // <sourceEditButton>false</sourceEditButton> drops the edit button; the view button stays
+    rejectTag( path, html, "a", new String[] { "aria-label", "Edit this page" }, "the Edit this page button must not render" );
+    reject( path, html, "bi-pencil-square", "the Edit this page icon must not render" );
+    reject( path, html, "/edit/main/", "no link may point at the source file editor" );
+    expectTag( path, html, "a", new String[] {
+        "class", "supa-icon-btn", "href", "https://github.com/example/legacy-site/blob/main/" + sourcePath,
+        "target", "_blank", "rel", "noopener noreferrer", "aria-label", "View page source", "data-bs-title", "View page source" },
+        "the View page source button must link to the page's source" );
+
+    // The pom.xml <organization> with a URL is linked in the copyright line, its name escaped
+    List copyright = findTexts( html, "div", new String[] { "class", "supa-copyright" } );
+    if ( copyright.size() != 1 ) {
+        throw new IllegalStateException( path + ": expected one copyright line, found " + copyright );
+    }
+    String copyrightLine = (String) copyright.get( 0 );
+    if ( !copyrightLine.replaceAll( "<[^>]*>", "" ).matches( "Copyright &copy; 2024&#x2013;\\d{4} Example &amp; Co\\." ) ) {
+        throw new IllegalStateException( path + ": the copyright line must name the years and the organization: " + copyrightLine );
+    }
+    expectText( path, copyrightLine, "a", new String[] { "href", "https://example.org/" }, "Example &amp; Co",
+        "the organization must link to its <url>" );
+    rejectTag( path, html, "div", new String[] { "class~", "supa-custom-footer" }, "no custom footer is configured" );
+}
+
+return true;

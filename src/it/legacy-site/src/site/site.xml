@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Configured with the legacy <furoSkin> block, which the skin reads when <supaSkin> is absent -->
+<site xmlns="http://maven.apache.org/SITE/2.0.0"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:schemaLocation="http://maven.apache.org/SITE/2.0.0 https://maven.apache.org/xsd/site-2.0.0.xsd"
+      name="Legacy Supa Site">
+
+  <skin>
+    <groupId>${skinGroupId}</groupId>
+    <artifactId>${skinArtifactId}</artifactId>
+    <version>${skinVersion}</version>
+  </skin>
+
+  <!-- Without <lightLogo>, the sidebar shows this image, and the brand links to its href -->
+  <bannerLeft name="Legacy Banner Project" href="guide.html">
+    <image src="images/banner.svg" />
+  </bannerLeft>
+
+  <custom>
+    <furoSkin>
+      <defaultTheme>light</defaultTheme>
+      <colorScheme>modus</colorScheme>
+      <sidebarBrandAlign>right</sidebarBrandAlign>
+      <footerVersion>false</footerVersion>
+      <sourceRepository>https://github.com/example/legacy-site</sourceRepository>
+      <sourceEditButton>false</sourceEditButton>
+      <labels>
+        <skipToContent>Skip to the documentation</skipToContent>
+        <searchNoResults>Nothing matches {query}</searchNoResults>
+      </labels>
+    </furoSkin>
+  </custom>
+
+  <body>
+    <menu name="Documentation">
+      <item name="Welcome" href="index.html" />
+      <item name="User Guide" href="guide.html" />
+    </menu>
+  </body>
+</site>

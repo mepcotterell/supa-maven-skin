@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>io.github.mepcotterell.its</groupId>
+  <artifactId>legacy-site</artifactId>
+  <version>1.0.0-SNAPSHOT</version>
+  <packaging>pom</packaging>
+
+  <name>Legacy Supa Site</name>
+  <description>Integration test verifying supa-maven-skin with the legacy furoSkin configuration block, a banner image, and an organization copyright</description>
+  <url>https://example.org/legacy-site</url>
+  <inceptionYear>2024</inceptionYear>
+
+  <!-- With a URL, the copyright line links the organization name -->
+  <organization>
+    <name>Example &amp; Co</name>
+    <url>https://example.org/</url>
+  </organization>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <skinGroupId>@project.groupId@</skinGroupId>
+    <skinArtifactId>@project.artifactId@</skinArtifactId>
+    <skinVersion>@project.version@</skinVersion>
+  </properties>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-site-plugin</artifactId>
+        <version>@maven-site-plugin.version@</version>
+        <dependencies>
+          <dependency>
+            <groupId>org.apache.maven.doxia</groupId>
+            <artifactId>doxia-module-markdown</artifactId>
+            <version>@doxia.version@</version>
+          </dependency>
+        </dependencies>
+      </plugin>
+    </plugins>
+  </build>
+
+  <!-- No reports: the pages under test are the Markdown pages -->
+  <reporting>
+    <excludeDefaults>true</excludeDefaults>
+  </reporting>
+</project>
