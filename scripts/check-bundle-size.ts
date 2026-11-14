@@ -43,8 +43,9 @@ const JS_DIR = 'target/classes/js';
  * needs them, so they share one budget for their combined size: weight moved out of the entry into
  * a chunk, or a new chunk, still has to fit, so it cannot grow unnoticed.
  *
- * Each budget is the gzip size measured under the Node version Maven pins in `pom.xml` (v22.14.0)
- * plus about 5% headroom, rounded up to a whole KiB:
+ * Each budget was the gzip size measured under the Node version Maven pins in `pom.xml` (v22.14.0)
+ * plus about 5% headroom, rounded up to a whole KiB, and the CSS and JS entry budgets were raised
+ * once afterwards (see below):
  * - CSS: 77,468 B for 0.1.1-SNAPSHOT, before the accessibility fixes and the SRI Mermaid/KaTeX
  *   loader merged; 78,317 B (76.48 KiB) by 0.1.5-SNAPSHOT, leaving about 4.4% headroom.
  * - JS entry: 70,240 B (68.59 KiB) once the widgets only author content uses moved into chunks
@@ -55,6 +56,12 @@ const JS_DIR = 'target/classes/js';
  * Gzip output differs slightly between the zlib builds of different Node versions (newer Node
  * measured ~0.3% smaller), so Maven's pinned Node is the reference. The headroom absorbs small
  * fixes; it is not meant to absorb a new feature or dependency.
+ *
+ * The CSS budget was raised by 4 KiB, to 84 KiB, and the JS entry budget by 2 KiB, to 75 KiB, once
+ * for the planned accessibility fixes from the second audit (R-10, R-14, R-31, R-32, R-36, R-37,
+ * R-38, R-53, R-54, R-64–R-66). `npm run build` then measured 80,208 B (78.33 KiB) of CSS and
+ * 72,296 B (70.60 KiB) of JS entry, and 40,344 B (39.40 KiB) of lazy chunks, which keep their
+ * 42 KiB budget. Those figures were measured on Node 26.13.0.
  *
  * To raise a budget deliberately: run `mvn -B -ntp verify` (or `npm run build` with the pinned
  * Node), note the reported gzip size, decide that the growth is worth what every consumer site
@@ -67,13 +74,13 @@ const BUDGETS: readonly BundleBudget[] = [
     label: 'CSS bundle',
     dir: 'target/classes/css',
     files: /^supa-maven-skin\.min\.css$/,
-    maxGzipBytes: 80 * KIB
+    maxGzipBytes: 84 * KIB
   },
   {
     label: 'JS entry',
     dir: JS_DIR,
     files: /^supa-maven-skin\.min\.js$/,
-    maxGzipBytes: 73 * KIB
+    maxGzipBytes: 75 * KIB
   },
   {
     label: 'JS lazy chunks (total)',
