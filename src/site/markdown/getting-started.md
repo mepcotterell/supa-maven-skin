@@ -150,7 +150,7 @@ Create `src/site/markdown/index.md`. In standard `.md` files, you can immediatel
 :bi-rocket-takeoff text-primary: **My Project** is a fast, modern JVM library.
 
 > [!TIP] Quick Search
-> Press <kbd>/</kbd> or <kbd>⌘K</kbd> anywhere on the site to search pages, headings, and Maven reports.
+> Press <kbd>/</kbd>, <kbd>Ctrl+K</kbd>, or <kbd>⌘K</kbd> anywhere on the site to search pages, headings, and Maven reports.
 
 ## Adding the Dependency
 

@@ -1,4 +1,4 @@
-# Migrating from Apache Maven Fluido Skin
+# Migrating from Fluido
 
 This how-to guide moves an existing Maven site from the [Apache Maven Fluido Skin](https://maven.apache.org/skins/maven-fluido-skin/) (`org.apache.maven.skins:maven-fluido-skin`) to **Supa Maven Skin**. Both skins read their settings from `<custom>` in `src/site/site.xml` and render the same Doxia content, so most of the work is editing the site descriptor and reviewing any hand-written HTML that relies on Fluido's bundled Bootstrap v2.3.2.
 
@@ -174,7 +174,7 @@ html:root {
 
 | Fluido option | Supa Maven Skin equivalent | Notes |
 | :--- | :--- | :--- |
-| `<googleSearch>` (`sitesearch`) | `<search>true</search>` (default) | Replaces the Google form with built-in client-side search. Open it with <kbd>/</kbd>, <kbd>⌘K</kbd>, or <kbd>Ctrl+K</kbd>; it searches navigation entries, headings on the current page, and the first 30 pages linked from the sidebar, which it fetches in the browser. Unlike Google site search, pages that are not in the sidebar, or that come after the first 30, are not indexed, so a large site (for example, a plugin site with many goal pages) is only partly searchable. No `<url>` in `pom.xml` is required. |
+| `<googleSearch>` (`sitesearch`) | `<search>true</search>` (default) | Replaces the Google form with built-in client-side search. Open it with <kbd>/</kbd>, <kbd>Ctrl+K</kbd>, or <kbd>⌘K</kbd>; it searches navigation entries, headings on the current page, and the first 30 pages linked from the sidebar, which it fetches in the browser. Unlike Google site search, pages that are not in the sidebar, or that come after the first 30, are not indexed, so a large site (for example, a plugin site with many goal pages) is only partly searchable. No `<url>` in `pom.xml` is required. |
 | `<sourceLineNumbersEnabled>` | No site-wide equivalent | Add line numbers to individual blocks with `<pre class="line-numbers">` (see [Styling Code Blocks](authoring-guide.html#styling-code-blocks)). Highlighting itself is on by default (`<syntaxHighlighting>`), using bundled Highlight.js instead of Google Code Prettify. |
 | `<anchorJs>` (`cssSelector`, `options`) | `<headingPermalinks>true</headingPermalinks>` (default) | Adds a permalink to every `h2`–`h6` in the article. Change the symbol with `<headingPermalinkSymbol>`. The heading selector is fixed. |
 | `<skipGenerationDate>` | Not needed | The generator comment at the top of each page never includes a date. To hide the visible "Last updated on" date in the footer, set `<footerTimestamp>false</footerTimestamp>`. |

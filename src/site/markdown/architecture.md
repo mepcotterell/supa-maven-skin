@@ -73,7 +73,7 @@ Because `doxia-site-renderer` extracts all non-`META-INF/` files from a skin JAR
 Inspired by Pradyun Gedam's [Furo](https://pradyunsg.me/furo/) theme for Sphinx and aligned with **Bootstrap 6 Docs** breakpoints and prose widths, **Supa Maven Skin** organizes technical documentation into three distinct spatial zones that adapt across viewports using native HTML5 `<dialog>` drawers:
 
 1. **Left Navigation Sidebar (`16rem` / `256px` on `lg+` / `64em+`, `1024px+` at the default font)**:
-   - Displays the project brand, dual-theme logo (`<lightLogo>` / `<darkLogo>`), version badge, search trigger (`⌘K` / `/`), and hierarchical `<details>` / `<summary>` navigation menus.
+   - Displays the project brand, dual-theme logo (`<lightLogo>` / `<darkLogo>`), version badge, search trigger (`/`, `Ctrl+K`, or `⌘K`), and hierarchical `<details>` / `<summary>` navigation menus.
    - Below `lg`, the same DOM node (`<dialog id="supaSidebarDrawer" class="drawer drawer-start">`) acts as an accessible off-canvas Bootstrap 6 left drawer without duplicating navigation markup.
    - Inline, the column is its `<aside>` landmark, named "Primary navigation" by the `navPrimary` label. At those widths the sidebar and the TOC are still closed, non-modal `<dialog>` elements laid out inline, so some screen readers announce them as dialogs. An ARIA role cannot fix that conformingly: Chromium and Firefox both ignore `role="none"` and `role="presentation"` on a `<dialog>`, and ARIA in HTML permits only `alertdialog` there. The planned fix renders the inline columns outside any `<dialog>` and moves them into it only for the drawer.
    - A sidebar link to a section of the same page moves keyboard focus to that section's heading, in the drawer as in the TOC drawer, and in the inline sidebar too. There the browser follows the link itself, but a heading cannot take focus, so browsers focused the viewport and left focus on `<body>`. `index.ts` makes the heading focusable (`tabindex="-1"`, unless the author set one) before the browser follows the link, so the browser focuses the heading, and focuses it a moment later if the browser has not, unless the reader has already moved focus.
@@ -303,7 +303,7 @@ Mermaid and KaTeX never ship inside the skin JAR. `optional.ts` loads them from 
 
 ## Zero-Config Client-Side Search
 
-When `<search>true</search>` is active, pressing `/` or `⌘K` (`Ctrl+K`) opens `#supaSearchDialog`:
+When `<search>true</search>` is active, pressing `/`, `Ctrl+K`, or `⌘K` opens `#supaSearchDialog`:
 
 Arrow keys move the active result while focus stays in the search input, which exposes that result to assistive technology; Enter opens it, and Tab still reaches the result links.
 

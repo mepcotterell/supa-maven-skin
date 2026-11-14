@@ -23,6 +23,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - **Tested and Minimum Toolchains**: The Quickstart Tutorial and the README separate the versions Supa Maven Skin is tested on (JDK 21 and 25, Maven 3.9.x) from the lower minimums that `maven-site-plugin` and `maven-project-info-reports-plugin` declare (Java 8, Maven 3.6.3), which are not promised.
 - **Documentation Navigation**: The documentation site no longer lists CI Management twice or an "About" report page that repeats Overview, and the Quickstart Tutorial's example no longer configures the `index` report next to the home page it has readers write.
 - **Self-Hosting KaTeX Without npm**: The KaTeX recipe in the authoring guide downloads the pinned package archive with `curl` and unpacks it with `tar` in a fresh temporary folder, so it needs neither npm nor a shared `/tmp/package`.
+- **Search Shortcuts and Link Labels**: The documentation shows the search shortcuts the same way everywhere (`/`, `Ctrl+K`, or `⌘K`). The README links use the titles of the pages they open, the Fluido migration guide is titled "Migrating from Fluido" like its sidebar item and landing card, and that card for the configuration page says "Configuration Reference".
 
 ### Fixed
 

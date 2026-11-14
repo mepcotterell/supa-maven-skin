@@ -30,7 +30,7 @@ The six color schemes:
 - Navigation sidebar, article, and "On this page" table of contents, with drawers on small screens.
 - Light, dark, and auto themes, and six color schemes checked for WCAG 2.2 AA or AAA contrast.
 - Admonitions from `> [!NOTE]`-style blockquotes, synchronized tabs, Bootstrap Icons, and code blocks with copy buttons.
-- Built-in search (`/` or `⌘K`).
+- Built-in search (`/`, `Ctrl+K`, or `⌘K`).
 - Interface text and page language you can translate in `site.xml`.
 - Opt-in Mermaid diagrams and KaTeX math, loaded only on pages that use them.
 - Clean printouts and PDFs.
@@ -53,8 +53,8 @@ Every other setting is optional; see the [configuration reference](https://mepco
 
 The full documentation is at **[mepcotterell.github.io/supa-maven-skin](https://mepcotterell.github.io/supa-maven-skin/)**. Good places to start:
 
-- [Getting Started](https://mepcotterell.github.io/supa-maven-skin/getting-started.html)
-- [Configuration](https://mepcotterell.github.io/supa-maven-skin/configuration.html)
+- [Quickstart Tutorial](https://mepcotterell.github.io/supa-maven-skin/getting-started.html)
+- [Configuration Reference](https://mepcotterell.github.io/supa-maven-skin/configuration.html)
 - [Migrating from Fluido](https://mepcotterell.github.io/supa-maven-skin/migrating-from-fluido.html)
 - [Troubleshooting](https://mepcotterell.github.io/supa-maven-skin/troubleshooting.html)
 

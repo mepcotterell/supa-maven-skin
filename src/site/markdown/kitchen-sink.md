@@ -37,7 +37,7 @@ All 12 [Sphinx Furo admonition types](https://pradyunsg.me/furo/reference/admoni
 > Cross-references related documentation pages or external specifications (`[!SEEALSO]` or `[!SEE-ALSO]`, `bi-arrow-up-right-circle`).
 
 > [!TIP] Pro Tip: Instant Keyboard Search
-> Press <kbd>/</kbd> or <kbd>⌘K</kbd> (<kbd>Ctrl+K</kbd>) anywhere on the page to open the native `<dialog class="dialog">` search modal (`[!TIP]`, `bi-lightbulb`).
+> Press <kbd>/</kbd>, <kbd>Ctrl+K</kbd>, or <kbd>⌘K</kbd> anywhere on the page to open the native `<dialog class="dialog">` search modal (`[!TIP]`, `bi-lightbulb`).
 
 > [!TODO]
 > Tracks planned documentation expansions or upcoming roadmap items (`[!TODO]`, `bi-check2-square`).
@@ -212,7 +212,7 @@ $$
 > "Documentation should be effortless to read, navigate, and maintain—in both light and dark environments."
 
 - **Bold text**, *italicized text*, ~~strikethrough~~, and `inline code` tokens.
-- Keyboard shortcuts: <kbd>⌘</kbd> + <kbd>K</kbd>, <kbd>/</kbd>, and <kbd>Esc</kbd>.
+- Keyboard shortcuts: <kbd>/</kbd>, <kbd>Ctrl+K</kbd>, <kbd>⌘K</kbd>, and <kbd>Esc</kbd>.
 - Automatic heading permalinks (`#`) on `h2` through `h4` headings:
   1. First ordered item
   2. Second ordered item with nested bullets:

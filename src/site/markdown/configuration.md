@@ -395,7 +395,7 @@ Configures client-side code block enhancements, heading permalinks, offline sear
 | `<syntaxHighlighting>` | `true` | Highlight `<pre><code>` blocks offline using bundled `highlight.js`. |
 | `<headingPermalinks>` | `true` | Append `#` permalink anchors to article headings (`h2`–`h6`). Each heading is still named by its own text for assistive technology (see [Architecture](architecture.html#doxia-20-normalization-prose-isolation)). |
 | `<headingPermalinkSymbol>` | `#` | Symbol rendered inside heading permalink anchors. |
-| `<search>` | `true` | Enable the sidebar search box and `/` (`⌘K` / `Ctrl+K`) search dialog. |
+| `<search>` | `true` | Enable the sidebar search box and `/`, `Ctrl+K`, or `⌘K` search dialog. |
 | `<mermaid>` | `auto` | Lazy-load Mermaid when `.mermaid` or `code.language-mermaid` is present (`auto`, `true`, or `false`). |
 | `<mermaidCdnUrl>` | *(pinned jsDelivr + SRI)* | Custom or self-hosted Mermaid URL. Unset, the skin loads `https://cdn.jsdelivr.net/npm/mermaid@11.17.2/dist/mermaid.min.js` via `<script integrity crossorigin="anonymous">`. An ES module URL (ending in `.mjs` or `/+esm`, or on `esm.sh`) loads with `import()`; any other URL loads as a classic `<script>` that should define `window.mermaid` (see the note below for ES modules with other names). |
 | `<katex>` | `auto` | Lazy-load KaTeX when `$...$` or `$$...$$` math expressions are present (`auto`, `true`, or `false`). |
