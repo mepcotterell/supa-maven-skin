@@ -82,7 +82,7 @@ import type { AddressInfo } from 'node:net';
 import { extname, join, normalize, resolve, sep } from 'node:path';
 import { parseArgs } from 'node:util';
 import { chromium, firefox, webkit } from 'playwright';
-import type { Browser, BrowserType, Locator, Page } from 'playwright';
+import type { Browser, BrowserContext, BrowserType, Locator, Page } from 'playwright';
 import { WCAG_MINIMUMS } from './contrast-audit.ts';
 import type { ContrastRole } from './contrast-audit.ts';
 
@@ -255,6 +255,16 @@ const TABLET_LANDSCAPE: Viewport = { width: 1024, height: 768 };
 const READY_TIMEOUT_MS = 30_000;
 const STATE_TIMEOUT_MS = 5_000;
 const CONCURRENCY = 4;
+/**
+ * Longest one scan job may run, from opening its context to the end of axe, before it is failed
+ * as not scanned. The slowest job measured, `forced-colors-states` in Chromium, takes about 12 s
+ * (Firefox's slowest about 6 s, WebKit's about 4 s), and a page that never gets ready spends up
+ * to 60 s in the timed `goto` and ready waits before failing with its own message, so 120 s
+ * catches only a job that is stuck.
+ */
+const JOB_DEADLINE_MS = 120_000;
+/** Longest wait for a browser context or the browser to close before it is abandoned. */
+const CLOSE_DEADLINE_MS = 10_000;
 
 /**
  * Variants an interaction scenario runs in unless it lists its own: `furo` (AA)
@@ -3508,124 +3518,193 @@ function variantLabel(job: ScanJob): string {
 }
 
 /**
- * Opens one page variant, waits for the skin to finish initialising, drives it
- * into the job's interaction scenario (if any), and runs axe.
+ * Waits for a promise to settle, but no longer than `ms`, and ignores its outcome.
+ *
+ * @param promise - Cleanup that may never settle, such as closing a wedged browser context.
+ * @param ms - Longest wait in milliseconds.
+ */
+async function settleWithin(promise: Promise<unknown>, ms: number): Promise<void> {
+  let timer: NodeJS.Timeout | undefined;
+  await Promise.race([
+    promise.catch(() => undefined),
+    new Promise<void>((resolveWait) => {
+      timer = setTimeout(resolveWait, ms);
+    })
+  ]);
+  clearTimeout(timer);
+}
+
+/**
+ * Runs one scan job in a fresh browser context, failing it once it passes `JOB_DEADLINE_MS`.
+ *
+ * Several of `scan()`'s steps have no timeout of their own (`document.fonts.ready`, waiting
+ * for transitions, axe's `analyze()`), and a wedged WebKit page once held three jobs, and so the
+ * whole run, forever. An overrunning job is reported as not scanned and the run moves on; its
+ * context is closed, waiting at most `CLOSE_DEADLINE_MS`, and otherwise abandoned to
+ * `browser.close()`.
  *
  * @param browser - Shared browser of the selected engine.
+ * @param engine - That browser's engine, for the timeout message.
  * @param baseUrl - Static server base URL.
  * @param job - Page/variant to scan.
  * @returns Flattened violation nodes for this job.
  */
-async function scan(browser: Browser, baseUrl: string, job: ScanJob): Promise<Finding[]> {
-  const { scenario } = job;
-  const context = await browser.newContext({
-    viewport: { width: job.width, height: job.height },
-    colorScheme: job.polarity,
-    reducedMotion: 'reduce',
-    permissions: scenario?.permissions ?? []
+async function scanWithDeadline(
+  browser: Browser,
+  engine: Engine,
+  baseUrl: string,
+  job: ScanJob
+): Promise<Finding[]> {
+  let context: BrowserContext | undefined;
+  let expired = false;
+  let timer: NodeJS.Timeout | undefined;
+  const work = (async (): Promise<Finding[]> => {
+    const opened = await browser.newContext({
+      viewport: { width: job.width, height: job.height },
+      colorScheme: job.polarity,
+      reducedMotion: 'reduce',
+      permissions: job.scenario?.permissions ?? []
+    });
+    context = opened;
+    // The deadline passed while the context opened, after the cleanup below had already run.
+    if (expired) {
+      await settleWithin(opened.close(), CLOSE_DEADLINE_MS);
+      return [];
+    }
+    return scan(opened, baseUrl, job);
+  })();
+  const deadline = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => {
+      expired = true;
+      reject(
+        new Error(
+          `${job.page} [${variantLabel(job)}] did not finish within the ` +
+            `${JOB_DEADLINE_MS / 1000} s job deadline in ${engine}`
+        )
+      );
+    }, JOB_DEADLINE_MS);
   });
   try {
-    if (scenario?.now !== undefined) {
-      await context.clock.setFixedTime(scenario.now);
-    }
-    // Seed the same keys the <head> anti-FOUC script and theme.ts read, before
-    // any page script runs, so the first paint already uses the variant.
-    await context.addInitScript(
-      ([theme, palette]: [string, string]) => {
-        try {
-          window.localStorage.setItem('supa-theme', theme);
-          window.localStorage.setItem('supa-palette', palette);
-        } catch {
-          // Storage can be unavailable on opaque origins; the scan then uses defaults.
-        }
-      },
-      [job.polarity, job.palette] as [string, string]
-    );
-    await context.addInitScript(installColorHelper, WCAG_MINIMUMS);
-    const page = await context.newPage();
-    await page.goto(`${baseUrl}/${job.page}`, { waitUntil: 'load' });
-    await page.waitForSelector('html[data-supa-ready="true"]', {
-      state: 'attached',
-      timeout: READY_TIMEOUT_MS
-    });
-    await page.evaluate(async () => {
-      await document.fonts.ready;
-    });
-    const applied = await page.evaluate(() => ({
-      theme: document.documentElement.getAttribute('data-bs-theme'),
-      palette: document.documentElement.getAttribute('data-supa-palette'),
-      level: getComputedStyle(document.documentElement)
-        .getPropertyValue('--supa-wcag-level')
-        .replace(/["'\s]/g, '')
-    }));
-    if (applied.theme !== job.polarity || applied.palette !== job.palette) {
-      throw new Error(
-        `did not apply the requested variant ` +
-          `(got data-bs-theme=${applied.theme}, data-supa-palette=${applied.palette}).`
-      );
-    }
-    // The AAA rule follows AAA_PALETTES, so a palette whose declared level drifted from that
-    // list would be scanned against the wrong target; fail instead.
-    const aaa = AAA_PALETTES.has(job.palette);
-    if (applied.level !== (aaa ? 'AAA' : 'AA')) {
-      throw new Error(
-        `palette ${job.palette} declares --supa-wcag-level ${applied.level || '(unset)'}, ` +
-          `but the scan expects ${aaa ? 'AAA' : 'AA'}.`
-      );
-    }
-    if (scenario) {
-      // A mistyped setup locator should fail in seconds, not after Playwright's 30 s default.
-      page.setDefaultTimeout(STATE_TIMEOUT_MS);
-      try {
-        await scenario.setup(page);
-        await scenario.assertState(page);
-      } catch (error: unknown) {
-        throw new Error(`scenario state not reached: ${firstLine(error)}`, { cause: error });
-      }
-    }
-    await settleTransitions(page);
-    // A scoped scan covers only the regions its state changes; the load-time scans check the rest.
-    const labelFindings = scenario?.scope ? [] : await checkLabelInName(page, job);
-    const idFindings = scenario?.scope ? [] : await checkUniqueIds(page, job);
-    // `options()` replaces axe's run options, so it carries the AA tags itself. axe runs a rule
-    // enabled under `rules` even when its tags are outside `runOnly`.
-    const builder = new AxeBuilder({ page }).options({
-      runOnly: { type: 'tag', values: WCAG_TAGS },
-      ...(aaa ? { rules: { [AAA_CONTRAST_RULE]: { enabled: true } } } : {})
-    });
-    for (const selector of scenario?.scope ?? []) {
-      builder.include(selector);
-    }
-    const results = await builder.analyze();
-    if (scenario) {
-      try {
-        await scenario.assertState(page);
-      } catch (error: unknown) {
-        throw new Error(`scenario state did not hold through the scan: ${firstLine(error)}`, {
-          cause: error
-        });
-      }
-    }
-    const findings: Finding[] = [...labelFindings, ...idFindings];
-    // No rule exclusions: every violation is either fixed in the skin or in demo content.
-    for (const violation of results.violations) {
-      for (const node of violation.nodes) {
-        findings.push({
-          page: job.page,
-          variant: variantLabel(job),
-          ruleId: violation.id,
-          impact: node.impact ?? violation.impact ?? 'unknown',
-          target: node.target.map((t) => (Array.isArray(t) ? t.join(' >>> ') : String(t))).join(' '),
-          summary: (node.failureSummary ?? violation.help).replace(/\s+/g, ' ').trim(),
-          html: node.html.replace(/\s+/g, ' ').trim().slice(0, 160),
-          helpUrl: violation.helpUrl
-        });
-      }
-    }
-    return findings;
+    // A job that loses the race keeps running until its context closes; Promise.race has
+    // already subscribed to it, so its late rejection is handled.
+    return await Promise.race([work, deadline]);
   } finally {
-    await context.close();
+    clearTimeout(timer);
+    if (context) {
+      await settleWithin(context.close(), CLOSE_DEADLINE_MS);
+    }
   }
+}
+
+/**
+ * Opens one page variant, waits for the skin to finish initialising, drives it
+ * into the job's interaction scenario (if any), and runs axe.
+ *
+ * @param context - Fresh browser context for this job, which the caller closes.
+ * @param baseUrl - Static server base URL.
+ * @param job - Page/variant to scan.
+ * @returns Flattened violation nodes for this job.
+ */
+async function scan(context: BrowserContext, baseUrl: string, job: ScanJob): Promise<Finding[]> {
+  const { scenario } = job;
+  if (scenario?.now !== undefined) {
+    await context.clock.setFixedTime(scenario.now);
+  }
+  // Seed the same keys the <head> anti-FOUC script and theme.ts read, before
+  // any page script runs, so the first paint already uses the variant.
+  await context.addInitScript(
+    ([theme, palette]: [string, string]) => {
+      try {
+        window.localStorage.setItem('supa-theme', theme);
+        window.localStorage.setItem('supa-palette', palette);
+      } catch {
+        // Storage can be unavailable on opaque origins; the scan then uses defaults.
+      }
+    },
+    [job.polarity, job.palette] as [string, string]
+  );
+  await context.addInitScript(installColorHelper, WCAG_MINIMUMS);
+  const page = await context.newPage();
+  await page.goto(`${baseUrl}/${job.page}`, { waitUntil: 'load' });
+  await page.waitForSelector('html[data-supa-ready="true"]', {
+    state: 'attached',
+    timeout: READY_TIMEOUT_MS
+  });
+  await page.evaluate(async () => {
+    await document.fonts.ready;
+  });
+  const applied = await page.evaluate(() => ({
+    theme: document.documentElement.getAttribute('data-bs-theme'),
+    palette: document.documentElement.getAttribute('data-supa-palette'),
+    level: getComputedStyle(document.documentElement)
+      .getPropertyValue('--supa-wcag-level')
+      .replace(/["'\s]/g, '')
+  }));
+  if (applied.theme !== job.polarity || applied.palette !== job.palette) {
+    throw new Error(
+      `did not apply the requested variant ` +
+        `(got data-bs-theme=${applied.theme}, data-supa-palette=${applied.palette}).`
+    );
+  }
+  // The AAA rule follows AAA_PALETTES, so a palette whose declared level drifted from that
+  // list would be scanned against the wrong target; fail instead.
+  const aaa = AAA_PALETTES.has(job.palette);
+  if (applied.level !== (aaa ? 'AAA' : 'AA')) {
+    throw new Error(
+      `palette ${job.palette} declares --supa-wcag-level ${applied.level || '(unset)'}, ` +
+        `but the scan expects ${aaa ? 'AAA' : 'AA'}.`
+    );
+  }
+  if (scenario) {
+    // A mistyped setup locator should fail in seconds, not after Playwright's 30 s default.
+    page.setDefaultTimeout(STATE_TIMEOUT_MS);
+    try {
+      await scenario.setup(page);
+      await scenario.assertState(page);
+    } catch (error: unknown) {
+      throw new Error(`scenario state not reached: ${firstLine(error)}`, { cause: error });
+    }
+  }
+  await settleTransitions(page);
+  // A scoped scan covers only the regions its state changes; the load-time scans check the rest.
+  const labelFindings = scenario?.scope ? [] : await checkLabelInName(page, job);
+  const idFindings = scenario?.scope ? [] : await checkUniqueIds(page, job);
+  // `options()` replaces axe's run options, so it carries the AA tags itself. axe runs a rule
+  // enabled under `rules` even when its tags are outside `runOnly`.
+  const builder = new AxeBuilder({ page }).options({
+    runOnly: { type: 'tag', values: WCAG_TAGS },
+    ...(aaa ? { rules: { [AAA_CONTRAST_RULE]: { enabled: true } } } : {})
+  });
+  for (const selector of scenario?.scope ?? []) {
+    builder.include(selector);
+  }
+  const results = await builder.analyze();
+  if (scenario) {
+    try {
+      await scenario.assertState(page);
+    } catch (error: unknown) {
+      throw new Error(`scenario state did not hold through the scan: ${firstLine(error)}`, {
+        cause: error
+      });
+    }
+  }
+  const findings: Finding[] = [...labelFindings, ...idFindings];
+  // No rule exclusions: every violation is either fixed in the skin or in demo content.
+  for (const violation of results.violations) {
+    for (const node of violation.nodes) {
+      findings.push({
+        page: job.page,
+        variant: variantLabel(job),
+        ruleId: violation.id,
+        impact: node.impact ?? violation.impact ?? 'unknown',
+        target: node.target.map((t) => (Array.isArray(t) ? t.join(' >>> ') : String(t))).join(' '),
+        summary: (node.failureSummary ?? violation.help).replace(/\s+/g, ' ').trim(),
+        html: node.html.replace(/\s+/g, ' ').trim().slice(0, 160),
+        helpUrl: violation.helpUrl
+      });
+    }
+  }
+  return findings;
 }
 
 /**
@@ -3834,7 +3913,7 @@ async function main(): Promise<number> {
     const perJob = await mapLimit(jobs, CONCURRENCY, async (job) => {
       const label = `${job.page} [${variantLabel(job)}]`;
       try {
-        const findings = await scan(activeBrowser, baseUrl, job);
+        const findings = await scanWithDeadline(activeBrowser, engine, baseUrl, job);
         console.log(
           `  ${findings.length === 0 ? 'ok  ' : 'FAIL'} ${label}` +
             (findings.length > 0 ? ` (${findings.length} violation nodes)` : '')
@@ -3873,7 +3952,9 @@ async function main(): Promise<number> {
     );
     return 0;
   } finally {
-    await browser?.close();
+    if (browser) {
+      await settleWithin(browser.close(), CLOSE_DEADLINE_MS);
+    }
     await new Promise<void>((resolveClose) => server.close(() => resolveClose()));
   }
 }
