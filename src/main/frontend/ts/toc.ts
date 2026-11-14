@@ -137,7 +137,8 @@ export function findFragmentTarget(hash: string): HTMLElement | null {
  * the scroll position from then on. Scroll events cannot tell the reader's scrolling from the
  * skin's own scroll to the heading or from the browser's scroll anchoring, so the input that
  * scrolls the page, moves focus, or follows a link is watched instead: the wheel, a touch, a
- * pointer press (which starts every click), and a key.
+ * pointer press (which starts every click), and a key. Dragging the scrollbar and find-in-page fire
+ * none of them, so a reader who moved only that way is not seen.
  */
 const READER_INPUT_EVENTS: readonly string[] = ['wheel', 'touchstart', 'pointerdown', 'keydown'];
 
@@ -205,38 +206,96 @@ function browserRestoresScroll(): boolean {
 }
 
 /**
+ * Tells whether an element sits where a scroll to it puts it: its top at `<html>`'s
+ * `scroll-padding-top` plus its own `scroll-margin-top`, give or take 2px of sub-pixel layout, or
+ * below that with the page scrolled to its end, which an element near the bottom never gets past.
+ *
+ * @param target - Element scrolled to.
+ * @returns Whether the element is at its landing place.
+ */
+function sitsAtLanding(target: HTMLElement): boolean {
+  const padding = Number.parseFloat(getComputedStyle(document.documentElement).scrollPaddingTop) || 0;
+  const landing = padding + (Number.parseFloat(getComputedStyle(target).scrollMarginTop) || 0);
+  const top = target.getBoundingClientRect().top;
+  if (Math.abs(top - landing) <= 2) {
+    return true;
+  }
+  const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
+  return maxScroll > 0 && window.scrollY >= maxScroll - 1 && top > landing;
+}
+
+/**
  * Keeps the reader where they are through the browser's last try to scroll to the URL's fragment.
  * The HTML gives a heading no `id`, so the browser finds nothing to scroll to while it parses the
  * page. Firefox tries once more right after the load event, finds the id `prepareHeadings()` has
  * given the heading since, and scrolls to it: past the place it restored on a reload or a Back, and
  * past where the reader scrolled while the page loaded. A page whose HTML holds the id keeps both:
- * Firefox found the heading while parsing, and leaves a page scrolled since then alone. This puts
- * the page back where it was at the load event when `keep` says the reader's place stands and no
- * reader input has come since. Firefox scrolls before it returns to the event loop, and nothing
- * else scrolls the page by the next frame or task, whichever comes first; the next frame puts the
- * page back before the heading is painted.
+ * Firefox found the heading while parsing, and leaves a page scrolled since then alone.
  *
- * @param keep - Whether the reader's place at the load event stands: the browser restored it, or
- *     the reader has moved since the page opened.
+ * So when the browser restored the reader's place, or the reader has given input since the page
+ * opened (`READER_INPUT_EVENTS`), this notes the scroll position at the load event and, at the next
+ * frame or task, whichever comes first, puts the page back there if it has since moved to just
+ * where a scroll to the fragment's element puts that element (`sitsAtLanding()`). Firefox scrolls
+ * before it returns to the event loop, and the next frame puts the page back before the heading is
+ * painted. Anything else is left alone: a scroll the reader started before the load event toward
+ * another place, which is still on its way, or a link they followed to the fragment's own element;
+ * and reader input, a `hashchange`, or a `popstate` after the load event.
+ *
+ * @param restoring - Whether the browser restores the reader's place (`browserRestoresScroll()`).
  */
-function keepPlaceAtLoad(keep: () => boolean): void {
+function keepPlaceAtLoad(restoring: boolean): void {
   if (document.readyState === 'complete') {
     return;
   }
+  const fragment = window.location.hash;
+  const pageUrl = (url: string): string => url.split('#')[0];
+  // A restored place stands whatever the reader does, so their input matters only on a first visit
+  const movedBeforeLoad = restoring ? () => true : watchReaderInput();
+  let followedToFragment = false;
+  const onClick = (event: Event): void => {
+    const link = event.target instanceof Element ? event.target.closest('a[href]') : null;
+    if (
+      link instanceof HTMLAnchorElement &&
+      pageUrl(link.href) === pageUrl(window.location.href) &&
+      findFragmentTarget(link.hash) === findFragmentTarget(fragment)
+    ) {
+      followedToFragment = true;
+    }
+  };
+  document.addEventListener('click', onClick, true);
+
   window.addEventListener(
     'load',
     () => {
+      document.removeEventListener('click', onClick, true);
+      if (!movedBeforeLoad() || followedToFragment) {
+        return;
+      }
       const left = window.scrollX;
       const top = window.scrollY;
+      const hashAtLoad = window.location.hash;
       const inputSinceLoad = watchReaderInput();
+      let navigated = false;
+      const onNavigate = (): void => {
+        navigated = true;
+      };
+      window.addEventListener('hashchange', onNavigate);
+      window.addEventListener('popstate', onNavigate);
       let checked = false;
       const putBack = (): void => {
         if (checked) {
           return;
         }
         checked = true;
+        const input = inputSinceLoad();
+        window.removeEventListener('hashchange', onNavigate);
+        window.removeEventListener('popstate', onNavigate);
+        if (input || navigated || window.location.hash !== hashAtLoad) {
+          return;
+        }
         const moved = window.scrollX !== left || window.scrollY !== top;
-        if (!inputSinceLoad() && keep() && moved) {
+        const target = findFragmentTarget(fragment);
+        if (moved && target && sitsAtLanding(target)) {
           // Instant: under `scroll-behavior: smooth`, the default would glide back from the heading
           window.scrollTo({ left, top, behavior: 'instant' });
         }
@@ -271,8 +330,7 @@ function landOnFragment(): () => Promise<void> {
     return skip;
   }
   const restoring = browserRestoresScroll();
-  const movedBeforeLoad = watchReaderInput();
-  keepPlaceAtLoad(() => movedBeforeLoad() || restoring);
+  keepPlaceAtLoad(restoring);
   // On a reload or a Back without the back/forward cache, the browser puts the reader back where
   // they were. Scrolling to the heading would fight that, and the second scroll would win it.
   if (restoring) {

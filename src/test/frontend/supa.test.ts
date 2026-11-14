@@ -2864,53 +2864,93 @@ describe('Supa Maven Skin Frontend Modules', () => {
       }
     });
 
-    it('keeps a reader who moved or was restored where they are when the browser tries the fragment again at load', async () => {
-      const happyDOM = (window as unknown as { happyDOM: { setURL: (url: string) => void } })
-        .happyDOM;
-      const originalUrl = window.location.href;
-      const scrollSpy = vi.spyOn(Element.prototype, 'scrollIntoView').mockImplementation(() => undefined);
+    describe('the browser\'s last try at the fragment after the load event', () => {
+      const happyDOM = (): { setURL: (url: string) => void } =>
+        (window as unknown as { happyDOM: { setURL: (url: string) => void } }).happyDOM;
+      let originalUrl = '';
       let navigationType: NavigationTimingType = 'navigate';
-      const entries = vi
-        .spyOn(performance, 'getEntriesByType')
-        .mockImplementation((type: string) =>
+      let readyState: DocumentReadyState = 'interactive';
+      const tick = (): Promise<void> => new Promise((resolveTick) => setTimeout(resolveTick, 0));
+
+      beforeEach(() => {
+        originalUrl = window.location.href;
+        vi.spyOn(Element.prototype, 'scrollIntoView').mockImplementation(() => undefined);
+        vi.spyOn(performance, 'getEntriesByType').mockImplementation((type: string) =>
           type === 'navigation' ? ([{ type: navigationType }] as unknown as PerformanceEntryList) : []
         );
-      // happy-dom has finished loading; stand in for a page whose load event is still to come
-      let readyState: DocumentReadyState = 'interactive';
-      Object.defineProperty(document, 'readyState', { get: () => readyState, configurable: true });
-      const tick = (): Promise<void> => new Promise((resolveTick) => setTimeout(resolveTick, 0));
+        // happy-dom lays nothing out: #usage sits at the top of the viewport, where a scroll to it
+        // lands it, at scrollY 6000, and every other element far below
+        vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (this: Element) {
+          return new DOMRect(0, this.id === 'usage' ? 6000 - window.scrollY : 9999, 100, 20);
+        });
+        // happy-dom has finished loading; stand in for a page whose load event is still to come
+        Object.defineProperty(document, 'readyState', { get: () => readyState, configurable: true });
+      });
+
+      afterEach(() => {
+        Reflect.deleteProperty(document, 'readyState');
+        window.scrollTo(0, 0);
+        vi.restoreAllMocks();
+        happyDOM().setURL(originalUrl);
+      });
+
       /**
        * Opens the page at `#usage` the way `type` names, lets `beforeLoad` run, fires the load
-       * event, and then scrolls as Firefox does when it tries the fragment once more right after
-       * the load event, now that the skin has given the heading its id.
+       * event, lets `afterLoad` run, and then scrolls to `browserScroll`: by default where Firefox
+       * puts #usage when it tries the fragment once more right after the load event, now that the
+       * skin has given the heading its id.
        *
        * @param type - How the reader reached the page.
        * @param beforeLoad - What happens between the skin's start and the load event.
-       * @param afterLoad - What happens between the load event and the browser's scroll.
-       * @returns The scroll position once the skin has had its turn.
+       * @param afterLoad - What happens between the load event and the scroll.
+       * @param browserScroll - Where the page scrolls after the load event.
+       * @returns The scroll position once the skin has had its turn after the load event.
        */
       const open = async (
         type: NavigationTimingType,
         beforeLoad: () => void,
-        afterLoad: () => void = () => undefined
+        afterLoad: () => void = () => undefined,
+        browserScroll = 6000
       ): Promise<number> => {
         navigationType = type;
         readyState = 'interactive';
         window.scrollTo(0, 0);
-        happyDOM.setURL('https://example.org/docs/guide.html#usage');
-        document.body.innerHTML =
-          '<main id="supa-main-content"><h1>Guide</h1><h2>Install</h2><h2>Usage</h2></main>';
-        initTocAndScrollSpy();
+        happyDOM().setURL('https://example.org/docs/guide.html#usage');
+        document.body.innerHTML = `
+          <main id="supa-main-content"><h1>Guide</h1><h2>Install</h2><h2>Usage</h2>
+            <p><a id="to-install" href="#install">Install</a> <a id="to-usage" href="#usage">Usage</a></p>
+          </main>`;
+        // The skin's TOC links scroll themselves, as an in-page link with a smooth scroll does
+        document.querySelectorAll('main a').forEach((link) => {
+          link.addEventListener('click', (event) => event.preventDefault());
+        });
+        const landAgain = initTocAndScrollSpy();
         beforeLoad();
         readyState = 'complete';
         window.dispatchEvent(new Event('load'));
         afterLoad();
-        window.scrollTo(0, 6000);
+        window.scrollTo(0, browserScroll);
         await tick();
-        return window.scrollY;
+        const scrollY = window.scrollY;
+        // The skin's own second scroll to the heading is a mocked scrollIntoView(), which moves nothing
+        await landAgain();
+        return scrollY;
       };
 
-      try {
+      /**
+       * Follows an in-page link the way a pointer does, and leaves its smooth scroll under way.
+       *
+       * @param id - Id of the link.
+       * @param at - Where the smooth scroll has got to by the load event.
+       */
+      const follow = (id: string, at: number): void => {
+        const link = document.getElementById(id)!;
+        link.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+        link.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+        window.scrollTo(0, at);
+      };
+
+      it('keeps a reader who moved or was restored where they are', async () => {
         // The browser put the reader back where they were before a reload or a Back
         expect(await open('reload', () => window.scrollTo(0, 3000))).toBe(3000);
         expect(await open('back_forward', () => window.scrollTo(0, 3000))).toBe(3000);
@@ -2921,8 +2961,13 @@ describe('Supa Maven Skin Frontend Modules', () => {
             window.scrollTo(0, 2400);
           })
         ).toBe(2400);
+        // ...or followed a link to another heading, whose scroll had ended by the load event
+        expect(await open('navigate', () => follow('to-install', 2000))).toBe(2000);
         // Nobody moved: the browser's scroll to the heading stands
         expect(await open('navigate', () => window.scrollTo(0, 5000))).toBe(6000);
+      });
+
+      it('never undoes a scroll the reader or the browser is still making', async () => {
         // The reader's own input after the load event is theirs to keep
         expect(
           await open(
@@ -2931,13 +2976,70 @@ describe('Supa Maven Skin Frontend Modules', () => {
             () => window.dispatchEvent(new Event('keydown'))
           )
         ).toBe(6000);
-      } finally {
-        Reflect.deleteProperty(document, 'readyState');
-        window.scrollTo(0, 0);
-        entries.mockRestore();
-        scrollSpy.mockRestore();
-        happyDOM.setURL(originalUrl);
-      }
+        // A link followed before the load event, whose smooth scroll is still on its way
+        expect(await open('navigate', () => follow('to-install', 2000), undefined, 2100)).toBe(2100);
+        // ...and one to the URL's own heading, which the browser's scroll is right to finish
+        expect(await open('navigate', () => follow('to-usage', 2000))).toBe(6000);
+        // A Back or Forward to another fragment after the load event
+        expect(
+          await open(
+            'reload',
+            () => window.scrollTo(0, 3000),
+            () => window.dispatchEvent(new HashChangeEvent('hashchange'))
+          )
+        ).toBe(6000);
+        expect(
+          await open(
+            'reload',
+            () => window.scrollTo(0, 3000),
+            () => window.dispatchEvent(new PopStateEvent('popstate'))
+          )
+        ).toBe(6000);
+      });
+
+      it('stops listening for reader input on every path', async () => {
+        const listening = new Set<EventListenerOrEventListenerObject>();
+        const add = window.addEventListener.bind(window);
+        const remove = window.removeEventListener.bind(window);
+        vi.spyOn(window, 'addEventListener').mockImplementation(
+          (type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions) => {
+            if (type === 'wheel') {
+              listening.add(listener);
+            }
+            add(type, listener, options);
+          }
+        );
+        vi.spyOn(window, 'removeEventListener').mockImplementation(
+          (type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions) => {
+            if (type === 'wheel') {
+              listening.delete(listener);
+            }
+            remove(type, listener, options);
+          }
+        );
+
+        // The page had already loaded when the skin started
+        navigationType = 'navigate';
+        readyState = 'complete';
+        happyDOM().setURL('https://example.org/docs/guide.html#usage');
+        document.body.innerHTML = '<main id="supa-main-content"><h1>Guide</h1><h2>Usage</h2></main>';
+        await initTocAndScrollSpy()();
+        expect(listening.size, 'already loaded').toBe(0);
+
+        // Reader input after the load event, on a reload and on a first visit
+        await open(
+          'reload',
+          () => window.scrollTo(0, 3000),
+          () => window.dispatchEvent(new Event('keydown'))
+        );
+        expect(listening.size, 'reload, input after load').toBe(0);
+        await open(
+          'navigate',
+          () => window.dispatchEvent(new Event('wheel')),
+          () => window.dispatchEvent(new Event('keydown'))
+        );
+        expect(listening.size, 'first visit, input after load').toBe(0);
+      });
     });
   });
 
