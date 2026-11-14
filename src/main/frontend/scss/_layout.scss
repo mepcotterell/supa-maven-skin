@@ -974,3 +974,21 @@ dialog[data-bs-backdrop="false"]::backdrop {
   justify-content: space-between;
   gap: 1.25rem;
 }
+
+// <navIcons> links hold a 1em glyph, about 16px, which made 13-17px targets 15px apart. Each gets
+// a box of at least 24 × 24 CSS px (WCAG 2.5.8 Target Size), in px so a small root font size
+// cannot shrink it, with the glyph centered, so the icons only spread a little.
+.supa-footer-icons {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.supa-footer-icon-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  min-height: 24px;
+}

@@ -33,6 +33,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - **CSS Variable Reference**: The color token table no longer says Bootstrap's `--bg-2` follows `color-background-hover`; it follows `color-background-item`, and `--bg-3` follows `color-background-border`. `color-foreground-border` is described by what it paints, not as the form-control border, which `supa-control-border` sets.
 - **Clean Site Rebuild Guidance**: The migration, customizing, and troubleshooting guides now require `mvn clean site` after skin or `site.xml` changes so unchanged pages receive the new skin, labels, language, and options. The migration guide saves the Fluido comparison copy outside `target/` before cleaning.
 - **Dialog Names**: The search dialog takes its name from the `search` label, and the sidebar navigation drawer from its `navDrawerTitle` title, so both keep a name in every language and when `<sidebarHideName>` hides the project name. Each previously pointed at an element that was not on the page.
+- **Footer Icon Targets**: Each `<navIcons>` footer link is a target of at least 24 &times; 24 CSS pixels, with its icon centered, instead of the bare icon, so adjacent icons are easier to tap and click.
 
 ### Security
 
