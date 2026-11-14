@@ -36,6 +36,9 @@
       outline-offset: var(--focus-ring-offset);
     }
 
+    // `.active` is the author's hook, which Doxia keeps and the script turns into
+    // `aria-current="page"`, so the cue shows before the script runs and without it.
+    &.active,
     &[aria-current="page"] {
       font-weight: 700;
       text-decoration-thickness: 3px;

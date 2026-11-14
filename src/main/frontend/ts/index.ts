@@ -23,7 +23,7 @@ import {
   Tooltip
 } from './bootstrap-components';
 import { initCodeBlocks } from './code';
-import { initDoxiaEnhancements, initScrollRegions } from './doxia';
+import { initDoxiaEnhancements, initScrollRegions, restoreDocumentationChannels } from './doxia';
 import { getLabel, warnUnknownLabels } from './labels';
 import { initOptionalLibraries } from './optional';
 import { initSearch } from './search';
@@ -294,6 +294,8 @@ export function initSupaSkin(): Promise<void> {
   warnUnknownLabels();
   initTheme();
   initDoxiaEnhancements();
+  // Document-wide: a channels navigation may sit outside the article.
+  restoreDocumentationChannels(document);
   const landOnFragmentAgain = initTocAndScrollSpy();
   initCodeBlocks();
   initSearch();

@@ -51,6 +51,7 @@ import {
   labelReportAvatars,
   markDisabledPageLinks,
   normalizeDoxiaTables,
+  restoreDocumentationChannels,
   syncScrollRegionFocus,
   TAB_SYNC_STORAGE_KEY,
   transformBootstrapIcons,
@@ -641,6 +642,61 @@ describe('Supa Maven Skin Frontend Modules', () => {
 
       const labels = Array.from(container.querySelectorAll('.supa-tab-btn')).map((b) => b.textContent);
       expect(labels).toEqual(['Markdown Shorthand', 'Velocity Macro (.md.vm)']);
+    });
+
+    describe('documentation channels, whose aria-* attributes Doxia strips from raw HTML', () => {
+      it('names the navigation from its title and marks the .active link as the current page', () => {
+        // What Doxia renders for the recipe: `title`, `id`, and `class` survive; `aria-*` does not.
+        const root = document.createElement('div');
+        root.innerHTML = `
+          <nav class="supa-documentation-channels" title=" Documentation channels ">
+            <a href="index.html">Project home</a>
+            <a href="guide.html" class="active">Guide</a>
+            <details class="documentation-version-picker"><summary>Version: 2.x</summary>
+              <ul><li><a href="v1/guide.html">1.x</a></li></ul>
+            </details>
+          </nav>`;
+        restoreDocumentationChannels(root);
+        const nav = root.querySelector('nav')!;
+        expect(nav.getAttribute('aria-label')).toBe('Documentation channels');
+        // The name moves to aria-label, so hovering a link no longer shows the landmark's tooltip.
+        expect(nav.hasAttribute('title')).toBe(false);
+        const current = Array.from(root.querySelectorAll('[aria-current]'));
+        expect(current.map((el) => [el.textContent, el.getAttribute('aria-current')])).toEqual([['Guide', 'page']]);
+      });
+
+      it('accepts the .documentation-channels alias and keeps ARIA that reached the page', () => {
+        const root = document.createElement('div');
+        root.innerHTML = `
+          <nav class="documentation-channels" title="Tooltip" aria-label="Kanäle">
+            <a href="index.html" class="active" aria-current="true">Start</a>
+          </nav>
+          <nav class="documentation-channels" title="" aria-labelledby="channels-heading">
+            <a href="a.html">A</a>
+          </nav>
+          <nav class="documentation-channels"><a href="b.html">B</a></nav>
+          <p><a href="c.html" class="active">Outside</a></p>`;
+        restoreDocumentationChannels(root);
+        const [labelled, referenced, bare] = Array.from(root.querySelectorAll('nav'));
+        expect(labelled?.getAttribute('aria-label')).toBe('Kanäle');
+        expect(labelled?.getAttribute('title')).toBe('Tooltip');
+        expect(labelled?.querySelector('a')?.getAttribute('aria-current')).toBe('true');
+        expect(referenced?.hasAttribute('aria-label')).toBe(false);
+        expect(bare?.hasAttribute('aria-label')).toBe(false);
+        // Only a link the author marked inside the navigation becomes current; no URL is compared.
+        expect(root.querySelector('p a')?.hasAttribute('aria-current')).toBe(false);
+        expect(root.querySelector('a[href="b.html"]')?.hasAttribute('aria-current')).toBe(false);
+      });
+
+      it('restores the channels outside the article when the skin initializes', async () => {
+        document.body.innerHTML = `
+          <nav class="supa-documentation-channels" title="Channels"><a href="x.html" class="active">X</a></nav>
+          <main id="supa-main-content"><p>Body</p></main>`;
+        await initSupaSkin();
+        const nav = document.querySelector('nav')!;
+        expect(nav.getAttribute('aria-label')).toBe('Channels');
+        expect(nav.querySelector('a')?.getAttribute('aria-current')).toBe('page');
+      });
     });
   });
 

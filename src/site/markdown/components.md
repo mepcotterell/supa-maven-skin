@@ -799,8 +799,9 @@ A `vcpOptions` set in markup, through a `data-bs-vcp-options` or `data-bs-config
 
 ## Documentation channels
 
-<nav class="documentation-channels" aria-label="Documentation channels">
-<a href="index.html" aria-current="page">Project home</a>
+<nav class="documentation-channels" title="Documentation channels">
+<a href="index.html">Project home</a>
+<a href="components.html" class="active">Components</a>
 <a href="configuration.html">All versions</a>
 <a href="authoring-guide.html">API Reference (Release with a long descriptive version label)</a>
 <details class="documentation-version-picker">

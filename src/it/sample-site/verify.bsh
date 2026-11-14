@@ -466,4 +466,12 @@ if ( !channels.contains( "class=\"documentation-channels\"" )
      || !channels.contains( "<summary>Version: Current release</summary>" ) ) {
     throw new IllegalStateException( "Documentation channel markup was not preserved" );
 }
+// Doxia strips aria-* (and data-*) from the recipe's raw HTML but keeps title and class, the hooks
+// the skin's script turns into the navigation's name and aria-current="page" (R-10).
+expectTag( "documentation-channels.html", channels, "nav", new String[] {
+    "class", "documentation-channels", "title", "Documentation channels" },
+    "The channels navigation must keep the title that names it" );
+expectTag( "documentation-channels.html", channels, "a", new String[] {
+    "class", "active", "href", "documentation-channels.html" },
+    "The link to the current page must keep the class that marks it current" );
 return true;

@@ -801,6 +801,34 @@ export function markDisabledPageLinks(container: HTMLElement): void {
     });
 }
 
+/**
+ * Restores the documentation channels navigation's name and current-page link from the hooks
+ * Doxia keeps.
+ *
+ * Doxia's sinks drop `aria-*` and `data-*` attributes from raw-HTML `<nav>` and `<a>` elements in
+ * Markdown, `.md.vm`, and XDoc pages, but keep `title` and `class`. So the recipe names the
+ * navigation with `title` and marks the link to the current page with `class="active"`, and this
+ * copies the title into `aria-label` (dropping the tooltip it would show over every link) and
+ * sets `aria-current="page"` on each marked link. The current page is never inferred from URLs,
+ * and a name or `aria-current` that reached the page is kept.
+ *
+ * @param root - Root node to scan; the navigation may sit outside the article.
+ */
+export function restoreDocumentationChannels(root: ParentNode = document): void {
+  root
+    .querySelectorAll<HTMLElement>('.supa-documentation-channels, .documentation-channels')
+    .forEach((nav) => {
+      const title = nav.getAttribute('title')?.trim();
+      if (title && !nav.hasAttribute('aria-label') && !nav.hasAttribute('aria-labelledby')) {
+        nav.setAttribute('aria-label', title);
+        nav.removeAttribute('title');
+      }
+      nav.querySelectorAll('a.active:not([aria-current])').forEach((link) => {
+        link.setAttribute('aria-current', 'page');
+      });
+    });
+}
+
 /** Horizontally scrollable code and table wrappers created by the skin. */
 const SCROLL_REGION_SELECTOR = '.supa-code-block > pre, .supa-table-responsive';
 

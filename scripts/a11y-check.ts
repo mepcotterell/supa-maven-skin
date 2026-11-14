@@ -422,6 +422,43 @@ async function expectFocused(page: Page, locator: Locator, what: string): Promis
   }
 }
 
+/** Name the `components.html` documentation channels navigation gives itself in its `title`. */
+const CHANNELS_NAME = 'Documentation channels';
+
+/**
+ * Throws unless the documentation channels navigation on `components.html` keeps the hooks the
+ * recipe documents through Doxia, and the skin has turned them into ARIA. Doxia strips `aria-*`
+ * and `data-*` from raw HTML but keeps `title` and `class` (R-10), so the served page must name
+ * the navigation with `title` and mark the link to this page with `class="active"`, and the
+ * hydrated page must expose that name, drop the `title` tooltip, and mark only that link
+ * `aria-current="page"`.
+ *
+ * @param page - `components.html`, after the skin has initialized.
+ */
+async function expectChannelSemantics(page: Page): Promise<void> {
+  const served = await page.evaluate(async () => {
+    const html = await (await fetch(location.href)).text();
+    const nav = new DOMParser().parseFromString(html, 'text/html').querySelector('.documentation-channels');
+    return {
+      title: nav?.getAttribute('title') ?? null,
+      current: Array.from(nav?.querySelectorAll('a.active') ?? [], (a) => a.getAttribute('href')).join()
+    };
+  });
+  if (served.title !== CHANNELS_NAME || served.current !== 'components.html') {
+    throw new Error(`served channels navigation lost its title or current-link class: ${JSON.stringify(served)}`);
+  }
+  const named = await page.getByRole('navigation', { name: CHANNELS_NAME, exact: true }).count();
+  const hydrated = await page.locator('.documentation-channels').evaluate((el) => ({
+    title: el.getAttribute('title'),
+    current: Array.from(el.querySelectorAll('[aria-current]'),
+      (a) => `${a.getAttribute('href')}=${a.getAttribute('aria-current')}`).join()
+  }));
+  if (named !== 1 || hydrated.title !== null || hydrated.current !== 'components.html=page') {
+    throw new Error(`channels navigation must be named ${JSON.stringify(CHANNELS_NAME)} and mark ` +
+      `components.html current: ${JSON.stringify({ named, ...hydrated })}`);
+  }
+}
+
 /**
  * Waits until an element's attribute has the expected value.
  *
@@ -3394,7 +3431,7 @@ const SCENARIOS: readonly InteractionScenario[] = [
         } else {
           await page.locator('html').evaluate((el) => el.removeAttribute('data-bs-theme'));
         }
-        // Exercise the tracer's placement outside prose and the canonical alias too.
+        // Exercise a placement outside the article and the canonical class name too.
         if (width === 1440) {
           await page.locator('.documentation-channels').evaluate((el) => {
             document.querySelector('main')?.before(el);
@@ -3430,6 +3467,7 @@ const SCENARIOS: readonly InteractionScenario[] = [
         if (!fits) {
           throw new Error('Documentation channels overflow the viewport');
         }
+        await expectChannelSemantics(page);
       }
     }))
   ),

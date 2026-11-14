@@ -432,8 +432,8 @@ Group project, version, and API links in a named navigation landmark. The native
 version disclosure works without JavaScript:
 
 ```html
-<nav class="supa-documentation-channels" aria-label="Documentation channels">
-<a href="index.html" aria-current="page">Project home</a>
+<nav class="supa-documentation-channels" title="Documentation channels">
+<a href="index.html" class="active">Project home</a>
 <a href="https://example.org/versions/">All versions</a>
 <a href="api/index.html">API Reference</a>
 <details class="documentation-version-picker">
@@ -446,9 +446,19 @@ version disclosure works without JavaScript:
 </nav>
 ```
 
-Replace destinations and labels with your own. Set `aria-current="page"` only
-on a link to the current page. The skin does not discover versions or rewrite
-links. The component works inside or outside article prose, inherits all six
+Replace destinations and labels with your own. This example sits on the project
+home page, so its "Project home" link is marked current. Doxia removes `aria-*`
+and `data-*` attributes from raw HTML in Markdown, `.md.vm`, and XDoc pages, so
+the recipe uses two attributes it keeps:
+
+- `title` on the navigation names it. The skin copies the title into
+  `aria-label` when the page loads and removes the tooltip.
+- `class="active"` marks the link to the current page. Put it only on that
+  link. The link shows as current before the skin's script runs, and the skin
+  then adds `aria-current="page"` to it.
+
+The skin does not discover versions, rewrite links, or work out the current page
+from URLs. The component works inside or outside article prose, inherits all six
 palettes and light, dark, or automatic polarity, and is hidden when printed.
 On phones, the version list expands in the page flow; long labels wrap.
 

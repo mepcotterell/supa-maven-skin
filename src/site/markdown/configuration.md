@@ -501,6 +501,12 @@ When authoring Velocity-preprocessed pages (`.md.vm`, `.apt.vm`, `.xhtml.vm`), *
 | `.documentation-channels` | Equivalent compatibility alias for existing markup. |
 | `.documentation-version-picker` | Native `details` inside the container, containing a `summary` and a `ul` of version links. |
 
-All palettes and polarities are supported. Use `aria-current="page"` for the
-current destination. Labels and URLs belong to the consumer. No script or
-configuration option is required. See the [authoring recipe](authoring-guide.html#documentation-channels).
+All palettes and polarities are supported. Doxia removes `aria-*` and `data-*`
+attributes from raw HTML, so name the container with `title` and mark the link
+to the current page with `class="active"`. When the page loads, the skin copies
+the container's `title` into `aria-label`, removing the title, and adds
+`aria-current="page"` to each `.active` link inside it. An `aria-label`,
+`aria-labelledby`, or `aria-current` that reaches the page is kept. The `.active`
+link is styled as current before the script runs. Labels and URLs belong to the
+consumer, and no configuration option is required. See the
+[authoring recipe](authoring-guide.html#documentation-channels).
