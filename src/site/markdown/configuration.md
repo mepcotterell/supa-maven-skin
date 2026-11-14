@@ -382,6 +382,7 @@ Controls metadata and icon links in the page footer (`.supa-footer`) and version
 Most values are plain text. The skin escapes each one where it writes it into an HTML attribute or URL, so a quote or an ampersand cannot break the page's markup. Write an ampersand in `site.xml` or `pom.xml` as `&amp;`, as XML requires; the page then carries `&amp;` in the attribute, which browsers read as `&`.
 
 - **Escaped:** `<lightLogo>`, `<darkLogo>`, `<sourceRepository>`, `<sourceBranch>`, `<sourceDirectory>`, `<headingPermalinkSymbol>`, `<mermaidCdnUrl>`, `<katexCssCdnUrl>`, `<katexJsCdnUrl>`, `<labels>`, and the `<navIcons>` `<href>` and `<title>`; in `site.xml`, the `href`, `name`, and `target` of menu items and breadcrumbs and the `<bannerLeft>` `href`, `name`, and image `src`; in `pom.xml`, the project name and version, `<inceptionYear>`, and the `<organization>` `<name>` and `<url>`.
+- **CSS:** `<lightCssVariables>` and `<darkCssVariables>` values are written as CSS, not HTML-escaped, so a quoted font name such as `"Fira Sans", sans-serif` keeps its quotes. Each `<` becomes the CSS escape `\3c `, which CSS reads as `<`, so a value cannot end the skin's `<style>` element.
 - **Markup:** `<announcement>`, the `<navIcons>` `<html>`, and the `site.xml` `<body><head>` and `<body><footer>` are HTML, written as given; the last two are evaluated with Velocity first. So are the `$body`, `$footer`, and `$description` arguments of the [helper macros](#velocity-helper-macros-reference-site-macrosvm).
 
 ### Code, Search, Diagrams & Math
@@ -440,7 +441,7 @@ Every built-in color scheme is verified at build time by `scripts/lint-scss.ts` 
 
 ## Extending Palettes via `<lightCssVariables>` & `<darkCssVariables>`
 
-Just like Sphinx Furo's `light_css_variables` and `dark_css_variables`, any child element inside `<lightCssVariables>` or `<darkCssVariables>` is emitted as `--<tag-name>: <value>;` and automatically feeds into Bootstrap 6's component tokens (`--primary-*`, `--success-*`, `--warning-*`, `--danger-*`, `--info-*`, `--accent-*`) via `color-mix(in oklch, ...)`. The four `modus*` schemes also override some of those tokens and some of the `supa-*` state tokens below, so that every state stays at 7:1 or better. See [Modus Palette Overrides](architecture.html#modus-palette-overrides) for what they change and why.
+Just like Sphinx Furo's `light_css_variables` and `dark_css_variables`, any child element inside `<lightCssVariables>` or `<darkCssVariables>` is emitted as `--<tag-name>: <value>;` (the value as CSS, with each `<` written as `\3c `; see [How Values Reach the Page](#how-values-reach-the-page)) and automatically feeds into Bootstrap 6's component tokens (`--primary-*`, `--success-*`, `--warning-*`, `--danger-*`, `--info-*`, `--accent-*`) via `color-mix(in oklch, ...)`. The four `modus*` schemes also override some of those tokens and some of the `supa-*` state tokens below, so that every state stays at 7:1 or better. See [Modus Palette Overrides](architecture.html#modus-palette-overrides) for what they change and why.
 
 Defaults shown below are for the `furo` scheme; other schemes can override them. In `light-dark(...)`, the first value is for light polarity and the second is for dark polarity. Variable names omit the leading `--` because they are also the XML child element names.
 

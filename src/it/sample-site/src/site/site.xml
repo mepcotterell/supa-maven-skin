@@ -49,9 +49,13 @@
            page and on the brand-tinted current-page fill -->
       <lightCssVariables>
         <color-brand-primary>#0047cc</color-brand-primary>
+        <!-- CSS keeps its quotes, and "</style" cannot end the style element -->
+        <supa-fixture-font>"Fira Sans", sans-serif</supa-fixture-font>
+        <supa-fixture-marker>"&lt;/style&gt;&lt;p id=supaCssBreakout&gt;light&lt;/p&gt;"</supa-fixture-marker>
       </lightCssVariables>
       <darkCssVariables>
         <color-brand-primary>#80aaff</color-brand-primary>
+        <supa-fixture-marker>"&lt;/STYLE&gt;&lt;p id=supaCssBreakout&gt;dark&lt;/p&gt;"</supa-fixture-marker>
       </darkCssVariables>
     </supaSkin>
   </custom>

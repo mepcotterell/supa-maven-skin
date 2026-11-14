@@ -223,6 +223,20 @@ if ( !html.contains( "--color-brand-primary: #0047cc;" ) ) {
 if ( !html.contains( "--color-brand-primary: #80aaff;" ) ) {
     throw new IllegalStateException( "Missing custom darkCssVariables" );
 }
+// CSS values are not HTML-escaped, so a quoted font name keeps its quotes, but each "<" becomes the
+// CSS escape "\3c ", so a "</style" in a value cannot end the element (HTML matches it in any case)
+int customCssStart = html.indexOf( "<style id=\"supa-custom-css-variables\">" );
+if ( customCssStart < 0 ) {
+    throw new IllegalStateException( "Missing the custom CSS variables <style> element" );
+}
+String customCss = html.substring( customCssStart, html.toLowerCase().indexOf( "</style", customCssStart ) );
+expect( "index.html", customCss, "--supa-fixture-font: \"Fira Sans\", sans-serif;", "a CSS value must keep its quotes" );
+expect( "index.html", customCss, "--supa-fixture-marker: \"\\3c /style>\\3c p id=supaCssBreakout>light\\3c /p>\";",
+    "a \"<\" in a light CSS value must become a CSS escape" );
+expect( "index.html", customCss, "--supa-fixture-marker: \"\\3c /STYLE>\\3c p id=supaCssBreakout>dark\\3c /p>\";",
+    "a \"<\" in a dark CSS value must become a CSS escape" );
+expect( "index.html", customCss, "--color-brand-primary: #80aaff;", "the custom CSS must stay inside its <style> element" );
+reject( "index.html", html, "<p id=supaCssBreakout>", "no CSS value may end its <style> element" );
 // A printout uses the light polarity on white paper, so dark overrides must not apply in print
 if ( !html.contains( "@media screen {" ) || !html.contains( "@media screen and (prefers-color-scheme: dark) {" ) ) {
     throw new IllegalStateException( "Custom darkCssVariables must be scoped to @media screen" );

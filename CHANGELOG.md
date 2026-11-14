@@ -22,6 +22,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Fixed
 
+- **Custom CSS Values**: A `<lightCssVariables>` or `<darkCssVariables>` value containing `</style` no longer ends the skin's `<style>` element: each `<` is written as the CSS escape `\3c `, which CSS reads as `<`, and quotes stay as written.
 - **Reference Corrections**: The `<labels>` reference says that an element inside a label makes the skin keep the English text, and that escaped characters and `CDATA` show as typed. The customizing guide names the two focus rings that do not follow `color-brand-primary`, and the `color-background-hover` reference lists every surface it fills.
 - **Forced-Color Popovers and Page Coverage**: Popover arrows retain their triangular shape with system-color outlines and fills. Rendered checks cover open popovers and every top-level page in light and dark forced colors, without rule or element exclusions.
 - **Themed Card Footers**: Solid themed headers and footers keep their fills when printed, and use `--theme-contrast` for text and links, including header links. Subtle and translucent caps use their own text colors, and inline-code chips retain their page-colored backing. Build-time audits and rendered checks cover all eight themes across all 12 palette and polarity variants.

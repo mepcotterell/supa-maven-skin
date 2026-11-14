@@ -154,7 +154,8 @@
     <link rel="stylesheet" href="$relativePath/css/supa-maven-skin.min.css" />
     <link rel="stylesheet" href="$relativePath/css/site.css" onerror="this.remove()" />
 ##
-## Inject Furo-style <lightCssVariables> and <darkCssVariables> overrides from site.xml
+## Inject Furo-style <lightCssVariables> and <darkCssVariables> overrides from site.xml. Each value
+## is CSS, written by #supaCssValue so that it cannot end the <style> element.
 #set( $lightVars = $site.getCustomChild( "${skinCfg}.lightCssVariables" ) )
 #set( $darkVars = $site.getCustomChild( "${skinCfg}.darkCssVariables" ) )
 #if( ( $lightVars && $lightVars.getChildren().size() > 0 ) || ( $darkVars && $darkVars.getChildren().size() > 0 ) )
@@ -162,7 +163,8 @@
 #if( $lightVars && $lightVars.getChildren().size() > 0 )
       html:root, html[data-bs-theme="light"], html[data-supa-palette] {
 #foreach( $child in $lightVars.getChildren() )
-        --$child.getName(): $child.getValue();
+#supaCssValue( $child.getValue() )
+        --$child.getName(): $supaCssValue;
 #end
       }
 #end
@@ -171,14 +173,16 @@
       @media screen {
         html[data-bs-theme="dark"], html[data-supa-palette][data-bs-theme="dark"] {
 #foreach( $child in $darkVars.getChildren() )
-          --$child.getName(): $child.getValue();
+#supaCssValue( $child.getValue() )
+          --$child.getName(): $supaCssValue;
 #end
         }
       }
       @media screen and (prefers-color-scheme: dark) {
         html:root:not([data-bs-theme="light"]), html[data-supa-palette]:not([data-bs-theme="light"]) {
 #foreach( $child in $darkVars.getChildren() )
-          --$child.getName(): $child.getValue();
+#supaCssValue( $child.getValue() )
+          --$child.getName(): $supaCssValue;
 #end
         }
       }

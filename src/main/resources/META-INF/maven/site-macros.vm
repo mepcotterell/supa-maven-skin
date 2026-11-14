@@ -200,6 +200,15 @@ Apache Maven Doxia Site Renderer#if( $doxiaSiteRendererVersion ) $doxiaSiteRende
 #end
 #end
 ##
+## Write a <lightCssVariables> or <darkCssVariables> value $value into $supaCssValue for the
+## <style> element. The value is CSS, so it is not HTML-escaped: a quoted font name keeps its
+## quotes. Only "</style" can end the element (in any case), so each "<" becomes the CSS escape
+## "\3c ", which CSS reads back as "<", in a string as anywhere else. An empty value stays empty.
+#macro( supaCssValue $value )
+#set( $supaCssValue = "$!value" )
+#set( $supaCssValue = $supaCssValue.replace( '<', '\3c ' ) )
+#end
+##
 ## Resolve a menu item href into $itemHref and set $itemIsCurrent when it names the page being
 ## rendered. The check compares site-root-relative paths: Doxia's $currentFileName (for example
 ## guides/install.html) against $siteHref. $alignedFileName is page-relative on pages in
