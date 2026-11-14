@@ -2804,6 +2804,8 @@ describe('Supa Maven Skin Frontend Modules', () => {
 
   describe('Client-Side Search Indexing, Filtering & Highlighting', () => {
     describe('search combobox active result', () => {
+      const shortcutListeners: EventListenerOrEventListenerObject[] = [];
+
       beforeEach(() => {
         vi.stubGlobal('fetch', vi.fn(async () => ({ ok: false })));
         document.body.innerHTML = `
@@ -2817,10 +2819,22 @@ describe('Supa Maven Skin Frontend Modules', () => {
             <div id="supaSearchStatus"></div>
             <div id="supaSearchResults" role="listbox"></div>
           </dialog>`;
+        // initSearch() never removes its document-level shortcut listener, so a test would
+        // otherwise also trigger the listeners of every earlier test's detached dialog.
+        const addListener = document.addEventListener.bind(document);
+        vi.spyOn(document, 'addEventListener').mockImplementation(
+          (type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions) => {
+            if (type === 'keydown') {
+              shortcutListeners.push(listener);
+            }
+            addListener(type, listener, options);
+          }
+        );
         initSearch();
       });
 
       afterEach(() => {
+        shortcutListeners.splice(0).forEach((listener) => document.removeEventListener('keydown', listener));
         vi.unstubAllGlobals();
         vi.restoreAllMocks();
       });
@@ -2980,6 +2994,161 @@ describe('Supa Maven Skin Frontend Modules', () => {
         search('alpha');
         expectActive(input, 0);
         expect(document.querySelector('[role="option"]')?.id).toBe(alphaId);
+      });
+
+      describe('keydown with no results', () => {
+        it.each([
+          ['an empty query', ''],
+          ['a query without matches', 'zzzz-no-match']
+        ])('leaves ArrowDown, ArrowUp, and Enter to the browser for %s', (_label, query) => {
+          const input = search(query);
+          for (const key of ['ArrowDown', 'ArrowUp', 'Enter']) {
+            const event = new KeyboardEvent('keydown', { key, cancelable: true });
+            input.dispatchEvent(event);
+            expect(event.defaultPrevented).toBe(false);
+          }
+          expect(input.hasAttribute('aria-activedescendant')).toBe(false);
+          expect(input.getAttribute('aria-expanded')).toBe('false');
+          expect(document.querySelectorAll('[role="option"]')).toHaveLength(0);
+        });
+      });
+
+      describe('option IDs', () => {
+        it('skips an ID that an element elsewhere on the page already uses', () => {
+          document.body.insertAdjacentHTML(
+            'beforeend',
+            '<span id="supa-search-option-0"></span><span id="supa-search-option-1"></span>'
+          );
+          const input = search('guide');
+          const ids = Array.from(document.querySelectorAll('[role="option"]')).map((option) => option.id);
+          expect(ids).toHaveLength(2);
+          expect(new Set(ids).size).toBe(2);
+          expect(ids).toEqual(['supa-search-option-2', 'supa-search-option-3']);
+          expect(document.querySelectorAll('#supa-search-option-0, #supa-search-option-1')).toHaveLength(2);
+          expectActive(input, 0);
+        });
+
+        it('keeps a destination ID after a colliding element appears and the results re-render', () => {
+          search('guide');
+          const alphaId = document.querySelector('[href="alpha.html"][role="option"]')!.id;
+          document.body.insertAdjacentHTML('beforeend', '<span id="supa-search-option-9"></span>');
+          search('beta');
+          search('guide');
+          expect(document.querySelector('[href="alpha.html"][role="option"]')!.id).toBe(alphaId);
+          const ids = Array.from(document.querySelectorAll('[role="option"]')).map((option) => option.id);
+          expect(ids).not.toContain('supa-search-option-9');
+          expect(new Set(ids).size).toBe(ids.length);
+        });
+      });
+
+      describe('the / shortcut', () => {
+        /**
+         * Presses `/` on `target`, as a reader does.
+         * @param target - Element receiving the key press.
+         * @returns The dispatched event.
+         */
+        const pressSlash = (target: EventTarget = document.body): KeyboardEvent => {
+          const event = new KeyboardEvent('keydown', { key: '/', bubbles: true, cancelable: true });
+          target.dispatchEvent(event);
+          return event;
+        };
+
+        /**
+         * Closes the dialog as the browser does before it fires `close`.
+         * @returns The search dialog.
+         */
+        const closeDialog = (): HTMLDialogElement => {
+          const dialog = document.getElementById('supaSearchDialog') as HTMLDialogElement;
+          dialog.removeAttribute('open');
+          dialog.dispatchEvent(new Event('close'));
+          return dialog;
+        };
+
+        afterEach(() => {
+          vi.useRealTimers();
+        });
+
+        it('opens the dialog through Bootstrap and focuses the input once it is shown', () => {
+          vi.useFakeTimers();
+          const dialog = closeDialog();
+          const show = vi.spyOn(Dialog.getOrCreateInstance(dialog), 'show').mockResolvedValue(undefined);
+          dialog.showModal = vi.fn();
+          const input = document.getElementById('supaSearchInput') as HTMLInputElement;
+          const event = pressSlash();
+          expect(event.defaultPrevented).toBe(true);
+          expect(show).toHaveBeenCalledOnce();
+          expect(dialog.showModal).not.toHaveBeenCalled();
+          expect(document.activeElement).not.toBe(input);
+          vi.advanceTimersByTime(50);
+          expect(document.activeElement).toBe(input);
+        });
+
+        it('opens the dialog with showModal() and restores the retained results when Bootstrap fails', () => {
+          vi.useFakeTimers();
+          const input = search('guide');
+          const dialog = closeDialog();
+          vi.spyOn(Dialog, 'getOrCreateInstance').mockImplementation(() => {
+            throw new Error('Bootstrap Dialog unavailable');
+          });
+          dialog.showModal = vi.fn(() => dialog.setAttribute('open', ''));
+          input.blur();
+          const event = pressSlash();
+          expect(event.defaultPrevented).toBe(true);
+          expect(dialog.showModal).toHaveBeenCalledOnce();
+          vi.advanceTimersByTime(50);
+          // expectActive() also checks that the input has focus.
+          expectActive(input, 0);
+        });
+
+        it('tolerates a dialog without showModal() when Bootstrap fails', () => {
+          const dialog = closeDialog();
+          vi.spyOn(Dialog, 'getOrCreateInstance').mockImplementation(() => {
+            throw new Error('Bootstrap Dialog unavailable');
+          });
+          (dialog as { showModal?: unknown }).showModal = undefined;
+          expect(() => pressSlash()).not.toThrow();
+          expect(dialog.hasAttribute('open')).toBe(false);
+        });
+
+        it('starts indexing the site for the first search, like Ctrl/Cmd+K', async () => {
+          // An index that an earlier test cached in sessionStorage would make the fetch unnecessary.
+          window.sessionStorage.clear();
+          const fetchMock = vi.fn(async () => ({ ok: false }));
+          vi.stubGlobal('fetch', fetchMock);
+          const dialog = closeDialog();
+          vi.spyOn(Dialog.getOrCreateInstance(dialog), 'show').mockResolvedValue(undefined);
+          pressSlash();
+          await vi.waitFor(() => expect(fetchMock).toHaveBeenCalled());
+        });
+
+        it('does nothing while the dialog is already open', () => {
+          const dialog = document.getElementById('supaSearchDialog') as HTMLDialogElement;
+          const show = vi.spyOn(Dialog.getOrCreateInstance(dialog), 'show').mockResolvedValue(undefined);
+          dialog.showModal = vi.fn();
+          const event = pressSlash();
+          expect(event.defaultPrevented).toBe(false);
+          expect(show).not.toHaveBeenCalled();
+          expect(dialog.showModal).not.toHaveBeenCalled();
+        });
+
+        it.each([
+          ['an input', '<input id="field" />'],
+          ['a textarea', '<textarea id="field"></textarea>'],
+          ['a contenteditable element', '<div id="field" contenteditable="true">text</div>']
+        ])('does not open the dialog while typing in %s', (_label, markup) => {
+          document.body.insertAdjacentHTML('beforeend', markup);
+          const field = document.getElementById('field') as HTMLElement;
+          const dialog = closeDialog();
+          const show = vi.spyOn(Dialog.getOrCreateInstance(dialog), 'show').mockResolvedValue(undefined);
+          dialog.showModal = vi.fn();
+          const event = pressSlash(field);
+          expect(event.defaultPrevented).toBe(false);
+          expect(show).not.toHaveBeenCalled();
+          expect(dialog.showModal).not.toHaveBeenCalled();
+          // The same press on the page itself opens it, so the field was what suppressed it.
+          pressSlash();
+          expect(show).toHaveBeenCalledOnce();
+        });
       });
 
       it('resynchronizes selection after asynchronous indexing rerenders the current query', async () => {
