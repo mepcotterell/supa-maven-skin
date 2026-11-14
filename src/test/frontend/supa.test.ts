@@ -538,6 +538,61 @@ describe('Supa Maven Skin Frontend Modules', () => {
       expect(groups[1].querySelector('.supa-tab-btn.active')?.textContent).toBe('Kotlin');
     });
 
+    it.each([
+      ['constructor', 'no saved choices', null],
+      ['constructor', 'a saved choice that is not a string', '{"constructor":123}'],
+      ['toString', 'no saved choices', null],
+      ['toString', 'a saved choice that is not a string', '{"toString":[]}'],
+      ['hasOwnProperty', 'only another group saved', '{"other":"Kotlin"}'],
+      ['__proto__', 'a saved choice that is not a string', '{"__proto__":{}}']
+    ])(
+      'opens the first tab of a group named %s with %s',
+      (group, _name, saved) => {
+        if (saved !== null) {
+          window.localStorage.setItem(TAB_SYNC_STORAGE_KEY, saved);
+        }
+        const container = document.createElement('div');
+        container.innerHTML = `
+          <div class="supa-tabs" data-tab-group="${group}">
+            <div data-tab="Java">Java code</div>
+            <div data-tab="Kotlin">Kotlin code</div>
+          </div>
+        `;
+
+        expect(() => initContentTabs(container)).not.toThrow();
+        const tabButtons = container.querySelectorAll<HTMLButtonElement>('.supa-tab-btn');
+        expect(tabButtons[0].classList.contains('active')).toBe(true);
+
+        tabButtons[1].click();
+        expect(
+          Object.entries(JSON.parse(window.localStorage.getItem(TAB_SYNC_STORAGE_KEY) ?? '{}'))
+        ).toContainEqual([group, 'Kotlin']);
+      }
+    );
+
+    it('keeps saved choices for groups named after Object.prototype members', () => {
+      window.localStorage.setItem(
+        TAB_SYNC_STORAGE_KEY,
+        '{"constructor":"Kotlin","toString":"Kotlin","__proto__":"Kotlin"}'
+      );
+      const container = document.createElement('div');
+      container.innerHTML = ['constructor', 'toString', '__proto__']
+        .map(
+          (group) => `
+            <div class="supa-tabs" data-tab-group="${group}">
+              <div data-tab="Java">Java code</div>
+              <div data-tab="Kotlin">Kotlin code</div>
+            </div>`
+        )
+        .join('');
+
+      expect(() => initContentTabs(container)).not.toThrow();
+      const groups = container.querySelectorAll<HTMLElement>('.supa-tabs');
+      expect(
+        Array.from(groups, (g) => g.querySelector('.supa-tab-btn.active')?.textContent)
+      ).toEqual(['Kotlin', 'Kotlin', 'Kotlin']);
+    });
+
     it('marks Team report Gravatar avatars without alt as decorative and leaves authored alt text alone', () => {
       const container = document.createElement('div');
       container.innerHTML = `

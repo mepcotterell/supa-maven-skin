@@ -414,13 +414,15 @@ function inferPanelTabLabel(panel: HTMLElement, index: number): string {
 /**
  * Keeps only the usable entries of a parsed `localStorage['supa-tab-sync']` value. The key is
  * shared with other scripts and older releases, so it may hold `null`, an array, or choices that
- * are not strings, none of which may stop the enhancers that run after the tabs.
+ * are not strings, none of which may stop the enhancers that run after the tabs. The map has no
+ * prototype, so a group an author names `constructor`, `toString`, or `__proto__` reads and
+ * stores its own choice, never an `Object.prototype` member.
  *
  * @param parsed - Value `JSON.parse` returned for the saved tab choices.
  * @returns Group key to saved tab label, empty when the value is not an object of strings.
  */
 function parseStoredTabChoices(parsed: unknown): Record<string, string> {
-  const choices: Record<string, string> = {};
+  const choices = Object.create(null) as Record<string, string>;
   if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
     return choices;
   }
@@ -445,7 +447,7 @@ export function initContentTabs(container: HTMLElement): void {
     return;
   }
 
-  let storedPrefs: Record<string, string> = {};
+  let storedPrefs = parseStoredTabChoices(null);
   try {
     const raw = window.localStorage?.getItem(TAB_SYNC_STORAGE_KEY);
     if (raw) {
@@ -586,9 +588,9 @@ export function initContentTabs(container: HTMLElement): void {
     tabBox.insertBefore(tabList, rawPanels[0]);
     allTabGroups.push({ groupKey, activateLabel });
 
-    const savedLabel = storedPrefs[groupKey];
+    const savedLabel = Object.hasOwn(storedPrefs, groupKey) ? storedPrefs[groupKey] : undefined;
     const initialLabel =
-      savedLabel &&
+      typeof savedLabel === 'string' &&
       buttons.some(
         (b) => (b.getAttribute('data-tab-label') || '').toLowerCase() === savedLabel.toLowerCase()
       )
