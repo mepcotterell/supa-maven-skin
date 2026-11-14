@@ -615,6 +615,36 @@ describe('Supa Maven Skin Frontend Modules', () => {
       expect(stepperItems[2].classList.contains('active')).toBe(false);
     });
 
+    it('marks the last active .supa-stepper step with aria-current="step"', () => {
+      const container = document.createElement('div');
+      container.innerHTML = `
+        <ol class="supa-stepper" title="2">
+          <li>One</li><li>Two</li><li>Three</li>
+        </ol>
+        <ol class="supa-stepper">
+          <li>One</li><li class="active">Two</li><li>Three</li>
+        </ol>
+        <ol class="supa-stepper" data-active-step="3">
+          <li>One</li><li>Two</li><li aria-current="location">Three</li>
+        </ol>
+        <ol class="supa-stepper" data-active-step="0">
+          <li>One</li><li>Two</li>
+        </ol>
+      `;
+
+      initBootstrapSteppers(container);
+
+      const current = Array.from(container.querySelectorAll('.supa-stepper')).map((list) =>
+        Array.from(list.children).map((li) => li.getAttribute('aria-current'))
+      );
+      // Only the last active step is current; earlier active steps are completed, not current.
+      expect(current[0]).toEqual([null, 'step', null]);
+      expect(current[1]).toEqual([null, 'step', null]);
+      // An author's own aria-current is kept, and a stepper with no active step has no current one.
+      expect(current[2]).toEqual([null, null, 'location']);
+      expect(current[3]).toEqual([null, null]);
+    });
+
     it('transforms :bi-...: Markdown shortcodes into <i class="bi bi-..."> while preserving <code> and <pre>', () => {
       const container = document.createElement('div');
       container.innerHTML = `

@@ -345,7 +345,7 @@ Wrap `<div title="Section Heading">` items inside `<div class="supa-accordion">`
 
 ### Declarative Steppers (`ol.supa-stepper`)
 
-Use `<ol class="supa-stepper" title="2">` where `title` specifies the 1-based active step index (all steps up to that number are styled as active/completed):
+Use `<ol class="supa-stepper" title="2">` where `title` specifies the 1-based active step index (all steps up to that number are styled as active/completed, and the last of them gets `aria-current="step"` so screen readers announce the current step; an `aria-current` you write yourself is kept):
 
 <div class="supa-component-preview">
   <ol class="supa-stepper" title="2">

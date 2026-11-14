@@ -683,7 +683,8 @@ export function initBootstrapAccordions(container: HTMLElement): void {
 
 /**
  * Transforms declarative `<ol class="supa-stepper" data-active-step="2">` (or `title="2"` / `<li class="active">`)
- * lists into Bootstrap 6 `.stepper.stepper-horizontal` components.
+ * lists into Bootstrap 6 `.stepper.stepper-horizontal` components, marking the last active step
+ * `aria-current="step"`.
  *
  * @param container - Root container element to scan for `.supa-stepper` lists.
  */
@@ -717,6 +718,13 @@ export function initBootstrapSteppers(container: HTMLElement): void {
         li.classList.add('active');
       }
     });
+
+    // The fill only shows which steps are done, so screen readers learn where the reader is from
+    // the last active step. An author's own aria-current wins.
+    const lastActive = items.filter((li) => li.classList.contains('active')).pop();
+    if (lastActive && !items.some((li) => li.hasAttribute('aria-current'))) {
+      lastActive.setAttribute('aria-current', 'step');
+    }
   });
 }
 
