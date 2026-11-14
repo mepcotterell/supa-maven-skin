@@ -3772,6 +3772,37 @@ const SCENARIOS: readonly InteractionScenario[] = [
     }
   },
   {
+    // Doxia rewrites `href="#"` in raw HTML to `#null`, a fragment no element has, so the
+    // pagination demo uses inert `span.page-link` items (R-26). The scan itself repeats the page's
+    // load-time scan, so it runs in one variant.
+    name: 'pagination-demo',
+    page: 'components.html',
+    viewport: DESKTOP,
+    variants: [{ palette: 'furo', polarity: 'light' }],
+    setup: async (page) => {
+      await page.locator('.supa-article .pagination').first().scrollIntoViewIfNeeded();
+    },
+    assertState: async (page) => {
+      const demo = await page.locator('.supa-article').evaluate((article) => {
+        const pagination = article.querySelector('.pagination');
+        const previous = pagination?.querySelector<HTMLElement>('.page-item.disabled > .page-link');
+        return {
+          nullLinks: article.querySelectorAll('a[href="#null"]').length,
+          previous: previous?.textContent?.trim(),
+          previousDisabled: previous?.getAttribute('aria-disabled'),
+          previousFocusable: previous ? previous.tabIndex >= 0 : null,
+          current: Array.from(pagination?.querySelectorAll('[aria-current="page"]') ?? [],
+            (el) => el.textContent?.trim()).join()
+        };
+      });
+      if (demo.nullLinks !== 0 || demo.previous !== 'Previous' || demo.previousDisabled !== 'true'
+        || demo.previousFocusable !== false || demo.current !== '1') {
+        throw new Error('pagination demo must link nowhere dead, disable "Previous", and mark page 1 ' +
+          `current: ${JSON.stringify(demo)}`);
+      }
+    }
+  },
+  {
     // Doxia rewrites a Markdown link to a heading id that starts with a digit, such as
     // [..](#3-alerts-overlays-dialogs-drawers-toasts) in components.md, to #a3-alerts-..., the id of
     // the anchor prepareHeadings() adds before the heading. The scan itself repeats the page's

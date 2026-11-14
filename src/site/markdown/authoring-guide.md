@@ -462,8 +462,9 @@ from URLs. The component works inside or outside article prose, inherits all six
 palettes and light, dark, or automatic polarity, and is hidden when printed.
 On phones, the version list expands in the page flow; long labels wrap.
 
-The existing `.documentation-channels` class is an equivalent alias. When
-adopting this in a site such as the tracer, remove the old channel and
-version-picker rules from consumer CSS (including `dependencies.css`). Keep
-unrelated dependency-table styles. Later consumer CSS can otherwise override
-the skin's layout and colors.
+The existing `.documentation-channels` class is an equivalent alias. If your
+site already styled channel or version-picker markup in its own stylesheet,
+such as `src/site/resources/css/site.css`, remove those rules when you adopt
+this component, and keep the rest of the stylesheet. Your stylesheet loads
+after the skin's, so leftover rules can override its layout and colors (see
+[Adding a Custom Stylesheet](customizing.html#adding-a-custom-stylesheet)).

@@ -536,7 +536,7 @@ Authors can write a simple `<ol class="supa-stepper" title="3">` ordered list or
 
 ### Breadcrumbs & Pagination
 
-Doxia drops `aria-*` and `tabindex` attributes from raw-HTML links, so **Supa Maven Skin** restores Bootstrap's `aria-disabled="true"` and `tabindex="-1"` on disabled page links (`.page-item.disabled > .page-link`) when the page loads.
+The pagination shows page 1 of a series, so "Previous" is disabled and page 1 is current. The live demo has no other pages to link to, so its items are inert `span.page-link` elements; the code below links pages 2 and 3 as a real series would. Give every page link a real destination: Doxia rewrites `href="#"` in raw HTML to `#null`, a fragment no element has. Doxia also drops `aria-*` and `tabindex` attributes from raw-HTML links and list items, so **Supa Maven Skin** restores Bootstrap's `aria-disabled="true"` (and, on a link, `tabindex="-1"`) on disabled page items (`.page-item.disabled > .page-link`) when the page loads. Put `aria-current="page"` on the current item's `span`, which keeps it.
 
 <div class="supa-component-preview not-prose">
   <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
@@ -551,11 +551,11 @@ Doxia drops `aria-*` and `tabindex` attributes from raw-HTML links, so **Supa Ma
     </nav>
     <nav aria-label="Pagination demo">
       <ul class="pagination pagination-sm mb-0">
-        <li class="page-item disabled"><a class="page-link" href="#" aria-disabled="true" tabindex="-1">Previous</a></li>
-        <li class="page-item active" aria-current="page"><a class="page-link" href="#">1</a></li>
-        <li class="page-item"><a class="page-link" href="#">2</a></li>
-        <li class="page-item"><a class="page-link" href="#">3</a></li>
-        <li class="page-item"><a class="page-link" href="#">Next</a></li>
+        <li class="page-item disabled"><span class="page-link">Previous</span></li>
+        <li class="page-item active"><span class="page-link" aria-current="page">1</span></li>
+        <li class="page-item"><span class="page-link">2</span></li>
+        <li class="page-item"><span class="page-link">3</span></li>
+        <li class="page-item"><span class="page-link">Next</span></li>
       </ul>
     </nav>
   </div>
@@ -576,11 +576,11 @@ Doxia drops `aria-*` and `tabindex` attributes from raw-HTML links, so **Supa Ma
 <!-- Bootstrap 6 Pagination -->
 <nav aria-label="Pagination">
   <ul class="pagination pagination-sm mb-0">
-    <li class="page-item disabled"><a class="page-link" href="#" aria-disabled="true" tabindex="-1">Previous</a></li>
-    <li class="page-item active" aria-current="page"><a class="page-link" href="#">1</a></li>
-    <li class="page-item"><a class="page-link" href="#">2</a></li>
-    <li class="page-item"><a class="page-link" href="#">3</a></li>
-    <li class="page-item"><a class="page-link" href="#">Next</a></li>
+    <li class="page-item disabled"><span class="page-link">Previous</span></li>
+    <li class="page-item active"><span class="page-link" aria-current="page">1</span></li>
+    <li class="page-item"><a class="page-link" href="https://example.org/news/page-2.html">2</a></li>
+    <li class="page-item"><a class="page-link" href="https://example.org/news/page-3.html">3</a></li>
+    <li class="page-item"><a class="page-link" href="https://example.org/news/page-2.html">Next</a></li>
   </ul>
 </nav>
 ```
