@@ -16,7 +16,17 @@ import {
   packageNameFromSassSpecifier,
   sassModuleSpecifiers
 } from '../../../scripts/bundled-licenses';
-import { checkReleaseMetadata, type ReleaseMetadata } from '../../../scripts/check-release-ready';
+import {
+  checkReleaseMetadata,
+  checkReleaseReady,
+  CI_MISSING_GRACE_MS,
+  CI_POLL_INTERVAL_MS,
+  CI_WAIT_TIMEOUT_MS,
+  type CiRun,
+  type CiWaitOptions,
+  type ReleaseMetadata,
+  waitForCiSuccess
+} from '../../../scripts/check-release-ready';
 import {
   auditContrast,
   collectRootTokens,
@@ -5458,5 +5468,184 @@ describe('release preflight (scripts/check-release-ready.ts)', () => {
       release({ ref: 'refs/tags/v0.3.0', pomVersion: '0.3.0-SNAPSHOT', changelog: '## [Unreleased]\n' })
     );
     expect(errors).toHaveLength(3);
+  });
+});
+
+describe('release CI gate (scripts/check-release-ready.ts)', () => {
+  const SHA = '7941f0e82e058c499b17e6cb34104d815d6850d6';
+  const MINUTE = 60_000;
+
+  /**
+   * Builds a `ci.yml` push run on `main` for the release commit.
+   *
+   * @param status - The run's status.
+   * @param conclusion - The run's conclusion once completed.
+   * @param overrides - Fields to replace.
+   * @returns The run.
+   */
+  const run = (status: string, conclusion: string | null = null, overrides: Partial<CiRun> = {}): CiRun => ({
+    id: 42216636871,
+    url: 'https://github.com/mepcotterell/supa-maven-skin/actions/runs/42216636871',
+    headSha: SHA,
+    headBranch: 'main',
+    event: 'push',
+    status,
+    conclusion,
+    ...overrides
+  });
+
+  /**
+   * Builds wait options whose lookup returns the given results in turn (repeating the last) and
+   * whose clock only moves when the gate sleeps.
+   *
+   * @param results - What each lookup returns.
+   * @param overrides - Options to replace.
+   * @returns The options, the lookup calls, and the fake clock.
+   */
+  const scripted = (results: CiRun[][], overrides: Partial<CiWaitOptions> = {}) => {
+    const clock = { now: 0 };
+    const calls: string[] = [];
+    const options: CiWaitOptions = {
+      sha: SHA,
+      lookup: async (sha: string): Promise<CiRun[]> => {
+        calls.push(sha);
+        return results[Math.min(calls.length, results.length) - 1] ?? [];
+      },
+      sleep: async (ms: number): Promise<void> => {
+        clock.now += ms;
+      },
+      now: (): number => clock.now,
+      log: (): void => {},
+      ...overrides
+    };
+    return { options, calls, clock };
+  };
+
+  it('waits at most an hour, polling every 30 seconds, and two minutes for a missing run', () => {
+    expect(CI_WAIT_TIMEOUT_MS).toBe(60 * MINUTE);
+    expect(CI_POLL_INTERVAL_MS).toBe(30_000);
+    expect(CI_MISSING_GRACE_MS).toBe(2 * MINUTE);
+  });
+
+  it('passes at once when the commit already has a successful push run on main', async () => {
+    const { options, calls, clock } = scripted([[run('completed', 'success')]]);
+    expect(await waitForCiSuccess(options)).toBeNull();
+    expect(calls).toEqual([SHA]);
+    expect(clock.now).toBe(0);
+  });
+
+  it('waits for a queued or running run, then passes when it succeeds', async () => {
+    const { options, calls, clock } = scripted([
+      [run('queued')],
+      [run('in_progress')],
+      [run('in_progress')],
+      [run('completed', 'success')]
+    ]);
+    expect(await waitForCiSuccess(options)).toBeNull();
+    expect(calls).toHaveLength(4);
+    expect(clock.now).toBe(3 * CI_POLL_INTERVAL_MS);
+  });
+
+  it('fails on a run that failed, was cancelled, or did not succeed', async () => {
+    for (const conclusion of ['failure', 'cancelled', 'timed_out', 'startup_failure', 'skipped', 'action_required']) {
+      const { options } = scripted([[run('in_progress')], [run('completed', conclusion)]]);
+      const message = await waitForCiSuccess(options);
+      expect(message).toContain(conclusion);
+      expect(message).toContain(SHA);
+      expect(message).toContain('/actions/runs/42216636871');
+    }
+  });
+
+  it('fails when no run exists for the commit, after a short grace for one being created', async () => {
+    const { options, calls, clock } = scripted([[]]);
+    const message = await waitForCiSuccess(options);
+    expect(message).toContain(SHA);
+    expect(message).toContain('No ci.yml push run on main');
+    expect(clock.now).toBe(CI_MISSING_GRACE_MS);
+    expect(calls).toHaveLength(CI_MISSING_GRACE_MS / CI_POLL_INTERVAL_MS + 1);
+  });
+
+  it('ignores runs for another commit, branch, or event', async () => {
+    const { options } = scripted([
+      [
+        run('completed', 'success', { headSha: 'a291ad4dac489b319adbdd326a284fe7842072bd' }),
+        run('completed', 'success', { event: 'pull_request' }),
+        run('completed', 'success', { event: 'workflow_dispatch' }),
+        run('completed', 'success', { headBranch: 'v0.2.0' }),
+        run('completed', 'success', { headBranch: null })
+      ]
+    ]);
+    expect(await waitForCiSuccess(options)).toContain('No ci.yml push run on main');
+  });
+
+  it('waits for a run that appears during the grace period', async () => {
+    const { options } = scripted([[], [], [run('queued')], [run('completed', 'success')]]);
+    expect(await waitForCiSuccess(options)).toBeNull();
+  });
+
+  it('passes when any matching run succeeded, and waits while one is still running', async () => {
+    const failed = run('completed', 'failure', { id: 1, url: 'https://example.test/1' });
+    const { options, calls } = scripted([
+      [failed, run('in_progress')],
+      [failed, run('completed', 'success')]
+    ]);
+    expect(await waitForCiSuccess(options)).toBeNull();
+    expect(calls).toHaveLength(2);
+  });
+
+  it('fails once the run is still unfinished after the time limit', async () => {
+    const { options, calls, clock } = scripted([[run('in_progress')]]);
+    const message = await waitForCiSuccess(options);
+    expect(message).toContain('in_progress');
+    expect(message).toContain('60 minutes');
+    expect(clock.now).toBe(CI_WAIT_TIMEOUT_MS);
+    expect(calls).toHaveLength(CI_WAIT_TIMEOUT_MS / CI_POLL_INTERVAL_MS + 1);
+  });
+
+  it('never sleeps past the time limit', async () => {
+    const { options, clock } = scripted([[run('in_progress')]], { timeoutMs: 45_000, intervalMs: 30_000 });
+    expect(await waitForCiSuccess(options)).toContain('in_progress');
+    expect(clock.now).toBe(45_000);
+  });
+
+  it('fails when the run lookup fails', async () => {
+    const { options } = scripted([], {
+      lookup: async (): Promise<CiRun[]> => {
+        throw new Error('HTTP 403: Resource not accessible by integration');
+      }
+    });
+    expect(await waitForCiSuccess(options)).toContain('HTTP 403');
+  });
+
+  it('rejects a SHA that is not a full commit SHA without looking up runs', async () => {
+    for (const sha of ['', '7941f0e', `${SHA}\n`, 'refs/heads/main']) {
+      const { options, calls } = scripted([[run('completed', 'success', { headSha: sha })]], { sha });
+      expect(await waitForCiSuccess(options)).toContain('full commit SHA');
+      expect(calls).toEqual([]);
+    }
+  });
+
+  it('checks the tag, version, and changelog before waiting for CI', async () => {
+    const changelog = '## [0.2.1] - 2026-11-20\n';
+    const ready = scripted([[run('completed', 'success')]]);
+    expect(
+      await checkReleaseReady({ ...ready.options, ref: 'refs/tags/v0.2.1', pomVersion: '0.2.1', changelog })
+    ).toEqual([]);
+    expect(ready.calls).toEqual([SHA]);
+
+    const mistagged = scripted([[run('completed', 'success')]]);
+    const errors = await checkReleaseReady({
+      ...mistagged.options,
+      ref: 'refs/heads/main',
+      pomVersion: '0.2.1',
+      changelog
+    });
+    expect(errors).toEqual([expect.stringContaining('v*')]);
+    expect(mistagged.calls).toEqual([]);
+
+    const failed = scripted([[run('completed', 'failure')]]);
+    expect(
+      await checkReleaseReady({ ...failed.options, ref: 'refs/tags/v0.2.1', pomVersion: '0.2.1', changelog })
+    ).toEqual([expect.stringContaining('failure')]);
   });
 });

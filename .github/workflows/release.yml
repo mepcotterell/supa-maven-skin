@@ -13,13 +13,19 @@ permissions:
 jobs:
   # Checks the release before anything is built or any secret is read: the run must be on a v*
   # tag naming project.version, the version must not be a SNAPSHOT, and CHANGELOG.md must have
-  # the dated heading the GitHub Release notes come from. It runs no npm install or build.
+  # the dated heading the GitHub Release notes come from. Then it waits for ci.yml's push run on
+  # main for this exact commit (build, tests, and rendered accessibility checks) to succeed, so a
+  # tag pushed before main's CI finishes waits for it. It runs no npm install or build.
   preflight:
     name: Check release readiness
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    # Just above the script's 60-minute CI wait (CI_WAIT_TIMEOUT_MS in
+    # scripts/check-release-ready.ts), which fails with a clearer message than this limit.
+    timeout-minutes: 70
     permissions:
       contents: read
+      # Lists ci.yml's runs for the tagged commit.
+      actions: read
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -38,11 +44,18 @@ jobs:
           # Keep in sync with <node.version> in pom.xml (frontend-maven-plugin).
           node-version: '22.14.0'
 
-      - name: Check the tag, version, and changelog
+      - name: Read project.version
+        id: version
         run: |
           POM_VERSION=$(mvn -B -ntp help:evaluate -Dexpression=project.version -q -DforceStdout)
-          export POM_VERSION
-          node --no-warnings=ExperimentalWarning --experimental-strip-types scripts/check-release-ready.ts
+          echo "pom=$POM_VERSION" >> "$GITHUB_OUTPUT"
+
+      # Only this step gets the token, read-only here, and runs no Maven or npm code.
+      - name: Check the tag, version, changelog, and CI
+        env:
+          POM_VERSION: ${{ steps.version.outputs.pom }}
+          GH_TOKEN: ${{ github.token }}
+        run: node --no-warnings=ExperimentalWarning --experimental-strip-types scripts/check-release-ready.ts
 
   # Builds and verifies with no publishing secrets: npm lifecycle scripts, Vite, Vitest, and the
   # Invoker tests run here, so this job never sees the signing key or a write token.

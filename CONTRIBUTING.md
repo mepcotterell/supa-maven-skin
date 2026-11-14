@@ -53,6 +53,9 @@ The release workflow (`release.yml`) starts with a preflight job that holds no s
 - the run is on a `v*` tag; a `workflow_dispatch` run must also be started from the tag, not a branch;
 - the tag without its `v` equals Maven's `project.version`;
 - that version is not a SNAPSHOT;
-- `CHANGELOG.md` has its `## [x.y.z] - YYYY-MM-DD` heading, whose section becomes the GitHub Release notes.
+- `CHANGELOG.md` has its `## [x.y.z] - YYYY-MM-DD` heading, whose section becomes the GitHub Release notes;
+- the `ci.yml` run for the push of the tagged commit to `main` (build, tests, and the rendered accessibility checks) succeeded.
 
-The checks are in `scripts/check-release-ready.ts`. To fix a failed preflight, delete the tag, fix the commit on `main`, and tag again.
+The checks are in `scripts/check-release-ready.ts`. The first four fail at once. For the last, push the tag after `main`'s CI succeeds; a tag pushed earlier makes the release wait, checking every 30 seconds for up to 60 minutes, and then build and publish once CI succeeds. The release fails if that CI run fails or is cancelled, if it is still running after 60 minutes, or if the commit still has no such run two minutes after the check starts, as when the tag is on a commit never pushed to `main`. CI runs on `main` one at a time and keeps only the newest waiting run, so pushing to `main` again while the tagged commit's run is still waiting for an earlier one cancels it, which also fails the release.
+
+To fix a failed preflight on the tag, delete the tag, fix the commit on `main`, and tag again. When the tagged commit's CI failed for a reason unrelated to the commit, or was cancelled or timed out, re-run its failed jobs; once it succeeds, re-run the release workflow's failed jobs.
