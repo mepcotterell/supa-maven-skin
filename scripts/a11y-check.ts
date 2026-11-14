@@ -4834,6 +4834,7 @@ async function settleWithin(promise: Promise<unknown>, ms: number): Promise<void
  * @param browser - Shared browser of the selected engine.
  * @param engine - That browser's engine, for the timeout message.
  * @param baseUrl - Static server base URL.
+ * @param siteDir - Absolute directory that server serves.
  * @param job - Page/variant to scan.
  * @returns Flattened violation nodes for this job.
  */
@@ -4841,6 +4842,7 @@ async function scanWithDeadline(
   browser: Browser,
   engine: Engine,
   baseUrl: string,
+  siteDir: string,
   job: ScanJob
 ): Promise<Finding[]> {
   let context: BrowserContext | undefined;
@@ -4859,7 +4861,7 @@ async function scanWithDeadline(
       await settleWithin(opened.close(), CLOSE_DEADLINE_MS);
       return [];
     }
-    return scan(opened, baseUrl, job);
+    return scan(opened, baseUrl, siteDir, job);
   })();
   const deadline = new Promise<never>((_, reject) => {
     timer = setTimeout(() => {
@@ -4885,35 +4887,103 @@ async function scanWithDeadline(
 }
 
 /**
- * Matches the message Chromium logs for a request that failed or was blocked ("Failed to load
- * resource: ..."). Those say nothing about the skin's scripts: a scan may hold back or abort the
- * Mermaid and KaTeX CDN requests, and an unreachable CDN is a network matter.
+ * Site-root paths a page may request although the site leaves the file out. `site.vm` links
+ * `css/site.css`, which `maven-site-plugin` writes unless the site replaces it, with
+ * `onerror="this.remove()"`, so a consumer site that removes it still renders.
  */
-const RESOURCE_LOAD_ERROR = /^Failed to load resource\b/;
+const OPTIONAL_SITE_PATHS: ReadonlySet<string> = new Set(['/css/site.css']);
 
 /**
- * Starts recording the script errors a page raises: an uncaught exception or unhandled rejection
- * (`pageerror`) and any `console.error`, other than a failed resource load. `initSupaSkin()` logs
- * `console.error("Supa Maven Skin: <enhancer> failed", error)` when one of its enhancers throws and
- * carries on, so `data-supa-ready` is set even then, and only this listener notices the failure.
- * The current site logs no `console.error` in a Chromium run, so the check takes them all: it also
- * catches errors from Bootstrap's plugins and the lazily loaded chunks. Its warnings, such as the
- * unknown-label notices the fixture sites trigger on purpose, are not errors and are not recorded.
+ * Starts recording the errors a page raises: an uncaught exception or unhandled rejection
+ * (`pageerror`), any `console.error`, and every request for a file the site does not have.
+ * `initSupaSkin()` logs `console.error("Supa Maven Skin: <enhancer> failed", error)` when one of its
+ * enhancers throws and carries on, so `data-supa-ready` is set even then, and only this listener
+ * notices the failure. The current site logs no `console.error` in a Chromium run, so the check
+ * takes them all: it also catches errors from Bootstrap's plugins and the lazily loaded chunks. Its
+ * warnings, such as the unknown-label notices the fixture sites trigger on purpose, are not errors
+ * and are not recorded.
+ *
+ * A missing image, font, stylesheet, or widget chunk is a broken page even when the page still
+ * boots: `bootstrap-components.ts` only warns when a chunk does not load and leaves the widget as
+ * plain HTML. So a request to the site's own origin fails the scan when it is answered with an
+ * error status, which is how the static server answers a missing file, or when it fails without
+ * a response and the site has no file at its path; a request for a file the site has fails
+ * without a response only when a navigation or reload cancels it. `OPTIONAL_SITE_PATHS` may be
+ * missing. Requests to other origins, the Mermaid and KaTeX CDN and any URL a site configures,
+ * may fail: a scan may hold them back, and an unreachable host is a network matter.
+ *
+ * Every engine also logs a failed request as a `console.error` of its own wording (Chromium and
+ * WebKit "Failed to load resource", Firefox a CORS or Subresource Integrity error). Those are
+ * judged by the request, not their text: a console error that names a failed request's URL, in
+ * its text or as its source, is left to the request listeners above.
  *
  * @param page - Page to listen to, before it navigates.
- * @returns The array the listeners append a description of each error to.
+ * @param baseUrl - Origin of the site under test.
+ * @param siteDir - Absolute directory the site is served from.
+ * @returns Function that lists a description of each error the page has raised so far.
  */
-function collectScriptErrors(page: Page): string[] {
+function collectPageErrors(page: Page, baseUrl: string, siteDir: string): () => string[] {
+  const { origin } = new URL(baseUrl);
   const errors: string[] = [];
+  const missing = new Set<string>();
+  const failedUrls = new Set<string>();
+  const consoleErrors: Array<{ text: string; source: string }> = [];
+  /**
+   * Records a failed request, and fails the scan when it was for a file the site must have.
+   *
+   * @param href - Requested URL.
+   * @param resourceType - Playwright's resource type of the request, for the report.
+   * @param failure - How it failed, for the report.
+   * @param isMissing - Whether the site has no file at that URL.
+   */
+  const recordFailure = (
+    href: string,
+    resourceType: string,
+    failure: string,
+    isMissing: () => boolean
+  ): void => {
+    failedUrls.add(href);
+    const { origin: requestOrigin, pathname } = new URL(href);
+    if (
+      requestOrigin === origin &&
+      !OPTIONAL_SITE_PATHS.has(pathname) &&
+      !missing.has(pathname) &&
+      isMissing()
+    ) {
+      missing.add(pathname);
+      errors.push(`the ${resourceType} ${pathname} ${failure}`);
+    }
+  };
   page.on('pageerror', (error) => {
     errors.push(`uncaught ${error.message}`);
   });
   page.on('console', (message) => {
-    if (message.type() === 'error' && !RESOURCE_LOAD_ERROR.test(message.text())) {
-      errors.push(message.text());
+    if (message.type() === 'error') {
+      consoleErrors.push({ text: message.text(), source: message.location().url });
     }
   });
-  return errors;
+  page.on('response', (response) => {
+    const status = response.status();
+    if (status >= 400) {
+      const type = response.request().resourceType();
+      recordFailure(response.url(), type, `answered ${status}`, () => true);
+    }
+  });
+  page.on('requestfailed', (request) => {
+    const href = request.url();
+    recordFailure(
+      href,
+      request.resourceType(),
+      'failed, and the site has no such file',
+      () => resolveSitePath(siteDir, new URL(href).pathname) === null
+    );
+  });
+  return () => [
+    ...errors,
+    ...consoleErrors
+      .filter(({ text, source }) => ![...failedUrls].some((u) => source === u || text.includes(u)))
+      .map(({ text }) => text)
+  ];
 }
 
 /**
@@ -4922,10 +4992,16 @@ function collectScriptErrors(page: Page): string[] {
  *
  * @param context - Fresh browser context for this job, which the caller closes.
  * @param baseUrl - Static server base URL.
+ * @param siteDir - Absolute directory that server serves.
  * @param job - Page/variant to scan.
  * @returns Flattened violation nodes for this job.
  */
-async function scan(context: BrowserContext, baseUrl: string, job: ScanJob): Promise<Finding[]> {
+async function scan(
+  context: BrowserContext,
+  baseUrl: string,
+  siteDir: string,
+  job: ScanJob
+): Promise<Finding[]> {
   const { scenario } = job;
   if (scenario?.now !== undefined) {
     await context.clock.setFixedTime(scenario.now);
@@ -4945,7 +5021,7 @@ async function scan(context: BrowserContext, baseUrl: string, job: ScanJob): Pro
   );
   await context.addInitScript(installColorHelper, WCAG_MINIMUMS);
   const page = await context.newPage();
-  const scriptErrors = collectScriptErrors(page);
+  const pageErrors = collectPageErrors(page, baseUrl, siteDir);
   await scenario?.prepare?.(page);
   await page.goto(`${baseUrl}/${job.page}`, { waitUntil: 'load' });
   await page.waitForSelector('html[data-supa-ready="true"]', {
@@ -5015,14 +5091,14 @@ async function scan(context: BrowserContext, baseUrl: string, job: ScanJob): Pro
     }
   }
   const engine = page.context().browser()?.browserType().name() ?? 'unknown';
-  const errorFindings = scriptErrors.map(
+  const errorFindings = pageErrors().map(
     (text): Finding => ({
       page: pageLabel(job),
       variant: variantLabel(job),
       ruleId: 'script-error',
       impact: 'critical',
       target: 'console',
-      summary: `A page script failed in ${engine}: ${text.replace(/\s+/g, ' ').trim().slice(0, 300)}`,
+      summary: `The page failed in ${engine}: ${text.replace(/\s+/g, ' ').trim().slice(0, 300)}`,
       html: '',
       helpUrl: 'src/main/frontend/ts/index.ts'
     })
@@ -5308,7 +5384,13 @@ async function main(): Promise<number> {
     const perJob = await mapLimit(jobs, CONCURRENCY, async (job) => {
       const label = `${pageLabel(job)} [${variantLabel(job)}]`;
       try {
-        const findings = await scanWithDeadline(activeBrowser, engine, baseUrls.get(job.site)!, job);
+        const findings = await scanWithDeadline(
+          activeBrowser,
+          engine,
+          baseUrls.get(job.site)!,
+          roots.get(job.site)!,
+          job
+        );
         console.log(
           `  ${findings.length === 0 ? 'ok  ' : 'FAIL'} ${label}` +
             (findings.length > 0 ? ` (${findings.length} violation nodes)` : '')
