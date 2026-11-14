@@ -466,6 +466,42 @@ export function prepareHeadings(
 }
 
 /**
+ * ScrollSpy that leaves focus where the reader moved it during a smooth TOC scroll. Bootstrap's
+ * ScrollSpy waits for the smooth scroll to end and then writes the fragment and focuses the
+ * section (`_settleNavigation()`), wherever focus is by then. A reader who pressed Tab during the
+ * scroll, as after a TOC drawer link, which `closeDrawerForLink()` in `index.ts` follows by
+ * focusing the heading at once, lost their place to that late focus. This class records the
+ * element focused when the smooth scroll begins and, if focus has left it by the time the scroll
+ * settles, writes the fragment without moving focus. Scrolls that settle at once (reduced motion,
+ * or a section already in place) are Bootstrap's unchanged.
+ */
+class ReaderFocusScrollSpy extends ScrollSpy {
+  /** Element focused when the pending smooth scroll began; `undefined` when none is pending. */
+  private declare focusAtScrollStart: Element | null | undefined;
+
+  /** Records the focused element, then arms Bootstrap's settle for a new smooth scroll. */
+  protected override _armSettle(): void {
+    this.focusAtScrollStart = document.activeElement;
+    super._armSettle();
+  }
+
+  /** Settles the pending smooth scroll, moving focus only if the reader has not moved it. */
+  protected override _onSettle(): void {
+    const start = this.focusAtScrollStart;
+    this.focusAtScrollStart = undefined;
+    const pending = this._pendingNavigation;
+    if (!pending || start === undefined || document.activeElement === start) {
+      super._onSettle();
+      return;
+    }
+    this._disarmSettle();
+    this._pendingNavigation = null;
+    // Bootstrap's fragment update, without its history entry, and without the focus move.
+    window.history?.replaceState?.(null, '', pending.hash);
+  }
+}
+
+/**
  * Builds the right-hand "On this page" table of contents (`#supaTocNav`) and
  * maintains a single active section indicator synced with both the right TOC
  * and any hash sub-links in the left navigation sidebar.
@@ -640,7 +676,7 @@ export function buildTableOfContents(
   };
 
   try {
-    new ScrollSpy(document.body, {
+    new ReaderFocusScrollSpy(document.body, {
       target: '#supaTocNav',
       rootMargin: `-${getStickyContentHeaderOffset()}px 0px -70%`,
       // On each TOC click, Bootstrap 6 asks matchMedia whether the reader prefers reduced motion,

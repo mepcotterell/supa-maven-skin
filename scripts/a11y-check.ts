@@ -46,7 +46,8 @@
  * unthemed and themed switch knobs, checked contrast and disabled fading, and a focused pill in
  * all 12 variants, as `copy-button-tooltip` and `range-tooltip` scan a tooltip.
  * `toc-link-focus-mobile`, `toc-link-focus-tablet`, `toc-link-focus-smooth-mobile`,
- * and `toc-link-focus-smooth-tablet` check destination focus and Tab continuation.
+ * and `toc-link-focus-smooth-tablet` check destination focus, Tab continuation, and that the
+ * element Tab reached keeps focus once the TOC navigation has settled.
  * Search results also assert the combobox's active descendant matches selection.
  * `forced-colors-controls-tabs`, `forced-colors-palettes`, and `forced-colors-search`
  * check system-color selection and distinct keyboard focus in light and dark;
@@ -1741,7 +1742,8 @@ async function expectControlValidationBorders(page: Page): Promise<void> {
 }
 
 /**
- * Exercises keyboard continuation after Bootstrap restores a closed drawer's opener focus.
+ * Exercises keyboard continuation after Bootstrap restores a closed drawer's opener focus, and
+ * checks that the element the reader tabbed to keeps focus once the TOC navigation settles.
  *
  * @param name - CLI scenario name.
  * @param viewport - Drawer viewport.
@@ -1781,18 +1783,34 @@ function tocLinkFocusScenario(
       if (focused !== 'theme-branding') {
         throw new Error(`expected heading focus after drawer close, got ${focused}`);
       }
+      // With motion allowed, the page is still scrolling: this Tab lands before ScrollSpy settles.
       await page.keyboard.press('Tab');
+      await page.evaluate(() => document.activeElement?.setAttribute('data-test-tabbed-to', 'true'));
+      // The navigation settles by writing the fragment (at the click under reduced motion), and
+      // ScrollSpy's focus call comes after that in the same task; then let the scroll stop.
+      await page.waitForFunction(() => window.location.hash === '#theme-branding');
+      await settleTransitions(page);
     },
     assertState: async (page) => {
-      const continues = await page.evaluate(() => {
+      const problem = await page.evaluate(() => {
         const heading = document.getElementById('theme-branding')!;
+        const tabbed = document.querySelector('[data-test-tabbed-to]');
         const active = document.activeElement;
-        return !document.getElementById('supaTocDrawer')!.hasAttribute('open') &&
-          active !== null && (heading.contains(active) ||
-            !!(heading.compareDocumentPosition(active) & Node.DOCUMENT_POSITION_FOLLOWING));
+        if (document.getElementById('supaTocDrawer')!.hasAttribute('open')) {
+          return 'the TOC drawer is still open';
+        }
+        if (!tabbed || tabbed === heading || !(heading.contains(tabbed) ||
+            heading.compareDocumentPosition(tabbed) & Node.DOCUMENT_POSITION_FOLLOWING)) {
+          return 'Tab must continue inside or after the destination section';
+        }
+        if (active !== tabbed) {
+          const name = active ? `${active.tagName.toLowerCase()}#${active.id}.${active.className}` : 'none';
+          return `the element Tab reached lost focus to ${name} once the page settled`;
+        }
+        return '';
       });
-      if (!continues) {
-        throw new Error('Tab must continue inside or after the destination section');
+      if (problem) {
+        throw new Error(problem);
       }
     }
   };

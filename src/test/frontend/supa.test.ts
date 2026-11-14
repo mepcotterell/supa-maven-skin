@@ -2403,6 +2403,63 @@ describe('Supa Maven Skin Frontend Modules', () => {
       }
     });
 
+    it('focuses a smooth TOC scroll\'s heading when it settles, unless the reader moved focus meanwhile', () => {
+      const happyDOM = (window as unknown as { happyDOM: { setURL: (url: string) => void } })
+        .happyDOM;
+      const originalUrl = window.location.href;
+      happyDOM.setURL('https://example.org/docs/guide.html');
+      document.body.innerHTML = `
+        <main id="supa-main-content">
+          <h1>Guide</h1><h2 style="visibility: visible">Install</h2><h2 style="visibility: visible">Usage</h2>
+          <button type="button" id="later">Later</button>
+        </main>
+        <aside class="supa-toc-column"><nav id="supaTocNav"></nav></aside>
+      `;
+      document.body.style.overflowY = 'visible';
+      vi.stubGlobal('matchMedia', (query: string): MediaQueryList =>
+        ({ matches: false, media: query }) as MediaQueryList);
+      const rects = vi
+        .spyOn(Element.prototype, 'getClientRects')
+        .mockReturnValue([new DOMRect(0, 0, 100, 20)] as unknown as DOMRectList);
+      const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => undefined);
+
+      try {
+        initTocAndScrollSpy();
+        const usage = document.getElementById('usage')!;
+        Object.defineProperty(usage, 'offsetTop', { value: 800 });
+        const link = document.querySelector<HTMLAnchorElement>('#supaTocNav a[href="#usage"]')!;
+        const later = document.getElementById('later')!;
+
+        // The reader stays put: Bootstrap's settle writes the fragment and focuses the heading
+        link.focus();
+        link.click();
+        expect(window.location.hash).toBe('');
+        document.dispatchEvent(new Event('scrollend'));
+        expect(window.location.hash).toBe('#usage');
+        expect(document.activeElement).toBe(usage);
+
+        // The reader tabs on while the page is still scrolling: the fragment lands, focus stays
+        happyDOM.setURL('https://example.org/docs/guide.html');
+        link.focus();
+        link.click();
+        later.focus();
+        document.dispatchEvent(new Event('scrollend'));
+        expect(window.location.hash).toBe('#usage');
+        expect(document.activeElement).toBe(later);
+
+        // The settle is one-shot: a later unrelated scroll moves nothing
+        link.focus();
+        document.dispatchEvent(new Event('scrollend'));
+        expect(document.activeElement).toBe(link);
+      } finally {
+        document.body.removeAttribute('style');
+        scrollTo.mockRestore();
+        rects.mockRestore();
+        vi.unstubAllGlobals();
+        happyDOM.setURL(originalUrl);
+      }
+    });
+
     it('leaves the reader where the browser restores them on a reload or a Back, unless the site restores nothing', async () => {
       const happyDOM = (window as unknown as { happyDOM: { setURL: (url: string) => void } })
         .happyDOM;
