@@ -1,12 +1,45 @@
-// Forced colors discards the fills Bootstrap uses for its masked check and knob.
-// Preserve only their system-color ink; the control surfaces remain OS-managed.
+// Forced colors discards the fills Bootstrap uses for its masked check, radio dot, and knob.
+// Preserve only their system-color ink, GrayText on a disabled radio; the control surfaces
+// remain OS-managed.
 @media (forced-colors: active) {
   @layer forms {
     .check::before,
-    .switch::before {
+    .switch::before,
+    .radio::before {
       forced-color-adjust: none;
       background-color: CanvasText;
     }
+
+    .radio:disabled::before {
+      background-color: GrayText;
+    }
+  }
+
+  // These states differ from their neighbors only by author fills, which forced colors repaints
+  // as the same Canvas. Use the system selection pair instead. It is a fill, not an outline, so
+  // the focus ring stays a separate cue. A stepper connector fills only up to the last active item.
+  .nav-pills .nav-link.active,
+  .page-item.active > .page-link,
+  .btn.active,
+  .chip.active,
+  .list-group-item.active,
+  .stepper-item.active::before,
+  .stepper-item.active:has(+ .stepper-item.active)::after,
+  .supa-playground-pill[aria-pressed="true"] {
+    color: HighlightText;
+    background-color: Highlight;
+    border-color: Highlight;
+  }
+
+  // The playground pill keeps the browser's focus ring, which forced colors draws in Highlight
+  // on its edge, where a pressed pill's fill would swallow it.
+  .supa-playground-pill:focus-visible {
+    outline: 2px solid CanvasText;
+    outline-offset: 2px;
+  }
+
+  .page-item.disabled > .page-link {
+    color: GrayText;
   }
 
   // Native slider fills and shadows disappear under forced colors. Keep system-color

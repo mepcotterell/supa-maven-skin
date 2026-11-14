@@ -49,7 +49,9 @@
  * Search results also assert the combobox's active descendant matches selection.
  * `forced-colors-controls-tabs`, `forced-colors-palettes`, and `forced-colors-search`
  * check system-color selection and distinct keyboard focus in light and dark;
- * the controls/tabs scan is scoped to those widgets. `forced-colors-pages` scans
+ * the controls/tabs scan is scoped to those widgets. `forced-colors-states` checks that checked
+ * radios and selected, current, pressed, and disabled Bootstrap states visibly change their
+ * element, and that keyboard focus differs from resting selection. `forced-colors-pages` scans
  * every top-level page unscoped in both OS color schemes; `forced-colors-popover`
  * checks open popover text, box edges, and the connecting arrow. `forced-colors-tooltip`
  * checks the range slider's tooltip keeps a system-color text fill and border.
@@ -2141,6 +2143,333 @@ const FORCED_POPOVER: InteractionScenario = {
   }
 };
 
+/** A viewport rectangle, in CSS pixels, where a forced-colors state cue must paint. */
+interface CueRegion {
+  /** What the region shows, for failure messages. */
+  name: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  /** Smallest share of the region's pixels that entering the state must visibly change. */
+  share: number;
+}
+
+/** A selected, current, pressed, checked, or disabled state that forced colors must keep visible. */
+interface ForcedStateCue {
+  /** Name used in failure messages; it also tags the element while it is measured. */
+  name: string;
+  /** The element whose state is toggled: the first match on `components.html`. */
+  selector: string;
+  /** Matches that element while it is in the state, as Bootstrap or the skin marks it. */
+  state: string;
+  /** Puts the element into the state (`on`) or takes it out, as its widget does. Runs in the page. */
+  toggle: (element: Element, on: boolean) => void;
+  /** Smallest share of the element's box that the state must visibly change (default `.4`). */
+  share?: number;
+  /** Regions the state paints, for a cue drawn outside the element's own box. Runs in the page. */
+  regions?: (element: Element) => CueRegion[];
+}
+
+/**
+ * Smallest change, in 8-bit levels on any channel, that counts a pixel as visibly changed.
+ * Bootstrap's transitions and antialiasing leave small differences in a state that forced colors
+ * flattens, so exact pixel identity is too strict a test of a lost cue.
+ */
+const VISIBLE_CHANGE = 48;
+
+/** The showcase's toggle button; the playground's preview renders another one. */
+const TOGGLE_BUTTON = '.btn[data-bs-toggle="button"]:not(.supa-playground *)';
+
+/**
+ * Toggles a class and the ARIA attribute that mirrors it, as Bootstrap's tab and button plugins do.
+ *
+ * @param element - Element to toggle.
+ * @param on - Whether to enter the state.
+ */
+function toggleActive(element: Element, on: boolean): void {
+  element.classList.toggle('active', on);
+  for (const attribute of ['aria-selected', 'aria-pressed']) {
+    if (element.hasAttribute(attribute)) {
+      element.setAttribute(attribute, String(on));
+    }
+  }
+}
+
+/**
+ * States Bootstrap and the skin draw only with author colors, which forced colors replaces with
+ * the same system colors in and out of the state. The showcase has no radio and no active
+ * list-group item, so `forced-colors-states` adds them (`#supaForcedStates`).
+ */
+const FORCED_STATE_CUES: readonly ForcedStateCue[] = [
+  ...['#supaForcedRadio', '#supaForcedRadioDisabled'].map((selector): ForcedStateCue => ({
+    name: selector === '#supaForcedRadio' ? 'checked radio' : 'checked disabled radio',
+    selector,
+    state: ':checked',
+    toggle: (element, on) => {
+      (element as HTMLInputElement).checked = on;
+    },
+    // Measure only the dot, inset a quarter of the radio's size: a disabled radio also fades its
+    // ring when checked, which would otherwise count as a cue.
+    regions: (element) => {
+      const { x, y, width, height } = element.getBoundingClientRect();
+      return [{
+        name: 'dot', x: x + width / 4, y: y + height / 4, width: width / 2, height: height / 2, share: .4
+      }];
+    }
+  })),
+  { name: 'active nav pill', selector: '.nav-pills .nav-link.active', state: '.active', toggle: toggleActive },
+  {
+    // Doxia drops the authored `aria-current`; the toggle restores it with the class.
+    name: 'current page', selector: '.page-item.active', state: '.active',
+    toggle: (element, on) => {
+      element.classList.toggle('active', on);
+      if (on) {
+        element.setAttribute('aria-current', 'page');
+      } else {
+        element.removeAttribute('aria-current');
+      }
+    }
+  },
+  {
+    name: 'disabled page', selector: '.page-item.disabled', state: '.disabled',
+    // Only the label's ink changes, about an eighth of the link's pixels.
+    share: .05,
+    toggle: (element, on) => {
+      element.classList.toggle('disabled', on);
+    }
+  },
+  { name: 'active button', selector: '.btn-group .btn.active', state: '.active', toggle: toggleActive },
+  {
+    name: 'pressed toggle button', selector: TOGGLE_BUTTON,
+    state: '.active[aria-pressed="true"]',
+    // Bootstrap's button plugin toggles both the class and `aria-pressed` on click.
+    toggle: (element, on) => {
+      if (element.classList.contains('active') !== on) {
+        (element as HTMLElement).click();
+      }
+    }
+  },
+  { name: 'active chip', selector: '.chip.active', state: '.active', toggle: toggleActive },
+  {
+    name: 'active list-group item', selector: '#supaForcedStates .list-group-item.active',
+    state: '.active', toggle: toggleActive
+  },
+  {
+    name: 'active stepper item', selector: '.stepper-item.active:has(+ .stepper-item.active)',
+    state: '.active', toggle: toggleActive,
+    // The counter is the item's ::before; its ::after connects it to the next active item.
+    regions: (element) => {
+      const size = Number.parseFloat(getComputedStyle(element, '::before').width);
+      const item = element.getBoundingClientRect();
+      const next = element.nextElementSibling!.getBoundingClientRect();
+      const center = item.left + item.width / 2;
+      const nextCenter = next.left + next.width / 2;
+      if (Math.abs(next.top - item.top) > 1 || nextCenter - center < size + 8) {
+        throw new Error(`forced-colors stepper must be horizontal: ${JSON.stringify({item, next})}`);
+      }
+      return [
+        { name: 'counter', x: center - size / 2, y: item.top, width: size, height: size, share: .4 },
+        {
+          name: 'connector', x: center + size / 2 + 2, y: item.top + size / 2 - 3,
+          width: nextCenter - center - size - 4, height: 6, share: .2
+        }
+      ];
+    }
+  },
+  {
+    name: 'pressed playground pill', selector: '.supa-playground-pill[aria-pressed="true"]',
+    state: '.active[aria-pressed="true"]', toggle: toggleActive
+  }
+];
+
+/**
+ * Photographs regions of the page once running transitions settle.
+ *
+ * @param page - Page to photograph.
+ * @param regions - Viewport regions in CSS pixels.
+ * @returns Each region's screenshot as base64 PNG.
+ */
+async function shootRegions(page: Page, regions: readonly CueRegion[]): Promise<string[]> {
+  await settleTransitions(page);
+  const shots: string[] = [];
+  for (const { x, y, width, height } of regions) {
+    const shot = await page.screenshot({ clip: { x, y, width, height }, animations: 'disabled' });
+    shots.push(shot.toString('base64'));
+  }
+  return shots;
+}
+
+/**
+ * Measures how much of each region visibly changes between two sets of screenshots.
+ *
+ * @param page - Page to decode the screenshots in.
+ * @param before - Each region's first screenshot as base64 PNG.
+ * @param after - The same regions' second screenshots.
+ * @returns For each region, the share of pixels whose largest channel change exceeds
+ *     `VISIBLE_CHANGE`.
+ */
+async function visibleChange(page: Page, before: readonly string[], after: readonly string[]):
+    Promise<number[]> {
+  return page.evaluate(async ({ first, second, threshold }) => {
+    /**
+     * Decodes a screenshot into RGBA bytes.
+     * @param base64 - PNG screenshot.
+     * @returns Its pixels.
+     */
+    async function decode(base64: string): Promise<Uint8ClampedArray> {
+      const image = new Image();
+      image.src = `data:image/png;base64,${base64}`;
+      await image.decode();
+      const canvas = document.createElement('canvas');
+      canvas.width = image.width;
+      canvas.height = image.height;
+      const context = canvas.getContext('2d')!;
+      context.drawImage(image, 0, 0);
+      return context.getImageData(0, 0, image.width, image.height).data;
+    }
+    const shares: number[] = [];
+    for (let index = 0; index < first.length; index++) {
+      const a = await decode(first[index]);
+      const b = await decode(second[index]);
+      let changed = 0;
+      for (let offset = 0; offset < a.length; offset += 4) {
+        if ([0, 1, 2].some((channel) => Math.abs(a[offset + channel] - b[offset + channel]) > threshold)) {
+          changed++;
+        }
+      }
+      shares.push(changed / (a.length / 4));
+    }
+    return shares;
+  }, { first: [...before], second: [...after], threshold: VISIBLE_CHANGE });
+}
+
+/**
+ * Asserts that every `FORCED_STATE_CUES` state visibly changes its element in forced colors, that a
+ * disabled page link reads as `GrayText`, and that keyboard focus on a nav pill and a playground
+ * pill looks different from their resting selection, unselected or selected.
+ *
+ * @param page - `components.html` with forced colors active and `#supaForcedStates` added.
+ */
+async function expectForcedStateCues(page: Page): Promise<void> {
+  if (!await page.evaluate(() => matchMedia('(forced-colors: active)').matches)) {
+    throw new Error('Forced colors must be active');
+  }
+  const failures: string[] = [];
+  for (const cue of FORCED_STATE_CUES) {
+    // Tag the element once: toggling its state can make `cue.selector` match another one.
+    const element = page.locator(`[data-supa-forced-cue="${cue.name}"]`);
+    if (!await element.count()) {
+      await page.locator(cue.selector).first().evaluate((el, name) => {
+        el.setAttribute('data-supa-forced-cue', name);
+      }, cue.name, { timeout: STATE_TIMEOUT_MS });
+    }
+    await element.evaluate((el) => el.scrollIntoView({ block: 'center', behavior: 'instant' }));
+    await page.mouse.move(0, 0);
+    const initial = await element.evaluate((el, state) => el.matches(state), cue.state);
+    const regions = cue.regions ? await element.evaluate(cue.regions)
+      : await element.evaluate((el, share) => {
+        const { x, y, width, height } = el.getBoundingClientRect();
+        return [{ name: 'box', x, y, width, height, share }];
+      }, cue.share ?? .4);
+    const shots: string[][] = [];
+    for (const on of [true, false]) {
+      await element.evaluate(cue.toggle, on);
+      if (await element.evaluate((el, state) => el.matches(state), cue.state) !== on) {
+        throw new Error(`forced-colors ${cue.name}: could not ${on ? 'enter' : 'leave'} ${cue.state}`);
+      }
+      shots.push(await shootRegions(page, regions));
+    }
+    await element.evaluate(cue.toggle, initial);
+    if (await element.evaluate((el, state) => el.matches(state), cue.state) !== initial) {
+      throw new Error(`forced-colors ${cue.name}: could not restore ${cue.state}`);
+    }
+    const shares = await visibleChange(page, shots[0], shots[1]);
+    regions.forEach((region, index) => {
+      if (shares[index] < region.share) {
+        failures.push(`${cue.name} ${region.name}: ${(shares[index] * 100).toFixed(1)}% of pixels ` +
+          `change, need ${region.share * 100}%`);
+      }
+    });
+  }
+  const ink = await page.locator('.page-item.disabled > .page-link').first().evaluate((el) => {
+    const probe = document.createElement('span');
+    probe.style.color = 'GrayText';
+    document.body.append(probe);
+    const gray = getComputedStyle(probe).color;
+    probe.remove();
+    const enabled = document.querySelector('.page-item:not(.disabled, .active) > .page-link')!;
+    return { gray, disabled: getComputedStyle(el).color, enabled: getComputedStyle(enabled).color };
+  });
+  if (ink.disabled !== ink.gray || ink.enabled === ink.gray) {
+    failures.push(`disabled page link must read as GrayText against enabled links: ${JSON.stringify(ink)}`);
+  }
+  // A resting outline must not stand in for the focus ring: compare a selected, unfocused item with
+  // the same item focused by keyboard, both unselected and selected.
+  for (const name of ['active nav pill', 'pressed playground pill']) {
+    const cue = FORCED_STATE_CUES.find((candidate) => candidate.name === name)!;
+    const element = page.locator(`[data-supa-forced-cue="${name}"]`);
+    await element.evaluate((el) => el.scrollIntoView({ block: 'center', behavior: 'instant' }));
+    await page.mouse.move(0, 0);
+    // Pad the box so an outline drawn outside it counts.
+    const regions = await element.evaluate((el) => {
+      const { x, y, width, height } = el.getBoundingClientRect();
+      return [{ name: 'box', x: x - 6, y: y - 6, width: width + 12, height: height + 12, share: .05 }];
+    });
+    const resting = await shootRegions(page, regions);
+    await element.evaluate(cue.toggle, false);
+    await element.focus();
+    await page.keyboard.press('Shift+Tab');
+    await page.keyboard.press('Tab');
+    await expectFocused(page, element, name);
+    if (!await element.evaluate((el) => el.matches(':focus-visible'))) {
+      throw new Error(`forced-colors ${name}: keyboard focus must match :focus-visible`);
+    }
+    const focusedOff = await shootRegions(page, regions);
+    await element.evaluate(cue.toggle, true);
+    const focusedOn = await shootRegions(page, regions);
+    await element.blur();
+    const [unselected] = await visibleChange(page, resting, focusedOff);
+    const [selected] = await visibleChange(page, resting, focusedOn);
+    if (unselected < regions[0].share || selected < regions[0].share) {
+      failures.push(`${name}: keyboard focus must look different from resting selection ` +
+        `(unselected ${(unselected * 100).toFixed(1)}%, selected ${(selected * 100).toFixed(1)}% ` +
+        `of pixels change, need ${regions[0].share * 100}%)`);
+    }
+  }
+  await page.mouse.move(0, 0);
+  if (failures.length) {
+    throw new Error(`forced-colors states: ${failures.join('; ')}`);
+  }
+}
+
+/** Selected, current, pressed, checked, and disabled component states in forced colors. */
+const FORCED_STATES: InteractionScenario = {
+  name: 'forced-colors-states', page: 'components.html', viewport: DESKTOP,
+  variants: FORCED_VARIANTS,
+  setup: async (page) => {
+    await page.emulateMedia({ forcedColors: 'active' });
+    await page.locator('#checkMermaid').evaluate((check) => {
+      check.closest('.form-field')!.insertAdjacentHTML('afterend', '<div id="supaForcedStates">' +
+        '<div class="form-field"><input class="radio" type="radio" id="supaForcedRadio" ' +
+        'name="supaForcedRadio" checked /><label for="supaForcedRadio">Checked radio</label></div>' +
+        '<div class="form-field"><input class="radio" type="radio" id="supaForcedRadioDisabled" ' +
+        'name="supaForcedRadioDisabled" checked disabled />' +
+        '<label for="supaForcedRadioDisabled">Disabled checked radio</label></div>' +
+        '<div class="list-group"><span class="list-group-item">Item</span>' +
+        '<span class="list-group-item active" aria-current="true">Active item</span></div></div>');
+    });
+    await page.locator(TOGGLE_BUTTON).evaluate((el) => (el as HTMLElement).click());
+    await page.mouse.move(0, 0);
+  },
+  assertState: async (page) => {
+    if (await page.locator(TOGGLE_BUTTON).getAttribute('aria-pressed') !== 'true') {
+      throw new Error('forced-colors states: the toggle button must be pressed');
+    }
+    await expectForcedStateCues(page);
+  }
+};
+
 /** The range slider's value bubble on `components.html`, which reuses Bootstrap's tooltip markup. */
 const RANGE_TOOLTIP = '.supa-article .form-range-bubble.tooltip.show';
 
@@ -2212,6 +2541,7 @@ function rangeTooltipScenario(forced: boolean): InteractionScenario {
 const SCENARIOS: readonly InteractionScenario[] = [
   FORCED_POPOVER,
   ...['controls-tabs', 'palettes', 'search'].map(forcedColorsScenario),
+  FORCED_STATES,
   ...[false, true].map(rangeTooltipScenario),
   tocLinkFocusScenario('toc-link-focus-mobile', MOBILE, 'reduce'),
   tocLinkFocusScenario('toc-link-focus-tablet', { width: 1024, height: 768 }, 'reduce'),
