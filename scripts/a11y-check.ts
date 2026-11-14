@@ -1847,6 +1847,97 @@ function tocLinkFocusScenario(
   };
 }
 
+/** Page, sidebar link, and destination heading that the sidebar destination-focus scenarios follow. */
+const SIDEBAR_LINK_PAGE = 'customizing.html';
+const SIDEBAR_LINK_TARGET = 'injecting-extra-head-content';
+
+/**
+ * Follows a sidebar link to a section of the same page from the keyboard and checks that focus
+ * lands on the destination heading, that Tab continues inside or after that section, and that the
+ * element Tab reached keeps focus once the page has settled. Below `lg` the link is in the
+ * navigation drawer, which closes; from `lg` up it is in the inline sidebar.
+ *
+ * @param name - CLI scenario name.
+ * @param viewport - `MOBILE` for the drawer, `DESKTOP` for the inline sidebar.
+ * @param motion - Reader motion preference.
+ * @returns Scenario that presses Enter on the link and Tab once focus has landed.
+ */
+function sidebarLinkFocusScenario(
+  name: string,
+  viewport: Viewport,
+  motion: 'reduce' | 'no-preference'
+): InteractionScenario {
+  const drawer = viewport.width < 1024;
+  return {
+    name,
+    page: SIDEBAR_LINK_PAGE,
+    viewport,
+    variants: [{ palette: 'furo', polarity: 'light' }],
+    setup: async (page) => {
+      await page.emulateMedia({ reducedMotion: motion });
+      if (drawer) {
+        // Bootstrap ignores a hide() while the drawer is still sliding in, so wait for shown.
+        await page.evaluate(() => {
+          const drawerEl = document.getElementById('supaSidebarDrawer')!;
+          drawerEl.addEventListener('shown.bs.drawer', () => {
+            document.documentElement.setAttribute('data-test-sidebar-shown', 'true');
+          }, { once: true });
+          drawerEl.addEventListener('hidden.bs.drawer', () => {
+            document.documentElement.setAttribute('data-test-sidebar-hidden', 'true');
+          }, { once: true });
+        });
+        await openSidebarDrawer(page);
+        await page.waitForFunction(() => document.documentElement.hasAttribute('data-test-sidebar-shown'));
+      }
+      const link = page.locator(`#supaSidebarDrawer a.supa-nav-link[href="${SIDEBAR_LINK_PAGE}#${SIDEBAR_LINK_TARGET}"]`);
+      await link.focus();
+      await page.keyboard.press('Enter');
+      if (drawer) {
+        await page.waitForFunction(() => document.documentElement.hasAttribute('data-test-sidebar-hidden'));
+      }
+      await page.waitForFunction((id) => window.location.hash === `#${id}`, SIDEBAR_LINK_TARGET);
+      // Focus lands on the heading at once; a Tab before the scroll stops must stay where it went.
+      const landed = await page.waitForFunction(
+        (id) => document.activeElement?.id === id, SIDEBAR_LINK_TARGET, { timeout: STATE_TIMEOUT_MS }
+      ).then(() => '', async () => page.evaluate(() => {
+        const active = document.activeElement;
+        return active ? `${active.tagName.toLowerCase()}#${active.id}.${active.className}` : 'none';
+      }));
+      if (landed) {
+        throw new Error(`expected focus on #${SIDEBAR_LINK_TARGET} after following the sidebar link, got ${landed}`);
+      }
+      await page.keyboard.press('Tab');
+      await page.evaluate(() => document.activeElement?.setAttribute('data-test-tabbed-to', 'true'));
+      await settleTransitions(page);
+    },
+    assertState: async (page) => {
+      const problem = await page.evaluate(([id, inDrawer]: [string, boolean]) => {
+        const heading = document.getElementById(id);
+        const tabbed = document.querySelector('[data-test-tabbed-to]');
+        const active = document.activeElement;
+        if (!heading) {
+          return `no #${id} on the page`;
+        }
+        if (inDrawer && document.getElementById('supaSidebarDrawer')!.hasAttribute('open')) {
+          return 'the sidebar drawer is still open';
+        }
+        if (!tabbed || tabbed === heading || !(heading.contains(tabbed) ||
+            heading.compareDocumentPosition(tabbed) & Node.DOCUMENT_POSITION_FOLLOWING)) {
+          return 'Tab must continue inside or after the destination section';
+        }
+        if (active !== tabbed) {
+          const named = active ? `${active.tagName.toLowerCase()}#${active.id}.${active.className}` : 'none';
+          return `the element Tab reached lost focus to ${named} once the page settled`;
+        }
+        return '';
+      }, [SIDEBAR_LINK_TARGET, drawer] as [string, boolean]);
+      if (problem) {
+        throw new Error(problem);
+      }
+    }
+  };
+}
+
 /**
  * Audits selected and unselected picker outlines through real keyboard navigation.
  *
@@ -2979,6 +3070,10 @@ const SCENARIOS: readonly InteractionScenario[] = [
   tocLinkFocusScenario('toc-link-focus-tablet', TABLET_LANDSCAPE, 'reduce'),
   tocLinkFocusScenario('toc-link-focus-smooth-mobile', MOBILE, 'no-preference'),
   tocLinkFocusScenario('toc-link-focus-smooth-tablet', TABLET_LANDSCAPE, 'no-preference'),
+  sidebarLinkFocusScenario('sidebar-link-focus-mobile', MOBILE, 'reduce'),
+  sidebarLinkFocusScenario('sidebar-link-focus-desktop', DESKTOP, 'reduce'),
+  sidebarLinkFocusScenario('sidebar-link-focus-smooth-mobile', MOBILE, 'no-preference'),
+  sidebarLinkFocusScenario('sidebar-link-focus-smooth-desktop', DESKTOP, 'no-preference'),
   {
     name: 'control-boundaries-focus',
     page: 'components.html',
