@@ -27,6 +27,9 @@
         <colorSchemeFuro>Furo-Farben</colorSchemeFuro>
         <searchNoResults>Keine Ergebnisse für „{query}“</searchNoResults>
         <backToTop>Nach oben</backToTop>
+        <!-- Name the search and sidebar dialogs, so they must follow the labels -->
+        <search>Suche</search>
+        <navDrawerTitle>Seitennavigation</navDrawerTitle>
       </labels>
     </supaSkin>
   </custom>

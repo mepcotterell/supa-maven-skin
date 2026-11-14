@@ -251,7 +251,7 @@ The **Set by** column tells where a label is written: `template` labels are in t
 | `logoLightAlt` | `Light Logo` | | Alternative text of `<lightLogo>` when `<darkLogo>` is also set. | template |
 | `logoDarkAlt` | `Dark Logo` | | Alternative text of `<darkLogo>`. | template |
 | `navSidebarToggle` | `Toggle navigation sidebar` | | Mobile-header button that opens the navigation drawer (tooltip and name). | template |
-| `navDrawerTitle` | `Navigation` | | Title of the navigation drawer below `lg`. | template |
+| `navDrawerTitle` | `Navigation` | | Title of the navigation drawer below `lg`, which also names the navigation sidebar at every width. | template |
 | `navDrawerClose` | `Close navigation` | | Close button of the navigation drawer. | template |
 | `navPrimary` | `Primary navigation` | | Accessible name of the left sidebar landmark. | template |
 | `navSite` | `Site navigation` | | Accessible name of the sidebar menu tree. | template |
@@ -279,7 +279,7 @@ The **Set by** column tells where a label is written: `template` labels are in t
 
 | Key | English default | Placeholders | Where it shows | Set by |
 | :--- | :--- | :--- | :--- | :--- |
-| `search` | `Search` | | Sidebar search box (visible text, which is also its name). | template |
+| `search` | `Search` | | Sidebar search box (visible text, which is also its name) and the name of the search dialog. | template |
 | `searchButton` | `Search documentation` | | Mobile-header search button (tooltip and name) and the name of the search field. | template |
 | `searchPlaceholder` | `Search documentation...` | | Placeholder of the search field. | template |
 | `searchClose` | `Close search` | | Close button of the search dialog. | template |

@@ -157,3 +157,58 @@ void reject( String where, String html, String needle, String why ) {
         throw new IllegalStateException( where + ": " + why + " (found " + needle + ")" );
     }
 }
+
+/** Returns the path of every HTML page under the site directory, relative to it, in sorted order. */
+List sitePages( File siteDir ) {
+    List pages = new ArrayList();
+    List pending = new ArrayList();
+    pending.add( siteDir );
+    String root = siteDir.getCanonicalPath() + File.separator;
+    while ( !pending.isEmpty() ) {
+        File dir = (File) pending.remove( pending.size() - 1 );
+        File[] children = dir.listFiles();
+        for ( int i = 0; children != null && i < children.length; i++ ) {
+            if ( children[i].isDirectory() ) {
+                pending.add( children[i] );
+            } else if ( children[i].getName().endsWith( ".html" ) ) {
+                pages.add( children[i].getCanonicalPath().substring( root.length() ).replace( File.separatorChar, '/' ) );
+            }
+        }
+    }
+    java.util.Collections.sort( pages );
+    return pages;
+}
+
+/**
+ * Fails when an aria-labelledby or aria-describedby attribute on the page names an ID that no
+ * element on the page has: assistive technology then finds no name or description there at all.
+ */
+void expectIdReferencesResolve( String where, String html ) {
+    Set ids = new HashSet();
+    Matcher idMatcher = Pattern.compile( "<[A-Za-z][^>]*?\\sid\\s*=\\s*\"([^\"]*)\"" ).matcher( html );
+    while ( idMatcher.find() ) {
+        ids.add( idMatcher.group( 1 ) );
+    }
+    Matcher refs = Pattern.compile( "\\s(aria-(?:labelledby|describedby))\\s*=\\s*\"([^\"]*)\"" ).matcher( html );
+    while ( refs.find() ) {
+        String[] names = refs.group( 2 ).trim().split( "\\s+" );
+        for ( int i = 0; i < names.length; i++ ) {
+            if ( names[i].length() > 0 && !ids.contains( names[i] ) ) {
+                throw new IllegalStateException( where + ": " + refs.group( 1 ) + " names \"" + names[i]
+                    + "\", which no element on the page has" );
+            }
+        }
+    }
+}
+
+/** Runs expectIdReferencesResolve on every HTML page of the site, failing when there is none. */
+void expectSiteIdReferencesResolve( File siteDir ) {
+    List pages = sitePages( siteDir );
+    if ( pages.isEmpty() ) {
+        throw new IllegalStateException( siteDir + " holds no HTML pages" );
+    }
+    for ( int i = 0; i < pages.size(); i++ ) {
+        String path = (String) pages.get( i );
+        expectIdReferencesResolve( path, readPage( siteDir, path ) );
+    }
+}

@@ -58,6 +58,13 @@ for ( int i = 0; i < defaultPages.length; i++ ) {
     reject( path, html, "Shorthand loses", "<labels><tocTitle> must win over the <tocTitle> shorthand" );
     expectBuiltWith( path, html, "Erstellt mit Maven Site und Supa Maven Skin.",
             "footerBuiltWith must keep both links in its {maven} and {skin} placeholders" );
+    // The search and sidebar dialogs are named by their labels (R-28)
+    expectTag( path, html, "dialog", new String[] { "id", "supaSearchDialog", "aria-label", "Suche" },
+            "the search dialog must be named by the search label" );
+    expectTag( path, html, "dialog", new String[] { "id", "supaSidebarDrawer", "aria-labelledby", "supaSidebarDrawerTitle" },
+            "the sidebar drawer must be named by its drawer title" );
+    expectText( path, html, "span", new String[] { "id", "supaSidebarDrawerTitle" }, "Seitennavigation",
+            "the sidebar drawer title must use the navDrawerTitle label" );
     expect( path, html, "<span class=\"supa-last-updated\">Zuletzt aktualisiert am ", "footerLastUpdated must fill {date}" );
     Matcher lastUpdated = Pattern.compile( "Zuletzt aktualisiert am (\\d{4}-\\d{2}-\\d{2})\\." ).matcher( html );
     if ( !lastUpdated.find() ) {
@@ -116,6 +123,10 @@ for ( int i = 0; i < frenchPages.length; i++ ) {
     expectBuiltWith( path, html, "Built with Maven Site and Supa Maven Skin", "footerBuiltWith must stay English" );
     expect( path, html, "<span class=\"supa-last-updated\">Last updated on ", "footerLastUpdated must stay English" );
     expect( path, html, "aria-label=\"Close navigation\"", "navDrawerClose must stay English" );
+    expectTag( path, html, "dialog", new String[] { "id", "supaSearchDialog", "aria-label", "Search" },
+            "the search dialog name must stay English" );
+    expectText( path, html, "span", new String[] { "id", "supaSidebarDrawerTitle" }, "Navigation",
+            "the sidebar drawer title must stay English" );
 }
 
 // The Previous / Next cards: pageNext is translated in both locales, pagePrevious in neither
@@ -123,5 +134,8 @@ expect( "index.html", read( "index.html" ), "<span>Weiter</span>", "pageNext mus
 expect( "guide.html", read( "guide.html" ), "<span>Previous</span>", "pagePrevious must stay English" );
 expect( "fr/index.html", read( "fr/index.html" ), "<span>Suivant</span>", "pageNext must use the site_fr.xml label" );
 expect( "fr/guide.html", read( "fr/guide.html" ), "<span>Previous</span>", "pagePrevious must stay English" );
+
+// Every aria-labelledby and aria-describedby on every page of both locales names an element there
+expectSiteIdReferencesResolve( siteDir );
 
 return true;

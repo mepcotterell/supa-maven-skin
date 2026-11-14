@@ -3061,6 +3061,8 @@ const SCENARIOS: readonly InteractionScenario[] = [
     },
     assertState: async (page) => {
       await expectVisible(page.locator('dialog#supaSearchDialog[open]'), 'the search dialog');
+      // Named by the `search` label, not by an id that no element has (R-28)
+      await expectVisible(page.getByRole('dialog', { name: 'Search', exact: true }), 'the search dialog by its name');
       await expectFocused(page, page.locator('#supaSearchInput'), 'the search input');
       await expectVisible(
         page.locator('#supaSearchStatus:has-text("Type to search")'),
@@ -3133,6 +3135,10 @@ const SCENARIOS: readonly InteractionScenario[] = [
     setup: openSidebarDrawer,
     assertState: async (page) => {
       await expectVisible(page.locator('dialog#supaSidebarDrawer[open]'), 'the sidebar drawer');
+      // Named by its drawer title, which renders even when <sidebarHideName> hides the brand name
+      await expectVisible(
+        page.getByRole('dialog', { name: 'Navigation', exact: true }), 'the sidebar drawer by its name'
+      );
       await expectVisible(
         page.locator('#supaSidebarDrawer .supa-drawer-header .btn-close'),
         'the sidebar drawer close button'

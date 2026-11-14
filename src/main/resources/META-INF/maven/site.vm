@@ -310,9 +310,11 @@
                 data-bs-scroll="$esc.html( $sidebarDrawerScroll )"
                 data-bs-backdrop="$esc.html( $sidebarDrawerBackdrop )"
                 tabindex="-1"
-                aria-labelledby="supaSidebarBrandText">
+                aria-labelledby="supaSidebarDrawerTitle">
+## Named by the drawer title, which renders on every page, even where it is hidden from view on lg+
+## or where <sidebarHideName> drops the brand name
           <div class="drawer-header lg:d-none supa-drawer-header">
-            <span class="drawer-title fw-semibold">$esc.html( $supaLabels.navDrawerTitle )</span>
+            <span class="drawer-title fw-semibold" id="supaSidebarDrawerTitle">$esc.html( $supaLabels.navDrawerTitle )</span>
             <button type="button" class="btn-close" data-bs-dismiss="drawer" aria-label="$esc.html( $supaLabels.navDrawerClose )"></button>
           </div>
 
@@ -610,7 +612,8 @@
 
 #if( $enableSearch )
     <!-- Native Bootstrap 6 Search Dialog (<dialog class="dialog">) -->
-    <dialog class="dialog supa-search-dialog" id="supaSearchDialog" aria-labelledby="supaSearchDialogTitle">
+## The dialog shows no title, so it takes its name from the label of the sidebar search box that opens it
+    <dialog class="dialog supa-search-dialog" id="supaSearchDialog" aria-label="$esc.html( $supaLabels.search )">
       <div class="dialog-header supa-search-dialog-header">
         <div class="supa-search-input-wrapper">
           <svg class="supa-search-modal-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">

@@ -164,6 +164,15 @@ if ( !html.contains( "data-bs-scroll=" ) || !html.contains( "data-bs-backdrop=" 
 if ( !html.contains( "id=\"supaSearchDialog\"" ) ) {
     throw new IllegalStateException( "Missing Bootstrap 6 search dialog" );
 }
+// R-28: both dialogs are named by text that renders on every page, in the page's language
+expectTag( "index.html", html, "dialog", new String[] { "id", "supaSidebarDrawer", "aria-labelledby", "supaSidebarDrawerTitle" },
+    "the sidebar drawer must be named by its drawer title" );
+expectText( "index.html", html, "span", new String[] { "id", "supaSidebarDrawerTitle" }, "Navigation",
+    "the sidebar drawer title must carry the navDrawerTitle label" );
+expectTag( "index.html", html, "dialog", new String[] { "id", "supaSearchDialog", "aria-label", "Search" },
+    "the search dialog must be named by the search label" );
+// Every aria-labelledby and aria-describedby on every page, reports included, names an element there
+expectSiteIdReferencesResolve( siteDir );
 java.util.regex.Matcher searchCombobox = java.util.regex.Pattern.compile( "<input[^>]*id=\"supaSearchInput\"[^>]*>" ).matcher( html );
 if ( !searchCombobox.find() || !searchCombobox.group().contains( "role=\"combobox\"" )
      || !searchCombobox.group().contains( "aria-controls=\"supaSearchResults\"" )

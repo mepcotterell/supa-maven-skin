@@ -82,4 +82,7 @@ for ( int p = 0; p < pages.length; p++ ) {
     rejectTag( path, html, "div", new String[] { "class~", "supa-custom-footer" }, "no custom footer is configured" );
 }
 
+// Every aria-labelledby and aria-describedby on every page names an element there
+expectSiteIdReferencesResolve( siteDir );
+
 return true;

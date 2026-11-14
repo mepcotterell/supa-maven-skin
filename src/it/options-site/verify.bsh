@@ -56,7 +56,11 @@ for ( int p = 0; p < pages.length; p++ ) {
     reject( path, html, "supa-brand-meta", "the hidden brand name must not render its container" );
     rejectTag( path, html, "span", new String[] { "id", "supaSidebarBrandText" }, "the hidden brand name must not render" );
     rejectTag( path, html, "span", new String[] { "class~", "supa-version-badge" }, "the version badge goes with the hidden name" );
-    // R-28: asserted when fixed in N15 (the sidebar drawer keeps aria-labelledby="supaSidebarBrandText")
+    // R-28: so the drawer is named by its title, which renders whether or not the name does
+    expectTag( path, html, "dialog", new String[] { "id", "supaSidebarDrawer", "aria-labelledby", "supaSidebarDrawerTitle" },
+        "the sidebar drawer must be named by its drawer title, not by the hidden brand name" );
+    expectText( path, html, "span", new String[] { "id", "supaSidebarDrawerTitle" }, "Navigation",
+        "the sidebar drawer title must render while the brand name is hidden" );
 
     // <colorSchemeSelector>false</colorSchemeSelector>: no picker in the headers or the drawer,
     // while the theme triggers checked above stay
@@ -134,6 +138,9 @@ for ( int p = 0; p < pages.length; p++ ) {
     }
     reject( path, body, "data-supa-mermaid-url", "an unset <mermaidCdnUrl> must not be emitted" );
 }
+
+// Every aria-labelledby and aria-describedby on every page names an element there (R-28)
+expectSiteIdReferencesResolve( siteDir );
 
 // The author macros, called from macros.md.vm. Only the article is checked, so the skin's own
 // icons and badges cannot satisfy these assertions.
