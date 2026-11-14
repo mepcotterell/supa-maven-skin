@@ -446,8 +446,8 @@ Defaults shown below are for the `furo` scheme; other schemes can override them.
 | `color-background-item` | Sidebar version badge, code language badge, and search-result badge background (default `light-dark(#f1f3f5, #212529)`). |
 | `color-background-hover` | Hover state surface for navigation items and icon buttons (`--bg-2`). |
 | `color-background-border` | Subtle hairline border color across sidebars, tables, and headers (`--border-color`). |
-| `color-code-background` | Background of inline code and code blocks (default `light-dark(#f6f8fa, #1c1f24)`). |
-| `color-inline-code-background` | Declared inline-code background token (default `light-dark(rgba(175, 184, 193, 0.22), rgba(110, 118, 129, 0.35))`). Currently unused by the skin; inline code uses `color-code-background`. |
+| `color-code-background` | Background of code blocks (default `light-dark(#f6f8fa, #1c1f24)`). |
+| `color-inline-code-background` | Background of inline code (default `light-dark(rgba(175, 184, 193, 0.22), rgba(110, 118, 129, 0.35))`). Translucent in `furo` and `bootstrap`, so it tints the surface beneath, such as an admonition or alert. On a solid fill (the `.card-header` or `.card-footer` of a themed card that is not `.card-subtle` or `.card-translucent`, an active `.list-group-item`) it is laid over `color-background-primary` instead. Unthemed card caps inside `.theme-reset` keep the ordinary background; a theme inside the reset restores the solid-fill chip. |
 | `color-inline-code-text` | Inline code text color (default `var(--color-foreground-primary)`). |
 | `color-foreground-primary` | Primary body text and heading color (`--fg-body`), and the knob of an enabled, unchecked Bootstrap switch, with or without a theme. Enabled range thumbs (including active thumbs) and progress fills use this color against the unfilled track, including themed ranges except `.theme-inverse`, which retains its theme fill. The other theme fills fail the non-text target in at least one palette variant. |
 | `color-foreground-secondary` | Secondary metadata, caption, and inactive TOC link color (`--fg-2`). |

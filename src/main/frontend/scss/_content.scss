@@ -1,3 +1,19 @@
+@use "sass:list";
+
+// Follow Bootstrap's inherited theme context, including resets and themes inside a reset.
+$-themes: ();
+@each $theme in primary, accent, success, info, warning, danger, secondary, inverse {
+  $-themes: list.append($-themes, ".theme-#{$theme}", $separator: comma);
+}
+
+:is(#{$-themes}) {
+  --supa-solid-code-background: linear-gradient(var(--color-inline-code-background) 0 0) var(--color-background-primary);
+}
+
+.theme-reset {
+  --supa-solid-code-background: initial;
+}
+
 // ============================================================================
 // Prose Typography & Content Element Refinements (Bootstrap 6 .prose base)
 // ============================================================================
@@ -202,11 +218,25 @@
     font-size: 0.85em;
     padding: 0.175rem 0.4rem;
     border-radius: 0.3rem;
-    background-color: var(--color-code-background);
+    background-color: var(--color-inline-code-background);
     color: var(--color-inline-code-text);
     border: 1px solid var(--color-background-border);
     overflow-wrap: break-word;
     word-break: break-word;
+  }
+
+  // A solid component fill (`--theme-bg` on a themed card header or footer, `--primary-bg` on an
+  // active list-group item) would show through the translucent furo and bootstrap backgrounds,
+  // leaving page-colored text on a saturated color. Lay the background over the page color
+  // there, so the chip reads as it does on the page. `--theme-bg` is inherited from a `.theme-*`
+  // on the cap or any ancestor; `.card-subtle` and `.card-translucent` caps ignore it for their
+  // own subtle or translucent fill, so inline code there keeps the plain background.
+  :is(.card-header, .card-footer):not(:is(.card-subtle, .card-translucent) *) code:not(pre > code) {
+    background: var(--supa-solid-code-background, var(--color-inline-code-background));
+  }
+
+  .list-group-item.active code:not(pre > code) {
+    background: linear-gradient(var(--color-inline-code-background) 0 0) var(--color-background-primary);
   }
 
   kbd {

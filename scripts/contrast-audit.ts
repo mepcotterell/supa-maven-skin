@@ -453,6 +453,74 @@ export const SURFACE_AUDITS: readonly SurfaceSpec[] = [
       { label: 'link', color: LINK, role: 'text' }
     ]
   },
+  // Inline code (`.supa-article :not(pre) > code` in `_content.scss`). The furo and bootstrap
+  // backgrounds are translucent, so each is composited over every article surface the code can
+  // sit on: the page (also card bodies and table cells, whose `--bg-body` is the page color),
+  // `--color-background-secondary` (blockquotes, table headers, unthemed card headers and
+  // footers, and also the sidebar's color), `--color-background-item`, table row tints,
+  // admonitions, alerts, and the themed fills of cards and list groups.
+  ...[
+    { where: 'the page', layers: [PAGE] },
+    { where: '--color-background-secondary', layers: [PAGE, 'var(--color-background-secondary)'] },
+    {
+      // `--bg-2`: the open unthemed accordion summary (`--accordion-active-bg`) and a pressed
+      // unthemed `.list-group-item-action` (`--list-group-action-active-bg`)
+      where: '--color-background-item',
+      layers: [PAGE, 'var(--color-background-item)']
+    },
+    // Table cells paint their row tint as an inset `box-shadow` over the cell background, written
+    // with `--table-color`, which is `--fg-body` on an unthemed `.table`. `normalizeDoxiaTables()`
+    // adds `.table-hover`; `.table-striped` and `.table-active` come from author HTML. Hover
+    // replaces a stripe instead of stacking on it, and Doxia tables without a `<thead>` (the
+    // project reports) put their header row in the implicit `<tbody>`, so it gets hovered too.
+    ...[
+      { state: 'hovered', tint: '7.5%' },
+      { state: 'striped', tint: '5%' },
+      { state: 'active', tint: '10%' }
+    ].map(({ state, tint }) => ({
+      where: `a ${state} table cell`,
+      layers: [PAGE, `color-mix(in srgb, var(--fg-body) ${tint}, transparent)`]
+    })),
+    {
+      where: 'a hovered table header cell',
+      layers: [
+        PAGE,
+        'var(--color-background-secondary)',
+        'color-mix(in srgb, var(--fg-body) 7.5%, transparent)'
+      ]
+    },
+    ...ADMONITION_KINDS.map(({ accent, classes }) => ({
+      where: `admonition title bar (${classes})`,
+      layers: [PAGE, ADMONITION_BOX, `var(--supa-admonition-${accent}-bg)`]
+    })),
+    { where: 'admonition body', layers: [PAGE, ADMONITION_BOX] },
+    ...BOOTSTRAP_THEMES.map((theme: string) => ({
+      where: `.alert.theme-${theme}`,
+      layers: [PAGE, `var(--${theme}-bg-subtle)`]
+    })),
+    { where: '.alert without a Bootstrap theme', layers: [PAGE, 'var(--bg-1)'] },
+    // `--theme-bg` fills a themed `.card-header` and `.card-footer` (outside `.card-subtle`, whose
+    // caps paint `--theme-bg-subtle` like the `.alert.theme-*` above, and `.card-translucent`), and
+    // `--primary-bg` an active `.list-group-item`, whatever the list's theme. `_content.scss` lays
+    // inline code on exactly these over the page color, since the translucent backgrounds over the
+    // fill fail (as low as 1.01:1). The audit cannot see that rule; the `inline-code-solid-fills`
+    // scenario in `a11y-check.ts` measures it rendered.
+    ...BOOTSTRAP_THEMES.map((theme: string) => ({
+      where: `.theme-${theme} card header or footer, or active list-group item`,
+      layers: [PAGE, `var(--${theme}-bg)`, PAGE]
+    })),
+    // A hovered, focused, or pressed themed `.list-group-item-action`
+    ...BOOTSTRAP_THEMES.map((theme: string) => ({
+      where: `.theme-${theme} list-group action, hovered`,
+      layers: [PAGE, `var(--${theme}-bg-muted)`]
+    }))
+  ].map(
+    ({ where, layers }): SurfaceSpec => ({
+      surface: `inline code on ${where}`,
+      layers: [...layers, 'var(--color-inline-code-background)'],
+      foregrounds: [{ label: 'text', color: 'var(--color-inline-code-text)', role: 'text' }]
+    })
+  ),
   // Sidebar navigation (`.supa-nav-link` in `_sidebar.scss`). The hover rule also paints the
   // `.supa-nav-label` of a hovered group `<summary>`, whose own hover background is the same.
   {

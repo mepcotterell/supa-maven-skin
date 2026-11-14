@@ -21,8 +21,11 @@
  * button and its tooltip in the "Copied!" state, a re-expanded sidebar group,
  * an expanded accordion and switched content tab on `components.html`, a
  * Markdown link followed to a heading whose id starts with a digit there, a
- * hovered themed chip, unthemed chip, and text button there, an opened
- * Combobox, whose script is a lazily loaded chunk, the opened Datepicker
+ * hovered themed chip, unthemed chip, and text button there, inline code
+ * added there on the solid fills of themed card caps and an active list-group
+ * item, including cap text, links, and theme-reset inheritance, measured in every
+ * palette and polarity, an opened Combobox, whose script is a lazily loaded chunk,
+ * the opened Datepicker
  * calendar in every palette and polarity, in its month view, whose buttons
  * must be named by the month names they show, and again as a range picker opened
  * after a switch from `auto` to an explicit theme, and content pages printed,
@@ -1348,31 +1351,36 @@ async function expectControlContrast(page: Page): Promise<void> {
   }
 }
 
-/** Shared fixture for card-cap text and link contrast on solid, subtle, and translucent fills. */
+/**
+ * Fills a themed card cap with `--theme-bg` and an active list-group item with `--primary-bg`;
+ * `.card-subtle` and `.card-translucent` caps, and unthemed ones, paint their own fills. Inline
+ * code over the solid fills lies on the page color (`_content.scss`), which the contrast audit
+ * assumes but cannot see, so these fixtures render it.
+ */
 const INLINE_CODE_FILLS = `
   <div id="supaInlineCodeFills">
     ${['primary', 'accent', 'success', 'info', 'warning', 'danger', 'secondary', 'inverse'].map((theme) => `
     <div class="card theme-${theme}">
-      <div class="card-header"><span data-supa-footer>Header</span> <a href="#supaInlineCodeFills" data-supa-footer>Header link</a> </div>
-      <div class="card-footer"><span data-supa-footer>Footer ${theme}</span> <a href="#supaInlineCodeFills" data-supa-footer>Footer link</a> </div>
+      <div class="card-header"><span data-supa-footer>Header</span> <a href="#supaInlineCodeFills" data-supa-footer>Header link</a> <code data-supa-fill="solid">${theme}</code></div>
+      <div class="card-footer"><span data-supa-footer>Footer ${theme}</span> <a href="#supaInlineCodeFills" data-supa-footer>Footer link</a> <code data-supa-fill="solid">${theme}</code></div>
     </div>`).join('')}
     <div class="theme-danger"><div class="card">
-      <div class="card-header"><span data-supa-footer>Inherited header</span></div><div class="card-footer"><span data-supa-footer>Inherited theme</span></div>
+      <div class="card-header"><span data-supa-footer>Inherited header</span><code data-supa-fill="solid">inherited</code></div><div class="card-footer"><span data-supa-footer>Inherited theme</span></div>
     </div></div>
     <div class="theme-danger"><div class="theme-reset">
       <div class="card">
-        <div class="card-header"></div>
-        <div class="card-footer"></div>
+        <div class="card-header"><code data-supa-fill="plain">reset header</code></div>
+        <div class="card-footer"><code data-supa-fill="plain">reset footer</code></div>
       </div>
       <div class="theme-danger"><div class="card">
-        <div class="card-header"></div>
-        <div class="card-footer"></div>
+        <div class="card-header"><code data-supa-fill="solid">re-themed header</code></div>
+        <div class="card-footer"><code data-supa-fill="solid">re-themed footer</code></div>
       </div></div>
     </div></div>
-    <ul class="list-group"><li class="list-group-item active"></li></ul>
-    <div class="card"><div class="card-header"></div></div>
-    <div class="card card-subtle theme-success"><div class="card-header"></div></div>
-    <div class="card card-translucent theme-primary"><div class="card-header"></div></div>
+    <ul class="list-group"><li class="list-group-item active"><code data-supa-fill="solid">active</code></li></ul>
+    <div class="card"><div class="card-header"><code data-supa-fill="plain" data-supa-ordinary>unthemed</code></div></div>
+    <div class="card card-subtle theme-success"><div class="card-header"><code data-supa-fill="plain">subtle</code></div></div>
+    <div class="card card-translucent theme-primary"><div class="card-header"><code data-supa-fill="plain">translucent</code></div></div>
     ${['subtle', 'translucent'].flatMap((kind) =>
       ['primary', 'accent', 'success', 'info', 'warning', 'danger', 'secondary', 'inverse'].map((theme) => `
       <div class="card card-${kind} theme-${theme}"><div class="card-header"><span data-supa-footer>${kind} header</span><a href="#supaInlineCodeFills" data-supa-footer>Header link</a></div><div class="card-footer"><span data-supa-footer>${kind} ${theme}</span><a href="#supaInlineCodeFills" data-supa-footer>Footer link</a></div></div>`)).join('')}
@@ -1380,6 +1388,10 @@ const INLINE_CODE_FILLS = `
 
 /**
  * Checks card-cap text and links against their composited fill in `INLINE_CODE_FILLS`.
+ * For inline code on a solid fill, the chip's text meets the palette's
+ * contrast target over the chip as painted (its background color and image, composited over the
+ * fill); on every other cap, the chip keeps the plain background, with no image. axe leaves a chip
+ * with a background image incomplete rather than measuring it, so this is the check that holds.
  *
  * @param page - Components page with `INLINE_CODE_FILLS` in its article.
  */
@@ -1434,6 +1446,39 @@ async function expectInlineCodeOnFills(page: Page): Promise<void> {
     const found: string[] = [];
     const minimum = getComputedStyle(document.documentElement)
       .getPropertyValue('--supa-wcag-level').includes('AAA') ? 7 : 4.5;
+    const chips = document.querySelectorAll<HTMLElement>('#supaInlineCodeFills code');
+    if (chips.length !== 25) {
+      found.push(`expected 25 inline code fixtures, found ${chips.length}`);
+    }
+    for (const code of chips) {
+      const style = getComputedStyle(code);
+      const where = `${code.dataset.supaFill} chip "${code.textContent}"`;
+      if (code.dataset.supaFill === 'plain') {
+        if (style.backgroundImage !== 'none') {
+          found.push(`${where}: painted ${style.backgroundImage}, expected the plain background`);
+        }
+        const ordinary = document.querySelector<HTMLElement>('#supaInlineCodeFills [data-supa-ordinary]')!;
+        if (style.backgroundColor !== getComputedStyle(ordinary).backgroundColor) {
+          found.push(`${where}: expected the ordinary inline-code background color`);
+        }
+        continue;
+      }
+      if (style.backgroundImage === 'none') {
+        found.push(`${where}: expected the solid-fill chip background image`);
+      }
+      // The override paints the inline-code token as a one-color gradient over the page color.
+      const image = /(?:rgba?|color|oklch|oklab|lab|lch|hsla?|hwb)\([^)]*\)/.exec(style.backgroundImage);
+      let chip = over(rgba(style.backgroundColor), background(code.parentElement));
+      if (image) {
+        chip = over(rgba(image[0]), chip);
+      }
+      const a = luminance(over(rgba(style.color), chip));
+      const b = luminance(chip);
+      const ratio = (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+      if (ratio < minimum) {
+        found.push(`${where}: ${ratio.toFixed(2)}:1, minimum ${minimum}:1`);
+      }
+    }
     const footerText = document.querySelectorAll<HTMLElement>('#supaInlineCodeFills [data-supa-footer]');
     if (footerText.length !== 98) {
       found.push(`expected 98 cap text fixtures, found ${footerText.length}`);
@@ -1852,6 +1897,24 @@ const SCENARIOS: readonly InteractionScenario[] = [
   hoverScenario('chip-hovered', '.supa-article .chip.theme-success', 'the success chip'),
   hoverScenario('unthemed-chip-hovered', '.supa-article .chip-input .chip', 'a chip-input chip'),
   hoverScenario('text-button-hovered', '.supa-article .btn-text.theme-primary', 'the text button'),
+  {
+    // Inline code on the solid fills of themed card caps and an active list-group item, and on
+    // caps that keep the plain chip. components.html has no inline code there, so the setup adds
+    // `INLINE_CODE_FILLS`. Footer text and links also cover solid, subtle, and translucent fills.
+    name: 'inline-code-solid-fills',
+    page: 'components.html',
+    viewport: DESKTOP,
+    variants: ALL_VARIANTS,
+    scope: ['#supaInlineCodeFills code[data-supa-fill="solid"]', '#supaInlineCodeFills :is(.card-header, .card-footer)'],
+    setup: async (page) => {
+      await page.locator('.supa-article').evaluate((article, html) => {
+        article.insertAdjacentHTML('beforeend', html);
+      }, INLINE_CODE_FILLS);
+    },
+    assertState: async (page) => {
+      await expectInlineCodeOnFills(page);
+    }
+  },
   {
     // Combobox is not in the main bundle: bootstrap-components.ts imports its chunk only because
     // components.html contains a [data-bs-toggle="combobox"] toggle. The menu opening proves the
