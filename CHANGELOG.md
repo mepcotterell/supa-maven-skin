@@ -42,6 +42,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ### Security
 
 - **Workflow Actions and Signing**: All GitHub Actions are pinned to verified commit SHAs. CI and release builds now run without the signing key, publishing credentials, or a persisted repository token; a separate job signs and publishes the verified build output without running npm, Vite, Vitest, Checkstyle, or the integration tests, and only the job that creates the GitHub Release can write to the repository.
+- **Build Tooling Advisory**: The lockfile takes ESLint 10.15.0 and its `minimatch` 11 dependency, clearing the `minimatch` denial-of-service advisory (GHSA-g3hv-75wg-m249) on that path. The `typescript-eslint` packages still depend on `minimatch` 10 and stay flagged until they release a fix; the flagged packages are build-time lint tools and are not part of the packaged skin.
 
 ## [0.2.0] - 2026-11-06
 
