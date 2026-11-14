@@ -15,27 +15,9 @@
     }
   }
 
-  // These states differ from their neighbors only by author fills, which forced colors repaints
-  // as the same Canvas. Use the system selection pair instead. It is a fill, not an outline, so
-  // the focus ring stays a separate cue. A stepper connector fills only up to the last active item.
-  .nav-pills .nav-link.active,
-  .page-item.active > .page-link,
-  .btn.active,
-  .chip.active,
-  .list-group-item.active,
-  .stepper-item.active::before,
-  .stepper-item.active:has(+ .stepper-item.active)::after,
-  .supa-playground-pill[aria-pressed="true"] {
-    color: HighlightText;
+  // A stepper connector has no text, so it can take a fill; it fills only up to the last active item.
+  .stepper-item.active:has(+ .stepper-item.active)::after {
     background-color: Highlight;
-    border-color: Highlight;
-  }
-
-  // The playground pill keeps the browser's focus ring, which forced colors draws in Highlight
-  // on its edge, where a pressed pill's fill would swallow it.
-  .supa-playground-pill:focus-visible {
-    outline: 2px solid CanvasText;
-    outline-offset: 2px;
   }
 
   .page-item.disabled > .page-link {
@@ -86,12 +68,22 @@
     forced-color-adjust: none;
   }
 
-  // Attribute selectors follow the same state exposed to assistive technology.
-  // Inset outlines stay inside scrollable result lists and menu clipping bounds.
+  // Selected, current, and pressed states otherwise differ only by author fills, which forced
+  // colors repaints as the same Canvas. Mark them with an inset ring rather than a Highlight fill:
+  // Chromium draws a Canvas backplate behind forced text, which would hide HighlightText on a fill
+  // and leave nested links in LinkText on it. Attribute selectors follow the state exposed to
+  // assistive technology; inset outlines stay inside scrollable lists and menu clipping bounds.
   .supa-search-result-item[aria-selected="true"],
   .supa-tab-btn[aria-selected="true"],
   .supa-palette-card[aria-pressed="true"],
-  [data-supa-palette-option][aria-checked="true"] {
+  [data-supa-palette-option][aria-checked="true"],
+  .supa-playground-pill[aria-pressed="true"],
+  .nav-pills .nav-link.active,
+  .page-item.active > .page-link,
+  .btn.active,
+  .chip.active,
+  .list-group-item.active,
+  .stepper-item.active::before {
     outline: 3px solid Highlight;
     outline-offset: -3px;
   }
@@ -100,8 +92,20 @@
   .supa-search-result-item[aria-selected="true"]:focus-visible,
   .supa-tab-btn[aria-selected="true"]:focus-visible,
   .supa-palette-card[aria-pressed="true"]:focus-visible,
-  [data-supa-palette-option][aria-checked="true"]:focus-visible {
+  [data-supa-palette-option][aria-checked="true"]:focus-visible,
+  .supa-playground-pill[aria-pressed="true"]:focus-visible,
+  .nav-pills .nav-link.active:focus-visible,
+  .page-item.active > .page-link:focus-visible,
+  .btn.active:focus-visible,
+  .chip.active:focus-visible,
+  .list-group-item.active:focus-visible {
     outline-offset: 2px;
+  }
+
+  // Chromium paints a pressed button's text in ButtonText but reports -webkit-text-fill-color as
+  // the author's pressed color, which axe reads: 1.34:1 for a pressed outline button in light.
+  .btn.active {
+    -webkit-text-fill-color: ButtonText;
   }
 
   .supa-tab-btn[aria-selected="true"] {

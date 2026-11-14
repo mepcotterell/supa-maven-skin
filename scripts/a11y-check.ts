@@ -51,7 +51,8 @@
  * check system-color selection and distinct keyboard focus in light and dark;
  * the controls/tabs scan is scoped to those widgets. `forced-colors-states` checks that checked
  * radios and selected, current, pressed, and disabled Bootstrap states visibly change their
- * element, and that keyboard focus differs from resting selection. `forced-colors-pages` scans
+ * element, that their text reads against the pixels painted under it, and that keyboard focus
+ * differs from resting selection. `forced-colors-pages` scans
  * every top-level page unscoped in both OS color schemes; `forced-colors-popover`
  * checks open popover text, box edges, and the connecting arrow. `forced-colors-tooltip`
  * checks the range slider's tooltip keeps a system-color text fill and border.
@@ -2165,7 +2166,10 @@ interface ForcedStateCue {
   state: string;
   /** Puts the element into the state (`on`) or takes it out, as its widget does. Runs in the page. */
   toggle: (element: Element, on: boolean) => void;
-  /** Smallest share of the element's box that the state must visibly change (default `.4`). */
+  /**
+   * Smallest share of the element's box that the state must visibly change. The default, `.1`, is
+   * met by the inset 3px selection ring on the largest box here, a list-group item (about 13%).
+   */
   share?: number;
   /** Regions the state paints, for a cue drawn outside the element's own box. Runs in the page. */
   regions?: (element: Element) => CueRegion[];
@@ -2256,6 +2260,11 @@ const FORCED_STATE_CUES: readonly ForcedStateCue[] = [
     state: '.active', toggle: toggleActive
   },
   {
+    // A link, secondary text, and a badge keep their own forced colors unless the rule reaches them.
+    name: 'rich active list-group item', selector: '#supaForcedStates .list-group-item.active:has(a)',
+    state: '.active', toggle: toggleActive
+  },
+  {
     name: 'active stepper item', selector: '.stepper-item.active:has(+ .stepper-item.active)',
     state: '.active', toggle: toggleActive,
     // The counter is the item's ::before; its ::after connects it to the next active item.
@@ -2269,7 +2278,7 @@ const FORCED_STATE_CUES: readonly ForcedStateCue[] = [
         throw new Error(`forced-colors stepper must be horizontal: ${JSON.stringify({item, next})}`);
       }
       return [
-        { name: 'counter', x: center - size / 2, y: item.top, width: size, height: size, share: .4 },
+        { name: 'counter', x: center - size / 2, y: item.top, width: size, height: size, share: .2 },
         {
           name: 'connector', x: center + size / 2 + 2, y: item.top + size / 2 - 3,
           width: nextCenter - center - size - 4, height: 6, share: .2
@@ -2344,6 +2353,160 @@ async function visibleChange(page: Page, before: readonly string[], after: reado
   }, { first: [...before], second: [...after], threshold: VISIBLE_CHANGE });
 }
 
+/** A link inside a selected list-group item, which forced colors paints on the selection fill. */
+const SELECTED_LINK = '#supaForcedStates .list-group-item.active a';
+
+/** A line box of text inside a selected element, with the color its text computes to. */
+interface TextRegion extends CueRegion {
+  /** Computed text color, as `getComputedStyle` reports it. */
+  ink: string;
+}
+
+/**
+ * Finds the line boxes of an element's text, or the digit of a stepper item's ::before counter.
+ * Runs in the page.
+ *
+ * @param element - Element in its selected state.
+ * @returns One region per line box, each with its computed text color.
+ */
+function selectedTextRegions(element: Element): TextRegion[] {
+  if (element.matches('.stepper-item')) {
+    // The counter's digit sits centered in the circle, at the top of the item.
+    const item = element.getBoundingClientRect();
+    const size = Number.parseFloat(getComputedStyle(element, '::before').width);
+    return [{
+      name: 'counter digit', x: item.left + item.width / 2 - 6, y: item.top + size / 2 - 6,
+      width: 12, height: 12, share: 0, ink: getComputedStyle(element, '::before').color
+    }];
+  }
+  const regions: TextRegion[] = [];
+  const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    const text = node.textContent!.trim();
+    if (!text) {
+      continue;
+    }
+    const range = document.createRange();
+    range.selectNodeContents(node);
+    for (const rect of range.getClientRects()) {
+      if (rect.width > 2 && rect.height > 2) {
+        regions.push({
+          name: `"${text.slice(0, 24)}"`, x: rect.x, y: rect.y, width: rect.width, height: rect.height,
+          share: 0, ink: getComputedStyle(node.parentElement!).color
+        });
+      }
+    }
+  }
+  return regions;
+}
+
+/**
+ * Measures text against the pixels actually painted under it: the most common pixel of each line
+ * box is its fill, including the Canvas backplate Chromium draws behind forced text, and the
+ * computed text color must reach 4.5:1 against it and appear in the box.
+ *
+ * @param page - Page to photograph.
+ * @param regions - Line boxes from `selectedTextRegions`.
+ * @returns Failure messages, empty when every line box reads.
+ */
+async function expectPaintedTextContrast(page: Page, regions: readonly TextRegion[]): Promise<string[]> {
+  const shots = await shootRegions(page, regions);
+  return page.evaluate(async ({ boxes, images }) => {
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d', { willReadFrequently: true })!;
+    /**
+     * Calculates WCAG relative luminance.
+     * @param color - 8-bit sRGB channels.
+     * @returns Relative luminance.
+     */
+    function luminance(color: number[]): number {
+      return color.map((v) => v / 255).map((v) => v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4)
+        .reduce((sum, v, i) => sum + v * [0.2126, 0.7152, 0.0722][i], 0);
+    }
+    const found: string[] = [];
+    for (const [index, box] of boxes.entries()) {
+      const image = new Image();
+      image.src = `data:image/png;base64,${images[index]}`;
+      await image.decode();
+      canvas.width = image.width;
+      canvas.height = image.height;
+      // Resolve the computed color to the screenshot's 8-bit sRGB.
+      context.fillStyle = box.ink;
+      context.fillRect(0, 0, 1, 1);
+      const ink = Array.from(context.getImageData(0, 0, 1, 1).data.slice(0, 3));
+      context.drawImage(image, 0, 0);
+      const data = context.getImageData(0, 0, image.width, image.height).data;
+      const counts = new Map<number, number>();
+      for (let offset = 0; offset < data.length; offset += 4) {
+        const key = (data[offset] << 16) | (data[offset + 1] << 8) | data[offset + 2];
+        counts.set(key, (counts.get(key) ?? 0) + 1);
+      }
+      const mode = [...counts].reduce((best, entry) => entry[1] > best[1] ? entry : best)[0];
+      const paper = [mode >> 16, (mode >> 8) & 255, mode & 255];
+      // Thin antialiased glyphs rarely reach the exact ink, so count pixels nearer ink than paper.
+      let inked = 0;
+      for (let offset = 0; offset < data.length; offset += 4) {
+        const distance = (color: number[]): number =>
+          color.reduce((sum, channel, i) => sum + (data[offset + i] - channel) ** 2, 0);
+        if (distance(ink) < distance(paper)) {
+          inked++;
+        }
+      }
+      const [light, dark] = [luminance(ink), luminance(paper)].sort((a, b) => b - a);
+      const ratio = (light + 0.05) / (dark + 0.05);
+      if (ratio < 4.5) {
+        found.push(`${box.name}: rgb(${ink.join(', ')}) text on painted rgb(${paper.join(', ')}) is ` +
+          `${ratio.toFixed(2)}:1, need 4.5:1`);
+      } else if (inked < data.length / 4 * .03) {
+        // A computed color the screenshot does not show would make the ratio meaningless.
+        found.push(`${box.name}: the computed text color rgb(${ink.join(', ')}) is not painted`);
+      }
+    }
+    return found;
+  }, { boxes: [...regions], images: shots });
+}
+
+/**
+ * Checks that the link inside a selected list-group item stays identifiable without its color, by
+ * its underline, and shows keyboard focus on the selection fill.
+ *
+ * @param page - `components.html` with forced colors active and `#supaForcedStates` added.
+ * @returns Failure messages, empty when the link is underlined and its focus visible.
+ */
+async function expectSelectedLinkIdentified(page: Page): Promise<string[]> {
+  const failures: string[] = [];
+  const link = page.locator(SELECTED_LINK);
+  await link.evaluate((el) => el.scrollIntoView({ block: 'center', behavior: 'instant' }));
+  await page.mouse.move(0, 0);
+  await link.blur();
+  if (await link.evaluate((el) => el.matches(':focus'))) {
+    throw new Error('forced-colors selected link: the resting link must not have focus');
+  }
+  if (!(await link.evaluate((el) => getComputedStyle(el).textDecorationLine)).includes('underline')) {
+    failures.push('selected link: must stay underlined, since it shares the item\'s text color');
+  }
+  const regions = await link.evaluate((el) => {
+    const { x, y, width, height } = el.getBoundingClientRect();
+    return [{ name: 'focus', x: x - 4, y: y - 4, width: width + 8, height: height + 8, share: .05 }];
+  });
+  const resting = await shootRegions(page, regions);
+  await link.focus();
+  await page.keyboard.press('Shift+Tab');
+  await page.keyboard.press('Tab');
+  await expectFocused(page, link, 'the selected item\'s link');
+  if (!await link.evaluate((el) => el.matches(':focus-visible'))) {
+    throw new Error('forced-colors selected link: keyboard focus must match :focus-visible');
+  }
+  const focused = await shootRegions(page, regions);
+  await link.blur();
+  const [change] = await visibleChange(page, resting, focused);
+  if (change < regions[0].share) {
+    failures.push(`selected link: keyboard focus changes ${(change * 100).toFixed(1)}% of pixels, ` +
+      `need ${regions[0].share * 100}%`);
+  }
+  return failures;
+}
+
 /**
  * Asserts that every `FORCED_STATE_CUES` state visibly changes its element in forced colors, that a
  * disabled page link reads as `GrayText`, and that keyboard focus on a nav pill and a playground
@@ -2371,7 +2534,7 @@ async function expectForcedStateCues(page: Page): Promise<void> {
       : await element.evaluate((el, share) => {
         const { x, y, width, height } = el.getBoundingClientRect();
         return [{ name: 'box', x, y, width, height, share }];
-      }, cue.share ?? .4);
+      }, cue.share ?? .1);
     const shots: string[][] = [];
     for (const on of [true, false]) {
       await element.evaluate(cue.toggle, on);
@@ -2379,6 +2542,10 @@ async function expectForcedStateCues(page: Page): Promise<void> {
         throw new Error(`forced-colors ${cue.name}: could not ${on ? 'enter' : 'leave'} ${cue.state}`);
       }
       shots.push(await shootRegions(page, regions));
+      if (on) {
+        const text = await element.evaluate(selectedTextRegions);
+        failures.push(...(await expectPaintedTextContrast(page, text)).map((problem) => `${cue.name} ${problem}`));
+      }
     }
     await element.evaluate(cue.toggle, initial);
     if (await element.evaluate((el, state) => el.matches(state), cue.state) !== initial) {
@@ -2404,6 +2571,7 @@ async function expectForcedStateCues(page: Page): Promise<void> {
   if (ink.disabled !== ink.gray || ink.enabled === ink.gray) {
     failures.push(`disabled page link must read as GrayText against enabled links: ${JSON.stringify(ink)}`);
   }
+  failures.push(...await expectSelectedLinkIdentified(page));
   // A resting outline must not stand in for the focus ring: compare a selected, unfocused item with
   // the same item focused by keyboard, both unselected and selected.
   for (const name of ['active nav pill', 'pressed playground pill']) {
@@ -2416,6 +2584,10 @@ async function expectForcedStateCues(page: Page): Promise<void> {
       const { x, y, width, height } = el.getBoundingClientRect();
       return [{ name: 'box', x: x - 6, y: y - 6, width: width + 12, height: height + 12, share: .05 }];
     });
+    await element.blur();
+    if (await element.evaluate((el) => el.matches(':focus'))) {
+      throw new Error(`forced-colors ${name}: the resting item must not have focus`);
+    }
     const resting = await shootRegions(page, regions);
     await element.evaluate(cue.toggle, false);
     await element.focus();
@@ -2457,7 +2629,10 @@ const FORCED_STATES: InteractionScenario = {
         'name="supaForcedRadioDisabled" checked disabled />' +
         '<label for="supaForcedRadioDisabled">Disabled checked radio</label></div>' +
         '<div class="list-group"><span class="list-group-item">Item</span>' +
-        '<span class="list-group-item active" aria-current="true">Active item</span></div></div>');
+        '<span class="list-group-item active" aria-current="true">Active item</span>' +
+        '<div class="list-group-item active">Rich item <a href="#supaForcedStates">Read details</a> ' +
+        '<small class="text-body-secondary">Secondary</small> <span class="badge theme-primary">Badge</span>' +
+        '</div></div></div>');
     });
     await page.locator(TOGGLE_BUTTON).evaluate((el) => (el as HTMLElement).click());
     await page.mouse.move(0, 0);
