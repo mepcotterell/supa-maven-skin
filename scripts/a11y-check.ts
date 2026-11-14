@@ -2,7 +2,8 @@
  * @fileoverview Rendered-page accessibility checks for the generated self-site.
  *
  * Serves `target/site/` from an in-process Node static file server, opens every
- * top-level page in headless Chromium (Playwright), waits for Supa Maven Skin to
+ * top-level page in a headless Playwright browser (Chromium unless `--engine` or
+ * `A11Y_ENGINE` selects another), waits for Supa Maven Skin to
  * finish initialising (`html[data-supa-ready]`), and runs axe-core with the
  * WCAG 2.0/2.1/2.2 A and AA rule tags, plus the AAA `color-contrast-enhanced`
  * rule (7:1) on the `modus*` palettes that promise AAA, and checks that the
@@ -64,10 +65,13 @@
  *
  * Run `mvn -B -ntp clean verify site` first, then `npm run test:a11y`; append
  * page or scenario names (`npm run test:a11y -- team.html palette-menu`) to
- * narrow the matrix while iterating. Requires a Chromium build
- * (`npx playwright install chromium`). It is deliberately not part of
- * `npm test` or the Maven build so consumer sites and `mvn verify` never need
- * a browser.
+ * narrow the matrix while iterating, and `--variants furo/light,modus/dark` to
+ * keep only those palette × polarity variants. `--engine firefox` or
+ * `--engine webkit` (or `A11Y_ENGINE`) runs the same matrix in that engine; a
+ * scenario whose `engines` leave it out is skipped, and its reason printed once.
+ * Requires that engine's Playwright build (`npx playwright install chromium`,
+ * or `firefox` or `webkit`). It is deliberately not part of `npm test` or the
+ * Maven build so consumer sites and `mvn verify` never need a browser.
  */
 import { AxeBuilder } from '@axe-core/playwright';
 import { existsSync, readdirSync, statSync } from 'node:fs';
@@ -76,8 +80,9 @@ import { createServer } from 'node:http';
 import type { IncomingMessage, Server, ServerResponse } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { extname, join, normalize, resolve, sep } from 'node:path';
-import { chromium } from 'playwright';
-import type { Browser, Locator, Page } from 'playwright';
+import { parseArgs } from 'node:util';
+import { chromium, firefox, webkit } from 'playwright';
+import type { Browser, BrowserType, Locator, Page } from 'playwright';
 import { WCAG_MINIMUMS } from './contrast-audit.ts';
 import type { ContrastRole } from './contrast-audit.ts';
 
@@ -95,6 +100,28 @@ const PALETTES = [
 ] as const;
 
 type Palette = (typeof PALETTES)[number];
+
+/** Playwright browser engines the runner can scan in; `chromium` is the default and CI's. */
+const ENGINES = ['chromium', 'firefox', 'webkit'] as const;
+
+type Engine = (typeof ENGINES)[number];
+
+/** Launchers for each engine. */
+const BROWSER_TYPES: Readonly<Record<Engine, BrowserType>> = { chromium, firefox, webkit };
+
+/** Environment variable that selects the engine when no `--engine` flag does. */
+const ENGINE_ENV = 'A11Y_ENGINE';
+
+/**
+ * The engines an engine-limited scenario runs in, and why the others skip it. A run in another
+ * engine prints the reason once per scenario name, not per variant.
+ */
+interface EngineSupport {
+  /** Engines the scenario runs in. */
+  supported: readonly Engine[];
+  /** Why the other engines cannot run it. */
+  reason: string;
+}
 
 /** Browser viewport in CSS pixels. */
 interface Viewport {
@@ -127,6 +154,11 @@ interface InteractionScenario {
    * `SCENARIO_VARIANTS`; list others for a widget that only some palettes tint.
    */
   variants?: readonly Variant[];
+  /**
+   * Engines the scenario runs in. Defaults to every one of `ENGINES`; limit it only when an
+   * engine, or Playwright's emulation in it, cannot produce the state, and say why.
+   */
+  engines?: EngineSupport;
   /** Browser permissions the setup needs, such as clipboard access for the copy button. */
   permissions?: string[];
   /**
@@ -235,6 +267,44 @@ const SCENARIO_VARIANTS: readonly Variant[] = [
   { palette: 'furo', polarity: 'dark' },
   { palette: 'modus', polarity: 'dark' }
 ];
+
+/**
+ * Forced-colors scenarios. Playwright's WebKit matches `(forced-colors: active)` but keeps the
+ * author's colors, and Firefox's emulated palette is not a high-contrast theme (`Canvas` stays
+ * white under a dark OS, and `Highlight` on `ButtonFace` is 2.43:1), so only Chromium's emulation
+ * is a real forced-colors mode to measure.
+ */
+const FORCED_COLORS_ENGINES: EngineSupport = {
+  supported: ['chromium'],
+  reason:
+    "WebKit matches (forced-colors: active) without forcing colors, and Firefox's emulated " +
+    'palette is not a high-contrast theme'
+};
+
+/** The copy button's "Copied!" state, which needs clipboard permissions. */
+const CLIPBOARD_ENGINES: EngineSupport = {
+  supported: ['chromium'],
+  reason: 'Firefox and WebKit do not grant the clipboard-read and clipboard-write permissions'
+};
+
+/**
+ * Printing in `auto` mode under a dark OS. Firefox reports `prefers-color-scheme: light` under
+ * print media, so the skin resolves the light polarity, which prints correctly but is not the
+ * dark resolution the scenario asserts before printing.
+ */
+const AUTO_PRINT_ENGINES: EngineSupport = {
+  supported: ['chromium'],
+  reason: 'Firefox reports a light color-scheme preference under print media'
+};
+
+/**
+ * Scenarios that move focus with Tab between links and buttons. WebKit's default keyboard mode
+ * skips both on Tab, as macOS Safari does unless "Press Tab to highlight each item" is on.
+ */
+const TAB_ORDER_ENGINES: EngineSupport = {
+  supported: ['chromium', 'firefox'],
+  reason: "WebKit's default keyboard mode skips links and buttons on Tab"
+};
 
 const MIME_TYPES: Readonly<Record<string, string>> = {
   '.html': 'text/html; charset=utf-8',
@@ -524,6 +594,8 @@ function menuScenario(placement: MenuPlacement, kind: MenuKind): InteractionScen
     name: `${placement.prefix}${kind}-menu`,
     page: kind === 'palette' && placement.prefix === '' ? 'configuration.html' : 'index.html',
     variants: kind === 'palette' && placement.prefix === '' ? ALL_VARIANTS : undefined,
+    // expectPaletteFocus Tabs through the palette cards and menu items.
+    engines: kind === 'palette' && placement.prefix === '' ? TAB_ORDER_ENGINES : undefined,
     viewport: placement.viewport,
     setup: async (page) => {
       await placement.reveal?.(page);
@@ -772,6 +844,7 @@ function autoPrintScenario(page: string): InteractionScenario {
       { palette: 'furo', polarity: 'dark' },
       { palette: 'modus', polarity: 'dark' }
     ],
+    engines: AUTO_PRINT_ENGINES,
     setup: async (p) => {
       // The theme menu's "Auto" option runs theme.ts's own switch. It is hidden at the paper's
       // width, so the click is dispatched rather than performed.
@@ -1177,8 +1250,8 @@ type ColorWindow = { a11yColor: ColorHelper };
 /**
  * Installs one `ColorHelper` as `window.a11yColor` in every page of a scan's context, before the
  * page's own scripts run. Playwright sends this function's source into the page, so it closes over
- * nothing and takes the contrast thresholds as an argument. A canvas converts Chromium's resolved
- * colors, in any color space, to the sRGB bytes a screenshot holds.
+ * nothing and takes the contrast thresholds as an argument. A canvas converts the browser's
+ * resolved colors, in any color space, to the sRGB bytes a screenshot holds.
  *
  * @param minimums - `WCAG_MINIMUMS` from `contrast-audit.ts`, which the SCSS audit also uses.
  */
@@ -2008,6 +2081,7 @@ function forcedColorsScenario(kind: ForcedColorsKind): InteractionScenario {
     // contrast rule, so scoped computed-style and pixel assertions cover control cues.
     scope: kind === 'controls-tabs' ? ['#checkMermaid', '.switch', '.form-range', '.supa-tabs'] : undefined,
     variants: [{ palette: 'furo', polarity: 'light' }, { palette: 'furo', polarity: 'dark' }],
+    engines: FORCED_COLORS_ENGINES,
     setup: async (page) => {
       await page.emulateMedia({ forcedColors: 'active' });
       if (kind === 'controls-tabs') {
@@ -2063,6 +2137,7 @@ const FORCED_COLORS_PAGES = 'forced-colors-pages';
 function forcedColorsPageScenario(file: string): InteractionScenario {
   return {
     name: FORCED_COLORS_PAGES, page: file, viewport: DESKTOP, variants: FORCED_VARIANTS,
+    engines: FORCED_COLORS_ENGINES,
     setup: async (page) => { await page.emulateMedia({ forcedColors: 'active' }); },
     assertState: async (page) => {
       if (!await page.evaluate(() => matchMedia('(forced-colors: active)').matches)) {
@@ -2076,6 +2151,7 @@ function forcedColorsPageScenario(file: string): InteractionScenario {
 const FORCED_POPOVER: InteractionScenario = {
   name: 'forced-colors-popover', page: 'components.html', viewport: DESKTOP,
   variants: FORCED_VARIANTS,
+  engines: FORCED_COLORS_ENGINES,
   setup: async (page) => {
     await page.emulateMedia({ forcedColors: 'active' });
     await page.locator('[data-bs-toggle="popover"]').first().click();
@@ -2561,6 +2637,7 @@ async function expectForcedStateCues(page: Page): Promise<void> {
 const FORCED_STATES: InteractionScenario = {
   name: 'forced-colors-states', page: 'components.html', viewport: DESKTOP,
   variants: FORCED_VARIANTS,
+  engines: FORCED_COLORS_ENGINES,
   setup: async (page) => {
     await page.emulateMedia({ forcedColors: 'active' });
     await page.locator('#checkMermaid').evaluate((check) => {
@@ -2605,6 +2682,7 @@ function rangeTooltipScenario(forced: boolean): InteractionScenario {
     variants: forced
       ? [{ palette: 'furo', polarity: 'light' }, { palette: 'furo', polarity: 'dark' }]
       : ALL_VARIANTS,
+    engines: forced ? FORCED_COLORS_ENGINES : undefined,
     scope: [RANGE_TOOLTIP],
     setup: async (page) => {
       if (forced) {
@@ -2714,6 +2792,8 @@ const SCENARIOS: readonly InteractionScenario[] = [
       page: 'components.html',
       viewport: { width, height: 900 },
       variants: ALL_VARIANTS,
+      // The open scans Tab from the summary into the version links.
+      engines: open ? TAB_ORDER_ENGINES : undefined,
       scope: ['.documentation-channels'],
       setup: async (page) => {
         // Closed scans follow the OS; open scans retain explicit polarity against the OS.
@@ -2735,6 +2815,12 @@ const SCENARIOS: readonly InteractionScenario[] = [
         if (open) {
           await page.keyboard.press('Enter');
           await page.keyboard.press('Tab');
+          // Firefox makes a scrolling element a tab stop even when it holds links, and the version
+          // list scrolls at this height, so its first Tab stops on the list, with a visible focus
+          // ring; the next one reaches the first link, where the other engines stop at once.
+          if (await page.evaluate(() => document.activeElement?.matches('.documentation-version-picker ul'))) {
+            await page.keyboard.press('Tab');
+          }
           await page.locator('.documentation-version-picker li a').last().hover();
         }
       },
@@ -2892,6 +2978,7 @@ const SCENARIOS: readonly InteractionScenario[] = [
     name: 'copy-button-copied',
     page: 'index.html',
     viewport: DESKTOP,
+    engines: CLIPBOARD_ENGINES,
     permissions: ['clipboard-read', 'clipboard-write'],
     // The code blocks, plus the "Copied!" tooltip that Bootstrap appends to <body>.
     scope: ['#supa-main-content .supa-code-block', '.tooltip.show'],
@@ -3424,7 +3511,7 @@ function variantLabel(job: ScanJob): string {
  * Opens one page variant, waits for the skin to finish initialising, drives it
  * into the job's interaction scenario (if any), and runs axe.
  *
- * @param browser - Shared Chromium instance.
+ * @param browser - Shared browser of the selected engine.
  * @param baseUrl - Static server base URL.
  * @param job - Page/variant to scan.
  * @returns Flattened violation nodes for this job.
@@ -3598,18 +3685,73 @@ function listScenarioNames(): string[] {
   return [...SCENARIOS.map((s) => s.name), FORCED_COLORS_PAGES];
 }
 
+/** What the command line asks the runner to do. */
+interface RunOptions {
+  /** Engine to scan in: `--engine`, else `A11Y_ENGINE`, else `chromium`. */
+  engine: Engine;
+  /** Palette × polarity variants `--variants` keeps, or null for every variant. */
+  variants: readonly Variant[] | null;
+  /** Page and scenario names that narrow the matrix; empty for the whole matrix. */
+  names: readonly string[];
+}
+
+/**
+ * Parses `--engine <name>`, `--variants <palette/polarity,...>`, and the positional page and
+ * scenario names.
+ *
+ * @param args - Command-line arguments after the script path.
+ * @param env - Environment, for `A11Y_ENGINE`.
+ * @returns The run options.
+ */
+function parseRunOptions(args: string[], env: NodeJS.ProcessEnv): RunOptions {
+  const { values, positionals } = parseArgs({
+    args,
+    options: { engine: { type: 'string' }, variants: { type: 'string' } },
+    allowPositionals: true
+  });
+  const engine = values.engine ?? (env[ENGINE_ENV] || 'chromium');
+  if (!(ENGINES as readonly string[]).includes(engine)) {
+    throw new Error(`unknown engine "${engine}"; use one of ${ENGINES.join(', ')}`);
+  }
+  let variants: Variant[] | null = null;
+  if (values.variants !== undefined) {
+    variants = values.variants.split(',').map((label) => {
+      const [palette, polarity, extra] = label.trim().split('/');
+      if (
+        !(PALETTES as readonly string[]).includes(palette) ||
+        (polarity !== 'light' && polarity !== 'dark') ||
+        extra !== undefined
+      ) {
+        throw new Error(
+          `unknown variant "${label}"; use <palette>/<light|dark> with a palette of ${PALETTES.join(', ')}`
+        );
+      }
+      return { palette: palette as Palette, polarity };
+    });
+  }
+  return { engine: engine as Engine, variants, names: positionals };
+}
+
 /**
  * Entry point: serves the site, scans every job, prints a report, and sets the exit code.
  *
  * @returns Process exit code (0 when no violations or errors, 1 otherwise).
  */
 async function main(): Promise<number> {
-  // `--list` prints every scenario name and exits, so `scripts/lint-docs.ts` can check them
-  // against the `architecture.md` catalog without a built site or a browser.
+  // `--list` prints every scenario name, whatever the engine, and exits, so `scripts/lint-docs.ts`
+  // can check them against the `architecture.md` catalog without a built site or a browser.
   if (process.argv.slice(2).includes(LIST_FLAG)) {
     console.log(listScenarioNames().join('\n'));
     return 0;
   }
+  let options: RunOptions;
+  try {
+    options = parseRunOptions(process.argv.slice(2), process.env);
+  } catch (error: unknown) {
+    console.error(`a11y: ${firstLine(error)}`);
+    return 1;
+  }
+  const { engine } = options;
   if (!existsSync(join(SITE_DIR, 'index.html'))) {
     console.error(
       `a11y: ${SITE_DIR}/index.html not found. Build the self-site first: mvn -B -ntp clean verify site`
@@ -3633,7 +3775,7 @@ async function main(): Promise<number> {
   // Optional positional page or scenario names (`npm run test:a11y -- team.html`,
   // `npm run test:a11y -- search-dialog-results`) narrow the matrix while iterating
   // on a fix; CI always runs the full matrix.
-  const only = new Set(process.argv.slice(2));
+  const only = new Set(options.names);
   // A mistyped name would otherwise scan nothing and report success, which
   // reads like a clean result; reject unknown names before starting a browser.
   const unknown = [...only].filter((name) => !pages.includes(name) && !scenarioNames.includes(name));
@@ -3645,23 +3787,44 @@ async function main(): Promise<number> {
     );
     return 1;
   }
-  const jobs = buildJobs(pages).filter(
+  const matched = buildJobs(pages).filter(
     (job) =>
-      only.size === 0 || only.has(job.page) || (job.scenario !== undefined && only.has(job.scenario.name))
+      (only.size === 0 || only.has(job.page) || (job.scenario !== undefined && only.has(job.scenario.name))) &&
+      (options.variants === null ||
+        options.variants.some((v) => v.palette === job.palette && v.polarity === job.polarity))
   );
-  if (jobs.length === 0) {
+  if (matched.length === 0) {
     console.error('a11y: nothing to scan (no HTML pages matched).');
     return 1;
+  }
+  // A scenario the engine cannot run is skipped with its reason, printed once per name.
+  const skipped = new Map<string, { reason: string; variants: number }>();
+  const jobs = matched.filter((job) => {
+    const support = job.scenario?.engines;
+    if (!job.scenario || !support || support.supported.includes(engine)) {
+      return true;
+    }
+    const entry = skipped.get(job.scenario.name) ?? { reason: support.reason, variants: 0 };
+    entry.variants++;
+    skipped.set(job.scenario.name, entry);
+    return false;
+  });
+  for (const [name, { reason, variants }] of skipped) {
+    console.log(`  skip ${name} (${variants} variant${variants === 1 ? '' : 's'}) in ${engine}: ${reason}`);
+  }
+  if (jobs.length === 0) {
+    console.log(`a11y: nothing left to scan in ${engine}; every matched scenario is skipped there.`);
+    return 0;
   }
   const { server, baseUrl } = await startServer(SITE_DIR);
   let browser: Browser | null = null;
   try {
-    browser = await chromium.launch();
+    browser = await BROWSER_TYPES[engine].launch();
     const activeBrowser = browser;
     const scenarioJobs = jobs.filter((job) => job.scenario).length;
     const aaaJobs = jobs.filter((job) => AAA_PALETTES.has(job.palette)).length;
     console.log(
-      `a11y: scanning ${jobs.length} page variants (${pages.length} pages, ` +
+      `a11y: scanning ${jobs.length} page variants in ${engine} (${pages.length} pages, ` +
         `${scenarioJobs} in interactive states) with axe-core [${WCAG_TAGS.join(', ')}], ` +
         `plus ${AAA_CONTRAST_RULE} on the ${aaaJobs} AAA-palette variants, ` +
         `${LABEL_IN_NAME_RULE} (WCAG 2.5.3) on every visible ${LABEL_IN_NAME_SELECTOR}, ` +
@@ -3686,6 +3849,7 @@ async function main(): Promise<number> {
       }
     });
     const findings = perJob.flat();
+    const skippedNote = skipped.size > 0 ? `; ${skipped.size} scenarios skipped (listed above)` : '';
     if (findings.length > 0) {
       printReport(findings);
     }
@@ -3696,15 +3860,16 @@ async function main(): Promise<number> {
       const rules = new Set(findings.map((f) => f.ruleId));
       console.error(
         `\na11y: ${findings.length} violation nodes (${rules.size} rules` +
-          `${rules.size > 0 ? `: ${[...rules].join(', ')}` : ''}), ${errors.length} variants not scanned.`
+          `${rules.size > 0 ? `: ${[...rules].join(', ')}` : ''}), ${errors.length} variants not scanned` +
+          ` in ${engine}${skippedNote}.`
       );
       return 1;
     }
     console.log(
-      `a11y: no WCAG A/AA violations across ${jobs.length} page variants, ` +
+      `a11y: no WCAG A/AA violations across ${jobs.length} page variants in ${engine}, ` +
         `no AAA contrast violations across the ${aaaJobs} AAA-palette variants, ` +
         `no ${LABEL_IN_NAME_RULE} violations on ${LABEL_IN_NAME_SELECTOR}, ` +
-        `and no repeated ids.`
+        `and no repeated ids${skippedNote}.`
     );
     return 0;
   } finally {

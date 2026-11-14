@@ -17,6 +17,13 @@ mvn -B -ntp clean verify site
 npx playwright install chromium
 npm run test:a11y
 
+# The same checks in Firefox or WebKit (Chromium is the default, and CI's), here over the
+# variants interaction scenarios use by default. --engine overrides the A11Y_ENGINE variable.
+# Scenarios an engine cannot run are skipped, each with its reason printed once.
+npx playwright install firefox webkit
+npm run test:a11y -- --engine firefox --variants furo/light,furo/dark,modus/dark
+A11Y_ENGINE=webkit npm run test:a11y -- --variants furo/light,furo/dark,modus/dark
+
 # Regenerate the README screenshots in .github/screenshots/ from target/site/ (same browser).
 npm run screenshots
 ```
