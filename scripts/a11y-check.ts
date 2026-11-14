@@ -78,6 +78,8 @@ import type { AddressInfo } from 'node:net';
 import { extname, join, normalize, resolve, sep } from 'node:path';
 import { chromium } from 'playwright';
 import type { Browser, Locator, Page } from 'playwright';
+import { WCAG_MINIMUMS } from './contrast-audit.ts';
+import type { ContrastRole } from './contrast-audit.ts';
 
 /** Polarity stored in `localStorage['supa-theme']` (see `theme.ts`). */
 type Polarity = 'light' | 'dark';
@@ -216,6 +218,8 @@ const MOBILE: Viewport = { width: 390, height: 844 };
  * the TOC trigger, but below `xl` (1280px), where the TOC is still a drawer.
  */
 const TABLET: Viewport = { width: 1100, height: 900 };
+/** A tablet in landscape: exactly `lg`, the narrowest width with the sidebar inline. */
+const TABLET_LANDSCAPE: Viewport = { width: 1024, height: 768 };
 const READY_TIMEOUT_MS = 30_000;
 const STATE_TIMEOUT_MS = 5_000;
 const CONCURRENCY = 4;
@@ -442,7 +446,7 @@ async function expectLandedOnHeading(page: Page, linkId: string, headingId: stri
   let problems: string[];
   do {
     problems = await page.evaluate(
-      ([link, id]: [string, string]) => {
+      ([link, id, tolerance]: [string, string, number]) => {
         const found: string[] = [];
         if (decodeURIComponent(window.location.hash.slice(1)) !== link) {
           found.push(`the URL fragment is "${window.location.hash}"`);
@@ -463,12 +467,12 @@ async function expectLandedOnHeading(page: Page, linkId: string, headingId: stri
           (Number.parseFloat(getComputedStyle(document.documentElement).scrollPaddingTop) || 0) +
           (heading ? Number.parseFloat(getComputedStyle(heading).scrollMarginTop) || 0 : 0);
         const top = heading?.getBoundingClientRect().top;
-        if (top === undefined || Math.abs(top - landing) > 2) {
+        if (top === undefined || Math.abs(top - landing) > tolerance) {
           found.push(`the heading is ${top ?? '?'}px from the top instead of ${landing}px`);
         }
         return found;
       },
-      [linkId, headingId] as [string, string]
+      [linkId, headingId, LANDING_TOLERANCE_PX] as [string, string, number]
     );
     if (problems.length === 0) {
       return;
@@ -1149,66 +1153,150 @@ function deepLinkScenario(
   };
 }
 
+/** Color and pixel math that `installColorHelper` gives every page, for `page.evaluate` callbacks. */
+interface ColorHelper {
+  /** Converts a browser-resolved CSS color to straight sRGB and alpha, each channel in [0, 1]. */
+  rgba: (color: string) => number[];
+  /** Composites a color over an opaque one. */
+  over: (top: number[], bottom: number[]) => number[];
+  /** Resolves the opaque fill under an element through its translucent ancestors, over white. */
+  background: (element: Element | null) => number[];
+  /** Computes the WCAG contrast ratio of two opaque colors, channels in [0, 1]. */
+  contrast: (first: number[], second: number[]) => number;
+  /** Looks up the `WCAG_MINIMUMS` entry for the page palette's `--supa-wcag-level` and a role. */
+  minimumFor: (role: ContrastRole) => number;
+  /** Resolves a CSS system color, such as `CanvasText`, to its computed color. */
+  system: (name: string) => string;
+  /** Decodes a base64 PNG screenshot into its pixels. */
+  decode: (base64: string) => Promise<ImageData>;
+}
+
+/** The part of the page's `window` that `installColorHelper` adds. */
+type ColorWindow = { a11yColor: ColorHelper };
+
+/**
+ * Installs one `ColorHelper` as `window.a11yColor` in every page of a scan's context, before the
+ * page's own scripts run. Playwright sends this function's source into the page, so it closes over
+ * nothing and takes the contrast thresholds as an argument. A canvas converts Chromium's resolved
+ * colors, in any color space, to the sRGB bytes a screenshot holds.
+ *
+ * @param minimums - `WCAG_MINIMUMS` from `contrast-audit.ts`, which the SCSS audit also uses.
+ */
+function installColorHelper(minimums: typeof WCAG_MINIMUMS): void {
+  let context: CanvasRenderingContext2D | null = null;
+  /**
+   * Converts a browser-resolved color to straight sRGB and alpha.
+   * @param color - Computed CSS color.
+   * @returns RGBA channels in [0, 1].
+   */
+  function rgba(color: string): number[] {
+    if (!context) {
+      const canvas = document.createElement('canvas');
+      canvas.width = canvas.height = 1;
+      context = canvas.getContext('2d', { willReadFrequently: true });
+      if (!context) {
+        throw new Error('Canvas color conversion is unavailable');
+      }
+    }
+    context.clearRect(0, 0, 1, 1);
+    context.fillStyle = color;
+    context.fillRect(0, 0, 1, 1);
+    return Array.from(context.getImageData(0, 0, 1, 1).data, (channel) => channel / 255);
+  }
+  /**
+   * Composites a color over an opaque background.
+   * @param top - Foreground RGBA.
+   * @param bottom - Opaque background RGBA.
+   * @returns Composited opaque RGBA.
+   */
+  function over(top: number[], bottom: number[]): number[] {
+    return [0, 1, 2].map((i) => top[i] * top[3] + bottom[i] * (1 - top[3])).concat(1);
+  }
+  /**
+   * Resolves the actual fill through all transparent ancestors.
+   * @param element - Element whose background is needed.
+   * @returns Opaque composited sRGB background.
+   */
+  function background(element: Element | null): number[] {
+    if (!element) {
+      return [1, 1, 1, 1];
+    }
+    return over(rgba(getComputedStyle(element).backgroundColor), background(element.parentElement));
+  }
+  /**
+   * Calculates WCAG relative luminance.
+   * @param color - Opaque sRGB color.
+   * @returns Relative luminance.
+   */
+  function luminance(color: number[]): number {
+    return color.slice(0, 3).map((v) => v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4)
+      .reduce((sum, v, i) => sum + v * [0.2126, 0.7152, 0.0722][i], 0);
+  }
+  /**
+   * Calculates the WCAG contrast ratio.
+   * @param first - Opaque sRGB color.
+   * @param second - The other opaque sRGB color.
+   * @returns Contrast ratio in [1, 21].
+   */
+  function contrast(first: number[], second: number[]): number {
+    const [a, b] = [luminance(first), luminance(second)];
+    return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+  }
+  /**
+   * Reads the page palette's minimum contrast for a role.
+   * @param role - Text or non-text.
+   * @returns Minimum ratio for the palette's declared `--supa-wcag-level`.
+   */
+  function minimumFor(role: ContrastRole): number {
+    const level = getComputedStyle(document.documentElement).getPropertyValue('--supa-wcag-level');
+    return minimums[level.includes('AAA') ? 'AAA' : 'AA'][role];
+  }
+  /**
+   * Resolves a system color on a probe in the page.
+   * @param name - CSS system color keyword.
+   * @returns Its computed color.
+   */
+  function system(name: string): string {
+    const probe = document.createElement('span');
+    probe.style.color = name;
+    document.body.append(probe);
+    const color = getComputedStyle(probe).color;
+    probe.remove();
+    return color;
+  }
+  /**
+   * Decodes a screenshot into RGBA bytes.
+   * @param base64 - PNG screenshot.
+   * @returns Its pixels.
+   */
+  async function decode(base64: string): Promise<ImageData> {
+    const image = new Image();
+    image.src = `data:image/png;base64,${base64}`;
+    await image.decode();
+    const canvas = document.createElement('canvas');
+    canvas.width = image.width;
+    canvas.height = image.height;
+    const pixels = canvas.getContext('2d', { willReadFrequently: true })!;
+    pixels.drawImage(image, 0, 0);
+    return pixels.getImageData(0, 0, image.width, image.height);
+  }
+  (window as unknown as ColorWindow).a11yColor = { rgba, over, background, contrast, minimumFor, system, decode };
+}
+
 /**
  * Measures the painted form edges and inactive pill outline on their actual ancestor fills, and
  * the unchecked switch's knob on its track: the knob's position is what shows the off state.
- * Canvas converts Chromium's resolved CSS colors to sRGB; translucent ancestor fills are
- * composited before measuring WCAG luminance. axe does not check non-text contrast.
+ * Translucent ancestor fills are composited before measuring WCAG luminance. axe does not check
+ * non-text contrast.
  *
  * @param page - Components page with unchecked controls and a keyboard-focused inactive pill.
  */
 async function expectControlContrast(page: Page): Promise<void> {
   await settleTransitions(page);
   const failures = await page.evaluate(() => {
-    const canvas = document.createElement('canvas');
-    canvas.width = canvas.height = 1;
-    const context = canvas.getContext('2d', { willReadFrequently: true });
-    if (!context) {
-      throw new Error('Canvas color conversion is unavailable');
-    }
-    /**
-     * Converts a browser-resolved color to straight sRGB and alpha.
-     * @param color - Computed CSS color.
-     * @returns RGBA channels in [0, 1].
-     */
-    function rgba(color: string): number[] {
-      context!.clearRect(0, 0, 1, 1);
-      context!.fillStyle = color;
-      context!.fillRect(0, 0, 1, 1);
-      return Array.from(context!.getImageData(0, 0, 1, 1).data, (channel) => channel / 255);
-    }
-    /**
-     * Composites a color over an opaque background.
-     * @param top - Foreground RGBA.
-     * @param bottom - Opaque background RGBA.
-     * @returns Composited opaque RGBA.
-     */
-    function over(top: number[], bottom: number[]): number[] {
-      return [0, 1, 2].map((i) => top[i] * top[3] + bottom[i] * (1 - top[3])).concat(1);
-    }
-    /**
-     * Resolves the actual fill through all transparent ancestors.
-     * @param element - Element whose background is needed.
-     * @returns Opaque composited sRGB background.
-     */
-    function background(element: Element | null): number[] {
-      if (!element) {
-        return [1, 1, 1, 1];
-      }
-      return over(rgba(getComputedStyle(element).backgroundColor), background(element.parentElement));
-    }
-    /**
-     * Calculates WCAG relative luminance.
-     * @param color - Opaque sRGB color.
-     * @returns Relative luminance.
-     */
-    function luminance(color: number[]): number {
-      return color.slice(0, 3).map((v) => v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4)
-        .reduce((sum, v, i) => sum + v * [0.2126, 0.7152, 0.0722][i], 0);
-    }
+    const { rgba, over, background, contrast, minimumFor } = (window as unknown as ColorWindow).a11yColor;
     const found: string[] = [];
-    const minimum = getComputedStyle(document.documentElement)
-      .getPropertyValue('--supa-wcag-level').includes('AAA') ? 4.5 : 3;
+    const minimum = minimumFor('non-text');
     for (const selector of ['#checkMermaid', '#switchCopyBtn', '#demoDatepickerInput',
       '#supaBoundaryRadio', '.chip-input', '[data-bs-target="#bsTabGradle"]']) {
       const input = document.querySelector<HTMLElement>(selector);
@@ -1229,18 +1317,13 @@ async function expectControlContrast(page: Page): Promise<void> {
         found.push(`${selector} has no painted ${focus ? 'outline' : 'border'}`);
       }
       const beneath = background(element.parentElement);
-      const painted = over(rgba(focus ? style.outlineColor : style.borderTopColor), beneath);
-      const a = luminance(painted);
-      const b = luminance(beneath);
-      const ratio = (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+      const ratio = contrast(over(rgba(focus ? style.outlineColor : style.borderTopColor), beneath), beneath);
       if (ratio < minimum) {
         found.push(`${selector}: ${ratio.toFixed(3)}:1, minimum ${minimum}:1`);
       }
       if (selector === '#switchCopyBtn') {
         const track = over(rgba(style.backgroundColor), beneath);
-        const knob = luminance(over(rgba(getComputedStyle(element, '::before').backgroundColor), track));
-        const fill = luminance(track);
-        const knobRatio = (Math.max(knob, fill) + 0.05) / (Math.min(knob, fill) + 0.05);
+        const knobRatio = contrast(over(rgba(getComputedStyle(element, '::before').backgroundColor), track), track);
         if (knobRatio < minimum) {
           found.push(`${selector} knob on its track: ${knobRatio.toFixed(3)}:1, minimum ${minimum}:1`);
         }
@@ -1294,9 +1377,7 @@ async function expectControlContrast(page: Page): Promise<void> {
       ['inverse thumb/page', inverseThumb, pageFill], ['inverse fill/track', inverseFill, track]);
     range.classList.remove('theme-inverse');
     for (const [label, ink, surface] of pairs) {
-      const a = luminance(ink);
-      const b = luminance(surface);
-      const ratio = (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+      const ratio = contrast(ink, surface);
       if (ratio < minimum) {
         found.push(`${label}: ${ratio.toFixed(3)}:1, minimum ${minimum}:1`);
       }
@@ -1341,10 +1422,7 @@ async function expectControlContrast(page: Page): Promise<void> {
       const style = getComputedStyle(element);
       const indicator = getComputedStyle(element, '::before');
       const track = background(element);
-      const ink = over(rgba(indicator.backgroundColor), track);
-      const a = luminance(ink);
-      const b = luminance(track);
-      const ratio = (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+      const ratio = contrast(over(rgba(indicator.backgroundColor), track), track);
       if (!input.disabled && ratio < minimum) {
         found.push(`${input.id} knob on its track: ${ratio.toFixed(3)}:1, minimum ${minimum}:1`);
       }
@@ -1416,55 +1494,9 @@ const INLINE_CODE_FILLS = `
  */
 async function expectInlineCodeOnFills(page: Page): Promise<void> {
   const failures = await page.evaluate(() => {
-    const canvas = document.createElement('canvas');
-    canvas.width = canvas.height = 1;
-    const context = canvas.getContext('2d', { willReadFrequently: true });
-    if (!context) {
-      throw new Error('Canvas color conversion is unavailable');
-    }
-    /**
-     * Converts a browser-resolved color to straight sRGB and alpha.
-     * @param color - Computed CSS color.
-     * @returns RGBA channels in [0, 1].
-     */
-    function rgba(color: string): number[] {
-      context!.clearRect(0, 0, 1, 1);
-      context!.fillStyle = color;
-      context!.fillRect(0, 0, 1, 1);
-      return Array.from(context!.getImageData(0, 0, 1, 1).data, (channel) => channel / 255);
-    }
-    /**
-     * Composites a color over an opaque background.
-     * @param top - Foreground RGBA.
-     * @param bottom - Opaque background RGBA.
-     * @returns Composited opaque RGBA.
-     */
-    function over(top: number[], bottom: number[]): number[] {
-      return [0, 1, 2].map((i) => top[i] * top[3] + bottom[i] * (1 - top[3])).concat(1);
-    }
-    /**
-     * Resolves the actual fill through all transparent ancestors.
-     * @param element - Element whose background is needed.
-     * @returns Opaque composited sRGB background.
-     */
-    function background(element: Element | null): number[] {
-      if (!element) {
-        return [1, 1, 1, 1];
-      }
-      return over(rgba(getComputedStyle(element).backgroundColor), background(element.parentElement));
-    }
-    /**
-     * Calculates WCAG relative luminance.
-     * @param color - Opaque sRGB color.
-     * @returns Relative luminance.
-     */
-    function luminance(color: number[]): number {
-      return color.slice(0, 3).map((v) => v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4)
-        .reduce((sum, v, i) => sum + v * [0.2126, 0.7152, 0.0722][i], 0);
-    }
+    const { rgba, over, background, contrast, minimumFor } = (window as unknown as ColorWindow).a11yColor;
     const found: string[] = [];
-    const minimum = getComputedStyle(document.documentElement)
-      .getPropertyValue('--supa-wcag-level').includes('AAA') ? 7 : 4.5;
+    const minimum = minimumFor('text');
     const chips = document.querySelectorAll<HTMLElement>('#supaInlineCodeFills code');
     if (chips.length !== 25) {
       found.push(`expected 25 inline code fixtures, found ${chips.length}`);
@@ -1491,9 +1523,7 @@ async function expectInlineCodeOnFills(page: Page): Promise<void> {
       if (image) {
         chip = over(rgba(image[0]), chip);
       }
-      const a = luminance(over(rgba(style.color), chip));
-      const b = luminance(chip);
-      const ratio = (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+      const ratio = contrast(over(rgba(style.color), chip), chip);
       if (ratio < minimum) {
         found.push(`${where}: ${ratio.toFixed(2)}:1, minimum ${minimum}:1`);
       }
@@ -1504,9 +1534,7 @@ async function expectInlineCodeOnFills(page: Page): Promise<void> {
     }
     for (const text of footerText) {
       const fill = background(text);
-      const a = luminance(over(rgba(getComputedStyle(text).color), fill));
-      const b = luminance(fill);
-      const ratio = (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+      const ratio = contrast(over(rgba(getComputedStyle(text).color), fill), fill);
       if (ratio < minimum) {
         found.push(`${text.parentElement!.parentElement!.className} ${text.textContent}: ${ratio.toFixed(2)}:1, minimum ${minimum}:1`);
       }
@@ -1696,53 +1724,7 @@ async function expectPaletteFocus(page: Page): Promise<void> {
       await expectFocused(page, item, `${selector} selected=${selected}`);
       await settleTransitions(page);
       const failures = await item.evaluate((element, rest) => {
-        const canvas = document.createElement('canvas');
-        canvas.width = canvas.height = 1;
-        const context = canvas.getContext('2d', { willReadFrequently: true });
-        if (!context) {
-          throw new Error('Canvas color conversion is unavailable');
-        }
-        /**
-         * Converts a browser-resolved color to straight sRGB and alpha.
-         * @param color - Computed CSS color.
-         * @returns RGBA channels in [0, 1].
-         */
-        function rgba(color: string): number[] {
-          context!.clearRect(0, 0, 1, 1);
-          context!.fillStyle = color;
-          context!.fillRect(0, 0, 1, 1);
-          return Array.from(context!.getImageData(0, 0, 1, 1).data, (channel) => channel / 255);
-        }
-        /**
-         * Composites a color over an opaque background.
-         * @param top - Foreground RGBA.
-         * @param bottom - Opaque background RGBA.
-         * @returns Composited opaque RGBA.
-         */
-        function over(top: number[], bottom: number[]): number[] {
-          return [0, 1, 2].map((i) => top[i] * top[3] + bottom[i] * (1 - top[3])).concat(1);
-        }
-        /**
-         * Resolves the actual fill through all transparent ancestors.
-         * @param element - Element whose background is needed.
-         * @returns Opaque composited sRGB background.
-         */
-        function background(element: Element | null): number[] {
-          if (!element) {
-            return [1, 1, 1, 1];
-          }
-          return over(rgba(getComputedStyle(element).backgroundColor), background(element.parentElement));
-        }
-        /**
-         * Calculates WCAG relative luminance.
-         * @param color - Opaque sRGB color.
-         * @returns Relative luminance.
-         */
-        function luminance(color: number[]): number {
-          return color.slice(0, 3).map((v) => v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4)
-            .reduce((sum, v, i) => sum + v * [0.2126, 0.7152, 0.0722][i], 0);
-        }
-
+        const { rgba, over, background, contrast, minimumFor } = (window as unknown as ColorWindow).a11yColor;
         const found: string[] = [];
         const style = getComputedStyle(element);
         const focused = `${style.outlineStyle}/${style.outlineWidth}/${style.outlineColor}/${style.outlineOffset}`;
@@ -1750,14 +1732,11 @@ async function expectPaletteFocus(page: Page): Promise<void> {
             parseFloat(style.outlineWidth) < 2 || focused === rest) {
           found.push('keyboard outline must be visible and distinct from rest');
         }
-        const minimum = getComputedStyle(document.documentElement)
-          .getPropertyValue('--supa-wcag-level').includes('AAA') ? 4.5 : 3;
+        const minimum = minimumFor('non-text');
         for (const [name, fill] of [
           ['item', background(element)], ['surround', background(element.parentElement)]
         ] as Array<[string, number[]]>) {
-          const ink = luminance(over(rgba(style.outlineColor), fill));
-          const bg = luminance(fill);
-          const ratio = (Math.max(ink, bg) + 0.05) / (Math.min(ink, bg) + 0.05);
+          const ratio = contrast(over(rgba(style.outlineColor), fill), fill);
           if (ratio < minimum) {
             found.push(`${name}: ${ratio.toFixed(3)}:1, minimum ${minimum}:1`);
           }
@@ -1778,26 +1757,145 @@ async function expectPaletteFocus(page: Page): Promise<void> {
 }
 
 /**
+ * Checks the range slider's painted pixels in forced colors: CanvasText thumb ink, both track
+ * edges beyond the thumb, and the Highlight progress fill before it. Each region is sampled away
+ * from the others, so one cannot stand in for another.
+ *
+ * @param page - Components page with forced colors active.
+ */
+async function expectForcedRangePixels(page: Page): Promise<void> {
+  await settleTransitions(page);
+  const range = page.locator('#demoRangeInput');
+  const geometry = await range.evaluate((el) => {
+    const input = el as HTMLInputElement;
+    // Resolve rem/calc tokens as rendered lengths, not parseFloat("1rem").
+    const probe = document.createElement('span');
+    input.parentElement!.append(probe);
+    probe.style.cssText = 'position: absolute; height: 0; pointer-events: none';
+    probe.style.width = getComputedStyle(input).getPropertyValue('--range-thumb-width');
+    const thumbWidth = probe.getBoundingClientRect().width;
+    probe.style.width = getComputedStyle(input).getPropertyValue('--range-thumb-height');
+    const thumbHeight = probe.getBoundingClientRect().width;
+    probe.style.width = getComputedStyle(input).getPropertyValue('--range-track-height');
+    const trackHeight = probe.getBoundingClientRect().width;
+    probe.remove();
+    const { system } = (window as unknown as ColorWindow).a11yColor;
+    const { width, height } = input.getBoundingClientRect();
+    const fraction = (input.valueAsNumber - Number(input.min || 0)) /
+      (Number(input.max || 100) - Number(input.min || 0));
+    return { width, height, thumbWidth, thumbHeight, trackHeight, fraction,
+      ink: system('CanvasText'), fill: system('Highlight'), paper: system('Canvas') };
+  });
+  const pixels = await range.screenshot({ animations: 'disabled' });
+  const visible = await page.evaluate(async ({ base64, geometry: g }) => {
+    const { rgba, over, decode } = (window as unknown as ColorWindow).a11yColor;
+    const { data, width, height } = await decode(base64);
+    // Convert resolved system colors to the same RGB bytes as the screenshot.
+    const bytes = (color: number[]): number[] => color.slice(0, 3).map((channel) => Math.round(channel * 255));
+    const ink = bytes(rgba(g.ink));
+    const paper = bytes(rgba(g.paper));
+    // Highlight may be translucent; progress is composited over Canvas.
+    const fill = bytes(over(rgba(g.fill), rgba(g.paper)));
+    const distance = (offset: number, color: number[]): number =>
+      color.reduce((sum, channel, i) => sum + (data[offset + i] - channel) ** 2, 0);
+    const thumbLeft = (g.width - g.thumbWidth) * g.fraction;
+    const thumbRight = thumbLeft + g.thumbWidth;
+    const trackTop = (g.height - g.trackHeight) / 2;
+    const trackBottom = trackTop + g.trackHeight;
+    const thumbTop = (g.height - g.thumbHeight) / 2;
+    // Only the thumb protrusions can contribute thumb ink. Track samples are
+    // at least one thumb-width away, excluding the rounded ends as well.
+    const filledStart = g.thumbWidth;
+    const filledEnd = thumbLeft - g.thumbWidth;
+    const emptyStart = thumbRight + g.thumbWidth;
+    const emptyEnd = g.width - g.thumbWidth;
+    if (g.thumbHeight <= g.trackHeight + 4 || filledEnd <= filledStart ||
+        emptyEnd <= emptyStart || !Number.isFinite(thumbLeft)) {
+      throw new Error(`forced-colors range invalid sampling geometry: ${JSON.stringify(g)}`);
+    }
+    let thumb = 0;
+    const topBorder = new Uint8Array(width);
+    const bottomBorder = new Uint8Array(width);
+    let progress = 0;
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const cssX = (x + .5) * g.width / width;
+        const cssY = (y + .5) * g.height / height;
+        const offset = (y * width + x) * 4;
+        if (cssX > thumbLeft + g.thumbWidth / 4 &&
+            cssX < thumbRight - g.thumbWidth / 4 &&
+            cssY > thumbTop + 1 && cssY < thumbTop + g.thumbHeight - 1 &&
+            (cssY < trackTop - 1 || cssY > trackBottom + 1) &&
+            // Bootstrap overlays a white gradient (up to 15%) on thumb ink.
+            ink.every((channel, i) => Math.abs(data[offset + i] - channel) <= 40)) {
+          thumb++;
+        }
+        // Squared RGB distances admit partially blended border ink while
+        // excluding Canvas and near-Canvas pixels that are closer to paper.
+        if (cssX > emptyStart && cssX < emptyEnd && distance(offset, ink) < distance(offset, paper)) {
+          // Compare pixel centers in CSS coordinates so these edge bands
+          // tolerate fractional placement at any device pixel ratio.
+          if (Math.abs(cssY - trackTop) <= 1.5) { topBorder[x] = 1; }
+          if (Math.abs(cssY - trackBottom) <= 1.5) { bottomBorder[x] = 1; }
+        }
+        if (cssX > filledStart && cssX < filledEnd &&
+            Math.abs(cssY - g.height / 2) < 1 &&
+            fill.every((channel, i) => Math.abs(data[offset + i] - channel) <= 1)) {
+          progress++;
+        }
+      }
+    }
+    let border = 0;
+    let borderSpan = 0;
+    for (let x = 0; x < width; x++) {
+      const cssX = (x + .5) * g.width / width;
+      if (cssX > emptyStart && cssX < emptyEnd) {
+        borderSpan++;
+        if (topBorder[x] && bottomBorder[x]) { border++; }
+      }
+    }
+    // Five columns give the 80% coverage threshold at least four samples.
+    if (borderSpan < 5) {
+      throw new Error(`forced-colors range invalid sampling geometry: ${JSON.stringify(g)}`);
+    }
+    // Require both edges in 80% of columns: allow antialiasing gaps without
+    // accepting stray ink, independently of how many device rows an edge fills.
+    const borderMinimum = borderSpan * .8;
+    // Require substantial ink in each independent region, not stray edge pixels.
+    const scale = width / g.width * height / g.height;
+    return { thumb, border, borderSpan, progress, thumbMinimum: 8 * scale,
+      borderMinimum,
+      progressMinimum: (filledEnd - filledStart) * scale };
+  }, { base64: pixels.toString('base64'), geometry });
+  const missing: string[] = [];
+  if (visible.thumb < visible.thumbMinimum) { missing.push('thumb'); }
+  if (visible.border < visible.borderMinimum) { missing.push('track border'); }
+  if (visible.progress < visible.progressMinimum) { missing.push('track progress fill'); }
+  if (missing.length) {
+    throw new Error(`forced-colors range missing ${missing.join(', ')} pixels: ` +
+      JSON.stringify(visible));
+  }
+}
+
+/** A state family `forcedColorsScenario` exercises; the scenario is named `forced-colors-<kind>`. */
+type ForcedColorsKind = 'controls-tabs' | 'palettes' | 'search';
+
+/**
  * Verifies forced-color ink and selection cues against browser-resolved system colors.
  *
  * @param page - Page with forced colors active and the scenario's selected states visible.
  * @param kind - State family to inspect.
  */
-async function expectForcedColorCues(page: Page, kind: string): Promise<void> {
+async function expectForcedColorCues(page: Page, kind: ForcedColorsKind): Promise<void> {
   await settleTransitions(page);
   const failures = await page.evaluate((family) => {
     const problems: string[] = [];
     if (!matchMedia('(forced-colors: active)').matches) {
       throw new Error('Forced colors must be active');
     }
-    const probe = document.createElement('span');
-    document.body.append(probe);
-    const systemColor = (name: string): string => {
-      probe.style.color = name;
-      return getComputedStyle(probe).color;
-    };
-    const ink = systemColor('CanvasText');
-    const highlight = systemColor('Highlight');
+    const { system } = (window as unknown as ColorWindow).a11yColor;
+    const ink = system('CanvasText');
+    const highlight = system('Highlight');
     if (family === 'controls-tabs') {
       for (const selector of ['#checkMermaid', '#switchCopyBtn']) {
         const input = document.querySelector<HTMLInputElement>(selector)!;
@@ -1843,7 +1941,6 @@ async function expectForcedColorCues(page: Page, kind: string): Promise<void> {
         problems.push(`${selector}: selected outline must differ and resolve to Highlight`);
       }
     }
-    probe.remove();
     return problems;
   }, kind);
   if (failures.length) {
@@ -1892,7 +1989,7 @@ async function expectForcedColorCues(page: Page, kind: string): Promise<void> {
  * @param kind - State family to exercise.
  * @returns Scenario checking system-color cues before and after axe.
  */
-function forcedColorsScenario(kind: string): InteractionScenario {
+function forcedColorsScenario(kind: ForcedColorsKind): InteractionScenario {
   return {
     name: `forced-colors-${kind}`,
     page: kind === 'palettes' ? 'configuration.html' : 'components.html',
@@ -1930,133 +2027,7 @@ function forcedColorsScenario(kind: string): InteractionScenario {
     assertState: async (page) => {
       await expectForcedColorCues(page, kind);
       if (kind === 'controls-tabs') {
-        await settleTransitions(page);
-        const range = page.locator('#demoRangeInput');
-        const geometry = await range.evaluate((el) => {
-          const input = el as HTMLInputElement;
-          // Resolve rem/calc tokens as rendered lengths, not parseFloat("1rem").
-          const probe = document.createElement('span');
-          input.parentElement!.append(probe);
-          probe.style.cssText = 'position: absolute; height: 0; pointer-events: none';
-          probe.style.width = getComputedStyle(input).getPropertyValue('--range-thumb-width');
-          const thumbWidth = probe.getBoundingClientRect().width;
-          probe.style.width = getComputedStyle(input).getPropertyValue('--range-thumb-height');
-          const thumbHeight = probe.getBoundingClientRect().width;
-          probe.style.width = getComputedStyle(input).getPropertyValue('--range-track-height');
-          const trackHeight = probe.getBoundingClientRect().width;
-          probe.style.color = 'CanvasText';
-          const ink = getComputedStyle(probe).color;
-          probe.style.color = 'Canvas';
-          const paper = getComputedStyle(probe).color;
-          probe.style.color = 'Highlight';
-          const fill = getComputedStyle(probe).color;
-          probe.remove();
-          const {width, height} = input.getBoundingClientRect();
-          const fraction = (input.valueAsNumber - Number(input.min || 0)) /
-            (Number(input.max || 100) - Number(input.min || 0));
-          return {width, height, thumbWidth, thumbHeight, trackHeight, fraction, ink, fill, paper};
-        });
-        const pixels = await range.screenshot({animations: 'disabled'});
-        const visible = await page.evaluate(async ({base64, geometry: g}) => {
-          const image = new Image();
-          image.src = `data:image/png;base64,${base64}`;
-          await image.decode();
-          const canvas = document.createElement('canvas');
-          canvas.width = image.width;
-          canvas.height = image.height;
-          const context = canvas.getContext('2d')!;
-          // Convert resolved system colors to the same RGB bytes as the screenshot.
-          context.fillStyle = g.ink;
-          context.fillRect(0, 0, 1, 1);
-          const ink = context.getImageData(0, 0, 1, 1).data.slice(0, 3);
-          // Highlight may be translucent; progress is composited over Canvas.
-          context.fillStyle = g.paper;
-          context.fillRect(0, 0, 1, 1);
-          const paper = context.getImageData(0, 0, 1, 1).data.slice(0, 3);
-          context.fillStyle = g.fill;
-          context.fillRect(0, 0, 1, 1);
-          const fill = context.getImageData(0, 0, 1, 1).data.slice(0, 3);
-          context.drawImage(image, 0, 0);
-          const data = context.getImageData(0, 0, image.width, image.height).data;
-          const thumbLeft = (g.width - g.thumbWidth) * g.fraction;
-          const thumbRight = thumbLeft + g.thumbWidth;
-          const trackTop = (g.height - g.trackHeight) / 2;
-          const trackBottom = trackTop + g.trackHeight;
-          const thumbTop = (g.height - g.thumbHeight) / 2;
-          // Only the thumb protrusions can contribute thumb ink. Track samples are
-          // at least one thumb-width away, excluding the rounded ends as well.
-          const filledStart = g.thumbWidth;
-          const filledEnd = thumbLeft - g.thumbWidth;
-          const emptyStart = thumbRight + g.thumbWidth;
-          const emptyEnd = g.width - g.thumbWidth;
-          if (g.thumbHeight <= g.trackHeight + 4 || filledEnd <= filledStart ||
-              emptyEnd <= emptyStart || !Number.isFinite(thumbLeft)) {
-            throw new Error(`forced-colors range invalid sampling geometry: ${JSON.stringify(g)}`);
-          }
-          let thumb = 0;
-          const topBorder = new Uint8Array(image.width);
-          const bottomBorder = new Uint8Array(image.width);
-          let progress = 0;
-          for (let y = 0; y < image.height; y++) {
-            for (let x = 0; x < image.width; x++) {
-              const cssX = (x + .5) * g.width / image.width;
-              const cssY = (y + .5) * g.height / image.height;
-              const offset = (y * image.width + x) * 4;
-              if (cssX > thumbLeft + g.thumbWidth / 4 &&
-                  cssX < thumbRight - g.thumbWidth / 4 &&
-                  cssY > thumbTop + 1 && cssY < thumbTop + g.thumbHeight - 1 &&
-                  (cssY < trackTop - 1 || cssY > trackBottom + 1) &&
-                  // Bootstrap overlays a white gradient (up to 15%) on thumb ink.
-                  ink.every((channel, i) => Math.abs(data[offset + i] - channel) <= 40)) {
-                thumb++;
-              }
-              // Squared RGB distances admit partially blended border ink while
-              // excluding Canvas and near-Canvas pixels that are closer to paper.
-              if (cssX > emptyStart && cssX < emptyEnd &&
-                  ink.reduce((sum, channel, i) => sum + (data[offset + i] - channel) ** 2, 0) <
-                  paper.reduce((sum, channel, i) => sum + (data[offset + i] - channel) ** 2, 0)) {
-                // Compare pixel centers in CSS coordinates so these edge bands
-                // tolerate fractional placement at any device pixel ratio.
-                if (Math.abs(cssY - trackTop) <= 1.5) { topBorder[x] = 1; }
-                if (Math.abs(cssY - trackBottom) <= 1.5) { bottomBorder[x] = 1; }
-              }
-              if (cssX > filledStart && cssX < filledEnd &&
-                  Math.abs(cssY - g.height / 2) < 1 &&
-                  fill.every((channel, i) => Math.abs(data[offset + i] - channel) <= 1)) {
-                progress++;
-              }
-            }
-          }
-          let border = 0;
-          let borderSpan = 0;
-          for (let x = 0; x < image.width; x++) {
-            const cssX = (x + .5) * g.width / image.width;
-            if (cssX > emptyStart && cssX < emptyEnd) {
-              borderSpan++;
-              if (topBorder[x] && bottomBorder[x]) { border++; }
-            }
-          }
-          // Five columns give the 80% coverage threshold at least four samples.
-          if (borderSpan < 5) {
-            throw new Error(`forced-colors range invalid sampling geometry: ${JSON.stringify(g)}`);
-          }
-          // Require both edges in 80% of columns: allow antialiasing gaps without
-          // accepting stray ink, independently of how many device rows an edge fills.
-          const borderMinimum = borderSpan * .8;
-          // Require substantial ink in each independent region, not stray edge pixels.
-          const scale = image.width / g.width * image.height / g.height;
-          return {thumb, border, borderSpan, progress, thumbMinimum: 8 * scale,
-            borderMinimum,
-            progressMinimum: (filledEnd - filledStart) * scale};
-        }, {base64: pixels.toString('base64'), geometry});
-        const missing: string[] = [];
-        if (visible.thumb < visible.thumbMinimum) { missing.push('thumb'); }
-        if (visible.border < visible.borderMinimum) { missing.push('track border'); }
-        if (visible.progress < visible.progressMinimum) { missing.push('track progress fill'); }
-        if (missing.length) {
-          throw new Error(`forced-colors range missing ${missing.join(', ')} pixels: ` +
-            JSON.stringify(visible));
-        }
+        await expectForcedRangePixels(page);
       }
       if (kind === 'palettes') {
         await expectPaletteFocus(page);
@@ -2105,13 +2076,9 @@ const FORCED_POPOVER: InteractionScenario = {
     await expectVisible(page.locator('.popover.show'), 'the open popover');
     const problems = await page.locator('.popover.show').evaluate((el) => {
       const found: string[] = [];
-      const probe = document.createElement('span');
-      probe.style.color = 'CanvasText';
-      document.body.append(probe);
-      const ink = getComputedStyle(probe).color;
-      probe.style.color = 'Canvas';
-      const paper = getComputedStyle(probe).color;
-      probe.remove();
+      const { system } = (window as unknown as ColorWindow).a11yColor;
+      const ink = system('CanvasText');
+      const paper = system('Canvas');
       for (const text of el.querySelectorAll('.popover-header, .popover-body')) {
         if (getComputedStyle(text).color !== ink || !text.textContent?.trim()) {
           found.push('popover text must retain system ink and content');
@@ -2324,26 +2291,11 @@ async function shootRegions(page: Page, regions: readonly CueRegion[]): Promise<
 async function visibleChange(page: Page, before: readonly string[], after: readonly string[]):
     Promise<number[]> {
   return page.evaluate(async ({ first, second, threshold }) => {
-    /**
-     * Decodes a screenshot into RGBA bytes.
-     * @param base64 - PNG screenshot.
-     * @returns Its pixels.
-     */
-    async function decode(base64: string): Promise<Uint8ClampedArray> {
-      const image = new Image();
-      image.src = `data:image/png;base64,${base64}`;
-      await image.decode();
-      const canvas = document.createElement('canvas');
-      canvas.width = image.width;
-      canvas.height = image.height;
-      const context = canvas.getContext('2d')!;
-      context.drawImage(image, 0, 0);
-      return context.getImageData(0, 0, image.width, image.height).data;
-    }
+    const { decode } = (window as unknown as ColorWindow).a11yColor;
     const shares: number[] = [];
     for (let index = 0; index < first.length; index++) {
-      const a = await decode(first[index]);
-      const b = await decode(second[index]);
+      const a = (await decode(first[index])).data;
+      const b = (await decode(second[index])).data;
       let changed = 0;
       for (let offset = 0; offset < a.length; offset += 4) {
         if ([0, 1, 2].some((channel) => Math.abs(a[offset + channel] - b[offset + channel]) > threshold)) {
@@ -2414,31 +2366,13 @@ function selectedTextRegions(element: Element): TextRegion[] {
  */
 async function expectPaintedTextContrast(page: Page, regions: readonly TextRegion[]): Promise<string[]> {
   const shots = await shootRegions(page, regions);
-  return page.evaluate(async ({ boxes, images }) => {
-    const canvas = document.createElement('canvas');
-    const context = canvas.getContext('2d', { willReadFrequently: true })!;
-    /**
-     * Calculates WCAG relative luminance.
-     * @param color - 8-bit sRGB channels.
-     * @returns Relative luminance.
-     */
-    function luminance(color: number[]): number {
-      return color.map((v) => v / 255).map((v) => v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4)
-        .reduce((sum, v, i) => sum + v * [0.2126, 0.7152, 0.0722][i], 0);
-    }
+  return page.evaluate(async ({ boxes, images, minimum }) => {
+    const { rgba, contrast, decode } = (window as unknown as ColorWindow).a11yColor;
     const found: string[] = [];
     for (const [index, box] of boxes.entries()) {
-      const image = new Image();
-      image.src = `data:image/png;base64,${images[index]}`;
-      await image.decode();
-      canvas.width = image.width;
-      canvas.height = image.height;
+      const { data } = await decode(images[index]);
       // Resolve the computed color to the screenshot's 8-bit sRGB.
-      context.fillStyle = box.ink;
-      context.fillRect(0, 0, 1, 1);
-      const ink = Array.from(context.getImageData(0, 0, 1, 1).data.slice(0, 3));
-      context.drawImage(image, 0, 0);
-      const data = context.getImageData(0, 0, image.width, image.height).data;
+      const ink = rgba(box.ink).slice(0, 3).map((channel) => Math.round(channel * 255));
       const counts = new Map<number, number>();
       for (let offset = 0; offset < data.length; offset += 4) {
         const key = (data[offset] << 16) | (data[offset + 1] << 8) | data[offset + 2];
@@ -2455,18 +2389,17 @@ async function expectPaintedTextContrast(page: Page, regions: readonly TextRegio
           inked++;
         }
       }
-      const [light, dark] = [luminance(ink), luminance(paper)].sort((a, b) => b - a);
-      const ratio = (light + 0.05) / (dark + 0.05);
-      if (ratio < 4.5) {
+      const ratio = contrast(ink.map((channel) => channel / 255), paper.map((channel) => channel / 255));
+      if (ratio < minimum) {
         found.push(`${box.name}: rgb(${ink.join(', ')}) text on painted rgb(${paper.join(', ')}) is ` +
-          `${ratio.toFixed(2)}:1, need 4.5:1`);
+          `${ratio.toFixed(2)}:1, need ${minimum}:1`);
       } else if (inked < data.length / 4 * .03) {
         // A computed color the screenshot does not show would make the ratio meaningless.
         found.push(`${box.name}: the computed text color rgb(${ink.join(', ')}) is not painted`);
       }
     }
     return found;
-  }, { boxes: [...regions], images: shots });
+  }, { boxes: [...regions], images: shots, minimum: WCAG_MINIMUMS.AA.text });
 }
 
 /**
@@ -2563,11 +2496,7 @@ async function expectForcedStateCues(page: Page): Promise<void> {
     });
   }
   const ink = await page.locator('.page-item.disabled > .page-link').first().evaluate((el) => {
-    const probe = document.createElement('span');
-    probe.style.color = 'GrayText';
-    document.body.append(probe);
-    const gray = getComputedStyle(probe).color;
-    probe.remove();
+    const gray = (window as unknown as ColorWindow).a11yColor.system('GrayText');
     const enabled = document.querySelector('.page-item:not(.disabled, .active) > .page-link')!;
     return { gray, disabled: getComputedStyle(el).color, enabled: getComputedStyle(enabled).color };
   });
@@ -2685,11 +2614,7 @@ function rangeTooltipScenario(forced: boolean): InteractionScenario {
         if (!matchMedia('(forced-colors: active)').matches) {
           return ['forced colors must be active'];
         }
-        const probe = document.createElement('span');
-        probe.style.color = 'CanvasText';
-        document.body.append(probe);
-        const ink = getComputedStyle(probe).color;
-        probe.remove();
+        const ink = (window as unknown as ColorWindow).a11yColor.system('CanvasText');
         const style = getComputedStyle(el);
         const found: string[] = [];
         // axe reads the text fill before `color`, so it must resolve to the forced ink too.
@@ -2718,13 +2643,13 @@ function rangeTooltipScenario(forced: boolean): InteractionScenario {
  */
 const SCENARIOS: readonly InteractionScenario[] = [
   FORCED_POPOVER,
-  ...['controls-tabs', 'palettes', 'search'].map(forcedColorsScenario),
+  ...(['controls-tabs', 'palettes', 'search'] as const).map(forcedColorsScenario),
   FORCED_STATES,
   ...[false, true].map(rangeTooltipScenario),
   tocLinkFocusScenario('toc-link-focus-mobile', MOBILE, 'reduce'),
-  tocLinkFocusScenario('toc-link-focus-tablet', { width: 1024, height: 768 }, 'reduce'),
+  tocLinkFocusScenario('toc-link-focus-tablet', TABLET_LANDSCAPE, 'reduce'),
   tocLinkFocusScenario('toc-link-focus-smooth-mobile', MOBILE, 'no-preference'),
-  tocLinkFocusScenario('toc-link-focus-smooth-tablet', { width: 1024, height: 768 }, 'no-preference'),
+  tocLinkFocusScenario('toc-link-focus-smooth-tablet', TABLET_LANDSCAPE, 'no-preference'),
   {
     name: 'control-boundaries-focus',
     page: 'components.html',
@@ -3519,6 +3444,7 @@ async function scan(browser: Browser, baseUrl: string, job: ScanJob): Promise<Fi
       },
       [job.polarity, job.palette] as [string, string]
     );
+    await context.addInitScript(installColorHelper, WCAG_MINIMUMS);
     const page = await context.newPage();
     await page.goto(`${baseUrl}/${job.page}`, { waitUntil: 'load' });
     await page.waitForSelector('html[data-supa-ready="true"]', {

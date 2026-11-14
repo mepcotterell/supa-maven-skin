@@ -23,6 +23,15 @@ export type Polarity = 'light' | 'dark';
  */
 export type ContrastRole = 'text' | 'non-text';
 
+/**
+ * Minimum contrast for each `--supa-wcag-level` and role, shared with the rendered-page checks in
+ * `a11y-check.ts`.
+ */
+export const WCAG_MINIMUMS: Readonly<Record<'AA' | 'AAA', Readonly<Record<ContrastRole, number>>>> = {
+  AA: { text: 4.5, 'non-text': 3.0 },
+  AAA: { text: 7.0, 'non-text': 4.5 }
+};
+
 /** OKLCH coordinates; `h` is NaN when the hue is missing (`none`). */
 export interface Oklch {
   l: number;
@@ -1375,8 +1384,7 @@ export function auditContrast(
   surfaces: readonly SurfaceSpec[] = SURFACE_AUDITS
 ): ContrastAuditResult {
   const wcagLevel: string = (tokens.get('--supa-wcag-level') ?? 'AA').replace(/["']/g, '').trim();
-  const minimum: Record<ContrastRole, number> =
-    wcagLevel === 'AAA' ? { text: 7.0, 'non-text': 4.5 } : { text: 4.5, 'non-text': 3.0 };
+  const minimum = WCAG_MINIMUMS[wcagLevel === 'AAA' ? 'AAA' : 'AA'];
   const where = `palette '${paletteId}' (${polarity})`;
   const violations: string[] = [];
   let checked = 0;
