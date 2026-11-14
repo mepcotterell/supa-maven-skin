@@ -3,7 +3,10 @@
 // Built on Bootstrap 6 (6.0.0-alpha.1) + Bootstrap Icons + Furo Design System
 // ============================================================================
 
-@use "bootstrap/scss/bootstrap";
+@use "breakpoints";
+@use "bootstrap/scss/bootstrap" with (
+  $breakpoints: breakpoints.$breakpoints
+);
 @use "bootstrap-icons/font/bootstrap-icons.scss" with (
   $bootstrap-icons-font-dir: "bootstrap-icons/font/fonts"
 );

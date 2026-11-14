@@ -358,7 +358,7 @@ The plan costs <span>$</span>5 per seat and <span>$</span>10 per admin.
 
 **Cause:** One of the following:
 
-- **The window is narrow.** Below `1024px` the left navigation moves into a drawer opened from the menu button in the top bar. Below `1280px` the "On this page" column moves into a drawer opened from the table-of-contents button. `<stickyContentHeader>` only pins the content header at `1024px` and wider, because the mobile header is already sticky below that width.
+- **The window is narrow.** Below `1024px` the left navigation moves into a drawer opened from the menu button in the top bar. Below `1280px` the "On this page" column moves into a drawer opened from the table-of-contents button. `<stickyContentHeader>` only pins the content header at `1024px` and wider, because the mobile header is already sticky below that width. These widths hold at the browser's default 16px font. The breakpoints are in `em`, so a reader who has set a larger default font gets the drawers on a wider window: at 32px, everything below `2048px` and `2560px`.
 - **The page has no section headings.** The table of contents lists `h2` headings and deeper, down to `<tocMaxDepth>` (default `4`). A page with only a title has no table of contents, and its table-of-contents buttons are hidden.
 - **The column is turned off.** `<tocSidebar>false</tocSidebar>` removes it on every page.
 

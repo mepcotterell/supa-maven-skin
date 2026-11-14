@@ -1,3 +1,5 @@
+@use "breakpoints" as bp;
+
 // ============================================================================
 // Furo 3-Column Layout Architecture
 // Left Sidebar (256px on lg+) | Center Article (56rem max) | Right TOC (224px on xl+)
@@ -78,17 +80,17 @@ body.supa-body {
   backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--color-background-border);
 
-  @media (width >= 576px) {
+  @media (width >= bp.$sm) {
     padding: 0 1.25rem;
     gap: 0.75rem;
   }
 
-  @media (width >= 1024px) {
+  @media (width >= bp.$lg) {
     display: none !important;
   }
 
   .supa-palette-picker {
-    @media (width < 768px) {
+    @media (width < bp.$md) {
       display: none !important;
     }
   }
@@ -113,7 +115,7 @@ body.supa-body {
   gap: 0.25rem;
   flex: 0 0 auto;
 
-  @media (width >= 576px) {
+  @media (width >= bp.$sm) {
     gap: 0.375rem;
   }
 }
@@ -389,7 +391,7 @@ dialog[data-bs-backdrop="false"]::backdrop {
 .supa-sidebar-column {
   flex: 0 0 auto;
 
-  @media (width >= 1024px) {
+  @media (width >= bp.$lg) {
     position: sticky;
     top: 0;
     align-self: flex-start;
@@ -408,7 +410,7 @@ dialog[data-bs-backdrop="false"]::backdrop {
   --drawer-width: 18rem;
   --drawer-bg: var(--color-background-secondary);
 
-  @media (width >= 1024px) {
+  @media (width >= bp.$lg) {
     flex: 1 1 100%;
     min-height: 0;
     max-height: 100% !important;
@@ -423,7 +425,7 @@ dialog[data-bs-backdrop="false"]::backdrop {
   }
 
   .supa-drawer-header {
-    @media (width >= 1024px) {
+    @media (width >= bp.$lg) {
       display: none !important;
     }
   }
@@ -467,20 +469,20 @@ dialog[data-bs-backdrop="false"]::backdrop {
   display: flex;
   flex-direction: column;
 
-  @media (width >= 576px) {
+  @media (width >= bp.$sm) {
     padding: 0 1.5rem;
   }
 
-  @media (width >= 768px) {
+  @media (width >= bp.$md) {
     padding: 0 2.5rem;
   }
 
-  @media (width >= 1024px) {
+  @media (width >= bp.$lg) {
     max-width: min(100%, calc(var(--supa-content-max-width) + 5rem));
     padding: 0 2.5rem;
   }
 
-  @media (width >= 1280px) {
+  @media (width >= bp.$xl) {
     max-width: min(100%, calc(var(--supa-content-max-width) + 6rem));
     padding: 0 3rem; // Matches Bootstrap 6 Docs --bs-gutter-x: 3rem
   }
@@ -498,7 +500,7 @@ dialog[data-bs-backdrop="false"]::backdrop {
   border-bottom: 1px solid var(--color-background-border);
   font-size: 0.75rem;
 
-  @media (width >= 768px) {
+  @media (width >= bp.$md) {
     gap: 1rem;
     min-height: 3.5rem;
     padding: 0.75rem 0;
@@ -508,17 +510,17 @@ dialog[data-bs-backdrop="false"]::backdrop {
 
   .supa-palette-picker,
   .supa-theme-toggle {
-    @media (width < 1024px) {
+    @media (width < bp.$lg) {
       display: none !important;
     }
   }
 
   .supa-toc-drawer-trigger {
-    @media (width < 1024px) {
+    @media (width < bp.$lg) {
       display: none !important;
     }
 
-    @media (width >= 1280px) {
+    @media (width >= bp.$xl) {
       display: none !important;
     }
   }
@@ -529,7 +531,7 @@ dialog[data-bs-backdrop="false"]::backdrop {
 // Negative inline margins bleed the translucent background across the article
 // gutter so scrolled prose never peeks out beside the bar.
 .supa-sticky-content-header .supa-content-header {
-  @media (width >= 1024px) {
+  @media (width >= bp.$lg) {
     position: sticky;
     top: 0;
     z-index: 1010; // Below back-to-top (1015) and mobile header (1020); drawers/dialogs use the top layer
@@ -540,7 +542,7 @@ dialog[data-bs-backdrop="false"]::backdrop {
     backdrop-filter: blur(10px);
   }
 
-  @media (width >= 1280px) {
+  @media (width >= bp.$xl) {
     margin-inline: -3rem;
     padding-inline: 3rem;
   }
@@ -620,7 +622,7 @@ dialog[data-bs-backdrop="false"]::backdrop {
 .supa-toc-column {
   flex: 0 0 auto;
 
-  @media (width >= 1280px) {
+  @media (width >= bp.$xl) {
     position: sticky;
     top: 0;
     align-self: flex-start;
@@ -633,7 +635,7 @@ dialog[data-bs-backdrop="false"]::backdrop {
   }
 
   &.is-empty {
-    @media (width >= 1280px) {
+    @media (width >= bp.$xl) {
       visibility: hidden;
     }
   }
@@ -643,7 +645,7 @@ dialog[data-bs-backdrop="false"]::backdrop {
   --drawer-width: 16.5rem;
   --drawer-bg: var(--color-background-primary);
 
-  @media (width >= 1280px) {
+  @media (width >= bp.$xl) {
     flex: 1 1 100%;
     min-height: 0;
     max-height: 100% !important;
@@ -658,7 +660,7 @@ dialog[data-bs-backdrop="false"]::backdrop {
   }
 
   .supa-drawer-header {
-    @media (width >= 1280px) {
+    @media (width >= bp.$xl) {
       display: none !important;
     }
   }
@@ -666,7 +668,7 @@ dialog[data-bs-backdrop="false"]::backdrop {
 
 // Override Bootstrap 6 @layer components .lg:drawer / .xl:drawer !important rules
 @layer base {
-  @media (width >= 1024px) {
+  @media (width >= bp.$lg) {
     .supa-sidebar-drawer.lg\:drawer {
       position: sticky !important;
       top: 0 !important;
@@ -675,7 +677,7 @@ dialog[data-bs-backdrop="false"]::backdrop {
     }
   }
 
-  @media (width >= 1280px) {
+  @media (width >= bp.$xl) {
     .supa-toc-drawer.xl\:drawer {
       position: sticky !important;
       top: 0 !important;
@@ -700,7 +702,7 @@ dialog[data-bs-backdrop="false"]::backdrop {
     overflow: hidden;
   }
 
-  @media (width >= 768px) {
+  @media (width >= bp.$md) {
     --dialog-margin: 1.75rem;
     margin-top: 10vh;
     max-height: 75vh;
@@ -858,7 +860,7 @@ dialog[data-bs-backdrop="false"]::backdrop {
   font-size: 0.75rem;
   color: var(--color-foreground-muted);
 
-  @media (width >= 576px) {
+  @media (width >= bp.$sm) {
     display: flex;
   }
 }
@@ -925,7 +927,7 @@ dialog[data-bs-backdrop="false"]::backdrop {
     border-color: var(--color-brand-primary);
   }
 
-  @media (width < 576px) {
+  @media (width < bp.$sm) {
     padding: 0.5rem;
 
     span {

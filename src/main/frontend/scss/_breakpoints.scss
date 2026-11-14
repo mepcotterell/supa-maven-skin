@@ -1,0 +1,31 @@
+// ============================================================================
+// Layout Breakpoints, Sized to the Reader's Font
+//
+// In em rather than px. In a media query, 1em is the browser's default font
+// size, not the page's, so at the usual 16px default these are Bootstrap 6's own
+// widths (64em = 1024px) and the layout does not move. A reader who raises the
+// default font gets the layout of a narrower screen, as page zoom gives, instead
+// of rem-wide sidebar and TOC columns squeezing the article between px
+// breakpoints: at a 32px default, a 1280px window is 40em, below `lg`, so the
+// article spans it and both columns become drawers.
+//
+// main.scss hands $breakpoints to Bootstrap, so its responsive classes
+// (`lg:drawer`, `xl:d-none`, and an author's `md:col-6`) switch at the same
+// widths as the skin's own media queries, and index.ts asks matchMedia the
+// same `lg` and `xl` queries before it closes a drawer.
+// ============================================================================
+
+$sm: 36em;  // 576px at 16px
+$md: 48em;  // 768px
+$lg: 64em;  // 1024px: the sidebar is inline from here up (index.ts SIDEBAR_INLINE_EM)
+$xl: 80em;  // 1280px: the TOC is inline from here up (index.ts TOC_INLINE_EM)
+$xxl: 96em; // 1536px
+
+$breakpoints: (
+  xs: 0,
+  sm: $sm,
+  md: $md,
+  lg: $lg,
+  xl: $xl,
+  2xl: $xxl
+);

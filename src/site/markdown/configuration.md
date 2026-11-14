@@ -192,7 +192,7 @@ Controls the initial Light/Dark polarity, accessible color scheme preset, and le
 | :--- | :--- | :--- |
 | `<defaultTheme>` | `auto` | Initial light/dark polarity before user selection (`auto`, `light`, or `dark`). |
 | `<colorScheme>` | `furo` | Default accessible color scheme preset (`furo`, `bootstrap`, `modus`, `modus-tinted`, `modus-deuteranopia`, or `modus-tritanopia`). |
-| `<colorSchemeSelector>` | `true` | Render the accessible color scheme selector: a menu in the content header utility bar (`lg+`) and the mobile header (`768px`&ndash;`1023px`), and a native `<select>` in the sidebar drawer's Appearance footer (below `lg`). The menu trigger shows the active scheme's name, such as `Furo (AA)` (the configured `<colorScheme>` until a reader picks another), and its accessible name and tooltip are `Color scheme: Furo (AA)`, so voice-control users can say what they see (WCAG 2.5.3 Label in Name). |
+| `<colorSchemeSelector>` | `true` | Render the accessible color scheme selector: a menu in the content header utility bar (`lg+`) and the mobile header (`md` to `lg`, `768px`&ndash;`1023px` at the default 16px font), and a native `<select>` in the sidebar drawer's Appearance footer (below `lg`). The menu trigger shows the active scheme's name, such as `Furo (AA)` (the configured `<colorScheme>` until a reader picks another), and its accessible name and tooltip are `Color scheme: Furo (AA)`, so voice-control users can say what they see (WCAG 2.5.3 Label in Name). |
 | `<sidebarBrandAlign>` | `center` | Horizontal alignment of the sidebar brand logo, project title, and version badge (`center`, `left` / `start`, or `right` / `end`). |
 | `<sidebarHideName>` | `false` | Hide the project name text under the logo in the left sidebar. |
 | `<lightLogo>` | *(empty)* | Relative path or URL to the logo shown when the resolved theme is light. |
@@ -218,7 +218,7 @@ Configures the top announcement banner, breadcrumbs, left sidebar menu tree, rig
 | :--- | :--- | :--- |
 | `<announcement>` | *(empty)* | Top announcement banner HTML rendered above the page header. |
 | `<breadcrumb>` | `true` | Render the breadcrumb navigation trail in the top content utility bar. |
-| `<stickyContentHeader>` | `false` | Pin the top content utility bar (breadcrumbs, source links, palette picker, theme toggle) to the top of the viewport on `lg+` (`1024px`) screens. Adds `.supa-sticky-content-header` to `<body>`; heading anchors and ScrollSpy offset by `--supa-content-header-height`. Below `lg`, the mobile header is already sticky. |
+| `<stickyContentHeader>` | `false` | Pin the top content utility bar (breadcrumbs, source links, palette picker, theme toggle) to the top of the viewport on `lg+` screens (`64em`, `1024px` at the default 16px font). Adds `.supa-sticky-content-header` to `<body>`; heading anchors and ScrollSpy offset by `--supa-content-header-height`. Below `lg`, the mobile header is already sticky. |
 | `<sidebarCollapseDepth>` | `1` | Menu nesting depth expanded by default in the left sidebar (`<details open>`). |
 | `<tocSidebar>` | `true` | Enable the right-hand "On this page" table of contents column and right drawer (`#supaTocDrawer`). |
 | `<tocTitle>` | `On this page` | Heading label for the right-hand table of contents. Also names the TOC landmark (`<aside>`) and its `<nav>` for screen readers. A shorthand for the `tocTitle` [label](#labels): when both are set, `<labels><tocTitle>` wins. The TOC drawer buttons are named by the separate `tocToggle` label, so a translated site sets that too. |

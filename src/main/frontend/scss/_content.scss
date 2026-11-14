@@ -1,4 +1,5 @@
 @use "sass:list";
+@use "breakpoints" as bp;
 
 // Follow Bootstrap's inherited theme context, including resets and themes inside a reset.
 $-themes: ();
@@ -36,7 +37,7 @@ $-themes: ();
     scroll-margin-top: calc(var(--supa-header-height) + 1.25rem);
 
     .supa-sticky-content-header & {
-      @media (width >= 1024px) {
+      @media (width >= bp.$lg) {
         scroll-margin-top: calc(var(--supa-content-header-height) + 1.25rem);
       }
     }
@@ -58,7 +59,7 @@ $-themes: ();
 
     // Clear the pinned content header when <stickyContentHeader> is enabled (lg+)
     .supa-sticky-content-header & {
-      @media (width >= 1024px) {
+      @media (width >= bp.$lg) {
         scroll-margin-top: calc(var(--supa-content-header-height) + 1.25rem);
       }
     }
@@ -264,7 +265,7 @@ $-themes: ();
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
 
-    @media (width >= 576px) {
+    @media (width >= bp.$sm) {
       padding: 1.25rem;
     }
 
@@ -622,7 +623,7 @@ $-themes: ();
     }
   }
 
-  @media (hover: none), (width < 768px) {
+  @media (hover: none), (width < bp.$md) {
     .supa-copy-btn {
       opacity: 1;
     }
@@ -791,7 +792,7 @@ $-themes: ();
   padding-top: 1.75rem;
   border-top: 1px solid var(--color-background-border);
 
-  @media (width >= 576px) {
+  @media (width >= bp.$sm) {
     gap: 1rem;
   }
 }
@@ -811,7 +812,7 @@ $-themes: ();
   max-width: calc(50% - 0.5rem);
   min-width: 12rem;
 
-  @media (width >= 576px) {
+  @media (width >= bp.$sm) {
     gap: 0.875rem;
     padding: 0.875rem 1.125rem;
   }
@@ -862,7 +863,7 @@ $-themes: ();
   justify-content: flex-end;
 }
 
-@media (width < 576px) {
+@media (width < bp.$sm) {
   .supa-prev-page,
   .supa-next-page {
     max-width: 100%;

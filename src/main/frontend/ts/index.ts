@@ -31,6 +31,35 @@ import { initTheme } from './theme';
 import { findFragmentTarget, initTocAndScrollSpy } from './toc';
 
 /**
+ * Viewport width, in em, from which the sidebar is inline rather than a drawer: Bootstrap's `lg`
+ * in `_breakpoints.scss`, where `lg:drawer` on `#supaSidebarDrawer` switches.
+ */
+export const SIDEBAR_INLINE_EM = 64;
+
+/**
+ * Viewport width, in em, from which the TOC is inline rather than a drawer: Bootstrap's `xl` in
+ * `_breakpoints.scss`, where `xl:drawer` on `#supaTocDrawer` switches.
+ */
+export const TOC_INLINE_EM = 80;
+
+/**
+ * Tells whether a drawer's column is laid out inline, asking the stylesheet's own em media query.
+ * In a media query, 1em is the browser's default font size, so a px width compared with
+ * `innerWidth` would disagree with the stylesheet once a reader raises it: at a 32 px default, a
+ * 1280 px window is 40em wide, and the stylesheet shows both columns as drawers.
+ *
+ * @param minEm - `SIDEBAR_INLINE_EM` or `TOC_INLINE_EM`.
+ * @returns Whether the viewport is at least `minEm` wide; without `matchMedia`, at the 16 px
+ *     default font.
+ */
+function isInline(minEm: number): boolean {
+  if (typeof window.matchMedia === 'function') {
+    return window.matchMedia(`(width >= ${minEm}em)`).matches;
+  }
+  return window.innerWidth >= minEm * 16;
+}
+
+/**
  * Finds the element a link leads to on the current page.
  *
  * @param link - Navigation link.
@@ -149,7 +178,7 @@ export function initDrawers(): void {
     tocDrawer.setAttribute('data-supa-drawer-bound', 'true');
     tocDrawer.addEventListener('click', (e) => {
       const link = (e.target as HTMLElement | null)?.closest<HTMLAnchorElement>('a.nav-link');
-      if (link && window.innerWidth < 1280 && tocDrawer.open) {
+      if (link && !isInline(TOC_INLINE_EM) && tocDrawer.open) {
         closeDrawerForLink(tocDrawer, link);
       }
     });
@@ -162,7 +191,7 @@ export function initDrawers(): void {
       if (!link) {
         return;
       }
-      if (window.innerWidth < 1024 && sidebarDrawer.open) {
+      if (!isInline(SIDEBAR_INLINE_EM) && sidebarDrawer.open) {
         closeDrawerForLink(sidebarDrawer, link);
       } else {
         focusInlineLinkTarget(e, link);

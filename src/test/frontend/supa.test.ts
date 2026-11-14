@@ -7,7 +7,7 @@ import Dialog from 'bootstrap/js/dist/dialog.js';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { parse as parseCss } from 'postcss';
-import { compile } from 'sass-embedded';
+import { compile, compileString } from 'sass-embedded';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   BUNDLED_LICENSES,
@@ -61,7 +61,9 @@ import {
   initBackToTop,
   initDrawers,
   initSupaSkin,
-  SUPA_READY_ATTRIBUTE
+  SIDEBAR_INLINE_EM,
+  SUPA_READY_ATTRIBUTE,
+  TOC_INLINE_EM
 } from '../../main/frontend/ts/index';
 import { fillLabel, getLabel, LABEL_DEFAULTS, warnUnknownLabels } from '../../main/frontend/ts/labels';
 import { initOptionalLibraries, isModuleUrl, PINNED_ASSETS, pinnedIntegrity } from '../../main/frontend/ts/optional';
@@ -643,6 +645,27 @@ describe('Supa Maven Skin Frontend Modules', () => {
   });
 
   describe('Bootstrap 6 Plugins, Drawers & .prose Isolation', () => {
+    /**
+     * Simulates a viewport for the drawers' breakpoint queries: `innerWidth`, and a `matchMedia`
+     * that evaluates `(width >= <n>em)` as a browser does, where 1em is the browser's default font
+     * size. Every other query does not match, so a drawer threshold written another way fails.
+     *
+     * @param width - Viewport width, in CSS px.
+     * @param defaultFontPx - Browser's default font size, in CSS px.
+     */
+    const stubViewport = (width: number, defaultFontPx = 16): void => {
+      vi.stubGlobal('innerWidth', width);
+      vi.stubGlobal('matchMedia', (query: string): MediaQueryList => {
+        const minEm = /^\(width >= (\d+(?:\.\d+)?)em\)$/.exec(query);
+        return {
+          matches: minEm !== null && width >= Number(minEm[1]) * defaultFontPx,
+          media: query,
+          addEventListener: () => undefined,
+          removeEventListener: () => undefined
+        } as unknown as MediaQueryList;
+      });
+    };
+
     it('exposes Bootstrap 6 plugins on window.bootstrap (lazy ones once loaded) and isolates components from .prose', async () => {
       const container = document.createElement('div');
       container.innerHTML = `
@@ -892,7 +915,7 @@ describe('Supa Maven Skin Frontend Modules', () => {
         <button id="trigger">Open</button>
         <dialog id="${id}" class="drawer"><a class="nav-link supa-nav-link" href="#usage">Usage</a></dialog>
         <main id="supa-main-content"><h2 id="usage">Usage</h2><a href="#next">Continue</a></main>`;
-      vi.stubGlobal('innerWidth', 390);
+      stubViewport(390);
       initDrawers();
       const drawer = document.getElementById(id) as HTMLDialogElement;
       const trigger = document.getElementById('trigger')!;
@@ -963,14 +986,15 @@ describe('Supa Maven Skin Frontend Modules', () => {
        * @param href - Link `href` as authored.
        * @param innerWidth - Viewport width to simulate.
        * @param headingAttributes - Extra attributes for the destination heading.
+       * @param defaultFontPx - Browser's default font size to simulate.
        * @returns The elements involved and the `hide()` stub.
        */
-      const mount = (id: string, href: string, innerWidth = 390, headingAttributes = '') => {
+      const mount = (id: string, href: string, innerWidth = 390, headingAttributes = '', defaultFontPx = 16) => {
         document.body.innerHTML = `
           <button id="trigger">Open</button>
           <dialog id="${id}" class="drawer"><a class="nav-link supa-nav-link" href="${href}">Usage</a></dialog>
           <main id="supa-main-content"><h2 id="usage" ${headingAttributes}>Usage</h2></main>`;
-        vi.stubGlobal('innerWidth', innerWidth);
+        stubViewport(innerWidth, defaultFontPx);
         initDrawers();
         const drawer = document.getElementById(id) as HTMLDialogElement;
         const link = drawer.querySelector('a') as HTMLAnchorElement;
@@ -1117,18 +1141,51 @@ describe('Supa Maven Skin Frontend Modules', () => {
       });
 
       describe('viewport breakpoints', () => {
+        // The drawers switch at em widths, as the stylesheet does: 64em (lg) and 80em (xl) are
+        // 1024 and 1280 px at the 16 px default font, and twice that at 32 px, where a 1280 px
+        // window lays out as a 640 px one, with both columns in drawers.
         it.each([
-          ['supaTocDrawer', 1279, true],
-          ['supaTocDrawer', 1280, false],
-          ['supaSidebarDrawer', 1023, true],
-          ['supaSidebarDrawer', 1024, false]
-        ])('%s at innerWidth %i closes on link activation: %s', async (id, width, closes) => {
-          const { drawer, link, hide, instance } = mount(id, '#usage', width);
+          ['supaTocDrawer', 1279, 16, true],
+          ['supaTocDrawer', 1280, 16, false],
+          ['supaSidebarDrawer', 1023, 16, true],
+          ['supaSidebarDrawer', 1024, 16, false],
+          ['supaTocDrawer', 2559, 32, true],
+          ['supaTocDrawer', 2560, 32, false],
+          ['supaSidebarDrawer', 2047, 32, true],
+          ['supaSidebarDrawer', 2048, 32, false],
+          ['supaTocDrawer', 1440, 32, true],
+          ['supaSidebarDrawer', 1440, 32, true]
+        ])('%s at %ipx with a %ipx default font closes on link activation: %s', async (id, width, fontPx, closes) => {
+          const { drawer, link, hide, instance } = mount(id, '#usage', width, '', fontPx);
           drawer.setAttribute('open', '');
           link.click();
           expect(hide).toHaveBeenCalledTimes(closes ? 1 : 0);
           await Promise.resolve();
           instance.dispose();
+        });
+
+        it.each([
+          ['supaTocDrawer', 1279, true],
+          ['supaTocDrawer', 1280, false],
+          ['supaSidebarDrawer', 1023, true],
+          ['supaSidebarDrawer', 1024, false]
+        ])('%s without matchMedia at innerWidth %i closes on link activation: %s', async (id, width, closes) => {
+          const { drawer, link, hide, instance } = mount(id, '#usage', width);
+          vi.stubGlobal('matchMedia', undefined);
+          drawer.setAttribute('open', '');
+          link.click();
+          expect(hide).toHaveBeenCalledTimes(closes ? 1 : 0);
+          await Promise.resolve();
+          instance.dispose();
+        });
+
+        it('asks for the lg and xl widths that the stylesheet switches the columns at', () => {
+          const css = compileString(
+            '@use "breakpoints"; a { lg: breakpoints.$lg; xl: breakpoints.$xl; }',
+            { loadPaths: [resolve('src/main/frontend/scss')] }
+          ).css;
+          expect(css).toContain(`lg: ${SIDEBAR_INLINE_EM}em;`);
+          expect(css).toContain(`xl: ${TOC_INLINE_EM}em;`);
         });
 
         it.each(['supaTocDrawer', 'supaSidebarDrawer'])('%s does not hide a drawer that is not open', (id) => {
@@ -1159,7 +1216,7 @@ describe('Supa Maven Skin Frontend Modules', () => {
           document.body.innerHTML = `
             <dialog id="supaSidebarDrawer" class="lg:drawer" open><a class="supa-nav-link" href="${href}">Usage</a></dialog>
             <main id="supa-main-content"><h2 id="usage">Usage</h2><a id="later" href="#next">Later</a></main>`;
-          vi.stubGlobal('innerWidth', 1440);
+          stubViewport(1440);
           initDrawers();
           return {
             link: document.querySelector<HTMLAnchorElement>('#supaSidebarDrawer a')!,

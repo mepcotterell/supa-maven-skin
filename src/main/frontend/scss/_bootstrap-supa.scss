@@ -1,3 +1,5 @@
+@use "breakpoints" as bp;
+
 // ============================================================================
 // Bootstrap 6 Component Integration & .prose Isolation for Supa Maven Skin
 // ============================================================================
@@ -267,7 +269,7 @@ dialog.drawer:not([open]) {
   display: grid;
   width: 100%;
 
-  @media (width < 576px) {
+  @media (width < bp.$sm) {
     grid-auto-flow: row;
     grid-auto-columns: unset;
 
@@ -297,7 +299,7 @@ dialog.drawer:not([open]) {
     }
   }
 
-  @media (width >= 576px) {
+  @media (width >= bp.$sm) {
     grid-auto-columns: minmax(0, 1fr);
 
     .stepper-item {
@@ -314,7 +316,7 @@ dialog.drawer:not([open]) {
 }
 
 // Scale 6-digit OTP inputs cleanly on narrow mobile viewports (< 576px)
-@media (width < 576px) {
+@media (width < bp.$sm) {
   .otp {
     --otp-size: clamp(2rem, 11vw, 2.5rem);
     --otp-gap: 0.375rem;
@@ -483,7 +485,7 @@ dialog.drawer:not([open]) {
   min-width: 0;
   max-width: 100%;
 
-  @media (width >= 576px) {
+  @media (width >= bp.$sm) {
     padding: 1.5rem;
   }
 }
