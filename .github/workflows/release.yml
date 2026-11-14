@@ -51,7 +51,8 @@ jobs:
           name: verified-classes
           path: target/classes
           if-no-files-found: error
-          retention-days: 1
+          # Long enough to re-run only a failed publish job after a delay.
+          retention-days: 7
 
   # Signs and publishes the verified output. Only Maven's jar, source, gpg, and
   # central-publishing goals run after the key import; naming goals instead of a lifecycle phase
