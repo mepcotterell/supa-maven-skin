@@ -2665,6 +2665,31 @@ describe('Supa Maven Skin Frontend Modules', () => {
         expect(click).toHaveBeenCalledOnce();
       });
 
+      it('ignores keys that confirm IME composition', () => {
+        const input = search('guide');
+        const options = Array.from(document.querySelectorAll<HTMLAnchorElement>('[role="option"]'));
+        const click = vi.fn((event: Event) => event.preventDefault());
+        options.forEach((option) => option.addEventListener('click', click));
+        const composing: KeyboardEventInit[] = [{ isComposing: true }, { keyCode: 229 }];
+        for (const init of composing) {
+          for (const key of ['ArrowDown', 'ArrowUp', 'Enter']) {
+            const event = new KeyboardEvent('keydown', { key, cancelable: true, ...init });
+            input.dispatchEvent(event);
+            expect(event.defaultPrevented).toBe(false);
+            expectActive(input, 0);
+          }
+        }
+        expect(click).not.toHaveBeenCalled();
+        const arrow = new KeyboardEvent('keydown', { key: 'ArrowDown', cancelable: true });
+        input.dispatchEvent(arrow);
+        expect(arrow.defaultPrevented).toBe(true);
+        expectActive(input, 1);
+        const enter = new KeyboardEvent('keydown', { key: 'Enter', cancelable: true });
+        input.dispatchEvent(enter);
+        expect(enter.defaultPrevented).toBe(true);
+        expect(click).toHaveBeenCalledOnce();
+      });
+
       it('resynchronizes expanded state when a dialog with retained results reopens', () => {
         const input = search('guide');
         expectActive(input, 0);

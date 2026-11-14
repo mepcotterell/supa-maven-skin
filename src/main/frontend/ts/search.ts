@@ -785,6 +785,11 @@ export function initSearch(): void {
   });
 
   inputEl.addEventListener('keydown', (e) => {
+    // An IME uses these keys to choose and confirm candidates; keyCode 229 is the
+    // legacy signal browsers send for the same keystrokes.
+    if (e.isComposing || e.keyCode === 229) {
+      return;
+    }
     const items = Array.from(
       resultsEl.querySelectorAll<HTMLAnchorElement>('.supa-search-result-item')
     );
