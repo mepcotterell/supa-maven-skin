@@ -32,7 +32,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Security
 
-- **Workflow Actions and Signing**: All GitHub Actions are pinned to verified commit SHAs; CI imports the signing key and configures publishing credentials only after verification under the existing SNAPSHOT publishing guard.
+- **Workflow Actions and Signing**: All GitHub Actions are pinned to verified commit SHAs. CI and release builds now run without the signing key, publishing credentials, or a persisted repository token; a separate job signs and publishes the verified build output without running npm, Vite, Vitest, Checkstyle, or the integration tests, and only the job that creates the GitHub Release can write to the repository.
 
 ## [0.2.0] - 2026-11-06
 

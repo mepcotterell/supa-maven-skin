@@ -22,3 +22,12 @@ npm run screenshots
 ```
 
 Update GitHub Actions pins by resolving the desired upstream tag to its full commit SHA (dereferencing annotated tags), and update the trailing release-version comment alongside the pin.
+
+## Publishing
+
+CI (SNAPSHOTs from `main`) and `release.yml` (tags `v*`) build and verify without secrets, then hand `target/classes` to a separate job that imports the signing key. That job names its Maven goals instead of running a lifecycle phase, so no npm, Vite, Vitest, Checkstyle, or Invoker execution runs with the key. When you add an execution to the `release` profile in `pom.xml`, add its goal to both publish commands. To try the publish step locally after `mvn clean verify`, without signing or uploading:
+
+```bash
+mvn -B -ntp -Prelease jar:jar source:jar-no-fork@attach-sources jar:jar@attach-javadocs \
+  gpg:sign@sign-artifacts central-publishing:publish -Dgpg.skip=true -DskipUpload=true
+```

@@ -26,6 +26,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Set up JDK ${{ matrix.java }}
         uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
@@ -46,6 +48,17 @@ jobs:
 
       - name: Build, lint, test, verify ITs, and generate site
         run: mvn -B -ntp clean install site
+
+      # target/classes is the skin JAR's content that the Invoker tests just verified. Upload it
+      # before the npm steps below run, for the publish-snapshot job to sign.
+      - name: Upload verified build output
+        if: matrix.java == '21' && github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: verified-classes
+          path: target/classes
+          if-no-files-found: error
+          retention-days: 1
 
       # Rendered-page WCAG checks need a real browser, so they run here instead of inside
       # `mvn verify` (consumer sites never need Chromium). They scan the target/site/ built above.
@@ -68,31 +81,6 @@ jobs:
       - name: Check rendered site accessibility (axe-core)
         if: matrix.java == '21'
         run: npm run test:a11y
-
-      # Import signing material only after verification, on the publishing path.
-      - name: Set up JDK 21 and GPG for SNAPSHOT publishing
-        if: matrix.java == '21' && github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
-        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
-        with:
-          distribution: temurin
-          java-version: '21'
-          server-id: sonatype-central
-          server-username-env-var: MAVEN_CENTRAL_USERNAME
-          server-password-env-var: MAVEN_CENTRAL_TOKEN
-          gpg-private-key: ${{ secrets.MAVEN_GPG_PRIVATE_KEY }}
-
-      - name: Publish SNAPSHOT to Maven Central
-        if: matrix.java == '21' && github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
-        env:
-          MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
-          MAVEN_CENTRAL_TOKEN: ${{ secrets.MAVEN_CENTRAL_TOKEN }}
-        run: |
-          PROJECT_VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
-          if [[ "$PROJECT_VERSION" == *-SNAPSHOT ]]; then
-            mvn -B -ntp deploy -Prelease -Dinvoker.skip=true
-          else
-            echo "Skipping snapshot deploy for non-SNAPSHOT version $PROJECT_VERSION"
-          fi
 
       - name: Configure GitHub Pages
         if: matrix.java == '21' && github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
@@ -120,3 +108,68 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
+
+  # Signs and publishes the verified SNAPSHOT in a fresh job, so no npm lifecycle script, Vite,
+  # Vitest, Checkstyle, or Invoker run shares a runner with the signing key. Only Maven's jar,
+  # source, gpg, and central-publishing goals run after the key import; naming goals instead of a
+  # lifecycle phase keeps the build's other executions out of this job.
+  publish-snapshot:
+    name: Publish SNAPSHOT to Maven Central
+    needs: verify
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # No Maven cache: a cache saved by a job that ran npm lifecycle scripts must not supply the
+      # plugins that run with the signing key.
+      - name: Set up JDK 21
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Check for a SNAPSHOT version
+        id: version
+        run: |
+          PROJECT_VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
+          if [[ "$PROJECT_VERSION" == *-SNAPSHOT ]]; then
+            echo "snapshot=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Skipping snapshot deploy for non-SNAPSHOT version $PROJECT_VERSION"
+            echo "snapshot=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Download verified build output
+        if: steps.version.outputs.snapshot == 'true'
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: verified-classes
+          path: target/classes
+
+      - name: Set up GPG and publishing credentials
+        if: steps.version.outputs.snapshot == 'true'
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: '21'
+          server-id: sonatype-central
+          server-username-env-var: MAVEN_CENTRAL_USERNAME
+          server-password-env-var: MAVEN_CENTRAL_TOKEN
+          gpg-private-key: ${{ secrets.MAVEN_GPG_PRIVATE_KEY }}
+
+      - name: Publish SNAPSHOT to Maven Central
+        if: steps.version.outputs.snapshot == 'true'
+        env:
+          MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+          MAVEN_CENTRAL_TOKEN: ${{ secrets.MAVEN_CENTRAL_TOKEN }}
+        run: >-
+          mvn -B -ntp -Prelease
+          jar:jar source:jar-no-fork@attach-sources jar:jar@attach-javadocs
+          gpg:sign@sign-artifacts central-publishing:publish

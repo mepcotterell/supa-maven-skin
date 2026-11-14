@@ -334,6 +334,9 @@
 
   <profiles>
     <profile>
+      <!-- The publish jobs in .github/workflows/ci.yml and release.yml run these executions by
+           goal and execution id on already-verified target/classes, so the signing key never
+           shares a job with npm or the tests. Add any new execution's goal to both commands. -->
       <id>release</id>
       <build>
         <plugins>
