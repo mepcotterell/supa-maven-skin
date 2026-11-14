@@ -37,7 +37,7 @@ The six color schemes:
 
 ## Install
 
-Requires `maven-site-plugin` 3.21.0 or later. Add the skin to `src/site/site.xml`:
+Requires `maven-site-plugin` 3.21.0 or later. It is tested with JDK 21 and 25 and Maven 3.9.x; the [tutorial](https://mepcotterell.github.io/supa-maven-skin/getting-started.html#prerequisites) explains how that differs from the plugins' own minimums. Add the skin to `src/site/site.xml`:
 
 ```xml
 <skin>

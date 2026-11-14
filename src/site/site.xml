@@ -123,9 +123,6 @@
     <menu name="Explanation">
       <item name="Architecture &amp; Color System" href="architecture.html" />
     </menu>
-    <menu name="Project Management">
-      <item name="CI Management" href="ci-management.html" />
-    </menu>
     <menu ref="reports" inherit="bottom" />
   </body>
 </site>

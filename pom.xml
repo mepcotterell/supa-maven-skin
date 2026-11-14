@@ -419,7 +419,6 @@
         <reportSets>
           <reportSet>
             <reports>
-              <report>index</report>
               <report>summary</report>
               <report>licenses</report>
               <report>team</report>

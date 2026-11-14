@@ -402,6 +402,82 @@ function validateScenarioCatalog(): void {
   }
 }
 
+/**
+ * Finds sidebar entries that would repeat a page Maven already lists. A project-info report named
+ * in `pom.xml` gets its own item under the "Project Information" menu (`<menu ref="reports" />`),
+ * so a `site.xml` item for the same page shows it twice, and the `index` report, whose "About"
+ * item points at `index.html`, repeats an authored home page that the descriptor already links.
+ * Items that differ only by a `#fragment`, and absolute URLs, are not page destinations.
+ *
+ * @param siteXml - Text of a `site.xml` descriptor.
+ * @param reports - Names of the project-info reports the POM runs, such as `licenses`.
+ * @param hasAuthoredHome - Whether the project writes its own `index` page under `src/site/`.
+ * @returns One message per redundant entry; empty when the navigation has none.
+ */
+function findNavigationConflicts(
+  siteXml: string,
+  reports: string[],
+  hasAuthoredHome: boolean
+): string[] {
+  const problems: string[] = [];
+  const pages: string[] = [];
+  for (const match of siteXml.matchAll(/<item\b[^>]*\bhref="([^"#]*)"/g)) {
+    const href: string = match[1] ?? '';
+    if (href !== '' && !/^[a-z][a-z0-9+.-]*:/i.test(href)) {
+      pages.push(href);
+    }
+  }
+  for (const page of new Set<string>(pages)) {
+    if (pages.filter((other: string) => other === page).length > 1) {
+      problems.push(`site.xml links ${page} from more than one menu item.`);
+    }
+  }
+  for (const report of reports) {
+    const page = `${report}.html`;
+    if (report === 'index' && hasAuthoredHome) {
+      problems.push(
+        'the "index" report is configured next to an authored index page; drop the report, or its "About" item repeats the home page.'
+      );
+    } else if (pages.includes(page)) {
+      problems.push(
+        `site.xml links ${page}, which the "${report}" report already lists under Project Information.`
+      );
+    }
+  }
+  return problems;
+}
+
+/**
+ * Applies {@link findNavigationConflicts} to this repository's own `pom.xml` and `site.xml`, and
+ * to the pair of example snippets in the Quickstart Tutorial, so neither teaches a site that shows
+ * the same destination twice.
+ */
+function validateSiteNavigation(): void {
+  const readReports = (pom: string): string[] =>
+    Array.from(pom.matchAll(/<report>([^<]+)<\/report>/g), (m: RegExpMatchArray) =>
+      (m[1] ?? '').trim()
+    );
+  const authoredHome: boolean = siteMarkdownFiles.some((f: string) => f.startsWith('index.'));
+  const siteXml: string = fs.readFileSync(path.join(ROOT_DIR, 'src/site/site.xml'), 'utf8');
+  for (const problem of findNavigationConflicts(siteXml, readReports(pomXml), authoredHome)) {
+    errors.push(`src/site/site.xml: ${problem}`);
+  }
+
+  const tutorial = 'src/site/markdown/getting-started.md';
+  const fences: string[] = Array.from(
+    fs.readFileSync(path.join(ROOT_DIR, tutorial), 'utf8').matchAll(/```xml\n([\s\S]*?)\n```/g),
+    (m: RegExpMatchArray) => m[1] ?? ''
+  );
+  const tutorialSite: string | undefined = fences.find((f: string) => f.includes('<site '));
+  const tutorialPom: string | undefined = fences.find((f: string) => f.includes('<reporting>'));
+  if (tutorialSite && tutorialPom) {
+    // Step 3 of the tutorial writes src/site/markdown/index.md, so the home page is authored.
+    for (const problem of findNavigationConflicts(tutorialSite, readReports(tutorialPom), true)) {
+      errors.push(`${tutorial}: ${problem}`);
+    }
+  }
+}
+
 const pomXml: string = fs.readFileSync(POM_PATH, 'utf8');
 const pkgJson: PackageJsonShape = JSON.parse(
   fs.readFileSync(PKG_PATH, 'utf8')
@@ -676,6 +752,7 @@ for (const relPath of docFiles) {
 }
 
 validateScenarioCatalog();
+validateSiteNavigation();
 
 if (errors.length > 0) {
   console.error('Docs Version Linter found version alignment errors:');

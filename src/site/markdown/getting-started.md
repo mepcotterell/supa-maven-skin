@@ -11,9 +11,12 @@ This tutorial walks you step-by-step through setting up **Supa Maven Skin** in a
 
 Make sure your environment meets the following requirements:
 
-- **Java Development Kit (JDK)**: JDK 17 or newer (JDK 21+ recommended).
-- **Apache Maven**: Maven `3.9.0+`.
+- **Java Development Kit (JDK)**: JDK 21 or 25.
+- **Apache Maven**: Maven 3.9.x.
 - **Maven Site Plugin**: `maven-site-plugin` `3.21.0+` (which uses Doxia `2.0` and Doxia Sitetools `2.0`).
+
+> [!NOTE] Tested versions and minimum versions
+> The versions above are the ones Supa Maven Skin's own build and its sample sites run on in CI. The plugins you add in Step 1 state lower minimums: `maven-site-plugin` 3.21.0 and `maven-project-info-reports-plugin` 3.9.0 both declare Java 8 and Maven 3.6.3. An older JDK or Maven may therefore work, but Supa Maven Skin does not test it, so it does not promise it.
 
 > [!TIP] No Node.js Installation Required
 > You do **not** need Node.js or npm installed to use **Supa Maven Skin** in your Maven project—all compiled Bootstrap 6 CSS/JS bundles, Bootstrap Icons fonts, and Highlight.js grammars are pre-packaged inside the skin JAR. Even if you build **Supa Maven Skin** itself from source via `mvn verify`, `frontend-maven-plugin` automatically provisions a local Node.js and npm distribution during the Maven build.
@@ -22,7 +25,7 @@ Make sure your environment meets the following requirements:
 
 ## Step 1: Configure `pom.xml`
 
-Add `maven-site-plugin` (with `doxia-module-markdown`) under `<build><plugins>` and `maven-project-info-reports-plugin` under `<reporting><plugins>` in your project's `pom.xml`:
+Add `maven-site-plugin` (with `doxia-module-markdown`) under `<build><pluginManagement><plugins>` and `maven-project-info-reports-plugin` under `<reporting><plugins>` in your project's `pom.xml`:
 
 ```xml
 <build>
@@ -57,7 +60,6 @@ Add `maven-site-plugin` (with `doxia-module-markdown`) under `<build><plugins>` 
       <reportSets>
         <reportSet>
           <reports>
-            <report>index</report>
             <report>summary</report>
             <report>licenses</report>
             <report>team</report>
@@ -70,6 +72,21 @@ Add `maven-site-plugin` (with `doxia-module-markdown`) under `<build><plugins>` 
   </plugins>
 </reporting>
 ```
+
+A `pom.xml` has only one `<build>` and one `<reporting>` element. If yours already has them, add these `<plugin>` entries inside the existing elements instead of pasting a second copy.
+
+The reports are the pages Maven writes under **Project Information** in the sidebar. This list leaves out the `index` report. It writes an "About" page at `index.html`, and Step 3 gives you your own home page at that address, so "About" would only repeat "Overview".
+
+Four of the reports read a section of your `pom.xml`:
+
+| Report | Needs this in `pom.xml` |
+| --- | --- |
+| `licenses` | `<licenses>` |
+| `team` | `<developers>` |
+| `scm` | `<scm>` |
+| `ci-management` | `<ciManagement>` |
+
+When a section is missing, Maven skips that report, prints an `INFO` line such as `Skipping ... licenses report`, and the sidebar shows no link for it. Nothing fails. Add the section to get the page, or delete the report from the list.
 
 ---
 
@@ -94,6 +111,7 @@ Create the file `src/site/site.xml` to declare **Supa Maven Skin**, configure th
     <supaSkin>
       <defaultTheme>auto</defaultTheme>
       <colorScheme>furo</colorScheme>
+      <!-- Replace with the URL of your own repository. -->
       <sourceRepository>https://github.com/your-org/your-repo</sourceRepository>
       <sourceBranch>main</sourceBranch>
       <sourceDirectory>src/site</sourceDirectory>
@@ -117,6 +135,8 @@ Create the file `src/site/site.xml` to declare **Supa Maven Skin**, configure th
   </body>
 </site>
 ```
+
+Before you build, replace `https://github.com/your-org/your-repo` with your repository's URL. The "View page source" and "Edit this page" buttons link to files in that repository, so a placeholder sends readers to a page that does not exist. If your site's source is not on GitHub, GitLab, or Gitea, delete the `<sourceRepository>` line. The buttons then do not appear.
 
 ---
 

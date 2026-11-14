@@ -127,6 +127,8 @@ Check for a newer release of [`io.github.mepcotterell:supa-maven-skin` on Maven 
 </custom>
 ```
 
+`your-org/your-repo` is a placeholder. Replace it with your repository in all three places: `<sourceRepository>`, the `<navIcons>` `<href>`, and Fluido's `<projectId>` (if you keep that block). The "View page source" and "Edit this page" buttons link to files in `<sourceRepository>`, so leaving the placeholder sends readers to a page that does not exist. If you do not want those buttons or a GitHub icon, delete `<sourceRepository>` and the `<navIcons>` entry.
+
 Do not just rename `<fluidoSkin>` to `<supaSkin>`: almost none of the option names overlap. Translate each option with the [option mapping reference](#option-mapping-reference), and see the [Configuration Reference](configuration.html#configuration-options) for every `<supaSkin>` option and its default.
 
 ---
