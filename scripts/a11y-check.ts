@@ -52,7 +52,7 @@
  * `sidebar-link-focus-mobile`, `sidebar-link-focus-desktop`, and their `-smooth` variants check
  * the same for a same-page sidebar link, in the drawer and in the inline sidebar.
  * `drawer-roles-*` read the sidebar's and the TOC's role and name from Chromium's accessibility
- * tree: a landmark with no dialog inside it inline, and a modal dialog when opened as a drawer.
+ * tree: a named landmark inline, and a named modal dialog when opened as a drawer.
  * Search results also assert the combobox's active descendant matches selection, and
  * `search-dialog-no-results` the polite no-results status. `sidebar-depth-three` checks the
  * self-site's third sidebar level.
@@ -2345,13 +2345,12 @@ function largeDefaultFontScenario(file: string, fontPx: number, width: number): 
 }
 
 /**
- * Default font sizes, in CSS px, and viewports the `drawer-roles-*` scenarios load: both columns
- * inline, the sidebar inline beside a TOC drawer, and both drawers, at the 16 px default; then a
- * 1440 px window at 20 px (72em: the sidebar inline, the TOC a drawer) and at 24 px (60em: both
- * drawers), where a px breakpoint would keep both columns inline.
+ * Default font sizes, in CSS px, and viewports the `drawer-roles-*` scenarios load, each with at
+ * least one drawer: the sidebar inline beside a TOC drawer, and both drawers, at the 16 px default;
+ * then a 1440 px window at 20 px (72em: the sidebar inline, the TOC a drawer) and at 24 px (60em:
+ * both drawers), where a px breakpoint would keep both columns inline.
  */
 const DRAWER_ROLE_LAYOUTS: ReadonlyArray<{ fontPx: number; viewport: Viewport }> = [
-  { fontPx: 16, viewport: DESKTOP },
   { fontPx: 16, viewport: TABLET },
   { fontPx: 16, viewport: MOBILE },
   { fontPx: 20, viewport: DESKTOP },
@@ -2360,10 +2359,10 @@ const DRAWER_ROLE_LAYOUTS: ReadonlyArray<{ fontPx: number; viewport: Viewport }>
 
 /**
  * Checks what Chromium's accessibility tree exposes for a navigation column. Inline, the column is
- * its `<aside>` landmark, named as before, and its `<dialog>` is not exposed as a dialog, so a
- * screen reader does not announce a dialog that never opened. As a drawer, the closed `<dialog>`
- * is left out of the tree, and once its trigger opens it, it is a modal dialog named by its title;
- * Escape closes it again.
+ * its `<aside>` landmark, named by its label. (Its `<dialog>` is still exposed as a closed,
+ * non-modal dialog there: R-37, which needs the inline column outside the `<dialog>`.) As a
+ * drawer, the closed `<dialog>` is left out of the tree, and once its trigger opens it, it is a
+ * modal dialog named by its title; Escape closes it again.
  *
  * @param page - Page under test, with reduced motion.
  * @param column - `sidebar` (`#supaSidebarDrawer`, `lg`) or `toc` (`#supaTocDrawer`, `xl`).
@@ -2387,12 +2386,8 @@ async function navigationColumnSemanticsProblems(page: Page, column: 'sidebar' |
   const problems: string[] = [];
   if (!(await trigger.isVisible())) {
     const [landmark] = await axNodes(page, aside);
-    const [drawer] = await axNodes(page, `#${id}`);
     if (landmark?.role !== 'complementary' || landmark.ignored || landmark.name !== label) {
       problems.push(`the inline ${column}'s <aside> is ${show(landmark)}, not complementary "${label}"`);
-    }
-    if (!drawer || drawer.ignored || drawer.role === 'dialog' || drawer.role !== 'group') {
-      problems.push(`the inline #${id} is exposed as ${show(drawer)}, not as a group`);
     }
     return problems;
   }
@@ -2424,7 +2419,7 @@ async function navigationColumnSemanticsProblems(page: Page, column: 'sidebar' |
 
 /**
  * Checks the accessibility-tree role and name of the sidebar and the TOC at one default font and
- * viewport, inline and as drawers (see `navigationColumnSemanticsProblems()`). Each column is
+ * viewport, as drawers and inline (see `navigationColumnSemanticsProblems()`). Each column is
  * inline or a drawer by the skin's em breakpoints, which the larger fonts move.
  *
  * @param fontPx - Browser's default font size, in CSS px.

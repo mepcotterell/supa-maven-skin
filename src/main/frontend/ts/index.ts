@@ -60,42 +60,6 @@ function isInline(minEm: number): boolean {
 }
 
 /**
- * Role a drawer `<dialog>` has while it is laid out inline, where its column's `<aside>` is the
- * landmark. With its own `dialog` role, screen readers announced a dialog that never opened.
- * `group` is the most neutral role that Chromium and Firefox both honor on a `<dialog>`: they
- * ignore `none` and `presentation` there, and axe rejects `generic`.
- */
-const INLINE_DRAWER_ROLE = 'group';
-
-/**
- * Keeps a drawer's role in step with its layout. `site.vm` renders it with `INLINE_DRAWER_ROLE`;
- * below its breakpoint, and while it is open, it has no role of its own, so it opens as the modal
- * dialog it is. It is synced now, when the viewport crosses the breakpoint, and when it closes,
- * since Bootstrap closes an open drawer whose column has become inline.
- *
- * @param drawer - `#supaSidebarDrawer` or `#supaTocDrawer`.
- * @param minEm - `SIDEBAR_INLINE_EM` or `TOC_INLINE_EM`.
- */
-function bindDrawerRole(drawer: HTMLDialogElement, minEm: number): void {
-  /** Gives the drawer the role of its current layout. */
-  const sync = (): void => {
-    if (isInline(minEm) && !drawer.open) {
-      drawer.setAttribute('role', INLINE_DRAWER_ROLE);
-    } else {
-      drawer.removeAttribute('role');
-    }
-  };
-  sync();
-  if (typeof window.matchMedia === 'function') {
-    const query = window.matchMedia(`(width >= ${minEm}em)`);
-    if (typeof query.addEventListener === 'function') {
-      query.addEventListener('change', sync);
-    }
-  }
-  drawer.addEventListener('close', sync);
-}
-
-/**
  * Finds the element a link leads to on the current page.
  *
  * @param link - Navigation link.
@@ -189,8 +153,7 @@ function closeDrawerForLink(drawer: HTMLDialogElement, link: HTMLAnchorElement):
 
 /**
  * Initializes the responsive left sidebar (`#supaSidebarDrawer`) and right TOC
- * (`#supaTocDrawer`) Bootstrap 6 `<dialog>` drawers, keeps their roles in step with their
- * layout, and binds auto-close behavior.
+ * (`#supaTocDrawer`) Bootstrap 6 `<dialog>` drawers and binds auto-close behavior.
  */
 export function initDrawers(): void {
   const sidebarDrawer = document.getElementById('supaSidebarDrawer') as HTMLDialogElement | null;
@@ -213,7 +176,6 @@ export function initDrawers(): void {
 
   if (tocDrawer && !tocDrawer.hasAttribute('data-supa-drawer-bound')) {
     tocDrawer.setAttribute('data-supa-drawer-bound', 'true');
-    bindDrawerRole(tocDrawer, TOC_INLINE_EM);
     tocDrawer.addEventListener('click', (e) => {
       const link = (e.target as HTMLElement | null)?.closest<HTMLAnchorElement>('a.nav-link');
       if (link && !isInline(TOC_INLINE_EM) && tocDrawer.open) {
@@ -224,7 +186,6 @@ export function initDrawers(): void {
 
   if (sidebarDrawer && !sidebarDrawer.hasAttribute('data-supa-drawer-bound')) {
     sidebarDrawer.setAttribute('data-supa-drawer-bound', 'true');
-    bindDrawerRole(sidebarDrawer, SIDEBAR_INLINE_EM);
     sidebarDrawer.addEventListener('click', (e) => {
       const link = (e.target as HTMLElement | null)?.closest<HTMLAnchorElement>('a.supa-nav-link[href*="#"]');
       if (!link) {
