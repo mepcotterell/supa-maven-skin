@@ -6,8 +6,11 @@
  * package.json, verifies Keep a Changelog 1.1.0 conventions, and checks internal doc links and
  * Markdown code fences. Skin install snippets must show the latest *released* version (the newest
  * dated release heading in CHANGELOG.md), because the development `-SNAPSHOT` on main only exists
- * in the Central snapshot repository that consumer builds do not have configured.
+ * in the Central snapshot repository that consumer builds do not have configured. It also checks
+ * that the scenario table in architecture.md lists exactly the scenarios `scripts/a11y-check.ts`
+ * can run.
  */
+import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -22,6 +25,8 @@ const POM_PATH: string = path.join(ROOT_DIR, 'pom.xml');
 const PKG_PATH: string = path.join(ROOT_DIR, 'package.json');
 const CHANGELOG_PATH: string = path.join(ROOT_DIR, 'CHANGELOG.md');
 const SITE_MARKDOWN_DIR: string = path.join(ROOT_DIR, 'src/site/markdown');
+const A11Y_CHECK_PATH: string = path.join(ROOT_DIR, 'scripts/a11y-check.ts');
+const ARCHITECTURE_PATH: string = path.join(SITE_MARKDOWN_DIR, 'architecture.md');
 
 /** POM property holding the latest released skin version, read by `index.md.vm`. */
 const RELEASE_VERSION_PROPERTY = 'latest-release.version';
@@ -298,6 +303,105 @@ function validateChangelog(
   }
 }
 
+/**
+ * Expands the `{a,b}` brace groups in a scenario name, so the catalog can write a family of
+ * generated names once: `a-{1,2}-{x,y}` becomes `a-1-x`, `a-1-y`, `a-2-x`, and `a-2-y`.
+ *
+ * @param name - Scenario name that may contain `{a,b}` groups.
+ * @returns Every name the shorthand stands for, or the name itself when it has no group.
+ */
+function expandBraces(name: string): string[] {
+  const group = name.match(/\{([^{}]*)\}/);
+  if (!group || group.index === undefined) {
+    return [name];
+  }
+  const head: string = name.slice(0, group.index);
+  const tail: string = name.slice(group.index + group[0].length);
+  return (group[1] ?? '')
+    .split(',')
+    .flatMap((option: string) => expandBraces(`${head}${option.trim()}${tail}`));
+}
+
+/**
+ * Reads the scenario names the architecture.md scenario table catalogs: every backticked name in
+ * the first column of the table whose header cell is "Scenario", with brace shorthand expanded.
+ *
+ * @param markdown - Full text of architecture.md.
+ * @returns The cataloged names, or null when the table is missing.
+ */
+function readCatalogedScenarios(markdown: string): Set<string> | null {
+  const names = new Set<string>();
+  let inTable = false;
+  for (const line of markdown.split(/\r?\n/)) {
+    const cells: string[] = line.split(/(?<!\\)\|/).map((cell: string) => cell.trim());
+    if (!line.startsWith('|')) {
+      if (inTable) {
+        break;
+      }
+      continue;
+    }
+    if (cells[1] === 'Scenario') {
+      inTable = true;
+      continue;
+    }
+    if (!inTable) {
+      continue;
+    }
+    for (const token of (cells[1] ?? '').matchAll(/`([^`]+)`/g)) {
+      for (const name of expandBraces(token[1] ?? '')) {
+        names.add(name);
+      }
+    }
+  }
+  return inTable ? names : null;
+}
+
+/**
+ * Checks that the architecture.md scenario table lists every scenario `scripts/a11y-check.ts` can
+ * run, and nothing else. The runner prints its own names with `--list` before it looks for a built
+ * site or starts a browser, so the check needs neither.
+ */
+function validateScenarioCatalog(): void {
+  const relPath = 'src/site/markdown/architecture.md';
+  let listed: string;
+  try {
+    listed = execFileSync(
+      process.execPath,
+      ['--no-warnings=ExperimentalWarning', '--experimental-strip-types', A11Y_CHECK_PATH, '--list'],
+      { encoding: 'utf8' }
+    );
+  } catch (error: unknown) {
+    errors.push(
+      `scripts/a11y-check.ts: "--list" failed: ${error instanceof Error ? error.message.split('\n')[0] : String(error)}`
+    );
+    return;
+  }
+  const runnable = new Set<string>(
+    listed.split('\n').map((name: string) => name.trim()).filter(Boolean)
+  );
+  const cataloged: Set<string> | null = readCatalogedScenarios(
+    fs.readFileSync(ARCHITECTURE_PATH, 'utf8')
+  );
+  if (!cataloged) {
+    errors.push(`${relPath}: Missing the "Scenario" table that catalogs the a11y scenarios.`);
+    return;
+  }
+  for (const name of runnable) {
+    if (!cataloged.has(name)) {
+      errors.push(
+        `${relPath}: Scenario "${name}" can run in scripts/a11y-check.ts but is missing from the scenario table.`
+      );
+    }
+  }
+  for (const name of cataloged) {
+    if (!runnable.has(name)) {
+      errors.push(
+        `${relPath}: Scenario table lists "${name}", which scripts/a11y-check.ts no longer runs (npm run test:a11y -- --list).`
+      );
+    }
+  }
+}
+
 const pomXml: string = fs.readFileSync(POM_PATH, 'utf8');
 const pkgJson: PackageJsonShape = JSON.parse(
   fs.readFileSync(PKG_PATH, 'utf8')
@@ -570,6 +674,8 @@ for (const relPath of docFiles) {
     }
   }
 }
+
+validateScenarioCatalog();
 
 if (errors.length > 0) {
   console.error('Docs Version Linter found version alignment errors:');

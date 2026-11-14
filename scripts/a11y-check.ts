@@ -59,6 +59,9 @@
  * Every scan first waits for running CSS transitions to finish, so axe
  * measures settled colors, not a fade.
  *
+ * `--list` prints the scenario names and exits without a site or a browser;
+ * `scripts/lint-docs.ts` compares them with the `architecture.md` scenario table.
+ *
  * Run `mvn -B -ntp clean verify site` first, then `npm run test:a11y`; append
  * page or scenario names (`npm run test:a11y -- team.html palette-menu`) to
  * narrow the matrix while iterating. Requires a Chromium build
@@ -3647,12 +3650,30 @@ function printReport(findings: Finding[]): void {
   }
 }
 
+/** Command-line flag that prints the scenario names instead of scanning. */
+const LIST_FLAG = '--list';
+
+/**
+ * Lists every scenario name the runner accepts as a narrowing argument.
+ *
+ * @returns The names of `SCENARIOS` plus the per-page forced-colors scenario, in run order.
+ */
+function listScenarioNames(): string[] {
+  return [...SCENARIOS.map((s) => s.name), FORCED_COLORS_PAGES];
+}
+
 /**
  * Entry point: serves the site, scans every job, prints a report, and sets the exit code.
  *
  * @returns Process exit code (0 when no violations or errors, 1 otherwise).
  */
 async function main(): Promise<number> {
+  // `--list` prints every scenario name and exits, so `scripts/lint-docs.ts` can check them
+  // against the `architecture.md` catalog without a built site or a browser.
+  if (process.argv.slice(2).includes(LIST_FLAG)) {
+    console.log(listScenarioNames().join('\n'));
+    return 0;
+  }
   if (!existsSync(join(SITE_DIR, 'index.html'))) {
     console.error(
       `a11y: ${SITE_DIR}/index.html not found. Build the self-site first: mvn -B -ntp clean verify site`
@@ -3672,7 +3693,7 @@ async function main(): Promise<number> {
     );
     return 1;
   }
-  const scenarioNames = [...SCENARIOS.map((s) => s.name), FORCED_COLORS_PAGES];
+  const scenarioNames = listScenarioNames();
   // Optional positional page or scenario names (`npm run test:a11y -- team.html`,
   // `npm run test:a11y -- search-dialog-results`) narrow the matrix while iterating
   // on a fix; CI always runs the full matrix.
