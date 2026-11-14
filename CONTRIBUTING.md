@@ -32,6 +32,8 @@ A11Y_ENGINE=webkit npm run test:a11y -- --variants furo/light,furo/dark,modus/da
 npm run screenshots
 ```
 
+`npm run lint:vm` checks the skin's templates and the `.md.vm` pages of `src/site/` and of each `src/it/` project: `#if`, `#foreach`, `#define`, and `#macro` blocks closed by `#end`, no empty `#if`, `#elseif`, or `#foreach` condition, and that each macro call names a macro the templates define, with as many arguments. It skips escaped directives (`\#if`) and the text of `##`, `#* *#`, and `#[[ ]]#`, and it checks tabs and trailing whitespace only in the skin's templates, since Markdown can need them. It does not evaluate references or method calls, so the render in `mvn verify` remains the check for what fails only when a page is rendered.
+
 Update GitHub Actions pins by resolving the desired upstream tag to its full commit SHA (dereferencing annotated tags), and update the trailing release-version comment alongside the pin.
 
 ## Publishing

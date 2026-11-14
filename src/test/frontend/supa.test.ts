@@ -39,6 +39,11 @@ import {
   toHex
 } from '../../../scripts/contrast-audit';
 import {
+  collectTemplates,
+  lintVelocity,
+  type VelocityTemplate
+} from '../../../scripts/lint-velocity';
+import {
   BootstrapPlugins,
   initBootstrapComponents,
   initComponentExamples,
@@ -5647,5 +5652,124 @@ describe('release CI gate (scripts/check-release-ready.ts)', () => {
     expect(
       await checkReleaseReady({ ...failed.options, ref: 'refs/tags/v0.2.1', pomVersion: '0.2.1', changelog })
     ).toEqual([expect.stringContaining('failure')]);
+  });
+});
+
+describe('Velocity linter (scripts/lint-velocity.ts)', () => {
+  /** Skin macros the pages below call, as in site-macros.vm. */
+  const MACROS: VelocityTemplate = {
+    path: 'src/main/resources/META-INF/maven/site-macros.vm',
+    content: [
+      '#macro( bi $name $extraClasses $ariaLabel )',
+      '<i class="bi bi-$name"></i>##',
+      '#end',
+      '#macro( bsCardGridEnd )',
+      '</div>',
+      '#end',
+      '#macro( supaFillLabel $labelHtml $placeholder $valueHtml )',
+      '#set( $supaFilled = $labelHtml )',
+      '#end',
+      ''
+    ].join('\n')
+  };
+
+  /**
+   * Lints a template next to {@link MACROS}.
+   *
+   * @param path - The template's path.
+   * @param lines - The template's lines.
+   * @returns The violations found.
+   */
+  const lint = (path: string, lines: string[]): string[] =>
+    lintVelocity([MACROS, { path, content: `${lines.join('\n')}\n` }]).violations;
+
+  it('passes valid templates, including nested calls inside arguments', () => {
+    expect(
+      lint('src/main/resources/META-INF/maven/site.vm', [
+        '<!DOCTYPE html>',
+        '#if( $a.b( $c ) && $d )',
+        '#supaFillLabel( $esc.html( $supaLabels.get( "x" ) ) \'years\' "a, b" )',
+        '#elseif( $e )',
+        '#bi( "book" "" "" )',
+        '#else',
+        '#bsCardGridEnd()',
+        '#end'
+      ])
+    ).toEqual([]);
+  });
+
+  it('reports a call to a macro no template defines', () => {
+    expect(lint('src/site/markdown/index.md.vm', ['#bsCardGridEnds()'])).toEqual([
+      expect.stringMatching(/^src\/site\/markdown\/index\.md\.vm:1: .*#bsCardGridEnds/)
+    ]);
+  });
+
+  it('reports a macro call with the wrong number of arguments', () => {
+    const violations = lint('src/main/resources/META-INF/maven/site.vm', [
+      '<!DOCTYPE html>',
+      '#bi( "book" "" )',
+      '#supaFillLabel( $esc.html( $x ) \'years\' $y $z )'
+    ]);
+    expect(violations).toEqual([
+      expect.stringMatching(/site\.vm:2: .*#bi.* 3 .* 2/),
+      expect.stringMatching(/site\.vm:3: .*#supaFillLabel.* 3 .* 4/)
+    ]);
+  });
+
+  it('ignores escaped directives and macro calls', () => {
+    expect(
+      lint('src/site/markdown/index.md.vm', [
+        'Close a block with \\#end, or call \\#bi( "book" ).',
+        // An escaped backslash before a directive leaves the directive in force
+        '\\\\#if( $y )',
+        '#end'
+      ])
+    ).toEqual([]);
+  });
+
+  it('reports an #elseif without a condition', () => {
+    expect(
+      lint('src/site/markdown/index.md.vm', ['#if( $a )', 'a', '#elseif()', 'b', '#elseif', 'c', '#end'])
+    ).toEqual([
+      expect.stringMatching(/index\.md\.vm:3: #elseif .*empty/),
+      expect.stringMatching(/index\.md\.vm:5: #elseif .*empty/)
+    ]);
+  });
+
+  it('does not let a ## comment open a #* block comment', () => {
+    expect(lint('src/site/markdown/index.md.vm', ['## a comment that mentions #*', '#if( $a )', '#* a block comment *#'])).toEqual([
+      expect.stringMatching(/index\.md\.vm:2: Unclosed #if/)
+    ]);
+  });
+
+  it('checks .md.vm pages, skipping #[[ ]]# text and Markdown whitespace', () => {
+    expect(
+      lint('src/site/markdown/index.md.vm', [
+        '# Title',
+        '',
+        '#[[##]]# Section #[[#if( $not.a.directive )]]#',
+        'A line break  ',
+        '\tindented code with #',
+        '#bi( "book" "" "" )'
+      ])
+    ).toEqual([]);
+    expect(lint('src/site/markdown/index.md.vm', ['#if( $a )', 'unclosed'])).toEqual([
+      expect.stringMatching(/index\.md\.vm:1: Unclosed #if/)
+    ]);
+  });
+
+  it('lints the repository templates and Velocity pages without violations', () => {
+    const templates = collectTemplates(resolve(import.meta.dirname, '../../..'));
+    const paths = templates.map((template) => template.path);
+    expect(paths).toEqual(
+      expect.arrayContaining([
+        'src/main/resources/META-INF/maven/site.vm',
+        'src/main/resources/META-INF/maven/site-macros.vm',
+        'src/site/markdown/index.md.vm',
+        'src/it/options-site/src/site/markdown/macros.md.vm',
+        'src/it/sample-site/src/site/markdown/alerts.md.vm'
+      ])
+    );
+    expect(lintVelocity(templates).violations).toEqual([]);
   });
 });
