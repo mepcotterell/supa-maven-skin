@@ -1759,7 +1759,9 @@ async function expectPaletteFocus(page: Page): Promise<void> {
 /**
  * Checks the range slider's painted pixels in forced colors: CanvasText thumb ink, both track
  * edges beyond the thumb, and the Highlight progress fill before it. Each region is sampled away
- * from the others, so one cannot stand in for another.
+ * from the others, so one cannot stand in for another. Edges and progress are classified by the
+ * nearest system color and judged by column coverage, so antialiasing, fractional placement, and
+ * small rasterization shifts do not fail them while a missing edge or fill does.
  *
  * @param page - Components page with forced colors active.
  */
@@ -1816,7 +1818,9 @@ async function expectForcedRangePixels(page: Page): Promise<void> {
     let thumb = 0;
     const topBorder = new Uint8Array(width);
     const bottomBorder = new Uint8Array(width);
-    let progress = 0;
+    // Per column: pixels inside the track's border, and those nearer the fill than paper or ink.
+    const progressBand = new Uint16Array(width);
+    const progressFill = new Uint16Array(width);
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
         const cssX = (x + .5) * g.width / width;
@@ -1839,33 +1843,39 @@ async function expectForcedRangePixels(page: Page): Promise<void> {
           if (Math.abs(cssY - trackBottom) <= 1.5) { bottomBorder[x] = 1; }
         }
         if (cssX > filledStart && cssX < filledEnd &&
-            Math.abs(cssY - g.height / 2) < 1 &&
-            fill.every((channel, i) => Math.abs(data[offset + i] - channel) <= 1)) {
-          progress++;
+            Math.abs(cssY - g.height / 2) <= g.trackHeight / 2 - 1) {
+          progressBand[x]++;
+          const toFill = distance(offset, fill);
+          if (toFill < distance(offset, paper) && toFill < distance(offset, ink)) { progressFill[x]++; }
         }
       }
     }
     let border = 0;
     let borderSpan = 0;
+    let progress = 0;
+    let progressSpan = 0;
     for (let x = 0; x < width; x++) {
       const cssX = (x + .5) * g.width / width;
       if (cssX > emptyStart && cssX < emptyEnd) {
         borderSpan++;
         if (topBorder[x] && bottomBorder[x]) { border++; }
       }
+      if (cssX > filledStart && cssX < filledEnd) {
+        progressSpan++;
+        // Most of the column inside the border must be fill: a blended edge row alone is not.
+        if (progressFill[x] * 2 > progressBand[x]) { progress++; }
+      }
     }
     // Five columns give the 80% coverage threshold at least four samples.
-    if (borderSpan < 5) {
+    if (borderSpan < 5 || progressSpan < 5) {
       throw new Error(`forced-colors range invalid sampling geometry: ${JSON.stringify(g)}`);
     }
-    // Require both edges in 80% of columns: allow antialiasing gaps without
-    // accepting stray ink, independently of how many device rows an edge fills.
-    const borderMinimum = borderSpan * .8;
-    // Require substantial ink in each independent region, not stray edge pixels.
+    // Require both edges, and the fill, in 80% of columns: allow antialiasing gaps without
+    // accepting stray pixels, independently of how many device rows an edge or the fill spans.
+    // Require substantial thumb ink, not stray edge pixels.
     const scale = width / g.width * height / g.height;
-    return { thumb, border, borderSpan, progress, thumbMinimum: 8 * scale,
-      borderMinimum,
-      progressMinimum: (filledEnd - filledStart) * scale };
+    return { thumb, border, borderSpan, progress, progressSpan, thumbMinimum: 8 * scale,
+      borderMinimum: borderSpan * .8, progressMinimum: progressSpan * .8 };
   }, { base64: pixels.toString('base64'), geometry });
   const missing: string[] = [];
   if (visible.thumb < visible.thumbMinimum) { missing.push('thumb'); }
