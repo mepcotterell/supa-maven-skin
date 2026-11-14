@@ -4926,21 +4926,39 @@ const OPTIONAL_SITE_PATHS: ReadonlySet<string> = new Set(['/css/site.css']);
 const CANCELLED_REQUEST = /^(?:net::ERR_ABORTED|NS_BINDING_ABORTED|cancelled)$/;
 
 /**
- * The console error Chromium and WebKit log for a failed request, with the request's URL as its
- * source: "Failed to load resource: net::ERR_INTERNET_DISCONNECTED" or "Failed to load resource:
- * the server responded with a status of 404 (Not Found)".
+ * Console errors an engine writes itself about a resource that did not load, and the URL each
+ * names, if any. Chromium and WebKit log them with no arguments (`console.error` from a page
+ * always has at least one), and Firefox as a single "[JavaScript Error: ...]" string. Each pattern
+ * is anchored to the engine's whole wording, so a page's own message cannot match by quoting a URL.
  */
-const RESOURCE_LOAD_REPORT = /^Failed to load resource: /;
+const ENGINE_LOAD_REPORTS = {
+  /** Chromium and WebKit, with the request's URL as the message's source. */
+  failedToLoad: /^Failed to load resource: /,
+  /** Chromium, with the page as the source: "Access to script at '<url>' from origin ...". */
+  corsBlocked: /^Access to [A-Za-z ]+ at '([^']+)' from origin '[^']+' has been blocked by CORS policy: /,
+  /** WebKit, with no source or URL; the same text is the failed request's `errorText`. */
+  originNotAllowed: /^Origin \S+ is not allowed by Access-Control-Allow-Origin\. Status code: \d+$/,
+  /** Firefox, for a cross-origin request that failed or lacked CORS headers. */
+  firefoxCors:
+    /^\[JavaScript Error: "Cross-Origin Request Blocked: The Same Origin Policy disallows reading the remote resource at (\S+?)\. \(Reason: /,
+  /** Firefox, for a Subresource Integrity check: the URL, the algorithm, and the computed hash. */
+  firefoxIntegrity:
+    /^\[JavaScript Error: "None of the “(sha256|sha384|sha512)” hashes in the integrity attribute match the content of the subresource at “([^”]+)”\. The computed hash is “([^”]+)”\./
+} as const;
 
 /**
- * Firefox's console errors for a failed cross-origin script, which give the page, or nothing, as
- * their source, and name the request only in their text: the CORS failure of an unreachable host,
- * and the Subresource Integrity mismatch of the empty body it leaves. Each captures the URL.
+ * The hash of an empty body for each Subresource Integrity algorithm. Firefox checks the integrity
+ * of a script whose request failed against the empty body it got, so a mismatch with this hash
+ * only repeats the failure; a mismatch with any other hash is a real one, with the content loaded.
  */
-const RESOURCE_DIAGNOSTICS: readonly RegExp[] = [
-  /^\[JavaScript Error: "Cross-Origin Request Blocked: The Same Origin Policy disallows reading the remote resource at (\S+?)\. \(Reason:/,
-  /^\[JavaScript Error: "None of the “sha\d+” hashes in the integrity attribute match the content of the subresource at “([^”]+)”/
-];
+const EMPTY_BODY_HASHES: Readonly<Record<string, string>> = {
+  sha256: '47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=',
+  sha384: 'OLBgp1GsljhM2TJ+sbHjaiH9txEUvgdDTAzHv2P24donTt6/529l+9Ua0vFImLlb',
+  sha512: 'z4PhNX7vuL3xVChQ1m2AB9Yg5AULVxXcg/SpIdNs6c5H0NE8XYXysP+DGNKHfuwvY7kxvUdBeoGlODJ6+SfaPg=='
+};
+
+/** WebKit's uncaught error for a cross-origin `<script>` whose response failed its CORS check. */
+const WEBKIT_SCRIPT_CORS_ERROR = 'Cross-origin script load denied by Cross-Origin Resource Sharing policy.';
 
 /**
  * Starts recording the errors a page raises: an uncaught exception or unhandled rejection
@@ -4959,15 +4977,19 @@ const RESOURCE_DIAGNOSTICS: readonly RegExp[] = [
  * it failed without a response, as a Content Security Policy block does, unless it was cancelled
  * (`CANCELLED_REQUEST`) for a file the site has. `OPTIONAL_SITE_PATHS` may be missing. Requests to
  * other origins, the Mermaid and KaTeX CDN and any URL a site configures, may fail: a scan may
- * hold them back, and an unreachable host is a network matter.
+ * hold them back, an unreachable host is a network matter, and a proxy or an outage can answer
+ * them with an error page that has no CORS headers.
  *
- * Engines also log a failed request as a `console.error`. The one console error left out is the
- * engine's own report of a failed attempt the request listeners have judged, an allowed one or
- * one they recorded: Chromium's and WebKit's `RESOURCE_LOAD_REPORT` whose source is that request's
- * URL, or one of Firefox's `RESOURCE_DIAGNOSTICS` naming it. A successful response to the same URL
- * between the failure and the report means the report is about a later attempt, and it is
- * recorded. Every other console error, an application's (even one logged by a script whose own URL
- * failed later) or a Content Security Policy report among them, is recorded.
+ * Each console error is classified by what it says, not by when it arrives. Left out are only the
+ * engine's own reports (`ENGINE_LOAD_REPORTS`) that a resource of another origin, or an optional
+ * one, failed to load or failed its CORS check, and the engine's "Failed to load resource" copy of
+ * a same-origin failure already recorded above or excused as a cancellation. A Firefox integrity
+ * mismatch is left out only when the computed hash is that of an empty body
+ * (`EMPTY_BODY_HASHES`), the echo of a failed request; one over loaded content is recorded. So is
+ * every Content Security Policy report, every other engine message about the site's own files,
+ * and every message a page logs, whatever URL it quotes or comes from. WebKit's
+ * `WEBKIT_SCRIPT_CORS_ERROR` page error is left out only when a script request to another origin
+ * failed in the same job.
  *
  * @param page - Page to listen to, before it navigates.
  * @param baseUrl - Origin of the site under test.
@@ -4977,20 +4999,24 @@ const RESOURCE_DIAGNOSTICS: readonly RegExp[] = [
 function collectPageErrors(page: Page, baseUrl: string, siteDir: string): () => string[] {
   const { origin } = new URL(baseUrl);
   const errors: string[] = [];
+  /** Same-origin URLs whose failure was recorded above, or excused as a cancellation. */
+  const handledUrls = new Set<string>();
+  /** Paths already reported, so a file fails each job once. */
   const reported = new Set<string>();
-  // Each event's place in the page's event order, so a report can be matched to its attempt.
-  let order = 0;
-  const judged = new Map<string, number[]>();
-  const succeeded = new Map<string, number[]>();
-  const consoleErrors: Array<{ text: string; source: string; at: number }> = [];
+  /** The `errorText` of each failed request to another origin. */
+  const crossOriginFailures = new Set<string>();
+  let crossOriginScriptFailed = false;
+  const pageErrors: string[] = [];
+  const consoleErrors: Array<{ text: string; source: string; engine: boolean }> = [];
   /**
-   * Notes that a request to `href` reached an outcome now.
+   * Tells whether a request URL belongs to another origin or is an optional file of the site.
    *
-   * @param outcomes - Map of the outcome's places by URL.
    * @param href - Requested URL.
+   * @returns Whether its failure may pass.
    */
-  const note = (outcomes: Map<string, number[]>, href: string): void => {
-    outcomes.set(href, [...(outcomes.get(href) ?? []), order++]);
+  const mayFail = (href: string): boolean => {
+    const url = new URL(href);
+    return url.origin !== origin || OPTIONAL_SITE_PATHS.has(url.pathname);
   };
   /**
    * Judges a failed request: it fails the scan when it was for a file the site must have.
@@ -5006,26 +5032,29 @@ function collectPageErrors(page: Page, baseUrl: string, siteDir: string): () => 
     failure: string,
     cancelled: boolean
   ): void => {
-    const { origin: requestOrigin, pathname } = new URL(href);
-    if (requestOrigin !== origin || OPTIONAL_SITE_PATHS.has(pathname)) {
-      note(judged, href);
+    if (mayFail(href)) {
       return;
     }
+    const { pathname } = new URL(href);
+    handledUrls.add(href);
     if (cancelled && resolveSitePath(siteDir, pathname) !== null) {
       return;
     }
-    note(judged, href);
     if (!reported.has(pathname)) {
       reported.add(pathname);
       errors.push(`the ${resourceType} ${pathname} ${failure}`);
     }
   };
   page.on('pageerror', (error) => {
-    errors.push(`uncaught ${error.message}`);
+    pageErrors.push(error.message);
   });
   page.on('console', (message) => {
     if (message.type() === 'error') {
-      consoleErrors.push({ text: message.text(), source: message.location().url, at: order++ });
+      const text = message.text();
+      // A page's console.error passes at least one argument; an engine's own report passes none
+      // in Chromium and WebKit, and is one "[JavaScript Error: ...]" string in Firefox.
+      const engine = message.args().length === 0 || text.startsWith('[JavaScript Error: "');
+      consoleErrors.push({ text, source: message.location().url, engine });
     }
   });
   page.on('response', (response) => {
@@ -5033,40 +5062,55 @@ function collectPageErrors(page: Page, baseUrl: string, siteDir: string): () => 
     if (status >= 400) {
       const type = response.request().resourceType();
       judgeFailure(response.url(), type, `answered ${status}`, false);
-    } else {
-      note(succeeded, response.url());
     }
   });
   page.on('requestfailed', (request) => {
     const errorText = request.failure()?.errorText ?? '';
+    if (new URL(request.url()).origin !== origin) {
+      crossOriginFailures.add(errorText);
+      crossOriginScriptFailed ||= request.resourceType() === 'script';
+    }
     const cancelled = CANCELLED_REQUEST.test(errorText);
     judgeFailure(request.url(), request.resourceType(), `failed (${errorText})`, cancelled);
   });
   /**
-   * Tells whether a console error is the engine's own report of a judged failed attempt.
+   * Tells whether a console error is an engine's own report of a load failure that may pass, or
+   * that the request listeners have already handled.
    *
    * @param text - Console message text.
    * @param source - URL the engine gives as the message's source.
-   * @param at - The message's place in the page's event order.
-   * @returns Whether the request listeners have already judged the failure it reports.
+   * @param engine - Whether the engine, not a page script, wrote the message.
+   * @returns Whether to leave the message out.
    */
-  const reportsJudgedFailure = (text: string, source: string, at: number): boolean => {
-    const href = RESOURCE_LOAD_REPORT.test(text)
-      ? source
-      : RESOURCE_DIAGNOSTICS.map((pattern) => pattern.exec(text)?.[1]).find((url) => url);
-    if (!href) {
+  const isExcusedReport = (text: string, source: string, engine: boolean): boolean => {
+    if (!engine) {
       return false;
     }
-    const successes = succeeded.get(href) ?? [];
-    return (judged.get(href) ?? []).some((failedAt) => {
-      const [from, to] = failedAt < at ? [failedAt, at] : [at, failedAt];
-      return !successes.some((succeededAt) => succeededAt > from && succeededAt < to);
-    });
+    const reports = ENGINE_LOAD_REPORTS;
+    if (reports.failedToLoad.test(text)) {
+      return source !== '' && (mayFail(source) || handledUrls.has(source));
+    }
+    const blocked = reports.corsBlocked.exec(text)?.[1] ?? reports.firefoxCors.exec(text)?.[1];
+    if (blocked !== undefined) {
+      return mayFail(blocked);
+    }
+    if (reports.originNotAllowed.test(text)) {
+      return crossOriginFailures.has(text);
+    }
+    const integrity = reports.firefoxIntegrity.exec(text);
+    if (integrity) {
+      const [, algorithm, href, computed] = integrity;
+      return mayFail(href) && EMPTY_BODY_HASHES[algorithm] === computed;
+    }
+    return false;
   };
   return () => [
     ...errors,
+    ...pageErrors
+      .filter((message) => !(message === WEBKIT_SCRIPT_CORS_ERROR && crossOriginScriptFailed))
+      .map((message) => `uncaught ${message}`),
     ...consoleErrors
-      .filter(({ text, source, at }) => !reportsJudgedFailure(text, source, at))
+      .filter(({ text, source, engine }) => !isExcusedReport(text, source, engine))
       .map(({ text }) => text)
   ];
 }
