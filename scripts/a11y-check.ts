@@ -187,6 +187,11 @@ interface InteractionScenario {
    * Every other scenario scans the whole page.
    */
   scope?: readonly string[];
+  /**
+   * Changes a browser setting before the page loads, for a setting its first layout must already
+   * use, such as the default font size.
+   */
+  prepare?: (page: Page) => Promise<void>;
   /** Drives the loaded page into the state with locators, the keyboard, and the mouse. */
   setup: (page: Page) => Promise<void>;
   /**
@@ -1950,6 +1955,243 @@ function sidebarLinkFocusScenario(
 }
 
 /**
+ * Default font sizes the larger-font scenarios set, in CSS px: Chrome's "Very large" font setting
+ * (24 px), and twice the 16 px default (32 px), the text size WCAG 1.4.4 Resize Text asks for.
+ */
+const LARGE_DEFAULT_FONTS = [24, 32] as const;
+
+/**
+ * Viewport widths the larger-font scenarios load at: 1280, where all three columns first show at
+ * the default font, and the 1440 the desktop scans use.
+ */
+const LARGE_FONT_WIDTHS = [1280, 1440] as const;
+
+/** Pages the larger-font scenarios load: the longest page of components, and the widest tables. */
+const LARGE_FONT_PAGES = ['kitchen-sink.html', 'configuration.html'] as const;
+
+/**
+ * The narrowest article content box the larger-font scenarios accept, in em of the reader's default
+ * font. 20em is 320 CSS px at the 16 px default, the viewport width that WCAG 1.4.10 Reflow asks
+ * content to work in, and so the whole width of the narrowest phone layout the skin supports. A
+ * reader who raised the font on a wide screen must not get a column narrower than that phone
+ * screen, scaled to their font.
+ */
+const MIN_ARTICLE_EM = 20;
+
+/**
+ * Scenarios that set the browser's default font size. Playwright has no such option; only
+ * Chromium's DevTools protocol does (`Page.setFontSizes`).
+ */
+const FONT_SETTING_ENGINES: EngineSupport = {
+  supported: ['chromium'],
+  reason: "only Chromium's DevTools protocol sets the default font size (Page.setFontSizes)"
+};
+
+/**
+ * Lists what a larger default font broke in the article: a content box narrower than `minEm` of
+ * the default font, and text clipped by a box that hides its overflow. A box clips text when its
+ * content is wider than the box (`scrollWidth > clientWidth`) and a text node whose nearest
+ * ancestor with non-visible overflow is that box extends past its padding box. Overflow that is not
+ * text, a decorative shape or an icon, does not count, and text inside a scrolling descendant, a
+ * table or code block the reader can scroll, belongs to that descendant. Boxes 1 px wide or less
+ * are visually hidden text for screen readers, which is meant to be clipped. Runs in the page.
+ *
+ * @param minEm - Narrowest acceptable content box, in em of the root font size.
+ * @returns One message per problem; empty when the article holds up.
+ */
+function largeFontArticleProblems(minEm: number): string[] {
+  const problems: string[] = [];
+  const article = document.querySelector<HTMLElement>('.supa-article');
+  if (!article) {
+    return ['no .supa-article on the page'];
+  }
+  const rootPx = Number.parseFloat(getComputedStyle(document.documentElement).fontSize);
+  const articleStyle = getComputedStyle(article);
+  const contentWidth =
+    article.clientWidth -
+    Number.parseFloat(articleStyle.paddingLeft) -
+    Number.parseFloat(articleStyle.paddingRight);
+  if (contentWidth < minEm * rootPx) {
+    problems.push(
+      `the article is ${Math.round(contentWidth)}px wide (${(contentWidth / rootPx).toFixed(1)}em), ` +
+        `narrower than ${minEm}em (${minEm * rootPx}px)`
+    );
+  }
+  /**
+   * Names an element for a message.
+   *
+   * @param el - Element to name.
+   * @returns Tag and classes, such as `div.supa-admonition.admonition-note`.
+   */
+  const nameOf = (el: Element): string =>
+    [el.tagName.toLowerCase(), ...[...el.classList].filter((name) => !name.includes(':'))].join('.');
+  for (const box of [article, ...article.querySelectorAll<HTMLElement>('*')]) {
+    const overflow = getComputedStyle(box).overflowX;
+    if ((overflow !== 'hidden' && overflow !== 'clip') || box.clientWidth <= 1 ||
+        box.scrollWidth <= box.clientWidth + 1) {
+      continue;
+    }
+    const rect = box.getBoundingClientRect();
+    const left = rect.left + box.clientLeft;
+    const right = left + box.clientWidth;
+    const walker = document.createTreeWalker(box, NodeFilter.SHOW_TEXT);
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      let clipper = node.parentElement;
+      while (clipper && clipper !== box && getComputedStyle(clipper).overflowX === 'visible') {
+        clipper = clipper.parentElement;
+      }
+      if (clipper !== box || !node.textContent?.trim()) {
+        continue;
+      }
+      const range = document.createRange();
+      range.selectNodeContents(node);
+      const past = [...range.getClientRects()].find(
+        (r) => r.width > 0 && (r.right > right + 1 || r.left < left - 1)
+      );
+      if (past) {
+        const text = node.textContent.trim().replace(/\s+/g, ' ').slice(0, 40);
+        problems.push(
+          `${nameOf(box)} (${box.clientWidth}px wide, content ${box.scrollWidth}px) clips "${text}"`
+        );
+        break;
+      }
+    }
+  }
+  return problems;
+}
+
+/**
+ * Checks that a navigation column works at the current layout: inline beside the article, or,
+ * where its trigger shows, as a drawer that opens inside the viewport and closes again. A section
+ * link closes the drawer only where `index.ts` also takes the layout for a drawer, so following
+ * one proves the script and the stylesheet agree on the breakpoint. The sidebar follows a link to
+ * a section of the same page when one is showing, and is otherwise dismissed with Escape.
+ *
+ * @param page - Page under test, with reduced motion.
+ * @param file - Page's file name, which the sidebar's same-page links start with.
+ * @param column - `sidebar` (`#supaSidebarDrawer`, `lg`) or `toc` (`#supaTocDrawer`, `xl`).
+ */
+async function expectNavigationColumnWorks(page: Page, file: string, column: 'sidebar' | 'toc'): Promise<void> {
+  const id = column === 'sidebar' ? 'supaSidebarDrawer' : 'supaTocDrawer';
+  const trigger = page
+    .locator(column === 'sidebar'
+      ? '.supa-mobile-header [data-bs-target="#supaSidebarDrawer"]'
+      : '.supa-toc-drawer-trigger')
+    .filter({ visible: true })
+    .first();
+  if (!(await trigger.isVisible())) {
+    const beside = await page.evaluate(([drawerId, side]: [string, string]) => {
+      const drawer = document.getElementById(drawerId)!.getBoundingClientRect();
+      const article = document.querySelector('.supa-article')!.getBoundingClientRect();
+      if (drawer.width === 0 || drawer.height === 0) {
+        return `the inline #${drawerId} is not rendered, and no trigger opens it`;
+      }
+      const clear = side === 'left' ? drawer.right <= article.left + 1 : drawer.left >= article.right - 1;
+      return clear ? '' : `the inline #${drawerId} overlaps the article`;
+    }, [id, column === 'sidebar' ? 'left' : 'right'] as [string, string]);
+    if (beside) {
+      throw new Error(beside);
+    }
+    return;
+  }
+  // Bootstrap ignores a hide() while the drawer is still sliding in, so wait for shown.
+  await page.evaluate((drawerId) => {
+    const drawer = document.getElementById(drawerId)!;
+    document.documentElement.removeAttribute('data-test-drawer-shown');
+    document.documentElement.removeAttribute('data-test-drawer-hidden');
+    drawer.addEventListener('shown.bs.drawer', () => {
+      document.documentElement.setAttribute('data-test-drawer-shown', 'true');
+    }, { once: true });
+    drawer.addEventListener('hidden.bs.drawer', () => {
+      document.documentElement.setAttribute('data-test-drawer-hidden', 'true');
+    }, { once: true });
+  }, id);
+  await trigger.click();
+  await page.waitForFunction(() => document.documentElement.hasAttribute('data-test-drawer-shown'));
+  const fits = await page.evaluate((drawerId) => {
+    const rect = document.getElementById(drawerId)!.getBoundingClientRect();
+    return rect.width > 0 && rect.left >= -1 && rect.right <= window.innerWidth + 1
+      ? ''
+      : `the open #${drawerId} spans ${Math.round(rect.left)}..${Math.round(rect.right)}px ` +
+        `in a ${window.innerWidth}px viewport`;
+  }, id);
+  if (fits) {
+    throw new Error(fits);
+  }
+  const link = page
+    .locator(column === 'sidebar' ? `#${id} a.supa-nav-link[href^="${file}#"]` : `#${id} #supaTocNav a.nav-link`)
+    .filter({ visible: true })
+    .first();
+  const href = (await link.isVisible()) ? await link.getAttribute('href') : null;
+  if (href) {
+    await link.focus();
+    await page.keyboard.press('Enter');
+  } else {
+    await page.keyboard.press('Escape');
+  }
+  try {
+    await page.waitForFunction(() => document.documentElement.hasAttribute('data-test-drawer-hidden'));
+  } catch {
+    throw new Error(
+      `the open #${id} did not close after ${href ? `following ${href}` : 'Escape'}: ` +
+        'the script and the stylesheet disagree on whether it is a drawer'
+    );
+  }
+  if (href) {
+    const target = decodeURIComponent(href.slice(href.indexOf('#') + 1));
+    await expectFocused(page, page.locator(`[id="${target}"]`), `the section ${href} leads to`);
+  } else {
+    await expectFocused(page, trigger, `the trigger of #${id}`);
+  }
+}
+
+/**
+ * Loads `file` with the browser's default font size raised to `fontPx`, as a reader does with the
+ * browser's font setting. Unlike page zoom, that leaves the viewport as many CSS px wide, so a
+ * layout that switches at px widths keeps all three columns while `rem` widths and text grow.
+ * Checks that the article keeps a readable column and clips no text, and that the sidebar and the
+ * TOC each work, inline or as a drawer.
+ *
+ * @param file - Page to load.
+ * @param fontPx - Default font size, in CSS px.
+ * @param width - Viewport width, in CSS px.
+ * @returns Scenario that checks the layout at the larger font.
+ */
+function largeDefaultFontScenario(file: string, fontPx: number, width: number): InteractionScenario {
+  return {
+    name: `large-default-font-${file.replace(/\.html$/, '')}-${fontPx}-${width}`,
+    page: file,
+    viewport: { width, height: 900 },
+    variants: [{ palette: 'furo', polarity: 'light' }],
+    engines: FONT_SETTING_ENGINES,
+    prepare: async (page) => {
+      const cdp = await page.context().newCDPSession(page);
+      // Chrome's font-size setting keeps the fixed-width font 3 px smaller, 13 px at the 16 px default.
+      await cdp.send('Page.setFontSizes', { fontSizes: { standard: fontPx, fixed: fontPx - 3 } });
+    },
+    setup: async (page) => {
+      await page.emulateMedia({ reducedMotion: 'reduce' });
+      await expectNavigationColumnWorks(page, file, 'sidebar');
+      await expectNavigationColumnWorks(page, file, 'toc');
+      await settleTransitions(page);
+    },
+    assertState: async (page) => {
+      const rootPx = await page.evaluate(() => getComputedStyle(document.documentElement).fontSize);
+      if (rootPx !== `${fontPx}px`) {
+        throw new Error(`expected a ${fontPx}px default font, but <html> computes ${rootPx}`);
+      }
+      const problems = await page.evaluate(largeFontArticleProblems, MIN_ARTICLE_EM);
+      if (problems.length > 0) {
+        const more = problems.length > 5 ? `; and ${problems.length - 5} more` : '';
+        throw new Error(
+          `at a ${fontPx}px default font and ${width}px: ${problems.slice(0, 5).join('; ')}${more}`
+        );
+      }
+    }
+  };
+}
+
+/**
  * Audits selected and unselected picker outlines through real keyboard navigation.
  *
  * @param page - Configuration page with the header palette menu open.
@@ -3085,6 +3327,8 @@ const SCENARIOS: readonly InteractionScenario[] = [
   sidebarLinkFocusScenario('sidebar-link-focus-desktop', DESKTOP, 'reduce'),
   sidebarLinkFocusScenario('sidebar-link-focus-smooth-mobile', MOBILE, 'no-preference'),
   sidebarLinkFocusScenario('sidebar-link-focus-smooth-desktop', DESKTOP, 'no-preference'),
+  ...LARGE_FONT_PAGES.flatMap((file) => LARGE_DEFAULT_FONTS.flatMap((fontPx) =>
+    LARGE_FONT_WIDTHS.map((width) => largeDefaultFontScenario(file, fontPx, width)))),
   {
     name: 'control-boundaries-focus',
     page: 'components.html',
@@ -4119,6 +4363,7 @@ async function scan(context: BrowserContext, baseUrl: string, job: ScanJob): Pro
   );
   await context.addInitScript(installColorHelper, WCAG_MINIMUMS);
   const page = await context.newPage();
+  await scenario?.prepare?.(page);
   await page.goto(`${baseUrl}/${job.page}`, { waitUntil: 'load' });
   await page.waitForSelector('html[data-supa-ready="true"]', {
     state: 'attached',
