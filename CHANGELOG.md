@@ -20,7 +20,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Fixed
 
-- **Reference Corrections**: The `<labels>` reference says that an element inside a label makes the skin keep the English text, and that escaped characters and `CDATA` show as typed.
+- **Reference Corrections**: The `<labels>` reference says that an element inside a label makes the skin keep the English text, and that escaped characters and `CDATA` show as typed. The customizing guide names the two focus rings that do not follow `color-brand-primary`.
 - **Forced-Color Popovers and Page Coverage**: Popover arrows retain their triangular shape with system-color outlines and fills. Rendered checks cover open popovers and every top-level page in light and dark forced colors, without rule or element exclusions.
 - **Themed Card Footers**: Solid themed headers and footers keep their fills when printed, and use `--theme-contrast` for text and links, including header links. Subtle and translucent caps use their own text colors, and inline-code chips retain their page-colored backing. Build-time audits and rendered checks cover all eight themes across all 12 palette and polarity variants.
 - **Palette Picker Focus**: Color-scheme menu options gain a semantic-color keyboard outline in every palette and polarity. Rendered checks cover selected and unselected focus and outline contrast on both pickers.
