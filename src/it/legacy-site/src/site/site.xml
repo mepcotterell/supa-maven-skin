@@ -25,6 +25,9 @@
       <footerVersion>false</footerVersion>
       <sourceRepository>https://github.com/example/legacy-site</sourceRepository>
       <sourceEditButton>false</sourceEditButton>
+      <!-- Not numbers, so each falls back to its default -->
+      <tocMaxDepth>deep</tocMaxDepth>
+      <sidebarCollapseDepth>all</sidebarCollapseDepth>
       <labels>
         <skipToContent>Skip to the documentation</skipToContent>
         <searchNoResults>Nothing matches {query}</searchNoResults>

@@ -219,10 +219,10 @@ Configures the top announcement banner, breadcrumbs, left sidebar menu tree, rig
 | `<announcement>` | *(empty)* | Top announcement banner HTML rendered above the page header. |
 | `<breadcrumb>` | `true` | Render the breadcrumb navigation trail in the top content utility bar. |
 | `<stickyContentHeader>` | `false` | Pin the top content utility bar (breadcrumbs, source links, palette picker, theme toggle) to the top of the viewport on `lg+` screens (`64em`, `1024px` at the default 16px font). Adds `.supa-sticky-content-header` to `<body>`; heading anchors and ScrollSpy offset by `--supa-content-header-height`. Below `lg`, the mobile header is already sticky. |
-| `<sidebarCollapseDepth>` | `1` | Menu nesting depth expanded by default in the left sidebar (`<details open>`). |
+| `<sidebarCollapseDepth>` | `1` | Menu nesting depth expanded by default in the left sidebar (`<details open>`). A value that is not a number keeps the default. |
 | `<tocSidebar>` | `true` | Enable the right-hand "On this page" table of contents column and right drawer (`#supaTocDrawer`). |
 | `<tocTitle>` | `On this page` | Heading label for the right-hand table of contents. Also names the TOC landmark (`<aside>`) and its `<nav>` for screen readers. A shorthand for the `tocTitle` [label](#labels): when both are set, `<labels><tocTitle>` wins. The TOC drawer buttons are named by the separate `tocToggle` label, so a translated site sets that too. |
-| `<tocMaxDepth>` | `4` | Maximum heading level (`2`–`6`) included in the right-hand TOC. |
+| `<tocMaxDepth>` | `4` | Maximum heading level (`2`–`6`) included in the right-hand TOC. A value that is not a number keeps the default. |
 | `<prevNextButtons>` | `true` | Render Furo-styled Previous / Next page navigation cards at the bottom of articles. |
 
 ### Language & Labels

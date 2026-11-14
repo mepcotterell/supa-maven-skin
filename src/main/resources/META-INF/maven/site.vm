@@ -43,9 +43,17 @@
 #set( $stickyContentHeader = $convert.toBoolean( $site.getCustomValue( "${skinCfg}.stickyContentHeader", 'false' ) ) )
 #set( $tocSidebar = $convert.toBoolean( $site.getCustomValue( "${skinCfg}.tocSidebar", 'true' ) ) )
 ## <tocTitle> is a shorthand for <labels><tocTitle>, merged by #supaBuildLabels
+## A numeric option that is not a number keeps its default. The check is for null, not for a
+## false value, so a depth of 0 stays 0.
 #set( $tocMaxDepth = $convert.toNumber( $site.getCustomValue( "${skinCfg}.tocMaxDepth", '4' ) ) )
+#if( "$!tocMaxDepth" == '' )
+#set( $tocMaxDepth = 4 )
+#end
 #set( $prevNextBtns = $convert.toBoolean( $site.getCustomValue( "${skinCfg}.prevNextButtons", 'true' ) ) )
 #set( $sidebarCollapseDepth = $convert.toNumber( $site.getCustomValue( "${skinCfg}.sidebarCollapseDepth", '1' ) ) )
+#if( "$!sidebarCollapseDepth" == '' )
+#set( $sidebarCollapseDepth = 1 )
+#end
 #set( $drawerScrollDefault = $site.getCustomValue( "${skinCfg}.drawerBodyScroll", 'false' ) )
 #set( $drawerScroll = $site.getCustomValue( "${skinCfg}.drawerScroll", $drawerScrollDefault ) )
 #set( $drawerBackdrop = $site.getCustomValue( "${skinCfg}.drawerBackdrop", 'true' ) )

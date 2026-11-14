@@ -1,7 +1,7 @@
 // Renders the legacy <furoSkin> block, which the skin reads when site.xml has no <supaSkin>, with an
 // explicit light default, a right-aligned brand showing the <bannerLeft> image, the version badge
-// and the edit button turned off, a pom.xml <organization> with a URL, and a quote and an
-// ampersand in each site.xml and pom.xml URL and menu target.
+// and the edit button turned off, a pom.xml <organization> with a URL, numeric options that are not
+// numbers, and a quote and an ampersand in each site.xml and pom.xml URL and menu target.
 
 File siteDir = new File( basedir, "target/site" );
 if ( !siteDir.isDirectory() ) {
@@ -50,6 +50,11 @@ for ( int p = 0; p < pages.length; p++ ) {
         "no theme menu may mark auto as checked when the default is light" );
     expectTags( path, html, "button", new String[] { "class~", "selected", "data-supa-theme-option", "auto" }, 0,
         "no theme menu may select auto when the default is light" );
+
+    // <tocMaxDepth>deep</tocMaxDepth> is not a number, so the TOC keeps its default depth
+    if ( !tagHas( body, new String[] { "data-supa-toc-max-depth", "4" } ) ) {
+        throw new IllegalStateException( path + ": a <tocMaxDepth> that is not a number must fall back to 4: " + body );
+    }
 
     // <sidebarBrandAlign>right</sidebarBrandAlign>, linked to the <bannerLeft> href, escaped
     expectTag( path, html, "a", new String[] {
@@ -101,7 +106,16 @@ for ( int p = 0; p < pages.length; p++ ) {
         "the menu item must keep its escaped href and target" );
     expectTag( path, html, "a", new String[] { "class", "supa-next-page", "href", nextHref },
         "the Next page card must link to the next menu item, escaped" );
+
+    // <sidebarCollapseDepth>all</sidebarCollapseDepth> is not a number, so the default depth of 1
+    // opens the collapsed top-level group
+    expectTag( path, html, "details", new String[] { "class", "supa-nav-details", "open", "open" },
+        "a <sidebarCollapseDepth> that is not a number must fall back to 1" );
 }
+
+// The invalid numeric options must not make Velocity log errors while the pages render
+reject( "build.log", Files.readString( new File( basedir, "build.log" ).toPath(), StandardCharsets.UTF_8 ), "[ERROR]",
+    "the site build must log no errors" );
 
 // Every aria-labelledby and aria-describedby on every page names an element there
 expectSiteIdReferencesResolve( siteDir );
