@@ -1847,6 +1847,9 @@ function tocLinkFocusScenario(
   };
 }
 
+/** A query no page of the self-site contains, for the zero-result search state. */
+const NO_RESULTS_QUERY = 'qzxvjkw';
+
 /** Page, sidebar link, and destination heading that the sidebar destination-focus scenarios follow. */
 const SIDEBAR_LINK_PAGE = 'customizing.html';
 const SIDEBAR_LINK_TARGET = 'injecting-extra-head-content';
@@ -3250,6 +3253,42 @@ const SCENARIOS: readonly InteractionScenario[] = [
       await expectVisible(
         page.locator('#supaSearchResults > .is-active .supa-search-result-title mark').first(),
         'a highlighted match in the active result title'
+      );
+      await expectFocused(page, page.locator('#supaSearchInput'), 'the search input');
+    }
+  },
+  {
+    name: 'search-dialog-no-results',
+    page: 'index.html',
+    viewport: DESKTOP,
+    setup: async (page) => {
+      await page.locator('.supa-sidebar-search .supa-search-trigger').click();
+      await expectFocused(page, page.locator('#supaSearchInput'), 'the search input');
+      // Search the whole crawled index, as in search-dialog-results, so "no results" is final.
+      await page.waitForFunction(
+        () => Object.keys(window.sessionStorage).some((key) => key.startsWith('supa-search-index-')),
+        undefined,
+        { timeout: STATE_TIMEOUT_MS }
+      );
+      await page.keyboard.type(NO_RESULTS_QUERY);
+    },
+    assertState: async (page) => {
+      await expectVisible(page.locator('dialog#supaSearchDialog[open]'), 'the search dialog');
+      // The status is a polite live region whose text changes to the no-results message, so a
+      // screen reader announces it without moving focus from the field.
+      const status = page.locator('#supaSearchStatus');
+      await expectAttribute(status, 'aria-live', 'polite', 'the search status');
+      await expectVisible(
+        status.filter({ hasText: new RegExp(`^\\s*No results for “${NO_RESULTS_QUERY}”\\s*$`) }),
+        'the no-results message in the search status'
+      );
+      const options = await page.locator('#supaSearchResults > *').count();
+      if (options !== 0) {
+        throw new Error(`expected no search results, found ${options}`);
+      }
+      await expectAttribute(page.locator('#supaSearchInput'), 'aria-expanded', 'false', 'the search input');
+      await expectAttribute(
+        page.locator('#supaSearchInput'), 'aria-activedescendant', null, 'the search input'
       );
       await expectFocused(page, page.locator('#supaSearchInput'), 'the search input');
     }
