@@ -4918,8 +4918,26 @@ async function scanWithDeadline(
 const OPTIONAL_SITE_PATHS: ReadonlySet<string> = new Set(['/css/site.css']);
 
 /**
+ * The `errorText` each engine gives a request that was cancelled rather than refused: Chromium's
+ * `net::ERR_ABORTED`, Firefox's `NS_BINDING_ABORTED`, and WebKit's `cancelled`. A navigation or
+ * reload cancels the old page's pending requests this way, and so does a script's
+ * `AbortController`, which leaves no navigation to check for, so the text alone decides.
+ */
+const CANCELLED_REQUEST = /^(?:net::ERR_ABORTED|NS_BINDING_ABORTED|cancelled)$/;
+
+/**
+ * Firefox's console errors for a failed cross-origin script, which give the page, or nothing, as
+ * their source, and name the request only in their text: the CORS failure of an unreachable host,
+ * and the Subresource Integrity mismatch of the empty body it leaves. Each captures the URL.
+ */
+const RESOURCE_DIAGNOSTICS: readonly RegExp[] = [
+  /^\[JavaScript Error: "Cross-Origin Request Blocked: The Same Origin Policy disallows reading the remote resource at (\S+?)\. \(Reason:/,
+  /^\[JavaScript Error: "None of the “sha\d+” hashes in the integrity attribute match the content of the subresource at “([^”]+)”/
+];
+
+/**
  * Starts recording the errors a page raises: an uncaught exception or unhandled rejection
- * (`pageerror`), any `console.error`, and every request for a file the site does not have.
+ * (`pageerror`), a `console.error`, and a request for one of the site's files that fails.
  * `initSupaSkin()` logs `console.error("Supa Maven Skin: <enhancer> failed", error)` when one of its
  * enhancers throws and carries on, so `data-supa-ready` is set even then, and only this listener
  * notices the failure. The current site logs no `console.error` in a Chromium run, so the check
@@ -4930,16 +4948,17 @@ const OPTIONAL_SITE_PATHS: ReadonlySet<string> = new Set(['/css/site.css']);
  * A missing image, font, stylesheet, or widget chunk is a broken page even when the page still
  * boots: `bootstrap-components.ts` only warns when a chunk does not load and leaves the widget as
  * plain HTML. So a request to the site's own origin fails the scan when it is answered with an
- * error status, which is how the static server answers a missing file, or when it fails without
- * a response and the site has no file at its path; a request for a file the site has fails
- * without a response only when a navigation or reload cancels it. `OPTIONAL_SITE_PATHS` may be
- * missing. Requests to other origins, the Mermaid and KaTeX CDN and any URL a site configures,
- * may fail: a scan may hold them back, and an unreachable host is a network matter.
+ * error status, which is how the static server answers a missing file, and when it fails without
+ * a response, as a Content Security Policy block or a refused MIME type does, unless it was
+ * cancelled (`CANCELLED_REQUEST`) for a file the site has. `OPTIONAL_SITE_PATHS` may be missing.
+ * Requests to other origins, the Mermaid and KaTeX CDN and any URL a site configures, may fail: a
+ * scan may hold them back, and an unreachable host is a network matter.
  *
- * Every engine also logs a failed request as a `console.error` of its own wording (Chromium and
- * WebKit "Failed to load resource", Firefox a CORS or Subresource Integrity error). Those are
- * judged by the request, not their text: a console error that names a failed request's URL, in
- * its text or as its source, is left to the request listeners above.
+ * Engines also log a failed request as a `console.error`. The one console error left out is the
+ * engine's own report of a failure the request listeners have judged, an allowed one or one they
+ * recorded: a message whose source is that request's URL (Chromium and WebKit "Failed to load
+ * resource"), or one of Firefox's `RESOURCE_DIAGNOSTICS` naming it. Every other console error,
+ * an application's or a Content Security Policy report among them, is recorded.
  *
  * @param page - Page to listen to, before it navigates.
  * @param baseUrl - Origin of the site under test.
@@ -4949,32 +4968,34 @@ const OPTIONAL_SITE_PATHS: ReadonlySet<string> = new Set(['/css/site.css']);
 function collectPageErrors(page: Page, baseUrl: string, siteDir: string): () => string[] {
   const { origin } = new URL(baseUrl);
   const errors: string[] = [];
-  const missing = new Set<string>();
-  const failedUrls = new Set<string>();
+  const reported = new Set<string>();
+  const judgedUrls = new Set<string>();
   const consoleErrors: Array<{ text: string; source: string }> = [];
   /**
-   * Records a failed request, and fails the scan when it was for a file the site must have.
+   * Judges a failed request: it fails the scan when it was for a file the site must have.
    *
    * @param href - Requested URL.
    * @param resourceType - Playwright's resource type of the request, for the report.
    * @param failure - How it failed, for the report.
-   * @param isMissing - Whether the site has no file at that URL.
+   * @param cancelled - Whether it was cancelled rather than refused.
    */
-  const recordFailure = (
+  const judgeFailure = (
     href: string,
     resourceType: string,
     failure: string,
-    isMissing: () => boolean
+    cancelled: boolean
   ): void => {
-    failedUrls.add(href);
     const { origin: requestOrigin, pathname } = new URL(href);
-    if (
-      requestOrigin === origin &&
-      !OPTIONAL_SITE_PATHS.has(pathname) &&
-      !missing.has(pathname) &&
-      isMissing()
-    ) {
-      missing.add(pathname);
+    if (requestOrigin !== origin || OPTIONAL_SITE_PATHS.has(pathname)) {
+      judgedUrls.add(href);
+      return;
+    }
+    if (cancelled && resolveSitePath(siteDir, pathname) !== null) {
+      return;
+    }
+    judgedUrls.add(href);
+    if (!reported.has(pathname)) {
+      reported.add(pathname);
       errors.push(`the ${resourceType} ${pathname} ${failure}`);
     }
   };
@@ -4990,22 +5011,31 @@ function collectPageErrors(page: Page, baseUrl: string, siteDir: string): () => 
     const status = response.status();
     if (status >= 400) {
       const type = response.request().resourceType();
-      recordFailure(response.url(), type, `answered ${status}`, () => true);
+      judgeFailure(response.url(), type, `answered ${status}`, false);
     }
   });
   page.on('requestfailed', (request) => {
-    const href = request.url();
-    recordFailure(
-      href,
-      request.resourceType(),
-      'failed, and the site has no such file',
-      () => resolveSitePath(siteDir, new URL(href).pathname) === null
-    );
+    const errorText = request.failure()?.errorText ?? '';
+    const cancelled = CANCELLED_REQUEST.test(errorText);
+    judgeFailure(request.url(), request.resourceType(), `failed (${errorText})`, cancelled);
   });
+  /**
+   * Tells whether a console error is the engine's own report of a judged request failure.
+   *
+   * @param text - Console message text.
+   * @param source - URL the engine gives as the message's source.
+   * @returns Whether the request listeners have already judged the failure it reports.
+   */
+  const reportsJudgedFailure = (text: string, source: string): boolean =>
+    judgedUrls.has(source) ||
+    RESOURCE_DIAGNOSTICS.some((pattern) => {
+      const named = pattern.exec(text)?.[1];
+      return named !== undefined && judgedUrls.has(named);
+    });
   return () => [
     ...errors,
     ...consoleErrors
-      .filter(({ text, source }) => ![...failedUrls].some((u) => source === u || text.includes(u)))
+      .filter(({ text, source }) => !reportsJudgedFailure(text, source))
       .map(({ text }) => text)
   ];
 }
