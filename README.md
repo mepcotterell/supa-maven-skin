@@ -43,7 +43,7 @@ Requires `maven-site-plugin` 3.21.0 or later. It is tested with JDK 21 and 25 an
 <skin>
   <groupId>io.github.mepcotterell</groupId>
   <artifactId>supa-maven-skin</artifactId>
-  <version>0.2.0</version>
+  <version>0.2.1</version>
 </skin>
 ```
 
