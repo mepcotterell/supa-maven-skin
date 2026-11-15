@@ -183,16 +183,18 @@ interface InteractionScenario {
   now?: string;
   /**
    * Selectors that limit the scan to the regions the state changes. Only for a
-   * state the skin holds briefly (the copy button resets "Copied!" after 1.8 s),
-   * so axe finishes well inside it, a hovered component, which changes only
-   * itself, or a widget opened from a field, which changes only itself and the
-   * field; the unchanged rest of the page is covered by the load-time scans.
-   * Every other scenario scans the whole page.
+   * state that changes known regions alone: the copy button's result, which its
+   * scenario holds by withholding the reset timer, the copy button after its
+   * result tooltip has closed, a hovered component, which changes only itself,
+   * or a widget opened from a field, which changes only itself and the field;
+   * the unchanged rest of the page is covered by the load-time scans. Every
+   * other scenario scans the whole page.
    */
   scope?: readonly string[];
   /**
-   * Changes a browser setting before the page loads, for a setting its first layout must already
-   * use, such as the default font size.
+   * Changes a browser setting, or adds an init script, before the page loads: for a setting its
+   * first layout must already use, such as the default font size, or for a page function the
+   * scenario must replace before any page script runs, such as `setTimeout` (`installTimerHold`).
    */
   prepare?: (page: Page) => Promise<void>;
   /** Drives the loaded page into the state with locators, the keyboard, and the mouse. */
@@ -320,6 +322,13 @@ const TABLET: Viewport = { width: 1100, height: 900 };
 const TABLET_LANDSCAPE: Viewport = { width: 1024, height: 768 };
 const READY_TIMEOUT_MS = 30_000;
 const STATE_TIMEOUT_MS = 5_000;
+/**
+ * The `setTimeout` delay a copy-button scenario's timer hold withholds: `COPY_RESULT_DURATION_MS`
+ * in `code.ts`, the copy button's 1.8 s reset. Only a timer with exactly this delay is withheld,
+ * so Bootstrap's tooltip delays, floating-ui's 1 s position throttle, and axe's yields still run;
+ * if the reset's duration changes, the hold withholds nothing and `expectHeldTimers` fails.
+ */
+const COPY_RESET_DELAY_MS = 1_800;
 const CONCURRENCY = 4;
 /**
  * Longest one scan job may run, from opening its context to the end of axe, before it is failed
@@ -425,6 +434,22 @@ async function expectVisible(locator: Locator, what: string): Promise<void> {
     await locator.waitFor({ state: 'visible', timeout: STATE_TIMEOUT_MS });
   } catch (error: unknown) {
     throw new Error(`expected ${what} to be visible [${String(locator)}]: ${firstLine(error)}`, {
+      cause: error
+    });
+  }
+}
+
+/**
+ * Waits until nothing matching `locator` is visible.
+ *
+ * @param locator - Element that must be gone or hidden in the state.
+ * @param what - Human-readable description for the error message.
+ */
+async function expectHidden(locator: Locator, what: string): Promise<void> {
+  try {
+    await locator.waitFor({ state: 'hidden', timeout: STATE_TIMEOUT_MS });
+  } catch (error: unknown) {
+    throw new Error(`expected ${what} to be hidden [${String(locator)}]: ${firstLine(error)}`, {
       cause: error
     });
   }
@@ -1533,6 +1558,132 @@ function deepLinkScenario(
       }
     }
   };
+}
+
+/** The part of the page's `window` that `installTimerHold` adds. */
+interface TimerHoldWindow extends Window {
+  supaA11yTimerHold?: {
+    armed: boolean;
+    held: number;
+    /** Withheld callbacks not yet released or cleared, by the id their timer returned. */
+    pending: Map<number, () => void>;
+  };
+}
+
+/**
+ * Replaces the page's `setTimeout` and `clearTimeout`, before any page script runs, with ones that
+ * can withhold one kind of timer. While `setTimerHold(page, true)` has armed it, a timer whose
+ * delay is exactly `delayMs` is counted and does not run on its own: it is swapped for a no-op
+ * timer with the same delay, so its id is real, and its callback is kept until
+ * `releaseHeldTimers` runs it or the page clears the id. Every other timer, and every timer while
+ * the hold is disarmed, goes to the native `setTimeout`. Playwright's clock is not used, because
+ * pausing it also stops `requestAnimationFrame` and 0 ms timers, so Bootstrap's tooltip never
+ * shows and the settle step and axe hang. Playwright sends the init function's source into the
+ * page, so it closes over nothing and takes the delay as an argument.
+ *
+ * @param page - Page that has not loaded yet, from a scenario's `prepare`.
+ * @param delayMs - Delay of the timers to withhold, such as `COPY_RESET_DELAY_MS`.
+ */
+async function installTimerHold(page: Page, delayMs: number): Promise<void> {
+  await page.addInitScript((heldDelay: number) => {
+    const holder = window as TimerHoldWindow;
+    const hold = { armed: false, held: 0, pending: new Map<number, () => void>() };
+    holder.supaA11yTimerHold = hold;
+    const realSetTimeout = window.setTimeout.bind(window);
+    const realClearTimeout = window.clearTimeout.bind(window);
+    /**
+     * Schedules a timer, withholding it when the hold is armed and the delay matches.
+     * @param handler - Callback or code string.
+     * @param delay - Delay in milliseconds.
+     * @param args - Arguments for the callback.
+     * @returns The timer id.
+     */
+    function heldSetTimeout(handler: TimerHandler, delay?: number, ...args: unknown[]): number {
+      if (hold.armed && delay === heldDelay && typeof handler === 'function') {
+        hold.held += 1;
+        const id = realSetTimeout(() => undefined, delay);
+        hold.pending.set(id, () => {
+          (handler as (...callbackArgs: unknown[]) => void)(...args);
+        });
+        return id;
+      }
+      return realSetTimeout(handler, delay, ...args);
+    }
+    /**
+     * Cancels a timer, and drops its callback if the hold withheld it.
+     * @param id - Timer id from `setTimeout`.
+     */
+    function heldClearTimeout(id?: number): void {
+      if (typeof id === 'number') {
+        hold.pending.delete(id);
+      }
+      realClearTimeout(id);
+    }
+    window.setTimeout = heldSetTimeout as typeof window.setTimeout;
+    window.clearTimeout = heldClearTimeout as typeof window.clearTimeout;
+  }, delayMs);
+}
+
+/**
+ * Arms or disarms the timer hold that `installTimerHold` put in the page.
+ *
+ * @param page - Page under test.
+ * @param armed - True to withhold matching timers from now on, false to let new ones run.
+ */
+async function setTimerHold(page: Page, armed: boolean): Promise<void> {
+  const installed = await page.evaluate((arm: boolean) => {
+    const hold = (window as TimerHoldWindow).supaA11yTimerHold;
+    if (!hold) {
+      return false;
+    }
+    hold.armed = arm;
+    return true;
+  }, armed);
+  if (!installed) {
+    throw new Error('the timer hold is not installed; call installTimerHold in the scenario\'s prepare');
+  }
+}
+
+/**
+ * Runs, in the order they were scheduled, every withheld callback the page has not cleared, as if
+ * its timer had just fired.
+ *
+ * @param page - Page under test.
+ * @param what - Human-readable description of the withheld timers for the error message.
+ */
+async function releaseHeldTimers(page: Page, what: string): Promise<void> {
+  const released = await page.evaluate(() => {
+    const hold = (window as TimerHoldWindow).supaA11yTimerHold;
+    if (!hold) {
+      return null;
+    }
+    const callbacks = [...hold.pending.values()];
+    hold.pending.clear();
+    callbacks.forEach((callback) => callback());
+    return callbacks.length;
+  });
+  if (!released) {
+    const reason = released === null ? 'the timer hold is not installed' : 'none was pending';
+    throw new Error(`expected to release ${what}, but ${reason}`);
+  }
+}
+
+/**
+ * Throws unless the timer hold withheld exactly `count` timers, so a timer that moves to another
+ * delay, another mechanism, or out of the held window fails the run instead of flaking.
+ *
+ * @param page - Page under test.
+ * @param count - Exact number of timers the hold must have withheld.
+ * @param what - Human-readable description of the withheld timers for the error message.
+ */
+async function expectHeldTimers(page: Page, count: number, what: string): Promise<void> {
+  const held = await page.evaluate(() => (window as TimerHoldWindow).supaA11yTimerHold?.held ?? null);
+  if (held !== count) {
+    throw new Error(
+      `expected the timer hold to withhold ${count} timer(s), ${what}, ` +
+        `but it withheld ${held ?? 'none (not installed)'}`
+    );
+  }
 }
 
 /** Color and pixel math that `installColorHelper` gives every page, for `page.evaluate` callbacks. */
@@ -4150,8 +4301,23 @@ const SCENARIOS: readonly InteractionScenario[] = [
     permissions: ['clipboard-read', 'clipboard-write'],
     // The code blocks, plus the "Copied!" tooltip that Bootstrap appends to <body>.
     scope: ['#supa-main-content .supa-code-block', '.tooltip.show'],
+    prepare: (page) => installTimerHold(page, COPY_RESET_DELAY_MS),
     setup: async (page) => {
-      await page.locator('#supa-main-content .supa-copy-btn').first().click();
+      const button = page.locator('#supa-main-content .supa-copy-btn').first();
+      // A reader's pointer arrives first, so the "Copy code" tooltip is already shown when the
+      // click lands; the click must turn that tooltip into "Copied!" rather than close it.
+      await button.hover();
+      await expectVisible(
+        page.locator('.tooltip.show[role="tooltip"]:has-text("Copy code")'),
+        'the copy button tooltip'
+      );
+      // Withhold the 1.8 s reset, so "Copied!" holds through the scan on a slow runner.
+      await setTimerHold(page, true);
+      await button.click();
+      // The click handler sets this label in the same task that schedules the reset.
+      await expectAttribute(button, 'aria-label', 'Copied!', 'the first copy button');
+      // Disarm before the scan, so axe's own long timers run.
+      await setTimerHold(page, false);
     },
     assertState: async (page) => {
       const button = page.locator('#supa-main-content .supa-copy-btn').first();
@@ -4161,6 +4327,52 @@ const SCENARIOS: readonly InteractionScenario[] = [
         page.locator('.tooltip.show[role="tooltip"]:has-text("Copied!")'),
         'the "Copied!" tooltip'
       );
+      await expectHeldTimers(page, 1, "the copy button's 1.8 s reset");
+    }
+  },
+  {
+    // A click focuses the button in Chromium, and Bootstrap's focus trigger would hold the tooltip
+    // open under no pointer, first "Copied!" and then, after the 1.8 s reset, "Copy code". The
+    // pointer leaves only after the reset, so the scan sees the reset's state at rest.
+    name: 'copy-button-pointer-left',
+    page: 'index.html',
+    viewport: DESKTOP,
+    engines: CLIPBOARD_ENGINES,
+    permissions: ['clipboard-read', 'clipboard-write'],
+    scope: ['#supa-main-content .supa-code-block'],
+    prepare: (page) => installTimerHold(page, COPY_RESET_DELAY_MS),
+    setup: async (page) => {
+      const button = page.locator('#supa-main-content .supa-copy-btn').first();
+      await button.hover();
+      await expectVisible(
+        page.locator('.tooltip.show[role="tooltip"]:has-text("Copy code")'),
+        'the copy button tooltip'
+      );
+      // Withhold the 1.8 s reset, so "Copied!" holds until it is seen on a slow runner, and then
+      // run the reset on cue rather than on the wall clock.
+      await setTimerHold(page, true);
+      await button.click();
+      await expectAttribute(button, 'aria-label', 'Copied!', 'the first copy button');
+      await setTimerHold(page, false);
+      await expectVisible(
+        page.locator('.tooltip.show[role="tooltip"]:has-text("Copied!")'),
+        'the "Copied!" tooltip'
+      );
+      await expectHeldTimers(page, 1, "the copy button's 1.8 s reset");
+      await releaseHeldTimers(page, "the copy button's 1.8 s reset");
+      // The reset puts "Copy code" back in the tooltip, which the pointer still holds open.
+      await expectAttribute(button, 'aria-label', 'Copy code', 'the reset copy button');
+      await expectVisible(
+        page.locator('.tooltip.show[role="tooltip"]:has-text("Copy code")'),
+        'the reset copy button tooltip'
+      );
+      await page.mouse.move(0, 0);
+    },
+    assertState: async (page) => {
+      const button = page.locator('#supa-main-content .supa-copy-btn').first();
+      await expectFocused(page, button, 'the clicked copy button');
+      await expectAttribute(button, 'aria-label', 'Copy code', 'the reset copy button');
+      await expectHidden(page.locator('.tooltip.show'), 'every tooltip');
     }
   },
   {

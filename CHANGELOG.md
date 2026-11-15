@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Changed
+
+- **Accessibility Scan Coverage**: `npm run test:a11y` adds `copy-button-pointer-left`, which checks that the copy button's tooltip closes once the pointer leaves, and the copy scenarios now withhold the button's 1.8-second reset, so a slow runner can no longer reset the "Copied!" state before the scan.
+
 ### Fixed
 
 - **Copy Result Tooltips**: Clicking the code-block copy button while its tooltip is open, under the mouse or with keyboard focus, now turns the tooltip into "Copied!" or "Copy failed", and a heading permalink's tooltip reads "Copied!" after a mouse click for as long as the pointer stays on the link (it closes if the click scrolls the heading out from under the pointer). Before, the click closed the tooltip, so those readers saw only the icon change, or nothing on a permalink. After a mouse click or touch tap, the tooltip closes once the pointer leaves the control or the reader taps elsewhere, before or after the result resets; with keyboard focus it stays until focus moves or Escape is pressed.
