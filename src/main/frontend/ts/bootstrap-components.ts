@@ -222,8 +222,51 @@ function isDoxiaShorthandTitleElement(el: HTMLElement): boolean {
 }
 
 /**
+ * Controls whose tooltip reports the result of a click ("Copied!"): the code-block copy button
+ * and the heading permalink.
+ */
+const RESULT_TOOLTIP_SELECTOR = '.supa-copy-btn, .supa-headerlink';
+
+/**
+ * Closes the tooltip of a result-tooltip control the pointer has left, unless the control has
+ * keyboard focus (`:focus-visible`). In browsers that focus a control on click (Chromium, and
+ * Firefox on most platforms), a mouse click or touch tap lets Bootstrap's focus trigger hold the
+ * tooltip open, showing "Copied!" and then the idle text, until the control loses focus. Dropping
+ * that trigger and re-running Bootstrap's own leave check closes it as a hover tooltip closes,
+ * and still keeps it while the pointer moves onto the tooltip itself (WCAG 1.4.13).
+ *
+ * @param el - Result-tooltip control the pointer left.
+ */
+function releasePointerFocusTrigger(el: HTMLElement): void {
+  let keyboardFocus = false;
+  try {
+    keyboardFocus = el.matches(':focus-visible');
+  } catch {
+    // A browser without :focus-visible treats the focus as pointer focus
+  }
+  if (keyboardFocus) {
+    return;
+  }
+  const tooltip = Tooltip.getInstance(el) as
+    | (InstanceType<typeof Tooltip> & {
+        _activeTrigger?: Record<string, boolean>;
+        _leave?: () => unknown;
+      })
+    | null;
+  if (!tooltip?._activeTrigger) {
+    return;
+  }
+  tooltip._activeTrigger.focus = false;
+  // Bootstrap's own mouseleave listener may run before or after this one; whichever runs last
+  // sees neither trigger active and hides the tooltip.
+  tooltip._leave?.();
+}
+
+/**
  * Binds `click` and `show.bs.menu` listeners on `el` so its Bootstrap `Tooltip`
- * automatically hides when the user activates the control.
+ * automatically hides when the user activates the control. A control whose tooltip reports
+ * the click's result (`RESULT_TOOLTIP_SELECTOR`) keeps it open on click instead, and closes it
+ * once the pointer leaves unless the control has keyboard focus.
  *
  * @param el - Target element with a bound Tooltip.
  */
@@ -242,7 +285,14 @@ function bindTooltipAutoHideOnInteract(el: HTMLElement): void {
       // Ignore in synthetic DOMs
     }
   };
-  el.addEventListener('click', hideTip);
+  // A result tooltip reports what the click did, and Tooltip.setContent only redraws a tooltip
+  // that is already shown. Hiding it on click would leave a hovered or focused control showing no
+  // "Copied!" or "Copy failed", so it stays open and setContent swaps the text in place.
+  if (el.matches(RESULT_TOOLTIP_SELECTOR)) {
+    el.addEventListener('mouseleave', () => releasePointerFocusTrigger(el));
+  } else {
+    el.addEventListener('click', hideTip);
+  }
   el.addEventListener('show.bs.menu', hideTip);
 }
 

@@ -53,6 +53,7 @@ import {
   type LazyWidget,
   Menu,
   nameMonthButtonByText,
+  setTooltipTitle,
   Tooltip
 } from '../../main/frontend/ts/bootstrap-components';
 import { enhanceCodeBlocks } from '../../main/frontend/ts/code';
@@ -3521,6 +3522,103 @@ describe('Supa Maven Skin Frontend Modules', () => {
         expectCopiedState(btn);
         expect(document.activeElement).not.toBe(btn);
         expect(document.activeElement).toBe(document.body);
+      });
+
+      it('keeps its tooltip open on click, so a hovered or focused button shows Copied!', async () => {
+        mockClipboard({ writeText: vi.fn<(text: string) => Promise<void>>().mockResolvedValue(undefined) });
+        const btn = renderCopyButton();
+        const tooltip = Tooltip.getInstance(btn);
+        expect(tooltip).not.toBeNull();
+        // Tooltip.setContent only redraws a shown tooltip, so hiding it on click would leave the
+        // "Copy code" tooltip a reader had open closed instead of reading "Copied!".
+        const hide = vi.spyOn(tooltip!, 'hide');
+
+        btn.click();
+        await vi.waitFor(() => {
+          expect(btn.getAttribute('aria-label')).toBe('Copied!');
+        });
+
+        expect(hide).not.toHaveBeenCalled();
+        expect(btn.getAttribute('data-bs-title')).toBe('Copied!');
+      });
+
+      /** Tooltip internals the pointer-leave handling reads and writes. */
+      type TooltipTriggers = InstanceType<typeof Tooltip> & { _activeTrigger: Record<string, boolean> };
+
+      /**
+       * Clicks `el`, then moves the pointer off it as a browser does, `mouseout` then
+       * `mouseleave`, while the click has left `el` focused, and returns the tooltip and its
+       * `hide` spy, which counts any hide from the click as well.
+       *
+       * @param el - Result-tooltip control under the pointer, with its tooltip shown.
+       * @param keyboardFocus - Whether `el` matches `:focus-visible`, as after keyboard focus.
+       * @returns The control's tooltip and the spy on its `hide`.
+       */
+      const leaveAfterClick = (el: HTMLElement, keyboardFocus: boolean) => {
+        const tooltip = Tooltip.getInstance(el) as TooltipTriggers | null;
+        expect(tooltip).not.toBeNull();
+        // happy-dom matches :focus-visible on any focus; a browser does not after a mouse click.
+        const matches = el.matches.bind(el);
+        vi.spyOn(el, 'matches').mockImplementation((selector: string) =>
+          selector === ':focus-visible' ? keyboardFocus : matches(selector)
+        );
+        const hide = vi.spyOn(tooltip!, 'hide').mockResolvedValue(undefined);
+        el.click();
+        // The click focused the control under the pointer: Bootstrap's focus trigger is active.
+        tooltip!._activeTrigger = { hover: true, focus: true };
+        el.dispatchEvent(new MouseEvent('mouseout', { bubbles: true, relatedTarget: document.body }));
+        el.dispatchEvent(new MouseEvent('mouseleave', { relatedTarget: document.body }));
+        return { tooltip: tooltip!, hide };
+      };
+
+      it.each([
+        ['copy button', () => renderCopyButton()],
+        [
+          'heading permalink',
+          () => {
+            const article = document.createElement('main');
+            article.innerHTML = '<h2>Install</h2>';
+            document.body.appendChild(article);
+            prepareHeadings(article, true, '#');
+            return article.querySelector<HTMLElement>('.supa-headerlink')!;
+          }
+        ]
+      ])(
+        'closes the %s tooltip once the pointer leaves a control focused by the click',
+        async (_name, render) => {
+          const { tooltip, hide } = leaveAfterClick(render(), false);
+
+          // The click left the tooltip open to show its result; the pointer leaving closes it.
+          // Without that, the focus trigger the click set would hold "Copied!", and then the idle
+          // text after the reset, open under no pointer until the control lost focus.
+          expect(tooltip._activeTrigger.focus).toBe(false);
+          await vi.waitFor(() => {
+            expect(hide).toHaveBeenCalledTimes(1);
+          });
+        }
+      );
+
+      it('keeps the tooltip of a copy button with keyboard focus open when the pointer leaves', async () => {
+        const btn = renderCopyButton();
+        const { tooltip, hide } = leaveAfterClick(btn, true);
+
+        await new Promise((resolveWait) => setTimeout(resolveWait, 10));
+        expect(tooltip._activeTrigger.focus).toBe(true);
+        expect(hide).not.toHaveBeenCalled();
+      });
+
+      it('still hides the tooltip of any other control when it is clicked', () => {
+        const other = document.createElement('button');
+        other.type = 'button';
+        document.body.appendChild(other);
+        setTooltipTitle(other, 'Other control', 'top');
+        const tooltip = Tooltip.getInstance(other);
+        expect(tooltip).not.toBeNull();
+        const hide = vi.spyOn(tooltip!, 'hide');
+
+        other.click();
+
+        expect(hide).toHaveBeenCalledTimes(1);
       });
     });
   });
